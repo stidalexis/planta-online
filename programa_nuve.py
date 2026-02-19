@@ -6,18 +6,25 @@ import io
 # --- 1. CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="Sistema Planta Cloud", page_icon="🏭")
 
-# --- 2. INICIALIZACIÓN DE TABLAS EN MEMORIA ---
-tablas_nombres = [
-    "Impresion", "Corte", "Colectoras", "Encuadernacion", 
-    "Pendientes_Imp", "Pendientes_Corte", "Pendientes_Col", "Pendientes_Enc",
-    "Paradas_Emergencia", "Seguimiento_Cortadoras"
-]
+# --- 2. INICIALIZACIÓN DE TABLAS CON COLUMNAS (PARA EVITAR KEYERROR) ---
+columnas_tablas = {
+    "Impresion": ["OP", "Fecha_Fin", "Máquina", "Nombre_Trabajo", "Total_Metros"],
+    "Corte": ["OP", "Fecha_Fin", "Máquina", "Total_Varillas"],
+    "Colectoras": ["OP", "Fecha_Fin", "Máquina", "Total_Cajas"],
+    "Encuadernacion": ["OP", "Fecha_Fin", "Nombre_Trabajo", "Cant_Final"],
+    "Pendientes_Imp": ["OP", "Máquina", "Hora_I", "Fecha_I", "Nombre_Trabajo"],
+    "Pendientes_Corte": ["OP", "Máquina", "Hora_I", "Nombre_Trabajo"],
+    "Pendientes_Col": ["OP", "Máquina", "Hora_I", "Nombre_Trabajo"],
+    "Pendientes_Enc": ["OP", "Hora_I", "Nombre_Trabajo"],
+    "Paradas_Emergencia": ["Máquina", "Estado", "Fecha", "Hora_Inicio"],
+    "Seguimiento_Cortadoras": ["Fecha", "Máquina", "OP", "Num_Cajas"]
+}
 
-for tabla in tablas_nombres:
-    if tabla not in st.session_state:
-        st.session_state[tabla] = pd.DataFrame()
+for nombre, cols in columnas_tablas.items():
+    if nombre not in st.session_state:
+        st.session_state[nombre] = pd.DataFrame(columns=cols)
 
-# --- 3. CONFIGURACIÓN ESTATICA ORIGINAL ---
+# --- 3. CONFIGURACIÓN ESTATICA ---
 MAQUINAS_IMP = ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"]
 MAQUINAS_CORTE = ["COR-01", "COR-02", "COR-03", "COR-04", "COR-05", "COR-06", "COR-07", "COR-08", "COR-09", "COR-10", "COR-11", "COR-12", "COR-PP-01", "COR-PP-02"]
 MAQUINAS_COL = ["COL-01", "COL-02"]
@@ -37,12 +44,12 @@ def guardar_en_memoria(df_nuevo, nombre_tabla):
 
 def eliminar_de_memoria(nombre_tabla, columna, valor):
     df = st.session_state[nombre_tabla]
-    st.session_state[nombre_tabla] = df[df[columna] != valor]
+    st.session_state[nombre_tabla] = df[df[columna].astype(str) != str(valor)]
 
 def generar_excel_descarga():
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        for tabla in tablas_nombres:
+        for tabla in columnas_tablas.keys():
             st.session_state[tabla].to_excel(writer, sheet_name=tabla, index=False)
     return output.getvalue()
 
@@ -78,135 +85,115 @@ if st.sidebar.button("Cerrar Sesión"):
 
 menu = st.sidebar.radio("Módulos", st.session_state.vistas)
 
-# --- 7. LÓGICA DE MÁQUINAS ---
-def mostrar_botones(lista, tabla_p, prefix):
-    st.subheader("Seleccione Máquina")
-    df_p = st.session_state[tabla_p]
-    df_paradas = st.session_state["Paradas_Emergencia"]
-    cols = st.columns(4)
-    for i, m in enumerate(lista):
-        parada = not df_paradas.empty and m in df_paradas[df_paradas["Estado"]=="Activa"]["Máquina"].values
-        ocupada = not df_p.empty and m in df_p["Máquina"].values
-        icon = "⚠️" if parada else ("🔴" if ocupada else "⚪")
-        if cols[i % 4].button(f"{icon} {m}", key=f"{prefix}_{m}", use_container_width=True):
-            st.session_state[f"sel_{prefix}"] = m
+# --- 7. MODULOS DE PRODUCCION ---
 
-# --- 8. MÓDULOS COMPLETOS ---
-
-# IMPRESIÓN
+# --- IMPRESIÓN ---
 if menu == "🖨️ Impresión":
-    mostrar_botones(MAQUINAS_IMP, "Pendientes_Imp", "imp")
+    st.header("🖨️ Módulo de Impresión")
+    cols_btn = st.columns(4)
+    for i, m in enumerate(MAQUINAS_IMP):
+        if cols_btn[i % 4].button(m, key=f"imp_{m}", use_container_width=True):
+            st.session_state.sel_imp = m
+    
     maq = st.session_state.get("sel_imp")
     if maq:
         st.divider()
-        st.header(f"Máquina: {maq}")
         df_p = st.session_state["Pendientes_Imp"]
         actual = df_p[df_p["Máquina"] == maq]
         
-        c1, c2, c3 = st.columns(3)
+        c1, c2 = st.columns(2)
         with c1:
             if actual.empty:
-                with st.form("f_imp_ini", clear_on_submit=True):
-                    st.write("🟢 Iniciar Trabajo")
+                with st.form("f_imp_ini"):
+                    st.subheader(f"🟢 Iniciar en {maq}")
                     op = st.text_input("OP")
                     tr = st.text_input("Nombre Trabajo")
-                    pa = st.selectbox("Marca Papel", MARCAS_PAPEL)
-                    an = st.text_input("Ancho Bobina")
-                    gr = st.text_input("Gramaje")
-                    ti = st.number_input("Cant. Tintas", 0)
-                    me = st.text_input("Medida Rollo")
-                    im = st.number_input("Cant. Imágenes", 0)
                     if st.form_submit_button("REGISTRAR INICIO"):
-                        d = {"OP":str(op), "Máquina":maq, "Hora_I":datetime.now().strftime("%H:%M:%S"), "Fecha_I":datetime.now().strftime("%Y-%m-%d"), "Nombre_Trabajo":tr, "Marca_Papel":pa, "Ancho_Bobina":an, "Gramaje":gr, "Cant_Tintas":ti, "Medida_Rollo":me, "Cant_Imagenes":im}
-                        guardar_en_memoria(pd.DataFrame([d]), "Pendientes_Imp"); st.rerun()
-            else: st.info(f"En curso: OP {actual.iloc[0]['OP']}")
-
+                        guardar_en_memoria(pd.DataFrame([{"OP":op, "Máquina":maq, "Hora_I":datetime.now().strftime("%H:%M"), "Nombre_Trabajo":tr}]), "Pendientes_Imp")
+                        st.rerun()
+            else:
+                st.success(f"Trabajando OP: {actual.iloc[0]['OP']}")
         with c2:
             if not actual.empty:
                 with st.form("f_imp_fin"):
-                    st.write("🏁 Finalizar Trabajo")
-                    m = st.number_input("Metros Totales", 0)
-                    r = st.number_input("Rollos a Sacar", 0)
-                    pt = st.number_input("Peso Tinta", 0.0)
-                    pd_ = st.number_input("Peso Desperdicio", 0.0)
-                    mo = st.text_input("Motivo Desperdicio")
-                    ob = st.text_area("Observaciones")
-                    if st.form_submit_button("FINALIZAR"):
-                        row = actual.iloc[0]
-                        d = {"OP":row['OP'], "Fecha_Fin":datetime.now().strftime("%Y-%m-%d"), "Máquina":maq, "Nombre_Trabajo":row['Nombre_Trabajo'], "Marca_Papel":row['Marca_Papel'], "Hora_Inicio_T":row['Hora_I'], "Hora_Final_T":datetime.now().strftime("%H:%M:%S"), "Total_Metros":m, "Rollos_Sacar":r, "Peso_Tinta":pt, "Peso_Desperdicio":pd_, "Motivo_Desperdicio":mo, "Observaciones":ob}
-                        guardar_en_memoria(pd.DataFrame([d]), "Impresion")
-                        eliminar_de_memoria("Pendientes_Imp", "Máquina", maq); st.rerun()
-        with c3:
-            if st.button("🚨 PARADA/REANUDAR"):
-                # Lógica simplificada de parada
-                st.session_state["Paradas_Emergencia"] = pd.concat([st.session_state["Paradas_Emergencia"], pd.DataFrame([{"Máquina":maq, "Estado":"Activa"}])])
-                st.rerun()
+                    st.subheader("🏁 Finalizar")
+                    metros = st.number_input("Metros", 0)
+                    if st.form_submit_button("FINALIZAR TRABAJO"):
+                        guardar_en_memoria(pd.DataFrame([{"OP":actual.iloc[0]['OP'], "Máquina":maq, "Total_Metros":metros, "Fecha_Fin":datetime.now().strftime("%Y-%m-%d")}]), "Impresion")
+                        eliminar_de_memoria("Pendientes_Imp", "Máquina", maq)
+                        st.rerun()
 
-# CORTE
+# --- CORTE ---
 elif menu == "✂️ Corte":
-    mostrar_botones(MAQUINAS_CORTE, "Pendientes_Corte", "cor")
+    st.header("✂️ Módulo de Corte")
+    cols_btn = st.columns(4)
+    for i, m in enumerate(MAQUINAS_CORTE):
+        if cols_btn[i % 4].button(m, key=f"cor_{m}", use_container_width=True):
+            st.session_state.sel_cor = m
+    
     maq = st.session_state.get("sel_cor")
     if maq:
-        st.divider(); st.header(f"Máquina: {maq}")
+        st.divider()
         df_p = st.session_state["Pendientes_Corte"]
         actual = df_p[df_p["Máquina"] == maq]
         c1, c2 = st.columns(2)
         with c1:
             if actual.empty:
                 with st.form("f_cor_ini"):
+                    st.subheader(f"🟢 Iniciar en {maq}")
                     op = st.text_input("OP")
-                    tr = st.text_input("Trabajo")
-                    pa = st.selectbox("Papel", MARCAS_PAPEL)
-                    iv = st.number_input("Imágenes por Varilla", 0)
                     if st.form_submit_button("INICIAR CORTE"):
-                        d = {"OP":str(op), "Máquina":maq, "Hora_I":datetime.now().strftime("%H:%M:%S"), "Nombre_Trabajo":tr, "Marca_Papel":pa, "Imagenes_Varilla":iv}
-                        guardar_en_memoria(pd.DataFrame([d]), "Pendientes_Corte"); st.rerun()
+                        guardar_en_memoria(pd.DataFrame([{"OP":op, "Máquina":maq, "Hora_I":datetime.now().strftime("%H:%M")}]), "Pendientes_Corte")
+                        st.rerun()
+            else: st.success(f"En corte OP: {actual.iloc[0]['OP']}")
         with c2:
             if not actual.empty:
                 with st.form("f_cor_fin"):
-                    tv = st.number_input("Total Varillas", 0)
-                    uc = st.number_input("Unid. por Caja", 0)
-                    pd_ = st.number_input("Peso Desperdicio", 0.0)
-                    if st.form_submit_button("FINALIZAR CORTE"):
-                        row = actual.iloc[0]
-                        d = {"OP":row['OP'], "Máquina":maq, "Total_Varillas":tv, "Unidades_Por_Caja":uc, "Peso_Desperdicio":pd_, "Fecha_Fin":datetime.now().strftime("%Y-%m-%d")}
-                        guardar_en_memoria(pd.DataFrame([d]), "Corte")
-                        eliminar_de_memoria("Pendientes_Corte", "Máquina", maq); st.rerun()
-
-# COLECTORAS
-elif menu == "📥 Colectoras":
-    mostrar_botones(MAQUINAS_COL, "Pendientes_Col", "col")
-    maq = st.session_state.get("sel_col")
-    if maq:
-        st.divider(); st.header(f"Máquina: {maq}")
-        df_p = st.session_state["Pendientes_Col"]
-        actual = df_p[df_p["Máquina"] == maq]
-        c1, c2 = st.columns(2)
-        with c1:
-            if actual.empty:
-                with st.form("f_col_ini"):
-                    op = st.text_input("OP"); tr = st.text_input("Trabajo")
-                    if st.form_submit_button("INICIAR COLECTORA"):
-                        guardar_en_memoria(pd.DataFrame([{"OP":op, "Máquina":maq, "Hora_I":datetime.now().strftime("%H:%M:%S"), "Nombre_Trabajo":tr}]), "Pendientes_Col"); st.rerun()
-        with c2:
-            if not actual.empty:
-                with st.form("f_col_fin"):
-                    tc = st.number_input("Total Cajas", 0)
+                    var = st.number_input("Varillas", 0)
                     if st.form_submit_button("FINALIZAR"):
-                        guardar_en_memoria(pd.DataFrame([{"OP":actual.iloc[0]['OP'], "Máquina":maq, "Total_Cajas":tc, "Fecha_Fin":datetime.now().strftime("%Y-%m-%d")}]), "Colectoras")
-                        eliminar_de_memoria("Pendientes_Col", "Máquina", maq); st.rerun()
+                        guardar_en_memoria(pd.DataFrame([{"OP":actual.iloc[0]['OP'], "Máquina":maq, "Total_Varillas":var, "Fecha_Fin":datetime.now().strftime("%Y-%m-%d")}]), "Corte")
+                        eliminar_de_memoria("Pendientes_Corte", "Máquina", maq)
+                        st.rerun()
 
-# SEGUIMIENTO CORTADORAS (SISTEMA DE AVANCES)
-elif menu == "⏱️ Seguimiento Cortadoras":
-    st.header("Seguimiento de Cortadoras (Turnos)")
-    mostrar_botones(MAQUINAS_CORTE, "Pendientes_Corte", "seg")
-    maq = st.session_state.get("sel_seg")
-    if maq:
-        with st.form("f_seg"):
-            tu = st.selectbox("Turno", ["1", "2", "3"])
+# --- ENCUADERNACIÓN (AHORA COMPLETO) ---
+elif menu == "📕 Encuadernación":
+    st.header("📕 Módulo de Encuadernación")
+    df_p = st.session_state["Pendientes_Enc"]
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        with st.form("f_enc_ini", clear_on_submit=True):
+            st.subheader("🟢 Iniciar Nuevo Trabajo")
             op = st.text_input("OP")
-            mr = st.number_input("Metros Rollo", 0.0)
-            nc = st.number_input("Número Cajas", 0)
-            if st.form_submit_button("GUARDAR AVANCE"):
-                d = {"Fecha":datetime.now().strftime("%Y-%m-%d"), "Turno":tu, "Máquina":maq, "OP":op, "Num_Cajas":nc, "Metros_Rollo":mr}
-                guardar_en_memoria(pd.DataFrame([d]), "Seguimiento_Cortadoras"); st.success("Avance Guardado")
+            tr = st.text_input("Nombre del Trabajo")
+            ma = st.text_input("Tipo Material")
+            if st.form_submit_button("REGISTRAR INICIO"):
+                d = {"OP": op, "Nombre_Trabajo": tr, "Tipo_Material": ma, "Hora_I": datetime.now().strftime("%H:%M")}
+                guardar_en_memoria(pd.DataFrame([d]), "Pendientes_Enc")
+                st.rerun()
+
+    with c2:
+        st.subheader("🏁 Trabajos en Curso")
+        if not df_p.empty:
+            for i, row in df_p.iterrows():
+                with st.expander(f"OP: {row['OP']} - {row['Nombre_Trabajo']}"):
+                    with st.form(f"fin_enc_{i}"):
+                        cant = st.number_input("Cantidad Final", 0)
+                        if st.form_submit_button(f"Finalizar {row['OP']}"):
+                            d_fin = {"OP": row['OP'], "Nombre_Trabajo": row['Nombre_Trabajo'], "Cant_Final": cant, "Fecha_Fin": datetime.now().strftime("%Y-%m-%d")}
+                            guardar_en_memoria(pd.DataFrame([d_fin]), "Encuadernacion")
+                            eliminar_de_memoria("Pendientes_Enc", "OP", row['OP'])
+                            st.rerun()
+        else:
+            st.write("No hay trabajos pendientes.")
+
+# --- SEGUIMIENTO CORTADORAS ---
+elif menu == "⏱️ Seguimiento Cortadoras":
+    st.header("⏱️ Seguimiento Diario")
+    with st.form("f_seg"):
+        m = st.selectbox("Máquina", MAQUINAS_CORTE)
+        op = st.text_input("OP")
+        cj = st.number_input("Cajas", 0)
+        if st.form_submit_button("GUARDAR AVANCE"):
+            guardar_en_memoria(pd.DataFrame([{"Fecha":datetime.now().strftime("%Y-%m-%d"), "Máquina":m, "OP":op, "Num_Cajas":cj}]), "Seguimiento_Cortadoras")
+            st.success("Guardado")
