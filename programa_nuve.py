@@ -34,15 +34,15 @@ def normalizar(texto):
         texto = texto.replace(t, r)
     return texto.lower()
 
+# --- MONITOR EN TIEMPO REAL ---
+activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
+paradas = {p['maquina']: p for p in supabase.table("paradas_maquina").select("*").is_("h_fin", "null").execute().data}
+
 # --- INTERFAZ PRINCIPAL ---
 st.sidebar.title("🏭 PLANTA PRODUCCIÓN")
 area_actual = st.sidebar.radio("SELECCIONE ÁREA:", list(MAQUINAS.keys()))
 
 st.title(f"Módulo de Operación: {area_actual}")
-
-# --- MONITOR EN TIEMPO REAL ---
-activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
-paradas = {p['maquina']: p for p in supabase.table("paradas_maquina").select("*").is_("h_fin", "null").execute().data}
 
 n_cols = 5 if area_actual == "ENCUADERNACIÓN" else 4
 cols = st.columns(n_cols)
@@ -69,7 +69,6 @@ if "m_sel" in st.session_state:
     m = st.session_state.m_sel
     if m in MAQUINAS[area_actual]:
         st.subheader(f"🛠️ Panel de Control: {m}")
-        
         act = supabase.table("trabajos_activos").select("*").eq("maquina", m).execute().data
         par = supabase.table("paradas_maquina").select("*").eq("maquina", m).is_("h_fin", "null").execute().data
 
@@ -85,15 +84,29 @@ if "m_sel" in st.session_state:
                 c1, c2 = st.columns(2)
                 op = c1.text_input("Número de OP")
                 tr = c2.text_input("Nombre del Trabajo")
+                
+                # Campos adicionales al INICIO según área
+                extra = {}
+                if area_actual == "IMPRESIÓN":
+                    p1, p2, p3 = st.columns(3)
+                    extra = {"tipo_papel": p1.text_input("Tipo de Papel"), "ancho": p2.text_input("Ancho"), "gramaje": p3.text_input("Gramaje"), "medida_trabajo": p1.text_input("Medida Trabajo")}
+                elif area_actual == "CORTE":
+                    p1, p2, p3 = st.columns(3)
+                    extra = {"tipo_papel": p1.text_input("Tipo de Papel"), "ancho": p2.text_input("Ancho"), "gramaje": p3.text_input("Gramaje"), "img_varilla": p1.number_input("Imágenes*Varilla", 0), "medida_rollos": p2.text_input("Medida Rollos")}
+                elif area_actual == "ENCUADERNACIÓN":
+                    p1, p2 = st.columns(2)
+                    extra = {"formas_totales": p1.number_input("Formas Totales", 0), "material": p2.text_input("Material"), "medida": p1.text_input("Medida")}
+                
                 if st.form_submit_button("▶️ INICIAR PRODUCCIÓN", use_container_width=True):
                     if op and tr:
-                        supabase.table("trabajos_activos").insert({"maquina": m, "op": op, "trabajo": tr, "area": area_actual, "hora_inicio": datetime.now().strftime("%H:%M")}).execute()
+                        data = {"maquina": m, "op": op, "trabajo": tr, "area": area_actual, "hora_inicio": datetime.now().strftime("%H:%M")}
+                        data.update(extra)
+                        supabase.table("trabajos_activos").insert(data).execute()
                         st.rerun()
 
         else:
             datos_act = act[0]
             st.info(f"Produciendo: **{datos_act['trabajo']}** (OP: {datos_act['op']}) | Inicio: {datos_act['hora_inicio']}")
-            
             c_par, c_fin = st.columns([1, 2])
             
             with c_par:
@@ -109,29 +122,29 @@ if "m_sel" in st.session_state:
                     res = {}
                     if area_actual == "IMPRESIÓN":
                         c1, c2, c3 = st.columns(3)
-                        res = {"papel": c1.text_input("Papel"), "ancho": c2.text_input("Ancho"), "gramaje": c3.text_input("Gramaje"), "tintas": c1.number_input("Tintas", 0), "metros": c2.number_input("Metros", 0), "medida": c3.text_input("Medida")}
+                        res = {"metros_impresos": c1.number_input("Metros Impresos", 0), "bobinas": c2.number_input("Bobinas", 0), "motivo_desperdicio": c3.text_input("Motivo Desperdicio")}
                     elif area_actual == "CORTE":
-                        c1, c2 = st.columns(2)
-                        res = {"img_varilla": c1.number_input("Img x Varilla", 0), "medida": c2.text_input("Medida"), "total_varillas": c1.number_input("Total Varillas", 0), "rollos_cortados": c2.number_input("Rollos", 0)}
+                        c1, c2, c3 = st.columns(3)
+                        res = {"cant_varillas": c1.number_input("Cant. Varillas", 0), "unidades_caja": c2.number_input("Unidades*Caja", 0), "total_rollos": c3.number_input("Total Rollos", 0), "motivo_desperdicio": c1.text_input("Motivo Desperdicio")}
                     elif area_actual == "COLECTORAS":
-                        c1, c2 = st.columns(2)
-                        res = {"papel": c1.text_input("Papel"), "medida_forma": c2.text_input("Medida Forma"), "total_cajas": c1.number_input("Total Cajas", 0), "total_formas": c2.number_input("Total Formas", 0)}
+                        c1, c2, c3 = st.columns(3)
+                        res = {"tipo_papel": c1.text_input("Tipo Papel"), "presentacion": c2.text_input("Presentación"), "motivo_desperdicio": c3.text_input("Motivo Desperdicio")}
                     elif area_actual == "ENCUADERNACIÓN":
                         c1, c2 = st.columns(2)
-                        res = {"cant_formas": c1.number_input("Cant. Formas", 0), "material": c2.text_input("Material"), "cant_final": c1.number_input("Cant. Final", 0)}
+                        res = {"cant_final": c1.number_input("Cantidad Final", 0), "presentacion_desperdicio": c2.text_input("Presentación Desperdicio")}
 
-                    dk = st.number_input("Desperdicio Total (Kg)", 0.0)
+                    dk = st.number_input("Peso Desperdicio (Kg)", 0.0)
+                    obs = st.text_area("Observaciones")
                     
-                    if st.form_submit_button("💾 GUARDAR PRODUCCIÓN Y LIBERAR MÁQUINA", use_container_width=True):
+                    if st.form_submit_button("💾 GUARDAR PRODUCCIÓN", use_container_width=True):
                         res.update({
                             "op": datos_act['op'], "maquina": m, "trabajo": datos_act['trabajo'],
                             "h_inicio": datos_act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M"),
-                            "desp_kg": dk
+                            "desp_kg": dk, "observaciones": obs
                         })
                         try:
                             supabase.table(normalizar(area_actual)).insert(res).execute()
                             supabase.table("trabajos_activos").delete().eq("id", datos_act['id']).execute()
-                            st.success("✅ Datos guardados correctamente")
                             st.rerun()
                         except Exception as e:
-                            st.error(f"Error en base de datos: {e}")
+                            st.error(f"Error: {e}")
