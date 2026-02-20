@@ -3,200 +3,163 @@ from supabase import create_client
 import pandas as pd
 from datetime import datetime
 
-# --- CONEXIÓN A NUBE ---
+# --- CONEXIÓN ---
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-st.set_page_config(layout="wide", page_title="SISTEMA PLANTA TIEMPO REAL", page_icon="🏭")
+st.set_page_config(layout="wide", page_title="SISTEMA PLANTA MODULAR")
 
-# --- FUNCIONES NÚCLEO ---
-def db_insert(tabla, datos):
-    try:
-        supabase.table(tabla).insert(datos).execute()
-        return True
-    except Exception as e:
-        st.error(f"Error DB: {e}")
-        return False
-
-def db_get_activos():
-    res = supabase.table("trabajos_activos").select("*").execute()
-    return res.data
-
-# --- LOGIN Y ROLES ---
-if "auth" not in st.session_state:
-    st.session_state.update({"auth": False, "rol": None})
-
-if not st.session_state.auth:
-    st.title("🏭 CONTROL DE PRODUCCIÓN - ACCESO")
-    usuarios = {
-        "administrador": "admin2026",
-        "impresion": "imp2026",
-        "colectoras": "col2026",
-        "corte1": "c1p",
-        "corte2": "c2p",
-        "encuadernacion": "enc2026"
+# --- ESTILO TÁCTIL PERSONALIZADO (CSS) ---
+st.markdown("""
+    <style>
+    div.stButton > button {
+        height: 80px;
+        font-size: 20px;
+        font-weight: bold;
+        border-radius: 10px;
+        border: 2px solid #4CAF50;
     }
+    div.stButton > button:hover {
+        background-color: #4CAF50;
+        color: white;
+    }
+    .card {
+        padding: 20px;
+        border-radius: 15px;
+        background-color: #f0f2f6;
+        margin-bottom: 10px;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- LOGIN ---
+if "auth" not in st.session_state: st.session_state.update({"auth": False, "rol": None})
+if not st.session_state.auth:
+    st.title("🏭 ACCESO A LA EMPRESA")
+    usuarios = {"admin": "admin2026", "impresion": "imp2026", "colectoras": "col2026", "corte1": "c1p", "corte2": "c2p", "encuadernacion": "enc2026"}
     u = st.text_input("Usuario").lower().strip()
     p = st.text_input("Contraseña", type="password")
-    if st.button("ENTRAR AL SISTEMA", use_container_width=True):
+    if st.button("ENTRAR"):
         if u in usuarios and usuarios[u] == p:
             st.session_state.auth, st.session_state.rol = True, u
             st.rerun()
-        else:
-            st.error("Credenciales Incorrectas")
     st.stop()
 
-rol = st.session_state.rol
+# --- COMPONENTES TÁCTILES ---
+def grid_maquinas(lista, clave_session):
+    st.subheader("Seleccione Máquina:")
+    cols = st.columns(4)
+    for i, m in enumerate(lista):
+        if cols[i % 4].button(m, key=f"btn_{clave_session}_{m}", use_container_width=True):
+            st.session_state[clave_session] = m
+    return st.session_state.get(clave_session)
 
-# --- CONFIGURACIÓN TÉCNICA ---
-MAQ_DATOS = {
-    "impresion": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
-    "corte1": ["COR-01", "COR-02", "COR-03", "COR-04", "COR-05", "COR-06", "COR-07"],
-    "corte2": ["COR-08", "COR-09", "COR-10", "COR-11", "COR-12", "COR-PP-01", "COR-PP-02"],
-    "colectoras": ["COL-01", "COL-02"],
-    "encuadernacion": ["LINEA-01"]
-}
-
-# --- NAVEGACIÓN ---
-st.sidebar.title(f"Usuario: {rol.upper()}")
-if rol == "administrador":
-    menu = st.sidebar.radio("IR A:", ["PRODUCCIÓN VIVO", "REPORTES GENERALES"])
-else:
-    menu = "PRODUCCIÓN VIVO"
-
-if st.sidebar.button("Log Out"):
-    st.session_state.auth = False
-    st.rerun()
-
-# --- PANEL DE PRODUCCIÓN EN VIVO ---
-if menu == "PRODUCCIÓN VIVO":
-    st.header(f"Gestión de Piso - {rol.upper()}")
+# --- MÓDULO INDEPENDIENTE: IMPRESIÓN ---
+def modulo_impresion():
+    st.title("🖨️ ÁREA DE IMPRESIÓN")
+    maquinas = ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"]
+    m = grid_maquinas(maquinas, "m_imp")
     
-    # Obtener máquinas del área del usuario
-    maquinas_area = MAQ_DATOS.get(rol, [m for a in MAQ_DATOS.values() for m in a])
-    activos = db_get_activos()
-    maquinas_en_uso = [a['maquina'] for a in activos]
-
-    col_ini, col_viv = st.columns([1, 2])
-
-    with col_ini:
-        st.subheader("▶️ Iniciar Trabajo")
-        m_sel = st.selectbox("Máquina", maquinas_area)
-        op_sel = st.text_input("Orden de Producción (OP)")
-        tr_sel = st.text_input("Nombre del Trabajo")
+    if m:
+        st.info(f"Máquina seleccionada: **{m}**")
+        col1, col2 = st.columns(2)
         
-        if st.button("ABRIR TURNO", use_container_width=True):
-            if m_sel in maquinas_en_uso:
-                st.error("⚠️ Esta máquina ya tiene un trabajo activo.")
-            elif op_sel and tr_sel:
-                datos_ini = {"maquina": m_sel, "op": op_sel, "trabajo": tr_sel, "area": rol, "usuario": rol}
-                if db_insert("trabajos_activos", datos_ini):
-                    st.success(f"Trabajo iniciado en {m_sel}")
-                    st.rerun()
+        # INICIO (POST-MORTEM O REAL TIME)
+        with col1:
+            with st.form("form_ini_imp"):
+                st.subheader("1. Iniciar OP")
+                op = st.text_input("OP")
+                tr = st.text_input("Trabajo")
+                if st.form_submit_button("REGISTRAR INICIO"):
+                    supabase.table("trabajos_activos").insert({"maquina":m, "op":op, "trabajo":tr, "area":"impresion"}).execute()
+                    st.success("OP Iniciada")
+
+        # CIERRE
+        with col2:
+            st.subheader("2. Finalizar y Datos Técnicos")
+            activos = supabase.table("trabajos_activos").select("*").eq("maquina", m).execute().data
+            if activos:
+                act = activos[0]
+                with st.form("form_fin_imp"):
+                    st.write(f"OP Activa: {act['op']}")
+                    c1, c2 = st.columns(2)
+                    papel = c1.text_input("Papel")
+                    ancho = c2.text_input("Ancho")
+                    gramaje = c1.text_input("Gramaje")
+                    tintas = c2.number_input("Tintas", 0)
+                    metros = c1.number_input("Metros Finales", 0)
+                    desp = c2.number_input("Desperdicio Kg", 0.0)
+                    if st.form_submit_button("FINALIZAR TRABAJO"):
+                        data_final = {"op":act['op'], "maquina":m, "trabajo":act['trabajo'], "papel":papel, "ancho":ancho, "gramaje":gramaje, "tintas":tintas, "metros":metros, "desp_kg":desp, "h_inicio":act['hora_inicio'], "h_fin":datetime.now().strftime("%H:%M")}
+                        supabase.table("impresion").insert(data_final).execute()
+                        supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
+                        st.rerun()
             else:
-                st.warning("Complete OP y Trabajo.")
+                st.warning("No hay OP activa en esta máquina.")
 
-    with col_viv:
-        st.subheader("🕒 Trabajos Activos")
-        if not activos:
-            st.info("No hay máquinas operando en este momento.")
+# --- MÓDULO INDEPENDIENTE: CORTE ---
+def modulo_corte(usuario_corte):
+    st.title(f"✂️ ÁREA DE CORTE ({usuario_corte.upper()})")
+    maqs = ["COR-01", "COR-02", "COR-03", "COR-04", "COR-05", "COR-06", "COR-07"] if usuario_corte == "corte1" else ["COR-08", "COR-09", "COR-10", "COR-11", "COR-12", "COR-PP-01", "COR-PP-02"]
+    m = grid_maquinas(maqs, f"m_{usuario_corte}")
+    
+    if m:
+        st.info(f"Máquina seleccionada: **{m}**")
+        col1, col2 = st.columns(2)
+        with col1:
+            with st.form("ini_corte"):
+                st.subheader("Iniciar Corte")
+                op = st.text_input("OP")
+                tr = st.text_input("Trabajo")
+                if st.form_submit_button("INICIAR"):
+                    supabase.table("trabajos_activos").insert({"maquina":m, "op":op, "trabajo":tr, "area":usuario_corte}).execute()
         
-        for act in activos:
-            # Filtrar para que operarios solo vean sus máquinas, admin ve todo
-            if rol == "administrador" or act['area'] == rol or (rol[:5] == "corte" and act['area'][:5] == "corte"):
-                with st.container(border=True):
-                    c1, c2, c3 = st.columns([2, 1, 1])
-                    c1.markdown(f"**MAQ: {act['maquina']}** | OP: {act['op']}\n\n*{act['trabajo']}*")
-                    c2.caption(f"Inició: {act['hora_inicio'][11:16]}")
-                    
-                    # --- BOTÓN PARADA ---
-                    if c2.button("⚠️ PARADA", key=f"p_{act['id']}"):
-                        st.session_state[f"st_{act['id']}"] = True
+        with col2:
+            st.subheader("Finalizar Corte")
+            act = supabase.table("trabajos_activos").select("*").eq("maquina", m).execute().data
+            if act:
+                with st.form("fin_corte"):
+                    iv = st.number_input("Img x Varilla", 0)
+                    tv = st.number_input("Total Varillas", 0)
+                    rc = st.number_input("Rollos Cortados", 0)
+                    dk = st.number_input("Desperdicio Kg", 0.0)
+                    if st.form_submit_button("GUARDAR Y CERRAR"):
+                        supabase.table("corte").insert({"op":act[0]['op'], "maquina":m, "img_varilla":iv, "total_varillas":tv, "rollos_cortados":rc, "desp_kg":dk}).execute()
+                        supabase.table("trabajos_activos").delete().eq("id", act[0]['id']).execute()
+                        st.rerun()
 
-                    if st.session_state.get(f"st_{act['id']}"):
-                        with st.form(f"f_p_{act['id']}"):
-                            motivo = st.selectbox("Motivo", ["Mantenimiento", "Falla Mecánica", "Ajuste/Set-up", "Falta de Material", "Limpieza", "Almuerzo"])
-                            if st.form_submit_button("Registrar Parada"):
-                                db_insert("paradas_maquina", {"maquina": act['maquina'], "op": act['op'], "motivo": motivo, "usuario": rol})
-                                st.toast("Parada registrada")
-                                del st.session_state[f"st_{act['id']}"]
+# --- MÓDULO INDEPENDIENTE: PARADAS ---
+def modulo_paradas():
+    st.subheader("⚠️ REGISTRO DE PARADA DE MÁQUINA")
+    with st.expander("Abrir panel de paradas"):
+        maq = st.text_input("Máquina que se detiene")
+        motivo = st.selectbox("Motivo", ["Mantenimiento", "Falla Eléctrica", "Cambio Formato", "Ajuste", "Limpieza"])
+        if st.button("REGISTRAR PARADA"):
+            supabase.table("paradas_maquina").insert({"maquina":maq, "motivo":motivo}).execute()
+            st.warning(f"Parada registrada en {maq}")
 
-                    # --- BOTÓN FINALIZAR (CHECK-OUT) ---
-                    if c3.button("🏁 FINALIZAR", key=f"f_{act['id']}", type="primary"):
-                        st.session_state[f"fin_{act['id']}"] = True
+# --- ESTRUCTURA DE LA EMPRESA (NAVEGACIÓN) ---
+rol = st.session_state.rol
+st.sidebar.title(f"Usuario: {rol.upper()}")
 
-                    if st.session_state.get(f"fin_{act['id']}"):
-                        st.divider()
-                        with st.form(f"final_{act['id']}"):
-                            st.write("### Datos Técnicos de Cierre")
-                            
-                            # Cuestionario según área
-                            area_act = act['area']
-                            res_tecnico = {}
-                            
-                            if "impresion" in area_act:
-                                col_a, col_b = st.columns(2)
-                                res_tecnico = {
-                                    "papel": col_a.text_input("Marca Papel"), "ancho": col_b.text_input("Ancho Bobina"),
-                                    "gramaje": col_a.text_input("Gramaje"), "tintas": col_b.number_input("Tintas", 0),
-                                    "medida": col_a.text_input("Medida"), "imagenes": col_b.number_input("Imágenes x Vuelta", 0),
-                                    "metros": st.number_input("Metros Finales", 0)
-                                }
-                            elif "corte" in area_act:
-                                col_a, col_b = st.columns(2)
-                                res_tecnico = {
-                                    "img_varilla": col_a.number_input("Img x Varilla", 0), "medida": col_b.text_input("Medida Final"),
-                                    "total_varillas": col_a.number_input("Total Varillas", 0), "rollos_cortados": col_b.number_input("Rollos Cortados", 0),
-                                    "unid_caja": st.number_input("Unid/Caja", 0)
-                                }
-                            elif "colectoras" in area_act:
-                                col_a, col_b = st.columns(2)
-                                res_tecnico = {
-                                    "papel": col_a.text_input("Papel"), "medida_forma": col_b.text_input("Medida Forma"),
-                                    "unid_caja": col_a.number_input("Unid/Caja", 0), "total_cajas": col_b.number_input("Total Cajas", 0),
-                                    "total_formas": st.number_input("Total Formas", 0)
-                                }
-                            elif "encuadernacion" in area_act:
-                                col_a, col_b = st.columns(2)
-                                res_tecnico = {
-                                    "cant_formas": col_a.number_input("Cant. Formas", 0), "material": col_b.text_input("Tipo Material"),
-                                    "medida": col_a.text_input("Medida"), "unid_caja": col_b.number_input("Unid/Caja", 0),
-                                    "cant_final": st.number_input("Cantidad Final", 0), "presentacion": st.text_input("Presentación")
-                                }
+if rol == "admin":
+    menu = st.sidebar.radio("IR A:", ["IMPRESIÓN", "CORTE 1", "CORTE 2", "COLECTORAS", "ENCUADERNACIÓN", "ADMINISTRACIÓN"])
+    if menu == "IMPRESIÓN": modulo_impresion()
+    elif menu == "CORTE 1": modulo_corte("corte1")
+    elif menu == "CORTE 2": modulo_corte("corte2")
+    # ... agregar el resto de módulos ...
+    elif menu == "ADMINISTRACIÓN":
+        st.title("Reportes Generales")
+        t = st.selectbox("Tabla", ["impresion", "corte", "paradas_maquina"])
+        df = pd.DataFrame(supabase.table(t).select("*").execute().data)
+        st.dataframe(df)
 
-                            # Campos comunes a todos
-                            st.divider()
-                            dk = st.number_input("Desperdicio Total (Kg)", 0.0)
-                            md = st.text_input("Motivo Desperdicio")
-                            ob = st.text_area("Observaciones Finales")
+elif rol == "impresion": modulo_impresion()
+elif rol == "corte1": modulo_corte("corte1")
+elif rol == "corte2": modulo_corte("corte2")
 
-                            if st.form_submit_button("GUARDAR HISTORIAL Y CERRAR OP"):
-                                # 1. Construir registro final
-                                registro = {
-                                    "op": act['op'], "maquina": act['maquina'], "trabajo": act['trabajo'],
-                                    "h_inicio": act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M:%S"),
-                                    "desp_kg": dk, "motivo_desp": md, "obs": ob, **res_tecnico
-                                }
-                                # 2. Insertar en tabla histórica (impresion, corte, etc)
-                                tabla_h = "corte" if "corte" in area_act else area_act
-                                db_insert(tabla_h, registro)
-                                # 3. Borrar de activos
-                                supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
-                                del st.session_state[f"fin_{act['id']}"]
-                                st.rerun()
-
-# --- REPORTES ADMINISTRATIVOS ---
-elif menu == "REPORTES GENERALES":
-    st.header("Consolidado de Planta")
-    tab_rep = st.selectbox("Seleccione Tabla para Exportar:", ["impresion", "corte", "colectoras", "encuadernacion", "paradas_maquina"])
-    
-    res = supabase.table(tab_rep).select("*").order("id", desc=True).execute()
-    df = pd.DataFrame(res.data)
-    
-    if not df.empty:
-        st.dataframe(df, use_container_width=True)
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 DESCARGAR EXCEL (CSV)", data=csv, file_name=f"reporte_{tab_rep}.csv", mime='text/csv')
-    else:
-        st.warning("No hay datos en esta categoría.")
+# Mostrar paradas siempre abajo para los operarios
+if rol != "admin":
+    st.divider()
+    modulo_paradas()
