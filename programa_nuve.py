@@ -3,35 +3,32 @@ from supabase import create_client
 import pandas as pd
 from datetime import datetime
 
-# --- CONFIGURACIÓN DE CONEXIÓN ---
+# --- CONEXIÓN A NUBE ---
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-st.set_page_config(layout="wide", page_title="PLANTA INTEGRAL ONLINE", page_icon="🏭")
+st.set_page_config(layout="wide", page_title="SISTEMA PLANTA TIEMPO REAL", page_icon="🏭")
 
-# --- FUNCIONES DE BASE DE DATOS ---
-def guardar(tabla, datos):
+# --- FUNCIONES NÚCLEO ---
+def db_insert(tabla, datos):
     try:
         supabase.table(tabla).insert(datos).execute()
-        st.success("✅ Registro guardado exitosamente en la nube.")
-        st.balloons()
+        return True
     except Exception as e:
-        st.error(f"Error al guardar: {e}")
+        st.error(f"Error DB: {e}")
+        return False
 
-def leer(tabla):
-    try:
-        res = supabase.table(tabla).select("*").order("id", desc=True).execute()
-        return pd.DataFrame(res.data)
-    except:
-        return pd.DataFrame()
+def db_get_activos():
+    res = supabase.table("trabajos_activos").select("*").execute()
+    return res.data
 
-# --- AUTENTICACIÓN Y ROLES ---
+# --- LOGIN Y ROLES ---
 if "auth" not in st.session_state:
     st.session_state.update({"auth": False, "rol": None})
 
 if not st.session_state.auth:
-    st.title("🏭 ACCESO SISTEMA DE PRODUCCIÓN")
+    st.title("🏭 CONTROL DE PRODUCCIÓN - ACCESO")
     usuarios = {
         "administrador": "admin2026",
         "impresion": "imp2026",
@@ -42,118 +39,164 @@ if not st.session_state.auth:
     }
     u = st.text_input("Usuario").lower().strip()
     p = st.text_input("Contraseña", type="password")
-    if st.button("INGRESAR", use_container_width=True):
+    if st.button("ENTRAR AL SISTEMA", use_container_width=True):
         if u in usuarios and usuarios[u] == p:
             st.session_state.auth, st.session_state.rol = True, u
             st.rerun()
         else:
-            st.error("Credenciales inválidas")
+            st.error("Credenciales Incorrectas")
     st.stop()
 
-# --- MENÚ SEGMENTADO ---
 rol = st.session_state.rol
-opc_map = {
-    "administrador": ["🖨️ IMPRESIÓN", "✂️ CORTE", "📥 COLECTORAS", "📕 ENCUADERNACIÓN", "⏱️ METAS (GAP)", "📊 REPORTES"],
-    "impresion": ["🖨️ IMPRESIÓN"],
-    "colectoras": ["📥 COLECTORAS"],
-    "corte1": ["✂️ CORTE", "⏱️ METAS (GAP)"],
-    "corte2": ["✂️ CORTE", "⏱️ METAS (GAP)"],
-    "encuadernacion": ["📕 ENCUADERNACIÓN"]
-}
-opciones = opc_map.get(rol, [])
 
+# --- CONFIGURACIÓN TÉCNICA ---
+MAQ_DATOS = {
+    "impresion": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
+    "corte1": ["COR-01", "COR-02", "COR-03", "COR-04", "COR-05", "COR-06", "COR-07"],
+    "corte2": ["COR-08", "COR-09", "COR-10", "COR-11", "COR-12", "COR-PP-01", "COR-PP-02"],
+    "colectoras": ["COL-01", "COL-02"],
+    "encuadernacion": ["LINEA-01"]
+}
+
+# --- NAVEGACIÓN ---
 st.sidebar.title(f"Usuario: {rol.upper()}")
-menu = st.sidebar.radio("Navegación", opciones)
-if st.sidebar.button("Cerrar Sesión"):
+if rol == "administrador":
+    menu = st.sidebar.radio("IR A:", ["PRODUCCIÓN VIVO", "REPORTES GENERALES"])
+else:
+    menu = "PRODUCCIÓN VIVO"
+
+if st.sidebar.button("Log Out"):
     st.session_state.auth = False
     st.rerun()
 
-# --- LISTAS DE MÁQUINAS ---
-MA_IMP = ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"]
-MA_COR = ["COR-01", "COR-02", "COR-03", "COR-04", "COR-05", "COR-06", "COR-07", "COR-08", "COR-09", "COR-10", "COR-11", "COR-12", "COR-PP-01", "COR-PP-02"]
-MA_COL = ["COL-01", "COL-02"]
+# --- PANEL DE PRODUCCIÓN EN VIVO ---
+if menu == "PRODUCCIÓN VIVO":
+    st.header(f"Gestión de Piso - {rol.upper()}")
+    
+    # Obtener máquinas del área del usuario
+    maquinas_area = MAQ_DATOS.get(rol, [m for a in MAQ_DATOS.values() for m in a])
+    activos = db_get_activos()
+    maquinas_en_uso = [a['maquina'] for a in activos]
 
-def selector_maquina(lista, clave):
-    st.write("### Seleccione Máquina:")
-    cols = st.columns(4)
-    for i, m in enumerate(lista):
-        if cols[i % 4].button(m, key=f"{clave}_{m}", use_container_width=True):
-            st.session_state[clave] = m
-    return st.session_state.get(clave)
+    col_ini, col_viv = st.columns([1, 2])
 
-# --- MÓDULOS ---
-if menu == "🖨️ IMPRESIÓN":
-    st.header("Módulo de Impresión")
-    m = selector_maquina(MA_IMP, "m_imp")
-    if m:
-        with st.form("f_imp"):
-            st.subheader(f"Prensa: {m}")
-            c1, c2, c3 = st.columns(3)
-            op, tr, pa = c1.text_input("OP"), c2.text_input("Trabajo"), c3.text_input("Papel")
-            an, gr, ti = c1.text_input("Ancho"), c2.text_input("Gramaje"), c3.number_input("Tintas", 0)
-            me, im, mt = c1.text_input("Medida"), c2.number_input("Imágenes", 0), c3.number_input("Metros Totales", 0)
-            hi, hf, d_k = c1.text_input("H. Inicio"), c2.text_input("H. Fin"), c3.number_input("Desp. Kg", 0.0)
-            mot, obs = st.text_input("Motivo Desp."), st.text_area("Observaciones")
-            if st.form_submit_button("GUARDAR REGISTRO"):
-                guardar("impresion", {"op":op,"maquina":m,"trabajo":tr,"papel":pa,"ancho":an,"gramaje":gr,"tintas":ti,"medida":me,"imagenes":im,"metros":mt,"h_inicio":hi,"h_fin":hf,"desp_kg":d_k,"motivo":mot,"obs":obs})
+    with col_ini:
+        st.subheader("▶️ Iniciar Trabajo")
+        m_sel = st.selectbox("Máquina", maquinas_area)
+        op_sel = st.text_input("Orden de Producción (OP)")
+        tr_sel = st.text_input("Nombre del Trabajo")
+        
+        if st.button("ABRIR TURNO", use_container_width=True):
+            if m_sel in maquinas_en_uso:
+                st.error("⚠️ Esta máquina ya tiene un trabajo activo.")
+            elif op_sel and tr_sel:
+                datos_ini = {"maquina": m_sel, "op": op_sel, "trabajo": tr_sel, "area": rol, "usuario": rol}
+                if db_insert("trabajos_activos", datos_ini):
+                    st.success(f"Trabajo iniciado en {m_sel}")
+                    st.rerun()
+            else:
+                st.warning("Complete OP y Trabajo.")
 
-elif menu == "✂️ CORTE":
-    st.header(f"Módulo de Corte ({rol.upper()})")
-    m = selector_maquina(MA_COR, "m_cor")
-    if m:
-        with st.form("f_cor"):
-            st.subheader(f"Cortadora: {m}")
-            c1, c2, c3 = st.columns(3)
-            op, tr, iv = c1.text_input("OP"), c2.text_input("Trabajo"), c3.number_input("Img x Varilla", 0)
-            me, tv, rc = c1.text_input("Medida"), c2.number_input("Total Varillas", 0), c3.number_input("Rollos Cortados", 0)
-            uc, hi, hf = c1.number_input("Unid/Caja", 0), c2.text_input("H. Inicio"), c3.text_input("H. Fin")
-            dk, mo = c1.number_input("Desp. Kg", 0.0), st.text_input("Motivo")
-            if st.form_submit_button("GUARDAR CORTE"):
-                guardar("corte", {"op":op,"maquina":m,"trabajo":tr,"img_varilla":iv,"medida":me,"total_varillas":tv,"rollos_cortados":rc,"unid_caja":uc,"h_inicio":hi,"h_fin":hf,"desp_kg":dk,"motivo":mo, "obs": f"Reg por {rol}"})
+    with col_viv:
+        st.subheader("🕒 Trabajos Activos")
+        if not activos:
+            st.info("No hay máquinas operando en este momento.")
+        
+        for act in activos:
+            # Filtrar para que operarios solo vean sus máquinas, admin ve todo
+            if rol == "administrador" or act['area'] == rol or (rol[:5] == "corte" and act['area'][:5] == "corte"):
+                with st.container(border=True):
+                    c1, c2, c3 = st.columns([2, 1, 1])
+                    c1.markdown(f"**MAQ: {act['maquina']}** | OP: {act['op']}\n\n*{act['trabajo']}*")
+                    c2.caption(f"Inició: {act['hora_inicio'][11:16]}")
+                    
+                    # --- BOTÓN PARADA ---
+                    if c2.button("⚠️ PARADA", key=f"p_{act['id']}"):
+                        st.session_state[f"st_{act['id']}"] = True
 
-elif menu == "📥 COLECTORAS":
-    st.header("Módulo Colectoras")
-    m = selector_maquina(MA_COL, "m_col")
-    if m:
-        with st.form("f_col"):
-            c1, c2, c3 = st.columns(3)
-            op, tr, pa = c1.text_input("OP"), c2.text_input("Trabajo"), c3.text_input("Papel")
-            mf, uc = c1.text_input("Medida Forma"), c2.number_input("Unid/Caja", 0)
-            hi, hf = c1.text_input("H. Inicio"), c2.text_input("H. Fin")
-            tc, tf = c1.number_input("Total Cajas", 0), c2.number_input("Total Formas", 0)
-            dk, mo = c3.number_input("Desp. Kg", 0.0), st.text_input("Motivo")
-            if st.form_submit_button("GUARDAR COLECTORA"):
-                guardar("colectoras", {"op":op,"maquina":m,"trabajo":tr,"papel":pa,"medida_forma":mf,"unid_caja":uc,"h_inicio":hi,"h_fin":hf,"total_cajas":tc,"total_formas":tf,"desp_kg":dk,"motivo":mo})
+                    if st.session_state.get(f"st_{act['id']}"):
+                        with st.form(f"f_p_{act['id']}"):
+                            motivo = st.selectbox("Motivo", ["Mantenimiento", "Falla Mecánica", "Ajuste/Set-up", "Falta de Material", "Limpieza", "Almuerzo"])
+                            if st.form_submit_button("Registrar Parada"):
+                                db_insert("paradas_maquina", {"maquina": act['maquina'], "op": act['op'], "motivo": motivo, "usuario": rol})
+                                st.toast("Parada registrada")
+                                del st.session_state[f"st_{act['id']}"]
 
-elif menu == "📕 ENCUADERNACIÓN":
-    st.header("Módulo Encuadernación")
-    with st.form("f_enc"):
-        c1, c2, c3 = st.columns(3)
-        op, tr, cf = c1.text_input("OP"), c2.text_input("Trabajo"), c3.number_input("Cant. Formas", 0)
-        tm, me, hi = c1.text_input("Material"), c2.text_input("Medida"), c3.text_input("H. Inicio")
-        hf, uc, fi = c1.text_input("H. Fin"), c2.number_input("Unid/Caja", 0), c3.number_input("Cant. Final", 0)
-        tp, dk, mo = c1.text_input("Presentación"), c2.number_input("Desp. Kg", 0.0), c3.text_input("Motivo")
-        if st.form_submit_button("GUARDAR ENCUADERNACIÓN"):
-            guardar("encuadernacion", {"op":op,"trabajo":tr,"cant_formas":cf,"material":tm,"medida":me,"h_inicio":hi,"h_fin":hf,"unid_caja":uc,"cant_final":fi,"presentacion":tp,"desp_kg":dk,"motivo":mo})
+                    # --- BOTÓN FINALIZAR (CHECK-OUT) ---
+                    if c3.button("🏁 FINALIZAR", key=f"f_{act['id']}", type="primary"):
+                        st.session_state[f"fin_{act['id']}"] = True
 
-elif menu == "⏱️ METAS (GAP)":
-    st.header("Registro de Avance por Hora")
-    m = selector_maquina(MA_COR, "m_gap")
-    if m:
-        with st.form("f_gap"):
-            c1, c2 = st.columns(2)
-            op_h = c1.text_input("OP Actual")
-            vh = c2.number_input("Varillas producidas en esta hora", 0)
-            if st.form_submit_button("🚀 REGISTRAR PRODUCCIÓN"):
-                guardar("seguimiento_avance", {"hora":datetime.now().strftime("%H:%M"),"maquina":m,"op":op_h,"varillas_hora":vh})
+                    if st.session_state.get(f"fin_{act['id']}"):
+                        st.divider()
+                        with st.form(f"final_{act['id']}"):
+                            st.write("### Datos Técnicos de Cierre")
+                            
+                            # Cuestionario según área
+                            area_act = act['area']
+                            res_tecnico = {}
+                            
+                            if "impresion" in area_act:
+                                col_a, col_b = st.columns(2)
+                                res_tecnico = {
+                                    "papel": col_a.text_input("Marca Papel"), "ancho": col_b.text_input("Ancho Bobina"),
+                                    "gramaje": col_a.text_input("Gramaje"), "tintas": col_b.number_input("Tintas", 0),
+                                    "medida": col_a.text_input("Medida"), "imagenes": col_b.number_input("Imágenes x Vuelta", 0),
+                                    "metros": st.number_input("Metros Finales", 0)
+                                }
+                            elif "corte" in area_act:
+                                col_a, col_b = st.columns(2)
+                                res_tecnico = {
+                                    "img_varilla": col_a.number_input("Img x Varilla", 0), "medida": col_b.text_input("Medida Final"),
+                                    "total_varillas": col_a.number_input("Total Varillas", 0), "rollos_cortados": col_b.number_input("Rollos Cortados", 0),
+                                    "unid_caja": st.number_input("Unid/Caja", 0)
+                                }
+                            elif "colectoras" in area_act:
+                                col_a, col_b = st.columns(2)
+                                res_tecnico = {
+                                    "papel": col_a.text_input("Papel"), "medida_forma": col_b.text_input("Medida Forma"),
+                                    "unid_caja": col_a.number_input("Unid/Caja", 0), "total_cajas": col_b.number_input("Total Cajas", 0),
+                                    "total_formas": st.number_input("Total Formas", 0)
+                                }
+                            elif "encuadernacion" in area_act:
+                                col_a, col_b = st.columns(2)
+                                res_tecnico = {
+                                    "cant_formas": col_a.number_input("Cant. Formas", 0), "material": col_b.text_input("Tipo Material"),
+                                    "medida": col_a.text_input("Medida"), "unid_caja": col_b.number_input("Unid/Caja", 0),
+                                    "cant_final": st.number_input("Cantidad Final", 0), "presentacion": st.text_input("Presentación")
+                                }
 
-elif menu == "📊 REPORTES":
-    st.header("Centro de Datos - Administrador")
-    t = st.selectbox("Seleccione Tabla:", ["impresion", "corte", "colectoras", "encuadernacion", "seguimiento_avance"])
-    df = leer(t)
+                            # Campos comunes a todos
+                            st.divider()
+                            dk = st.number_input("Desperdicio Total (Kg)", 0.0)
+                            md = st.text_input("Motivo Desperdicio")
+                            ob = st.text_area("Observaciones Finales")
+
+                            if st.form_submit_button("GUARDAR HISTORIAL Y CERRAR OP"):
+                                # 1. Construir registro final
+                                registro = {
+                                    "op": act['op'], "maquina": act['maquina'], "trabajo": act['trabajo'],
+                                    "h_inicio": act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M:%S"),
+                                    "desp_kg": dk, "motivo_desp": md, "obs": ob, **res_tecnico
+                                }
+                                # 2. Insertar en tabla histórica (impresion, corte, etc)
+                                tabla_h = "corte" if "corte" in area_act else area_act
+                                db_insert(tabla_h, registro)
+                                # 3. Borrar de activos
+                                supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
+                                del st.session_state[f"fin_{act['id']}"]
+                                st.rerun()
+
+# --- REPORTES ADMINISTRATIVOS ---
+elif menu == "REPORTES GENERALES":
+    st.header("Consolidado de Planta")
+    tab_rep = st.selectbox("Seleccione Tabla para Exportar:", ["impresion", "corte", "colectoras", "encuadernacion", "paradas_maquina"])
+    
+    res = supabase.table(tab_rep).select("*").order("id", desc=True).execute()
+    df = pd.DataFrame(res.data)
+    
     if not df.empty:
         st.dataframe(df, use_container_width=True)
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 DESCARGAR CSV PARA EXCEL", data=csv, file_name=f"{t}.csv", mime='text/csv', use_container_width=True)
+        st.download_button("📥 DESCARGAR EXCEL (CSV)", data=csv, file_name=f"reporte_{tab_rep}.csv", mime='text/csv')
     else:
-        st.info("Sin registros.")
+        st.warning("No hay datos en esta categoría.")
