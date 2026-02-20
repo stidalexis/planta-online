@@ -1,152 +1,137 @@
 import streamlit as st
 from supabase import create_client
-import pandas as pd
 from datetime import datetime
 
-# --- CONFIGURACIÓN Y CONEXIÓN ---
-# Reemplaza con tus credenciales o usa st.secrets
+# --- CONEXIÓN ---
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-st.set_page_config(layout="wide", page_title="SISTEMA DE PRODUCCIÓN - ENSAYOS")
+st.set_page_config(layout="wide", page_title="CONTROL DE PRODUCCIÓN")
 
-# --- VARIABLES DE CONFIGURACIÓN ---
-MARCAS_PAPEL = ["Bond 75g", "Químico CB", "Químico CFB", "Químico CF", "Cartulina 180g"]
-MAQUINAS_IMP = ["HR-22", "ATF-22", "HR-17", "DID-11"]
-MAQUINAS_CORTE = ["COR-01", "COR-02", "COR-PP-01"]
-MAQUINAS_COL = ["COL-01", "COL-02"]
+# --- ESTILOS DE ALTO IMPACTO ---
+st.markdown("""
+    <style>
+    .stButton > button { height: 75px; font-weight: bold; border-radius: 15px; font-size: 20px; border: 2px solid #0D47A1; transition: 0.3s; }
+    .stButton > button:hover { background-color: #1E88E5; color: white; border: 2px solid #0D47A1; }
+    .card-proceso { padding: 20px; border-radius: 15px; background-color: #E8F5E9; border-left: 10px solid #2E7D32; text-align: center; }
+    .card-parada { padding: 20px; border-radius: 15px; background-color: #FFEBEE; border-left: 10px solid #C62828; text-align: center; }
+    .card-libre { padding: 20px; border-radius: 15px; background-color: #F5F5F5; border-left: 10px solid #9E9E9E; text-align: center; color: #757575; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- FUNCIONES CORE ---
-def cargar_datos(tabla):
-    try:
-        res = supabase.table(tabla).select("*").execute()
-        return pd.DataFrame(res.data)
-    except:
-        return pd.DataFrame()
+# --- CONFIGURACIÓN DE MÁQUINAS ---
+MAQUINAS = {
+    "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
+    "CORTE": ["COR-01", "COR-02", "COR-03", "COR-04", "COR-05", "COR-06", "COR-07", "COR-08", "COR-09", "COR-10", "COR-11", "COR-12", "COR-PP-01", "COR-PP-02"],
+    "COLECTORAS": ["COL-01", "COL-02"],
+    "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)]
+}
 
-def render_maquinas(lista, df_pendientes, prefix):
-    # Simulación simple de tu función visual
-    cols = st.columns(len(lista))
-    for i, m in enumerate(lista):
-        esta_ocupada = not df_pendientes.empty and m in df_pendientes["maquina"].values
-        color = "🟢" if not esta_ocupada else "🔴"
-        if cols[i].button(f"{color} {m}", key=f"btn_{prefix}_{m}"):
-            st.session_state[f"sel_{prefix}"] = m
+def normalizar(texto):
+    reemplazos = {"Í": "I", "Ó": "O", "Á": "A", "É": "E", "Ú": "U"}
+    for t, r in reemplazos.items():
+        texto = texto.replace(t, r)
+    return texto.lower()
 
-# --- LÓGICA DE INTERFAZ ---
-menu = st.sidebar.radio("MENÚ PRODUCCIÓN", ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
-df_paradas = cargar_datos("paradas_emergencia")
+# --- INTERFAZ PRINCIPAL ---
+st.sidebar.title("🏭 PLANTA PRODUCCIÓN")
+area_actual = st.sidebar.radio("SELECCIONE ÁREA:", list(MAQUINAS.keys()))
 
-# 1. MÓDULO IMPRESIÓN
-if menu == "🖨️ Impresión":
-    df_p_imp = cargar_datos("pendientes_imp")
-    render_maquinas(MAQUINAS_IMP, df_p_imp, "imp")
-    maq = st.session_state.get("sel_imp")
-    
-    if maq:
-        st.divider()
-        st.subheader(f"⚙️ Máquina: {maq}")
-        es_p = not df_paradas.empty and maq in df_paradas[df_paradas["estado"]=="Activa"]["maquina"].values
-        actual = df_p_imp[df_p_imp["maquina"] == maq] if not df_p_imp.empty else pd.DataFrame()
+st.title(f"Módulo de Operación: {area_actual}")
+
+# --- MONITOR EN TIEMPO REAL ---
+activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
+paradas = {p['maquina']: p for p in supabase.table("paradas_maquina").select("*").is_("h_fin", "null").execute().data}
+
+n_cols = 5 if area_actual == "ENCUADERNACIÓN" else 4
+cols = st.columns(n_cols)
+
+for i, m in enumerate(MAQUINAS[area_actual]):
+    with cols[i % n_cols]:
+        if m in paradas:
+            st.markdown(f"<div class='card-parada'>🚨 {m}<br><b>DETENIDA</b></div>", unsafe_allow_html=True)
+        elif m in activos:
+            st.markdown(f"<div class='card-proceso'>⚙️ {m}<br><b>OP: {activos[m]['op']}</b></div>", unsafe_allow_html=True)
+        else:
+            st.markdown(f"<div class='card-libre'>⚪ {m}<br>DISPONIBLE</div>", unsafe_allow_html=True)
+
+st.divider()
+
+# --- GESTIÓN TÁCTIL ---
+st.write("### 🔘 Seleccione Máquina para gestionar:")
+c_btn = st.columns(n_cols)
+for i, m_btn in enumerate(MAQUINAS[area_actual]):
+    if c_btn[i % n_cols].button(m_btn, key=f"btn_{m_btn}", use_container_width=True):
+        st.session_state.m_sel = m_btn
+
+if "m_sel" in st.session_state:
+    m = st.session_state.m_sel
+    if m in MAQUINAS[area_actual]:
+        st.subheader(f"🛠️ Panel de Control: {m}")
         
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            if actual.empty and not es_p:
-                with st.form("f_i_i", clear_on_submit=True):
-                    st.write("🟢 Registrar Inicio")
-                    op, tr = st.text_input("OP"), st.text_input("Trabajo")
-                    pa = st.selectbox("Papel", MARCAS_PAPEL)
-                    an, gr = st.text_input("Ancho"), st.text_input("Gramaje")
-                    ti, me, im = st.number_input("Tintas", 0), st.text_input("Medida"), st.number_input("Imágenes", 0)
-                    if st.form_submit_button("REGISTRAR INICIO"):
-                        data = {"op":str(op), "maquina":maq, "hora_i":datetime.now().strftime("%H:%M:%S"), "fecha_i":datetime.now().strftime("%Y-%m-%d"), "nombre_trabajo":tr, "marca_papel":pa, "ancho_bobina":an, "gramaje":gr, "cant_tintas":ti, "medida_rollo":me, "cant_imagenes":im}
-                        supabase.table("pendientes_imp").insert(data).execute()
-                        st.rerun()
-            elif es_p: st.warning("MÁQUINA EN PARADA DE EMERGENCIA")
-            else: st.success(f"OP {actual.iloc[0]['op']} en curso")
+        act = supabase.table("trabajos_activos").select("*").eq("maquina", m).execute().data
+        par = supabase.table("paradas_maquina").select("*").eq("maquina", m).is_("h_fin", "null").execute().data
 
-        with c2:
-            if not actual.empty and not es_p:
-                with st.form("f_i_f"):
-                    st.write("🏁 Registrar Cierre")
-                    m_val, r_val = st.number_input("Metros", 0), st.number_input("Rollos", 0)
-                    pt, pd_ = st.number_input("P. Tinta", 0), st.number_input("P. Desp.", 0)
-                    mo, ob = st.text_input("Motivo"), st.text_area("Observaciones")
-                    if st.form_submit_button("FINALIZAR TRABAJO"):
-                        row = actual.iloc[0]
-                        final = {"op":str(row['op']), "fecha_fin":datetime.now().strftime("%Y-%m-%d"), "maquina":maq, "nombre_trabajo":row['nombre_trabajo'], "marca_papel":row['marca_papel'], "hora_inicio_t":row['hora_i'], "hora_final_t":datetime.now().strftime("%H:%M:%S"), "total_metros":m_val, "rollos_sacar":r_val, "peso_tinta":pt, "peso_desperdicio":pd_, "motivo_desperdicio":mo, "observaciones":ob}
-                        supabase.table("impresion").insert(final).execute()
-                        supabase.table("pendientes_imp").delete().eq("maquina", maq).execute()
-                        st.rerun()
-
-        with c3:
-            if es_p:
-                if st.button("✅ REANUDAR MÁQUINA"):
-                    id_p = df_paradas[(df_paradas["maquina"]==maq) & (df_paradas["estado"]=="Activa")].iloc[0]['id']
-                    supabase.table("paradas_emergencia").update({"estado":"Finalizada"}).eq("id", id_p).execute()
-                    st.rerun()
-            else:
-                with st.form("f_i_p"):
-                    st.write("🚨 Reportar Parada")
-                    mot = st.selectbox("Motivo", ["Falla Mecánica", "Mantenimiento", "Falta Material", "Limpieza"])
-                    if st.form_submit_button("SUSPENDER MÁQUINA"):
-                        supabase.table("paradas_emergencia").insert({"maquina":maq, "fecha":datetime.now().strftime("%Y-%m-%d"), "hora_inicio":datetime.now().strftime("%H:%M:%S"), "motivo":mot, "estado":"Activa"}).execute()
-                        st.rerun()
-
-# 2. MÓDULO CORTE (Resumen de lógica igual a Impresión)
-elif menu == "✂️ Corte":
-    df_p_cor = cargar_datos("pendientes_corte")
-    render_maquinas(MAQUINAS_CORTE, df_p_cor, "cor")
-    maq = st.session_state.get("sel_cor")
-    if maq:
-        st.divider(); st.subheader(f"⚙️ Máquina: {maq}")
-        es_p = not df_paradas.empty and maq in df_paradas[df_paradas["estado"]=="Activa"]["maquina"].values
-        actual = df_p_cor[df_p_cor["maquina"] == maq] if not df_p_cor.empty else pd.DataFrame()
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            if actual.empty and not es_p:
-                with st.form("f_c_i"):
-                    st.write("🟢 Registrar Inicio")
-                    op, tr = st.text_input("OP"), st.text_input("Trabajo")
-                    iv, me = st.number_input("Img/Var", 0), st.text_input("Medida")
-                    if st.form_submit_button("REGISTRAR INICIO"):
-                        supabase.table("pendientes_corte").insert({"op":str(op), "maquina":maq, "hora_i":datetime.now().strftime("%H:%M:%S"), "nombre_trabajo":tr, "imagenes_varilla":iv, "medida_rollo":me}).execute()
-                        st.rerun()
-            elif es_p: st.warning("MÁQUINA EN PARADA")
-            else: st.success(f"OP {actual.iloc[0]['op']} en curso")
-        with c2:
-            if not actual.empty and not es_p:
-                with st.form("f_c_f"):
-                    st.write("🏁 Cierre")
-                    vt, uc = st.number_input("Varillas", 0), st.number_input("Unid/Caja", 0)
-                    if st.form_submit_button("FINALIZAR"):
-                        row = actual.iloc[0]
-                        supabase.table("corte").insert({"op":row['op'], "maquina":maq, "total_varillas":vt, "unidades_por_caja":uc, "hora_inicio_t":row['hora_i'], "hora_final_t":datetime.now().strftime("%H:%M:%S")}).execute()
-                        supabase.table("pendientes_corte").delete().eq("maquina", maq).execute()
-                        st.rerun()
-
-# 3. MÓDULO ENCUADERNACIÓN (Lógica especial de Expander)
-elif menu == "📕 Encuadernación":
-    df_p_enc = cargar_datos("pendientes_enc")
-    st.subheader("📦 Manual / Encuadernación")
-    c1, c2 = st.columns([1, 2])
-    with c1:
-        with st.form("f_e_i"):
-            st.write("🟢 Iniciar OP")
-            op, tr = st.text_input("OP"), st.text_input("Trabajo")
-            cf = st.number_input("Formas", 0)
-            if st.form_submit_button("REGISTRAR INICIO"):
-                supabase.table("pendientes_enc").insert({"op":str(op), "hora_i":datetime.now().strftime("%H:%M:%S"), "nombre_trabajo":tr, "cant_formas":cf}).execute()
+        if par:
+            st.error(f"🚨 Máquina en Parada Técnica")
+            if st.button("✅ FINALIZAR PARADA Y REANUDAR", use_container_width=True):
+                supabase.table("paradas_maquina").update({"h_fin": datetime.now().strftime("%H:%M")}).eq("id", par[0]['id']).execute()
                 st.rerun()
-    with c2:
-        st.write("🏁 Trabajos en Curso")
-        if not df_p_enc.empty:
-            for idx, row in df_p_enc.iterrows():
-                with st.expander(f"OP: {row['op']} - {row['nombre_trabajo']}"):
-                    with st.form(f"f_e_f_{row['op']}"):
-                        cf_final = st.number_input("Cant. Final", 0, key=f"c{idx}")
-                        if st.form_submit_button("CERRAR TRABAJO"):
-                            supabase.table("encuadernacion").insert({"op":row['op'], "nombre_trabajo":row['nombre_trabajo'], "cant_final":cf_final, "hora_inicio_t":row['hora_i'], "hora_final_t":datetime.now().strftime("%H:%M:%S")}).execute()
-                            supabase.table("pendientes_enc").delete().eq("op", row['op']).execute()
+
+        elif not act:
+            with st.form("ini_op"):
+                st.write("🆕 **ABRIR NUEVA ORDEN DE PRODUCCIÓN**")
+                c1, c2 = st.columns(2)
+                op = c1.text_input("Número de OP")
+                tr = c2.text_input("Nombre del Trabajo")
+                if st.form_submit_button("▶️ INICIAR PRODUCCIÓN", use_container_width=True):
+                    if op and tr:
+                        supabase.table("trabajos_activos").insert({"maquina": m, "op": op, "trabajo": tr, "area": area_actual, "hora_inicio": datetime.now().strftime("%H:%M")}).execute()
+                        st.rerun()
+
+        else:
+            datos_act = act[0]
+            st.info(f"Produciendo: **{datos_act['trabajo']}** (OP: {datos_act['op']}) | Inicio: {datos_act['hora_inicio']}")
+            
+            c_par, c_fin = st.columns([1, 2])
+            
+            with c_par:
+                st.warning("⚠️ Registrar Incidencia")
+                motivo = st.selectbox("Motivo:", ["Mantenimiento", "Falla Eléctrica", "Ajuste", "Limpieza", "Almuerzo"])
+                if st.button("🚨 ACTIVAR PARADA"):
+                    supabase.table("paradas_maquina").insert({"maquina": m, "op": datos_act['op'], "motivo": motivo, "h_inicio": datetime.now().strftime("%H:%M")}).execute()
+                    st.rerun()
+
+            with c_fin:
+                st.success("🏁 Finalizar Trabajo")
+                with st.form("form_cierre"):
+                    res = {}
+                    if area_actual == "IMPRESIÓN":
+                        c1, c2, c3 = st.columns(3)
+                        res = {"papel": c1.text_input("Papel"), "ancho": c2.text_input("Ancho"), "gramaje": c3.text_input("Gramaje"), "tintas": c1.number_input("Tintas", 0), "metros": c2.number_input("Metros", 0), "medida": c3.text_input("Medida")}
+                    elif area_actual == "CORTE":
+                        c1, c2 = st.columns(2)
+                        res = {"img_varilla": c1.number_input("Img x Varilla", 0), "medida": c2.text_input("Medida"), "total_varillas": c1.number_input("Total Varillas", 0), "rollos_cortados": c2.number_input("Rollos", 0)}
+                    elif area_actual == "COLECTORAS":
+                        c1, c2 = st.columns(2)
+                        res = {"papel": c1.text_input("Papel"), "medida_forma": c2.text_input("Medida Forma"), "total_cajas": c1.number_input("Total Cajas", 0), "total_formas": c2.number_input("Total Formas", 0)}
+                    elif area_actual == "ENCUADERNACIÓN":
+                        c1, c2 = st.columns(2)
+                        res = {"cant_formas": c1.number_input("Cant. Formas", 0), "material": c2.text_input("Material"), "cant_final": c1.number_input("Cant. Final", 0)}
+
+                    dk = st.number_input("Desperdicio Total (Kg)", 0.0)
+                    
+                    if st.form_submit_button("💾 GUARDAR PRODUCCIÓN Y LIBERAR MÁQUINA", use_container_width=True):
+                        res.update({
+                            "op": datos_act['op'], "maquina": m, "trabajo": datos_act['trabajo'],
+                            "h_inicio": datos_act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M"),
+                            "desp_kg": dk
+                        })
+                        try:
+                            supabase.table(normalizar(area_actual)).insert(res).execute()
+                            supabase.table("trabajos_activos").delete().eq("id", datos_act['id']).execute()
+                            st.success("✅ Datos guardados correctamente")
                             st.rerun()
+                        except Exception as e:
+                            st.error(f"Error en base de datos: {e}")
