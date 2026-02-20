@@ -12,8 +12,8 @@ st.set_page_config(layout="wide", page_title="SISTEMA INTEGRAL DE PRODUCCIÓN", 
 # --- ESTILOS VISUALES ---
 st.markdown("""
     <style>
-    .stButton > button { height: 70px; font-weight: bold; border-radius: 12px; font-size: 18px; border: 2px solid #0D47A1; transition: 0.3s; }
-    .stButton > button:hover { background-color: #1E88E5; color: white; }
+    .stButton > button { height: 75px; font-weight: bold; border-radius: 15px; font-size: 20px; border: 2px solid #0D47A1; transition: 0.3s; }
+    .stButton > button:hover { background-color: #1E88E5; color: white; border: 2px solid #0D47A1; }
     .card-proceso { padding: 15px; border-radius: 10px; background-color: #E8F5E9; border-left: 8px solid #2E7D32; text-align: center; margin-bottom: 10px; }
     .card-parada { padding: 15px; border-radius: 10px; background-color: #FFEBEE; border-left: 8px solid #C62828; text-align: center; margin-bottom: 10px; }
     .card-libre { padding: 15px; border-radius: 10px; background-color: #F5F5F5; border-left: 8px solid #9E9E9E; text-align: center; color: #757575; margin-bottom: 10px; }
@@ -21,7 +21,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- DICCIONARIO DE MÁQUINAS ---
+# --- CONFIGURACIÓN DE MÁQUINAS ---
 MAQUINAS = {
     "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": ["COR-01", "COR-02", "COR-03", "COR-04", "COR-05", "COR-06", "COR-07", "COR-08", "COR-09", "COR-10", "COR-11", "COR-12", "COR-PP-01", "COR-PP-02"],
@@ -42,8 +42,8 @@ try:
 except:
     activos, paradas = {}, {}
 
-# --- NAVEGACIÓN LATERAL ---
-st.sidebar.title("🏭 NAVEGACIÓN")
+# --- NAVEGACIÓN ---
+st.sidebar.title("🏭 PLANTA")
 opciones = ["🖥️ Monitor General", "⏱️ Seguimiento Cortadoras", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]
 seleccion = st.sidebar.radio("Ir a:", opciones)
 
@@ -51,65 +51,77 @@ seleccion = st.sidebar.radio("Ir a:", opciones)
 # 1. MONITOR GENERAL
 # ==========================================
 if seleccion == "🖥️ Monitor General":
-    st.title("🖥️ Estado de Planta en Tiempo Real")
+    st.title("🖥️ Estado Global de Planta")
     for area, lista in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols_mon = st.columns(6)
         for idx, m_mon in enumerate(lista):
             with cols_mon[idx % 6]:
-                if m_mon in paradas:
-                    st.markdown(f"<div class='card-parada'>🚨 {m_mon}<br><small>PARADA</small></div>", unsafe_allow_html=True)
-                elif m_mon in activos:
-                    st.markdown(f"<div class='card-proceso'>⚙️ {m_mon}<br><b>OP: {activos[m_mon]['op']}</b></div>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<div class='card-libre'>⚪ {m_mon}<br><small>LIBRE</small></div>", unsafe_allow_html=True)
+                if m_mon in paradas: st.markdown(f"<div class='card-parada'>🚨 {m_mon}</div>", unsafe_allow_html=True)
+                elif m_mon in activos: st.markdown(f"<div class='card-proceso'>⚙️ {m_mon}<br>OP: {activos[m_mon]['op']}</div>", unsafe_allow_html=True)
+                else: st.markdown(f"<div class='card-libre'>⚪ {m_mon}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. SEGUIMIENTO HORARIO CORTADORAS
+# 2. SEGUIMIENTO HORARIO CORTADORAS (ESTILO TÁCTIL)
 # ==========================================
 elif seleccion == "⏱️ Seguimiento Cortadoras":
-    st.title("⏱️ Seguimiento Horario: Corte")
-    with st.form("form_seg"):
-        st.write("### Registrar avance horario")
-        c1, c2, c3 = st.columns(3)
-        maq_s = c1.selectbox("Máquina Cortadora", MAQUINAS["CORTE"])
-        op_s = c2.text_input("Número de OP")
-        tr_s = c3.text_input("Nombre del Trabajo")
+    st.title("⏱️ Seguimiento Horario de Rendimiento")
+    st.info("Seleccione una máquina para registrar el avance de esta hora.")
+    
+    n_cols = 4
+    cols_s = st.columns(n_cols)
+    for i, m_btn in enumerate(MAQUINAS["CORTE"]):
+        # Color especial si la máquina ya está activa en producción
+        label = f"⚙️ {m_btn}" if m_btn in activos else m_btn
+        if cols_s[i % n_cols].button(label, key=f"seg_{m_btn}", use_container_width=True):
+            st.session_state.m_seg = m_btn
+
+    if "m_seg" in st.session_state:
+        m_s = st.session_state.m_seg
+        st.subheader(f"📋 Registro Horario: {m_s}")
         
-        c4, c5, c6 = st.columns(3)
-        pa_s = c4.text_input("Tipo de Papel")
-        gr_s = c5.text_input("Gramaje")
-        me_s = c6.text_input("Medida de Rollos")
+        # Intentar auto-rellenar datos si la máquina tiene una OP activa
+        datos_previa = activos.get(m_s, {})
         
-        c7, c8, c9 = st.columns(3)
-        var_s = c7.number_input("Número Varillas Actual", 0)
-        caj_s = c8.number_input("Número de Cajas", 0)
-        uni_s = c9.number_input("Unidades por Caja", 0)
-        
-        c10, c11, c12 = st.columns(3)
-        pes_s = c10.number_input("Peso Aprox Rollo (Unidad)", 0.0)
-        des_s = c11.number_input("Desperdicio (Kg)", 0.0)
-        mot_s = c12.text_input("Motivo Desperdicio")
-        
-        if st.form_submit_button("💾 REGISTRAR AVANCE HORARIO", use_container_width=True):
-            data_seg = {
-                "maquina": maq_s, "op": op_s, "nombre_trabajo": tr_s, "tipo_papel": pa_s,
-                "gramaje": gr_s, "medida_rollos": me_s, "n_varillas_actual": var_s,
-                "n_cajas": caj_s, "unidades_por_caja": uni_s, "peso_aprox_rollo": pes_s,
-                "desperidicio_kg": des_s, "motivo_desperdicio": mot_s
-            }
-            supabase.table("seguimiento_corte").insert(data_seg).execute()
-            st.success("✅ Registro horarioguardado con éxito.")
+        with st.form("form_seg_tactil"):
+            c1, c2, c3 = st.columns(3)
+            op_f = c1.text_input("Número de OP", value=datos_previa.get('op', ""))
+            tr_f = c2.text_input("Nombre del Trabajo", value=datos_previa.get('trabajo', ""))
+            pa_f = c3.text_input("Tipo de Papel", value=datos_previa.get('tipo_papel', ""))
+            
+            c4, c5, c6 = st.columns(3)
+            gr_f = c4.text_input("Gramaje", value=datos_previa.get('gramaje', ""))
+            me_f = c5.text_input("Medida de Rollos", value=datos_previa.get('medida_rollos', ""))
+            var_f = c6.number_input("Número Varillas Actual", 0)
+            
+            c7, c8, c9 = st.columns(3)
+            caj_f = c7.number_input("Número de Cajas", 0)
+            uni_f = c8.number_input("Unidades por Caja", value=datos_previa.get('unidades_caja', 0))
+            pes_f = c9.number_input("Peso Aprox Rollo (Unidad)", 0.0)
+            
+            c10, c11 = st.columns(2)
+            des_f = c10.number_input("Desperdicio de esta hora (Kg)", 0.0)
+            mot_f = c11.text_input("Motivo Desperdicio")
+            
+            if st.form_submit_button("💾 GUARDAR REGISTRO HORARIO", use_container_width=True):
+                data_seg = {
+                    "maquina": m_s, "op": op_f, "nombre_trabajo": tr_f, "tipo_papel": pa_f,
+                    "gramaje": gr_f, "medida_rollos": me_f, "n_varillas_actual": var_f,
+                    "n_cajas": caj_f, "unidades_por_caja": uni_f, "peso_aprox_rollo": pes_f,
+                    "desperdicio_kg": des_f, "motivo_desperdicio": mot_f
+                }
+                supabase.table("seguimiento_corte").insert(data_seg).execute()
+                st.success(f"✅ Registro de {m_s} guardado.")
+                # No hacemos rerun forzoso para que el usuario vea el mensaje de éxito
 
 # ==========================================
-# 3. MÓDULOS OPERATIVOS
+# 3. MÓDULOS OPERATIVOS (TRABAJO NORMAL)
 # ==========================================
 else:
     mapa_areas = {"🖨️ Impresión": "IMPRESIÓN", "✂️ Corte": "CORTE", "📥 Colectoras": "COLECTORAS", "📕 Encuadernación": "ENCUADERNACIÓN"}
     area_actual = mapa_areas[seleccion]
     st.title(f"Módulo: {area_actual}")
 
-    # Visualización de botones de máquinas
     n_cols = 5 if area_actual == "ENCUADERNACIÓN" else 4
     cols_v = st.columns(n_cols)
     for i, m_btn in enumerate(MAQUINAS[area_actual]):
@@ -160,20 +172,4 @@ else:
                 if area_actual == "IMPRESIÓN":
                     c1, c2 = st.columns(2); res = {"metros_impresos": c1.number_input("Metros", 0), "bobinas": c2.number_input("Bobinas", 0), "motivo_desperdicio": c1.text_input("Motivo Desp.")}
                 elif area_actual == "CORTE":
-                    c1, c2, c3 = st.columns(3); res = {"cant_varillas": c1.number_input("Varillas", 0), "unidades_caja": c2.number_input("Unidades/Caja", 0), "total_rollos": c3.number_input("Total Rollos", 0), "motivo_desperdicio": c1.text_input("Motivo")}
-                elif area_actual == "COLECTORAS":
-                    c1, c2 = st.columns(2); res = {"total_cajas": c1.number_input("Cant. Cajas", 0), "total_formas": c2.number_input("Total Formas", 0), "motivo_desperdicio": c1.text_input("Motivo")}
-                    res.update({"tipo_papel": act.get('tipo_papel'), "medida_trabajo": act.get('medida_trabajo'), "unidades_caja_inicial": act.get('unidades_caja')})
-                elif area_actual == "ENCUADERNACIÓN":
-                    c1, c2 = st.columns(2); res = {"cant_final": c1.number_input("Cantidad Final", 0), "presentacion": c2.text_input("Presentación"), "motivo_desperdicio": c1.text_input("Motivo")}
-
-                dk, ob = st.number_input("Desperdicio (Kg)", 0.0), st.text_area("Observaciones")
-                if st.form_submit_button("💾 GUARDAR Y FINALIZAR", use_container_width=True):
-                    res.update({"op": act['op'], "maquina": m, "trabajo": act['trabajo'], "h_inicio": act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M"), "desp_kg": dk, "observaciones": ob})
-                    supabase.table(normalizar(area_actual)).insert(res).execute()
-                    supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
-                    st.rerun()
-            
-            if st.button("🚨 ACTIVAR PARADA", use_container_width=True):
-                supabase.table("paradas_maquina").insert({"maquina": m, "op": act['op'], "motivo": "Ajuste Técnico", "h_inicio": datetime.now().strftime("%H:%M")}).execute()
-                st.rerun()
+                    c1, c2, c3 = st.columns(3); res = {"cant_varillas": c1.number_input("Varillas", 0), "unidades_caja": c2.number_input("Unidades/Caja", 0), "total_rollos": c3.number_input("Total Rollos", 0), "motivo_desperdicio": c1
