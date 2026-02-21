@@ -97,7 +97,7 @@ elif seleccion == "📊 Consolidado Total":
             # Cálculo de Peso Teórico (Kg)
             ancho_mm = safe_float(fila.get('ancho_imp', 0))
             ancho_m = ancho_mm / 1000 if ancho_mm > 10 else ancho_mm
-            peso_t = (ancho_m * safe_float(fila.get('metros_impresos', 0)) * safe_float(fila.get('gramaje_imp', 0))) / 1000
+            peso_t = (ancho_m * safe_float(fila.get('metros_impresos', 0)) * safe_float(fila.get('gramaje_imp', 0))) / 100
             
             # Cálculo de Desperdicio Total
             desp_t = safe_float(fila.get('desp_kg_imp', 0)) + safe_float(fila.get('desp_kg_corte', 0))
@@ -287,3 +287,4 @@ else:
                     "h_inicio": datetime.now().strftime("%H:%M")
                 }).execute()
                 st.rerun()
+
