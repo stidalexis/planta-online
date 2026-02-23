@@ -115,33 +115,41 @@ elif opcion == "📊 Consolidado Gerencial":
     with t1:
             st.subheader("Cruce Operativo de Producción con KPIs por OP")
             if not imp.empty:
-                # 1. Preparar datos de Impresión
+                # 1. Preparar datos de Impresión [cite: 4]
                 df_i = imp[['op', 'trabajo', 'maquina', 'h_inicio', 'h_fin', 'metros_impresos', 'desp_kg']].copy()
                 df_i.columns = ['OP', 'TRABAJO', 'MAQ_IMP', 'INI_I', 'FIN_I', 'METROS', 'DESP_I']
                 
-                # 2. Preparar datos de Corte
-                df_c = cor[['op', 'maquina', 'h_inicio', 'h_fin', 'total_rollos', 'desp_kg']].copy() if not cor.empty else pd.DataFrame(columns=['op'])
+                # 2. Preparar datos de Corte [cite: 5]
                 if not cor.empty:
+                    df_c = cor[['op', 'maquina', 'h_inicio', 'h_fin', 'total_rollos', 'desp_kg']].copy()
                     df_c.columns = ['OP', 'MAQ_COR', 'INI_C', 'FIN_C', 'ROLLOS', 'DESP_C']
                 else:
                     df_c = pd.DataFrame(columns=['OP', 'MAQ_COR', 'INI_C', 'FIN_C', 'ROLLOS', 'DESP_C'])
 
-                # 3. Cruzar información
+                # 3. Cruzar información por OP
                 merged = pd.merge(df_i, df_c, on='OP', how='left')
 
-                # --- CÁLCULO DE KPIs POR FILA (OP) ---
-                # KPI 1: Desperdicio Acumulado por OP (Impresión + Corte)
-                merged['KPI_Desp_Total_Kg'] = merged['DESP_I'].fillna(0) + merged['DESP_C'].fillna(0)
+                # --- CÁLCULO DE KPIs INDIVIDUALES POR FILA ---
+                # KPI: Desperdicio Acumulado (Suma de desperdicio en Impresión y Corte para esa OP)
+                merged['KPI_Desp_Total'] = merged['DESP_I'].fillna(0) + merged['DESP_C'].fillna(0)
                 
-                # KPI 2: Rendimiento (Rollos obtenidos por cada metro impreso)
-                merged['KPI_Rollos_x_Metro'] = (merged['ROLLOS'].fillna(0) / merged['METROS']).replace([float('inf'), -float('inf')], 0).round(2)
+                # KPI: Rendimiento de Material (Rollos obtenidos por cada metro lineal impreso)
+                merged['KPI_Eficiencia'] = (merged['ROLLOS'].fillna(0) / merged['METROS']).replace([float('inf'), -float('inf')], 0).round(4)
                 
-                # KPI 3: Estatus de Proceso
-                merged['ESTATUS'] = merged['MAQ_COR'].apply(lambda x: "✅ Finalizado" if pd.notnull(x) else "⏳ Pend. Corte")
+                # KPI: Tiempo de Proceso (Diferencia estimada entre inicio de Impresión y fin de Corte)
+                # (Opcional, basado en las columnas de horas disponibles) 
 
-                # Reordenar para que los KPIs sean visibles al principio o final
-                cols_ordenadas = ['OP', 'ESTATUS', 'TRABAJO', 'KPI_Desp_Total_Kg', 'KPI_Rollos_x_Metro', 'METROS', 'ROLLOS', 'MAQ_IMP', 'MAQ_COR']
-                st.dataframe(merged[cols_ordenadas], use_container_width=True)
+                # 4. Reordenar columnas para que los KPIs aparezcan resaltados al principio
+                columnas_finales = [
+                    'OP', 'TRABAJO', 
+                    'KPI_Desp_Total', 'KPI_Eficiencia', # KPIs por cada fila
+                    'METROS', 'ROLLOS', 
+                    'MAQ_IMP', 'MAQ_COR', 
+                    'FIN_I', 'FIN_C'
+                ]
+                
+                # Mostrar tabla con KPIs integrados
+                st.dataframe(merged[columnas_finales], use_container_width=True)
             else:
                 st.info("No hay datos de impresión para cruzar.")
 
@@ -254,4 +262,5 @@ else:
                         supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
                         st.rerun()
                     except Exception as e: st.error(f"Error: {e}")
+
 
