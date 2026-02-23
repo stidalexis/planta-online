@@ -71,47 +71,49 @@ if opcion == "🖥️ Monitor General":
                 else: st.markdown(f"<div class='card-libre'>⚪ {m}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. CONSOLIDADO GERENCIAL (PRODUCCIÓN & EFICIENCIA)
+# 2. CONSOLIDADO GERENCIAL (VERSION INTEGRAL)
 # ==========================================
 elif opcion == "📊 Consolidado Gerencial":
-    st.title("📊 Reporte de Eficiencia y Tiempos Muertos")
+    st.title("📊 Panel Integral de Control Gerencial")
 
     try:
-        # Carga de datos base [cite: 2, 3, 4, 5, 7, 8]
+        # Carga de datos de todas las tablas
         imp = pd.DataFrame(supabase.table("impresion").select("*").execute().data)
         cor = pd.DataFrame(supabase.table("corte").select("*").execute().data)
         paradas = pd.DataFrame(supabase.table("paradas_maquina").select("*").execute().data)
         col = pd.DataFrame(supabase.table("colectoras").select("*").execute().data)
         enc = pd.DataFrame(supabase.table("encuadernacion").select("*").execute().data)
 
-        # --- SECCIÓN DE MÉTRICAS GLOBALES (KPIs) ---
-        st.subheader("💡 Resumen Ejecutivo")
+        # --- RESUMEN EJECUTIVO (MÉTRICAS RÁPIDAS) ---
+        st.subheader("💡 Indicadores Clave de Desempeño (KPIs)")
         k1, k2, k3, k4 = st.columns(4)
         
+        # Cálculo de Horas de Paro
+        hrs_paro_total = 0.0
         if not paradas.empty:
-            # Calculamos horas totales perdidas 
-            paradas['horas_paro'] = paradas.apply(lambda r: calcular_horas(str(r['h_inicio']), str(r['h_fin'])), axis=1)
-            total_paro = paradas['horas_paro'].sum()
-            k1.metric("Tiempo Muerto Total", f"{total_paro:.2f} Hrs", delta_color="inverse")
-            
-            # Motivo más frecuente 
-            top_motivo = paradas['motivo'].mode()[0] if not paradas['motivo'].empty else "N/A"
-            k2.metric("Principal Causa Paro", top_motivo)
+            paradas['hrs_paro'] = paradas.apply(lambda r: calcular_horas(str(r['h_inicio']), str(r['h_fin'])), axis=1)
+            hrs_paro_total = paradas['hrs_paro'].sum()
+        
+        k1.metric("Tiempo Muerto", f"{hrs_paro_total:.2f} Hrs", delta_color="inverse")
+        k2.metric("Metraje Impreso", f"{imp['metros_impresos'].sum():,.0f} m" if not imp.empty else "0 m")
+        k3.metric("Total Rollos", f"{cor['total_rollos'].sum():,.0f}" if not cor.empty else "0")
+        
+        desp_total = (imp['desp_kg'].sum() if not imp.empty else 0) + (cor['desp_kg'].sum() if not cor.empty else 0)
+        k4.metric("Desperdicio (I+C)", f"{desp_total:.1f} Kg")
 
-        if not imp.empty:
-            total_metros = imp['metros_impresos'].sum()
-            k3.metric("Metraje Total", f"{total_metros:,.0f} m")
-            
-            total_desp = imp['desp_kg'].sum() + (cor['desp_kg'].sum() if not cor.empty else 0)
-            k4.metric("Desperdicio Total", f"{total_desp:.2f} Kg", delta="-5%" if total_desp > 0 else "0%")
-
-        # --- TABS DE ANÁLISIS DETALLADO ---
-        t1, t2, t3 = st.tabs(["🔗 Cruce Operativo", "🚨 Análisis de Paradas", "📈 Rendimiento por Área"])
+        # --- NAVEGACIÓN POR PESTAÑAS (TODO INCLUIDO) ---
+        t1, t2, t3, t4, t5, t6 = st.tabs([
+            "🔗 Cruce Imp-Cor", 
+            "🚨 Paradas", 
+            "🖨️ Impresión", 
+            "✂️ Corte", 
+            "📥 Colectoras", 
+            "📕 Encuadernación"
+        ])
 
         with t1:
-            st.subheader("Seguimiento de OPs (Flujo Impresión -> Corte)")
+            st.subheader("Cruce Operativo de Producción")
             if not imp.empty:
-                # Unimos datos de Impresión y Corte 
                 df_i = imp[['op', 'trabajo', 'maquina', 'h_inicio', 'h_fin', 'metros_impresos', 'desp_kg']].copy()
                 df_i.columns = ['OP', 'TRABAJO', 'MAQ_IMP', 'INI_I', 'FIN_I', 'METROS', 'DESP_I']
                 
@@ -119,35 +121,37 @@ elif opcion == "📊 Consolidado Gerencial":
                 df_c.columns = ['OP', 'MAQ_COR', 'INI_C', 'FIN_C', 'ROLLOS', 'DESP_C'] if not cor.empty else ['OP']
 
                 merged = pd.merge(df_i, df_c, on='OP', how='left')
-                
-                # Cálculo de Lead Time (Tiempo total desde inicio Imp hasta fin Corte) 
-                merged['LEAD_TIME_HRS'] = merged.apply(lambda r: calcular_horas(str(r['INI_I']), str(r.get('FIN_C', r['FIN_I']))), axis=1)
-                
                 st.dataframe(merged, use_container_width=True)
+            else:
+                st.info("No hay datos de impresión para cruzar.")
 
         with t2:
-            st.subheader("Registro de Tiempos Perdidos por Máquina")
+            st.subheader("Análisis de Tiempos Muertos")
             if not paradas.empty:
-                # Tabla de paradas con duración 
-                st.dataframe(paradas[['maquina', 'op', 'motivo', 'h_inicio', 'h_fin', 'horas_paro', 'fecha']], use_container_width=True)
-                
-                # Gráfico rápido de motivos (Streamlit nativo)
-                st.bar_chart(paradas.groupby('motivo')['horas_paro'].sum())
+                st.dataframe(paradas[['maquina', 'op', 'motivo', 'h_inicio', 'h_fin', 'hrs_paro', 'fecha']], use_container_width=True)
+                st.bar_chart(paradas.groupby('motivo')['hrs_paro'].sum())
             else:
-                st.info("No se registran paradas de máquina.")
+                st.info("Sin registros de paradas.")
 
+        # --- CONSOLIDADOS INDIVIDUALES RESTAURADOS ---
         with t3:
-            # Vista simplificada para gerencia de otras áreas [cite: 7, 8]
-            c_col, c_enc = st.columns(2)
-            with c_col:
-                st.write("📥 **Colectoras**")
-                if not col.empty: st.write(f"Cajas totales: {col['total_cajas'].sum()}")
-            with c_enc:
-                st.write("📕 **Encuadernación**")
-                if not enc.empty: st.write(f"Total Formas: {enc['cant_final'].sum()}")
+            st.subheader("Historial Detallado: Impresión")
+            st.dataframe(imp, use_container_width=True) if not imp.empty else st.info("Sin datos")
+
+        with t4:
+            st.subheader("Historial Detallado: Corte")
+            st.dataframe(cor, use_container_width=True) if not cor.empty else st.info("Sin datos")
+
+        with t5:
+            st.subheader("Historial Detallado: Colectoras")
+            st.dataframe(col, use_container_width=True) if not col.empty else st.info("Sin datos")
+
+        with t6:
+            st.subheader("Historial Detallado: Encuadernación")
+            st.dataframe(enc, use_container_width=True) if not enc.empty else st.info("Sin datos")
 
     except Exception as e:
-        st.error(f"Error en consolidado: {e}")
+        st.error(f"Error en el consolidado: {e}")
 
 # ==========================================
 # 3. JOYSTICKS DE ÁREA
@@ -259,5 +263,6 @@ else:
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error de guardado: {e}")
+
 
 
