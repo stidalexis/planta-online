@@ -11,7 +11,7 @@ URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-# --- ESTILOS CSS (ORIGINALES + MEJORAS) ---
+# --- ESTILOS ---
 st.markdown("""
     <style>
     .stButton > button { height: 75px; font-weight: bold; border-radius: 12px; font-size: 16px; border: 2px solid #0D47A1; }
@@ -41,11 +41,11 @@ def normalizar(t):
 # --- SIDEBAR ---
 with st.sidebar:
     st.image("https://cdn-icons-png.flaticon.com/512/2268/2268710.png", width=80)
-    st.title("MENÚ PRINCIPAL")
+    st.title("MENÚ DE CONTROL")
     opcion = st.radio("Ir a:", ["🖥️ Monitor General", "🎮 Joysticks de Áreas", "📊 Consolidado Gerencial"])
 
 # ==========================================
-# 1. MONITOR GENERAL (Igual al Original)
+# 1. MONITOR GENERAL (ORIGINAL)
 # ==========================================
 if opcion == "🖥️ Monitor General":
     st.title("🖥️ Monitor de Planta en Tiempo Real")
@@ -76,130 +76,144 @@ if opcion == "🖥️ Monitor General":
                     st.markdown('<div class="card-libre">✅ DISPONIBLE</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 2. JOYSTICKS DE ÁREAS (RESTAURADO COMPLETO)
+# 2. JOYSTICKS DE ÁREAS (ORIGINAL COMPLETO)
 # ==========================================
 elif opcion == "🎮 Joysticks de Áreas":
-    area_sel = st.selectbox("Seleccione Área:", ["Impresión", "Corte", "Colectoras", "Encuadernación"])
+    area_act = st.selectbox("Seleccione Área:", ["Impresión", "Corte", "Colectoras", "Encuadernación"])
     maqs = {"Impresión": ["M1", "M2", "M3"], "Corte": ["C1", "C2"], "Colectoras": ["COL1"], "Encuadernación": ["ENC1"]}
-    maquina_sel = st.selectbox("Máquina:", maqs[area_sel])
+    maquina_act = st.selectbox("Máquina:", maqs[area_act])
 
-    # Estado actual
-    act = supabase.table("trabajos_activos").select("*").eq("maquina", maquina_sel).execute().data
-    par = supabase.table("paradas_maquina").select("*").eq("maquina", maquina_sel).is_("h_fin", "null").execute().data
+    act = supabase.table("trabajos_activos").select("*").eq("maquina", maquina_act).execute().data
+    par = supabase.table("paradas_maquina").select("*").eq("maquina", maquina_act).is_("h_fin", "null").execute().data
     
     act = act[0] if act else None
     par = par[0] if par else None
 
-    # Lógica de Botones (Tu lógica original)
-    c1, c2, c3 = st.columns(3)
-
-    # BOTÓN INICIAR
+    # Lógica de Inicio (Tu formulario original completo)
     if not act and not par:
-        with c1:
-            if st.button("▶️ INICIAR TRABAJO", use_container_width=True):
-                with st.form("form_inicio"):
-                    st.write("Datos de la OP")
-                    op = st.text_input("Orden de Producción (OP)")
-                    tr = st.text_input("Nombre del Trabajo")
-                    if st.form_submit_button("Confirmar Inicio"):
-                        data = {"maquina": maquina_sel, "op": op, "trabajo": tr, "area": area_sel, "hora_inicio": datetime.now().strftime("%H:%M")}
-                        supabase.table("trabajos_activos").insert(data).execute()
-                        st.rerun()
+        with st.form("form_inicio"):
+            st.subheader(f"🚀 Iniciar en {maquina_act}")
+            c1, c2 = st.columns(2)
+            op = c1.text_input("Orden de Producción (OP)")
+            tr = c2.text_input("Nombre del Trabajo")
+            
+            # Campos originales por área
+            ext = {}
+            if area_act == "Impresión":
+                ext['tipo_papel'] = st.selectbox("Tipo Papel", ["Bond", "Químico", "Térmico"])
+                ext['ancho'] = st.text_input("Ancho (mm)")
+                ext['gramaje'] = st.text_input("Gramaje")
+                ext['medida_trabajo'] = st.text_input("Medida Trabajo")
+            elif area_act == "Corte":
+                ext['img_varilla'] = st.number_input("Imágenes por Varilla", 1)
+                ext['medida_rollos'] = st.text_input("Medida de Rollos")
+                ext['unidades_caja'] = st.number_input("Unidades por Caja", 1)
+            
+            if st.form_submit_button("CONFIRMAR INICIO"):
+                data = {"maquina": maquina_act, "op": op, "trabajo": tr, "area": area_act, "hora_inicio": datetime.now().strftime("%H:%M")}
+                data.update(ext)
+                supabase.table("trabajos_activos").insert(data).execute()
+                st.rerun()
 
-    # BOTÓN PARADA
+    # Lógica de Parada
     if act and not par:
-        with c2:
-            if st.button("⚠️ REGISTRAR PARADA", use_container_width=True):
-                motivo = st.selectbox("Motivo:", ["Mecánico", "Eléctrico", "Falta Material", "Cambio de Trabajo"])
-                if st.button("Confirmar Parada"):
-                    supabase.table("paradas_maquina").insert({
-                        "maquina": maquina_sel, "op": act['op'], "motivo": motivo, 
-                        "h_inicio": datetime.now().strftime("%H:%M")
-                    }).execute()
-                    st.rerun()
+        if st.button("🚨 REGISTRAR PARADA", use_container_width=True):
+            mot = st.selectbox("Motivo:", ["Mecánico", "Cambio Color", "Falta Material", "Ajuste"])
+            if st.button("Confirmar Parada"):
+                supabase.table("paradas_maquina").insert({"maquina": maquina_act, "op": act['op'], "motivo": mot, "h_inicio": datetime.now().strftime("%H:%M")}).execute()
+                st.rerun()
 
-    # BOTÓN FINALIZAR
+    # Lógica de Finalización (Tu lógica original de inserción)
     if act and not par:
-        with c3:
-            if st.button("🏁 FINALIZAR TRABAJO", use_container_width=True):
-                st.subheader("Reporte Final de Producción")
-                with st.form("form_final"):
-                    dk = st.number_input("Desperdicio (Kg)", min_value=0.0)
-                    mot = st.text_input("Motivo Desperdicio")
-                    obs = st.text_area("Observaciones")
-                    
-                    # Campos específicos según área
-                    res_extra = {}
-                    if area_sel == "Impresión":
-                        res_extra['metros_impresos'] = st.number_input("Metros Impresos", min_value=0)
-                    elif area_sel == "Corte":
-                        res_extra['total_rollos'] = st.number_input("Total Rollos", min_value=0)
+        with st.form("form_final"):
+            st.subheader("🏁 Finalizar y Reportar")
+            dk = st.number_input("Desperdicio (Kg)", 0.0)
+            mot = st.text_input("Motivo Desperdicio")
+            obs = st.text_area("Observaciones")
+            
+            res = {}
+            if area_act == "Impresión":
+                res['metros_impresos'] = st.number_input("Metros Impresos", 0)
+                res['bobinas'] = st.number_input("Bobinas", 0)
+            elif area_act == "Corte":
+                res['total_rollos'] = st.number_input("Total Rollos", 0)
+                res['cant_varillas'] = st.number_input("Varillas", 0)
 
-                    if st.form_submit_button("Guardar y Cerrar"):
-                        final_data = {
-                            "op": act['op'], "maquina": maquina_sel, "trabajo": act['trabajo'],
-                            "h_inicio": act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M"),
-                            "desp_kg": dk, "motivo_desperdicio": mot, "observaciones": obs
-                        }
-                        final_data.update(res_extra)
-                        supabase.table(normalizar(area_sel)).insert(final_data).execute()
-                        supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
-                        st.success("Trabajo Guardado!")
-                        st.rerun()
+            if st.form_submit_button("GUARDAR EN HISTORIAL"):
+                final_data = {
+                    "op": act['op'], "maquina": maquina_act, "trabajo": act['trabajo'],
+                    "h_inicio": act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M"),
+                    "desp_kg": dk, "motivo_desperdicio": mot, "observaciones": obs
+                }
+                final_data.update(res)
+                
+                # Mapeo de columnas adicionales originales
+                nom_t = normalizar(area_act)
+                supabase.table(nom_t).insert(final_data).execute()
+                supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
+                st.success("¡Datos guardados!")
+                st.rerun()
 
     if par:
-        if st.button("✅ REANUDAR TRABAJO"):
+        if st.button("✅ REANUDAR"):
             supabase.table("paradas_maquina").update({"h_fin": datetime.now().strftime("%H:%M")}).eq("id", par['id']).execute()
             st.rerun()
 
 # ==========================================
-# 3. CONSOLIDADO GERENCIAL (NUEVA VERSIÓN)
+# 3. CONSOLIDADO GERENCIAL (CAMBIOS ACORDADOS)
 # ==========================================
 elif opcion == "📊 Consolidado Gerencial":
-    st.title("📊 Reporte Gerencial de Producción")
+    st.title("📊 Reporte de Inteligencia de Planta")
     
     try:
-        # Carga de datos
+        # Carga masiva para reportes
         imp = pd.DataFrame(supabase.table("impresion").select("*").execute().data)
         cor = pd.DataFrame(supabase.table("corte").select("*").execute().data)
         par = pd.DataFrame(supabase.table("paradas_maquina").select("*").execute().data)
         col = pd.DataFrame(supabase.table("colectoras").select("*").execute().data)
         enc = pd.DataFrame(supabase.table("encuadernacion").select("*").execute().data)
 
-        # KPIs
-        k1, k2, k3 = st.columns(3)
-        k1.metric("Metros Totales", f"{imp['metros_impresos'].sum():,.0f} m" if not imp.empty else "0")
-        k2.metric("Rollos Producidos", f"{cor['total_rollos'].sum():,.0f}" if not cor.empty else "0")
-        k3.metric("Desperdicio Total", f"{(imp['desp_kg'].sum() if not imp.empty else 0) + (cor['desp_kg'].sum() if not cor.empty else 0):.1f} Kg")
+        # Métrica de Tiempo Muerto (Calculado)
+        hrs_paro = 0.0
+        if not par.empty:
+            par['duracion'] = par.apply(lambda r: calcular_horas(r['h_inicio'], r['h_fin'] if r['h_fin'] else datetime.now().strftime("%H:%M")), axis=1)
+            hrs_paro = par['duracion'].sum()
 
-        t1, t2, t3, t4, t5, t6 = st.tabs(["🔗 Cruce Imp-Cor", "🚨 Paradas", "🖨️ Imp", "✂️ Cor", "📥 Col", "📕 Enc"])
+        # KPIs superiores
+        k1, k2, k3, k4 = st.columns(4)
+        k1.metric("Tiempo Muerto", f"{hrs_paro:.2f} Hrs")
+        k2.metric("Producción Imp", f"{imp['metros_impresos'].sum():,.0f} m" if not imp.empty else "0")
+        k3.metric("Producción Corte", f"{cor['total_rollos'].sum():,.0f} rollos" if not cor.empty else "0")
+        k4.metric("Desperdicio", f"{(imp['desp_kg'].sum() if not imp.empty else 0) + (cor['desp_kg'].sum() if not cor.empty else 0):.1f} Kg")
 
-        with t1:
+        tabs = st.tabs(["🔗 Cruce Imp-Cor", "🚨 Paradas", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
+
+        with tabs[0]:
+            st.subheader("Eficiencia Cruzada")
             if not imp.empty and not cor.empty:
-                merged = pd.merge(imp[['op','trabajo','metros_impresos']], cor[['op','total_rollos','desp_kg']], on='op', how='left')
-                st.dataframe(merged, use_container_width=True)
-            else: st.info("Datos insuficientes para cruce")
+                df_cruce = pd.merge(imp[['op','trabajo','metros_impresos','desp_kg']], cor[['op','total_rollos','desp_kg']], on='op', suffixes=('_Imp', '_Cor'), how='left')
+                st.dataframe(df_cruce, use_container_width=True)
+            else: st.info("Faltan datos para realizar el cruce.")
 
-        with t2:
+        with tabs[1]:
+            st.subheader("Detalle de Paradas")
             if not par.empty:
-                par['hrs'] = par.apply(lambda r: calcular_horas(r['h_inicio'], r['h_fin'] if r['h_fin'] else "00:00"), axis=1)
-                st.dataframe(par, use_container_width=True)
-                st.bar_chart(par.groupby('motivo')['hrs'].sum())
-            else: st.info("Sin paradas")
+                st.dataframe(par[['fecha','maquina','op','motivo','h_inicio','h_fin','duracion']], use_container_width=True)
+                st.bar_chart(par.groupby('motivo')['duracion'].sum())
 
-        # Pestañas individuales sin el error de DeltaGenerator
-        with t3: 
-            if not imp.empty: st.dataframe(imp, use_container_width=True)
-            else: st.info("Vacío")
-        with t4:
-            if not cor.empty: st.dataframe(cor, use_container_width=True)
-            else: st.info("Vacío")
-        with t5:
-            if not col.empty: st.dataframe(col, use_container_width=True)
-            else: st.info("Vacío")
-        with t6:
-            if not enc.empty: st.dataframe(enc, use_container_width=True)
-            else: st.info("Vacío")
+        # Pestañas individuales protegidas contra el error DeltaGenerator
+        with tabs[2]:
+             if not imp.empty: st.dataframe(imp, use_container_width=True)
+             else: st.info("Sin registros.")
+        with tabs[3]:
+             if not cor.empty: st.dataframe(cor, use_container_width=True)
+             else: st.info("Sin registros.")
+        with tabs[4]:
+             if not col.empty: st.dataframe(col, use_container_width=True)
+             else: st.info("Sin registros.")
+        with tabs[5]:
+             if not enc.empty: st.dataframe(enc, use_container_width=True)
+             else: st.info("Sin registros.")
 
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Error en consolidado: {e}")
