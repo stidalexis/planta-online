@@ -71,34 +71,84 @@ if opcion == "🖥️ Monitor General":
                 else: st.markdown(f"<div class='card-libre'>⚪ {m}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. CONSOLIDADO GERENCIAL (HORIZONTAL)
+# 2. CONSOLIDADO GERENCIAL (EN EDICIÓN)
 # ==========================================
 elif opcion == "📊 Consolidado Gerencial":
-    st.title("📊 Seguimiento de OPs por Áreas")
-    
-    imp = pd.DataFrame(supabase.table("impresion").select("*").execute().data)
-    cor = pd.DataFrame(supabase.table("corte").select("*").execute().data)
-    
-    if not imp.empty:
-        df = imp[['op', 'maquina', 'h_inicio', 'h_fin', 'ancho', 'gramaje', 'metros_impresos', 'desp_kg']].copy()
-        df.columns = ['OP', 'MAQ_IMP', 'INI_IMP', 'FIN_IMP', 'ANCHO', 'GRAM', 'METROS', 'DESP_IMP']
-        
-        # Cálculos de Impresión
-        df['HRS_IMP'] = df.apply(lambda r: calcular_horas(r['INI_IMP'], r['FIN_IMP']), axis=1)
-        df['PESO_KG'] = df.apply(lambda r: round(((safe_float(r['ANCHO'])/1000) * safe_float(r['METROS']) * safe_float(r['GRAM']))/100, 2), axis=1)
+    st.title("📊 Panel de Control y Seguimiento")
 
-        if not cor.empty:
-            cor_sub = cor[['op', 'maquina', 'h_inicio', 'h_fin', 'total_rollos', 'desp_kg']].copy()
-            cor_sub.columns = ['OP', 'MAQ_COR', 'INI_COR', 'FIN_COR', 'ROLLOS', 'DESP_COR']
-            df = pd.merge(df, cor_sub, on='OP', how='left')
-            df['HRS_COR'] = df.apply(lambda r: calcular_horas(str(r.get('INI_COR','')), str(r.get('FIN_COR',''))), axis=1)
-            df['DESP_TOTAL'] = df.apply(lambda r: safe_float(r['DESP_IMP']) + safe_float(r.get('DESP_COR', 0)), axis=1)
-            df['%_DESP'] = df.apply(lambda r: f"{round((r['DESP_TOTAL']/r['PESO_KG']*100),1)}%" if r['PESO_KG']>0 else "0%", axis=1)
-        
-        cols_viz = ['OP', 'MAQ_IMP', 'MAQ_COR', 'HRS_IMP', 'HRS_COR', 'PESO_KG', 'METROS', 'ROLLOS', 'DESP_TOTAL', '%_DESP']
-        st.dataframe(df[cols_viz], use_container_width=True)
-    else:
-        st.info("Sin datos para mostrar.")
+    # Extracción de datos con manejo de errores
+    try:
+        imp = pd.DataFrame(supabase.table("impresion").select("*").execute().data)
+        cor = pd.DataFrame(supabase.table("corte").select("*").execute().data)
+        col = pd.DataFrame(supabase.table("colectoras").select("*").execute().data)
+        enc = pd.DataFrame(supabase.table("encuadernacion").select("*").execute().data)
+
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            "🔗 Cruce Imp-Corte", 
+            "🖨️ Solo Impresión", 
+            "✂️ Solo Corte", 
+            "📥 Colectoras", 
+            "📕 Encuadernación"
+        ])
+
+        # --- PESTAÑA 1: CONSOLIDADO CRUZADO ENRIQUECIDO ---
+        with tab1:
+            st.subheader("Seguimiento Producción: Impresión + Corte")
+            if not imp.empty and not cor.empty:
+                # Preparar Impresión
+                df_i = imp[['op', 'maquina', 'trabajo', 'h_inicio', 'h_fin', 'ancho', 'gramaje', 'metros_impresos', 'desp_kg', 'motivo_desperdicio']].copy()
+                df_i.columns = ['OP', 'MAQ_IMP', 'TRABAJO', 'INI_IMP', 'FIN_IMP', 'ANCHO', 'GRAM', 'METROS', 'DESP_IMP', 'MOTIVO_IMP']
+                
+                # Preparar Corte
+                df_c = cor[['op', 'maquina', 'h_inicio', 'h_fin', 'total_rollos', 'cant_varillas', 'unidades_caja', 'desp_kg', 'motivo_desperdicio']].copy()
+                df_c.columns = ['OP', 'MAQ_COR', 'INI_COR', 'FIN_COR', 'ROLLOS', 'VARILLAS', 'UND_CAJA', 'DESP_COR', 'MOTIVO_COR']
+
+                # Mezcla (Merge)
+                merged = pd.merge(df_i, df_c, on='OP', how='left')
+                
+                # Cálculos adicionales para las filas
+                merged['PESO_EST'] = merged.apply(lambda r: round(((safe_float(r['ANCHO'])/1000) * safe_float(r['METROS']) * safe_float(r['GRAM']))/100, 2), axis=1)
+                merged['DESP_TOT'] = merged.apply(lambda r: safe_float(r['DESP_IMP']) + safe_float(r.get('DESP_COR', 0)), axis=1)
+                
+                # Mostrar tabla con más columnas
+                st.dataframe(merged, use_container_width=True)
+            else:
+                st.warning("Se requieren datos en Impresión y Corte para el cruce.")
+
+        # --- PESTAÑA 2: SOLO IMPRESIÓN ---
+        with tab2:
+            st.subheader("Historial de Impresión")
+            if not imp.empty:
+                st.dataframe(imp, use_container_width=True)
+                st.metric("Total Metros", f"{imp['metros_impresos'].sum():,.0f} m")
+            else: st.info("Sin datos")
+
+        # --- PESTAÑA 3: SOLO CORTE ---
+        with tab3:
+            st.subheader("Historial de Corte")
+            if not cor.empty:
+                st.dataframe(cor, use_container_width=True)
+                st.metric("Total Rollos", f"{cor['total_rollos'].sum():,.0f}")
+            else: st.info("Sin datos")
+
+        # --- PESTAÑA 4: COLECTORAS ---
+        with tab4:
+            st.subheader("Historial de Colectoras")
+            if not col.empty:
+                st.dataframe(col, use_container_width=True)
+                st.metric("Total Formas", f"{col['total_formas'].sum():,.0f}")
+            else: st.info("Sin datos")
+
+        # --- PESTAÑA 5: ENCUADERNACIÓN ---
+        with tab5:
+            st.subheader("Historial de Encuadernación")
+            if not enc.empty:
+                st.dataframe(enc, use_container_width=True)
+                st.metric("Cant. Final", f"{enc['cant_final'].sum():,.0f}")
+            else: st.info("Sin datos")
+
+    except Exception as e:
+        st.error(f"Error cargando consolidados: {e}")
 
 # ==========================================
 # 3. JOYSTICKS DE ÁREA
@@ -210,3 +260,4 @@ else:
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error de guardado: {e}")
+
