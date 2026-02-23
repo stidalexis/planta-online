@@ -43,11 +43,19 @@ def safe_float(valor):
     except: return 0.0
 
 def calcular_horas(inicio, fin):
+    if not inicio or not fin or fin == "None": return 0.0
     try:
         t_ini = datetime.strptime(inicio, "%H:%M")
         t_fin = datetime.strptime(fin, "%H:%M")
         return round((t_fin - t_ini).total_seconds() / 3600, 2)
     except: return 0.0
+
+def obtener_datos_seguros(tabla):
+    try:
+        res = supabase.table(tabla).select("*").execute()
+        return pd.DataFrame(res.data) if res.data else pd.DataFrame()
+    except:
+        return pd.DataFrame()
 
 # --- NAVEGACIÓN ---
 st.sidebar.title("🏭 MENÚ PRINCIPAL")
@@ -71,87 +79,57 @@ if opcion == "🖥️ Monitor General":
                 else: st.markdown(f"<div class='card-libre'>⚪ {m}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. CONSOLIDADO GERENCIAL (VERSION INTEGRAL)
+# 2. CONSOLIDADO GERENCIAL
 # ==========================================
 elif opcion == "📊 Consolidado Gerencial":
     st.title("📊 Panel Integral de Control Gerencial")
 
-    try:
-        # Carga de datos de todas las tablas [cite: 3, 4, 5, 7, 8]
-        imp = pd.DataFrame(supabase.table("impresion").select("*").execute().data)
-        cor = pd.DataFrame(supabase.table("corte").select("*").execute().data)
-        paradas = pd.DataFrame(supabase.table("paradas_maquina").select("*").execute().data)
-        col = pd.DataFrame(supabase.table("colectoras").select("*").execute().data)
-        enc = pd.DataFrame(supabase.table("encuadernacion").select("*").execute().data)
+    # Carga segura de datos
+    imp = obtener_datos_seguros("impresion")
+    cor = obtener_datos_seguros("corte")
+    paradas = obtener_datos_seguros("paradas_maquina")
+    col = obtener_datos_seguros("colectoras")
+    enc = obtener_datos_seguros("encuadernacion")
 
-        # --- RESUMEN EJECUTIVO (MÉTRICAS RÁPIDAS) ---
-        st.subheader("💡 Indicadores Clave de Desempeño (KPIs)")
-        k1, k2, k3, k4 = st.columns(4)
-        
-        # Cálculo de Horas de Paro 
-        hrs_paro_total = 0.0
+    # --- KPIs ---
+    st.subheader("💡 Indicadores Clave (KPIs)")
+    k1, k2, k3, k4 = st.columns(4)
+    
+    h_paro = 0.0
+    if not paradas.empty and 'h_fin' in paradas.columns:
+        p_fin = paradas.dropna(subset=['h_fin'])
+        h_paro = p_fin.apply(lambda r: calcular_horas(r['h_inicio'], r['h_fin']), axis=1).sum()
+    
+    m_imp = imp['metros_impresos'].sum() if not imp.empty else 0
+    t_rollos = cor['total_rollos'].sum() if not cor.empty else 0
+    d_total = (imp['desp_kg'].sum() if not imp.empty else 0) + (cor['desp_kg'].sum() if not cor.empty else 0)
+
+    k1.metric("Tiempo Muerto", f"{h_paro:.2f} Hrs")
+    k2.metric("Metraje Impreso", f"{m_imp:,.0f} m")
+    k3.metric("Total Rollos", f"{t_rollos:,.0f}")
+    k4.metric("Desperdicio (I+C)", f"{d_total:.1f} Kg")
+
+    t1, t2, t3, t4, t5, t6 = st.tabs(["🔗 Cruce", "🚨 Paradas", "🖨️ Imp", "✂️ Corte", "📥 Col", "📕 Enc"])
+
+    with t1:
+        if not imp.empty and not cor.empty:
+            merged = pd.merge(imp[['op', 'trabajo', 'maquina', 'metros_impresos']], 
+                              cor[['op', 'maquina', 'total_rollos']], on='op', how='left', suffixes=('_I', '_C'))
+            st.dataframe(merged, use_container_width=True)
+        else: st.info("Datos insuficientes para cruce")
+
+    with t2:
         if not paradas.empty:
-            paradas['hrs_paro'] = paradas.apply(lambda r: calcular_horas(str(r['h_inicio']), str(r['h_fin'])), axis=1)
-            hrs_paro_total = paradas['hrs_paro'].sum()
-        
-        k1.metric("Tiempo Muerto", f"{hrs_paro_total:.2f} Hrs", delta_color="inverse")
-        k2.metric("Metraje Impreso", f"{imp['metros_impresos'].sum():,.0f} m" if not imp.empty else "0 m")
-        k3.metric("Total Rollos", f"{cor['total_rollos'].sum():,.0f}" if not cor.empty else "0")
-        
-        desp_total = (imp['desp_kg'].sum() if not imp.empty else 0) + (cor['desp_kg'].sum() if not cor.empty else 0)
-        k4.metric("Desperdicio (I+C)", f"{desp_total:.1f} Kg")
+            paradas['hrs'] = paradas.apply(lambda r: calcular_horas(r['h_inicio'], r['h_fin']), axis=1)
+            st.dataframe(paradas, use_container_width=True)
+            st.bar_chart(paradas.groupby('motivo')['hrs'].sum())
+        else: st.info("Sin paradas")
 
-        # --- NAVEGACIÓN POR PESTAÑAS (TODO INCLUIDO) ---
-        t1, t2, t3, t4, t5, t6 = st.tabs([
-            "🔗 Cruce Imp-Cor", 
-            "🚨 Paradas", 
-            "🖨️ Impresión", 
-            "✂️ Corte", 
-            "📥 Colectoras", 
-            "📕 Encuadernación"
-        ])
+    with t3: st.dataframe(imp, use_container_width=True) if not imp.empty else st.info("Sin datos")
+    with t4: st.dataframe(cor, use_container_width=True) if not cor.empty else st.info("Sin datos")
+    with t5: st.dataframe(col, use_container_width=True) if not col.empty else st.info("Sin datos")
+    with t6: st.dataframe(enc, use_container_width=True) if not enc.empty else st.info("Sin datos")
 
-        with t1:
-            st.subheader("Cruce Operativo de Producción")
-            if not imp.empty:
-                df_i = imp[['op', 'trabajo', 'maquina', 'h_inicio', 'h_fin', 'metros_impresos', 'desp_kg']].copy()
-                df_i.columns = ['OP', 'TRABAJO', 'MAQ_IMP', 'INI_I', 'FIN_I', 'METROS', 'DESP_I']
-                
-                df_c = cor[['op', 'maquina', 'h_inicio', 'h_fin', 'total_rollos', 'desp_kg']].copy() if not cor.empty else pd.DataFrame(columns=['op'])
-                df_c.columns = ['OP', 'MAQ_COR', 'INI_C', 'FIN_C', 'ROLLOS', 'DESP_C'] if not cor.empty else ['OP']
-
-                merged = pd.merge(df_i, df_c, on='OP', how='left')
-                st.dataframe(merged, use_container_width=True)
-            else:
-                st.info("No hay datos de impresión para cruzar.")
-
-        with t2:
-            st.subheader("Análisis de Tiempos Muertos")
-            if not paradas.empty:
-                st.dataframe(paradas[['maquina', 'op', 'motivo', 'h_inicio', 'h_fin', 'hrs_paro', 'fecha']], use_container_width=True)
-                st.bar_chart(paradas.groupby('motivo')['hrs_paro'].sum())
-            else:
-                st.info("Sin registros de paradas.")
-
-        # --- CONSOLIDADOS INDIVIDUALES RESTAURADOS ---
-        with t3:
-            st.subheader("Historial Detallado: Impresión")
-            st.dataframe(imp, use_container_width=True) if not imp.empty else st.info("Sin datos")
-
-        with t4:
-            st.subheader("Historial Detallado: Corte")
-            st.dataframe(cor, use_container_width=True) if not cor.empty else st.info("Sin datos")
-
-        with t5:
-            st.subheader("Historial Detallado: Colectoras")
-            st.dataframe(col, use_container_width=True) if not col.empty else st.info("Sin datos")
-
-        with t6:
-            st.subheader("Historial Detallado: Encuadernación")
-            st.dataframe(enc, use_container_width=True) if not enc.empty else st.info("Sin datos")
-
-    except Exception as e:
-        st.error(f"Error en el consolidado: {e}")
 # ==========================================
 # 3. JOYSTICKS DE ÁREA
 # ==========================================
@@ -163,7 +141,6 @@ else:
     activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
     paradas = {p['maquina']: p for p in supabase.table("paradas_maquina").select("*").is_("h_fin", "null").execute().data}
 
-    # SELECCIÓN VISUAL POR BOTONES
     cols_m = st.columns(4)
     for i, m_btn in enumerate(MAQUINAS[area_act]):
         label = m_btn
@@ -234,6 +211,7 @@ else:
                 obs = st.text_input("Observaciones")
 
                 if st.form_submit_button("🏁 FINALIZAR"):
+                    nom_t = normalizar(area_act)
                     final_data = {
                         "op": act['op'], "maquina": m, "trabajo": act['trabajo'],
                         "h_inicio": act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M"),
@@ -241,24 +219,14 @@ else:
                     }
                     final_data.update(res)
                     
-                    # --- FILTRADO DE COLUMNAS PARA EVITAR PGRST204 ---
-                    nom_t = normalizar(area_act)
-                    # Campos permitidos por tabla
-                    cols_permitidas = {
-                        "impresion": ["tipo_papel", "ancho", "gramaje", "medida_trabajo"],
-                        "corte": ["tipo_papel", "ancho", "gramaje", "img_varilla", "medida_rollos", "unidades_caja"],
-                        "colectoras": ["tipo_papel", "medida_trabajo", "unidades_caja"],
-                        "encuadernacion": ["formas_totales", "material", "medida"]
-                    }
-
-                    for col in cols_permitidas.get(nom_t, []):
-                        if col in act and act[col] is not None:
-                            if col in ["ancho", "gramaje"]: final_data[col] = safe_float(act[col])
-                            else: final_data[col] = act[col]
+                    # Pasar datos del inicio al historial
+                    campos_inicio = ["tipo_papel", "ancho", "gramaje", "medida_trabajo", "unidades_caja", "img_varilla", "medida_rollos", "formas_totales", "material", "medida"]
+                    for c in campos_inicio:
+                        if c in act: final_data[c] = act[c]
 
                     try:
                         supabase.table(nom_t).insert(final_data).execute()
                         supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
                         st.rerun()
                     except Exception as e:
-                        st.error(f"Error de guardado: {e}")
+                        st.error(f"Error: {e}")
