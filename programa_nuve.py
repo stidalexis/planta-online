@@ -11,7 +11,7 @@ URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-# --- ESTILOS (TU DISEÑO ORIGINAL v6) ---
+# --- ESTILOS ---
 st.markdown("""
     <style>
     .stButton > button { height: 75px; font-weight: bold; border-radius: 12px; font-size: 18px; border: 2px solid #0D47A1; }
@@ -51,54 +51,40 @@ seleccion = st.sidebar.radio("Ir a:", opciones)
 # ==========================================
 if seleccion == "🖥️ Monitor":
     st.title("🖥️ Estatus General")
-    act_data = supabase.table("trabajos_activos").select("*").execute().data
-    act_dict = {a['maquina']: a for a in act_data} if act_data else {}
-    
+    act_res = supabase.table("trabajos_activos").select("*").execute().data
+    act_dict = {a['maquina']: a for a in act_res} if act_res else {}
     for area, lista in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(6)
         for i, m in enumerate(lista):
             with cols[i % 6]:
-                if m in act_dict:
-                    st.markdown(f"<div class='card-proceso'>⚙️ {m}<br>OP: {act_dict[m]['op']}</div>", unsafe_allow_html=True)
-                else:
-                    st.markdown(f"<div class='card-libre'>⚪ {m}</div>", unsafe_allow_html=True)
+                if m in act_dict: st.markdown(f"<div class='card-proceso'>⚙️ {m}<br>OP: {act_dict[m]['op']}</div>", unsafe_allow_html=True)
+                else: st.markdown(f"<div class='card-libre'>⚪ {m}</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. CONSOLIDADO GERENCIAL (TODAS LAS VENTANAS)
+# 2. CONSOLIDADO GERENCIAL
 # ==========================================
 elif seleccion == "📊 Consolidado Gerencial":
-    st.title("📊 Consolidado de Producción")
-    
-    # Consultas de todas las áreas
+    st.title("📊 Consolidado")
     imp = supabase.table("impresion").select("*").execute().data
     cor = supabase.table("corte").select("*").execute().data
     col = supabase.table("colectoras").select("*").execute().data
     enc = supabase.table("encuadernacion").select("*").execute().data
     par = supabase.table("paradas_maquina").select("*").execute().data
 
-    tabs = st.tabs(["Fila Maestra (OP)", "Corte", "Impresión", "Colectoras", "Encuadernación", "Paradas"])
-    
-    with tabs[0]: # Fila Maestra con tu cálculo solicitado
+    tabs = st.tabs(["Fila Maestra (Análisis)", "Corte", "Impresión", "Colectoras", "Encuadernación", "Paradas"])
+    with tabs[0]:
         if imp and cor:
             df_i, df_c = pd.DataFrame(imp), pd.DataFrame(cor)
             df_m = pd.merge(df_c, df_i, on="op", how="inner", suffixes=('_cor', '_imp'))
             analisis = []
             for _, f in df_m.iterrows():
-                anch = safe_float(f['ancho_imp'])
+                anch = safe_float(f.get('ancho', 0))
                 anch_m = anch/1000 if anch > 10 else anch
-                k_bruto = (anch_m * safe_float(f['metros_impresos']) * safe_float(f['gramaje_imp'])) / 1000
-                merma = safe_float(f['desp_kg_imp']) + safe_float(f['desp_kg_cor'])
-                k_neto = k_bruto - merma
-                analisis.append({
-                    "OP": f['op'], "Trabajo": f['trabajo_imp'], "K. Bruto": round(k_bruto,2),
-                    "Merma": round(merma,2), "K. Neto": round(k_neto,2),
-                    "Eficiencia": f"{round((k_neto/k_bruto*100),1) if k_bruto>0 else 0}%",
-                    "Obs. Imp": f.get('observaciones_imp',''), "Obs. Cor": f.get('observaciones_cor','')
-                })
+                k_bruto = (anch_m * safe_float(f.get('metros_impresos', 0)) * safe_float(f.get('gramaje', 0))) / 1000
+                merma = safe_float(f.get('desp_kg_imp', 0)) + safe_float(f.get('desp_kg_cor', 0))
+                analisis.append({"OP": f['op'], "Trabajo": f['trabajo_imp'], "Kg Brutos": round(k_bruto,2), "Merma": round(merma,2), "Neto Est.": round(k_bruto-merma,2), "Obs": f.get('observaciones_cor','')})
             st.dataframe(pd.DataFrame(analisis), use_container_width=True)
-        else: st.info("Datos insuficientes para el cruce de OP.")
-
     with tabs[1]: st.dataframe(pd.DataFrame(cor), use_container_width=True) if cor else st.write("Sin datos")
     with tabs[2]: st.dataframe(pd.DataFrame(imp), use_container_width=True) if imp else st.write("Sin datos")
     with tabs[3]: st.dataframe(pd.DataFrame(col), use_container_width=True) if col else st.write("Sin datos")
@@ -106,17 +92,16 @@ elif seleccion == "📊 Consolidado Gerencial":
     with tabs[5]: st.dataframe(pd.DataFrame(par), use_container_width=True) if par else st.write("Sin datos")
 
 # ==========================================
-# 3. MÓDULOS OPERATIVOS (BOTONERA TÁCTIL)
+# 3. ÁREAS (BOTONERA Y FORMULARIOS ORIGINALES)
 # ==========================================
 else:
     area_map = {"🖨️ Impresión": "IMPRESIÓN", "✂️ Corte": "CORTE", "📥 Colectoras": "COLECTORAS", "📕 Encuadernación": "ENCUADERNACIÓN"}
     area_actual = area_map[seleccion]
     st.title(f"Joystick: {area_actual}")
     
-    act_data = supabase.table("trabajos_activos").select("*").execute().data
-    act_dict = {a['maquina']: a for a in act_data} if act_data else {}
+    act_res = supabase.table("trabajos_activos").select("*").execute().data
+    act_dict = {a['maquina']: a for a in act_res} if act_res else {}
 
-    # Botonera táctil original
     m_cols = st.columns(4)
     for i, m_btn in enumerate(MAQUINAS[area_actual]):
         if m_cols[i % 4].button(m_btn, key=f"btn_{m_btn}"):
@@ -131,34 +116,47 @@ else:
                 st.subheader(f"🚀 Iniciar {m}")
                 c1, c2 = st.columns(2)
                 v_op, v_tr = c1.text_input("OP"), c2.text_input("Trabajo")
-                p1, p2, p3 = st.columns(3)
-                v_pa, v_an, v_gr = p1.text_input("Papel"), p2.text_input("Ancho"), p3.text_input("Gramaje")
+                
+                # TODOS LOS CAMPOS ORIGINALES RESTAURADOS
+                if area_actual == "IMPRESIÓN":
+                    p1, p2, p3 = st.columns(3)
+                    pa, an, gr = p1.text_input("Papel"), p2.text_input("Ancho"), p3.text_input("Gramaje")
+                    extra = {"tipo_papel": pa, "ancho": an, "gramaje": gr}
+                elif area_actual == "CORTE":
+                    p1, p2, p3 = st.columns(3)
+                    pa, iv, mr = p1.text_input("Papel"), p2.text_input("Img Varilla"), p3.text_input("Medida Rollos")
+                    extra = {"tipo_papel": pa, "img_varilla": iv, "medida_rollos": mr}
+                else:
+                    extra = {}
+
                 if st.form_submit_button("EMPEZAR"):
-                    if v_op:
-                        supabase.table("trabajos_activos").insert({
-                            "maquina":m, "op":v_op, "trabajo":v_tr, "area":area_actual,
-                            "tipo_papel":v_pa, "ancho":v_an, "gramaje":v_gr, "hora_inicio":datetime.now().strftime("%H:%M")
-                        }).execute()
-                        st.rerun()
+                    data = {"maquina":m, "op":v_op, "trabajo":v_tr, "area":area_actual, "hora_inicio":datetime.now().strftime("%H:%M")}
+                    data.update(extra)
+                    supabase.table("trabajos_activos").insert(data).execute()
+                    st.rerun()
         else:
             with st.form("fin"):
                 st.success(f"📌 {m} - OP: {act['op']}")
-                if area_actual == "IMPRESIÓN": prod = st.number_input("Metros", 0.0)
-                elif area_actual == "CORTE": prod = st.number_input("Rollos", 0)
-                else: prod = st.number_input("Cantidad", 0)
-
+                res = {}
+                # CAMPOS DE CIERRE ORIGINALES
+                if area_actual == "IMPRESIÓN":
+                    c1, c2 = st.columns(2)
+                    res["metros_impresos"] = c1.number_input("Metros", 0.0)
+                    res["bobinas"] = c2.number_input("Bobinas", 0)
+                elif area_actual == "CORTE":
+                    c1, c2 = st.columns(2)
+                    res["cant_varillas"] = c1.number_input("Cant. Varillas", 0)
+                    res["total_rollos"] = c2.number_input("Total Rollos", 0)
+                
                 dk = st.number_input("Desperdicio (Kg)", 0.0)
-                obs = st.text_area("📝 Observaciones")
+                obs = st.text_area("📝 Observaciones (Reemplaza Motivo)")
                 
                 if st.form_submit_button("🏁 FINALIZAR"):
-                    final = {
-                        "op": act['op'], "maquina": m, "trabajo": act['trabajo'],
-                        "h_inicio": act['hora_inicio'], "h_fin": datetime.now().strftime("%H:%M"),
-                        "desp_kg": safe_float(dk), "observaciones": obs,
-                        "tipo_papel": act.get('tipo_papel',''), "ancho": safe_float(act.get('ancho',0)), "gramaje": safe_float(act.get('gramaje',0))
-                    }
-                    if area_actual == "IMPRESIÓN": final["metros_impresos"] = prod
-                    elif area_actual == "CORTE": final["total_rollos"] = int(prod)
+                    final = {"op":act['op'], "maquina":m, "trabajo":act['trabajo'], "h_inicio":act['hora_inicio'], "h_fin":datetime.now().strftime("%H:%M"), "desp_kg":safe_float(dk), "observaciones":obs}
+                    final.update(res)
+                    # Mapeo de campos técnicos del inicio al historial
+                    for k in ["tipo_papel", "ancho", "gramaje", "img_varilla", "medida_rollos"]:
+                        if k in act: final[k] = safe_float(act[k]) if k in ["ancho", "gramaje"] else act[k]
                     
                     supabase.table(normalizar(area_actual)).insert(final).execute()
                     supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
