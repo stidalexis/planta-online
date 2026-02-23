@@ -113,11 +113,37 @@ elif opcion == "📊 Consolidado Gerencial":
     t1, t2, t3, t4, t5, t6 = st.tabs(["🔗 Cruce", "🚨 Paradas", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc"])
 
     with t1:
-        if not imp.empty and not cor.empty:
-            merged = pd.merge(imp[['op', 'trabajo', 'maquina', 'h_inicio', 'h_fin', 'metros_impresos']], 
-                              cor[['op', 'maquina', 'total_rollos']], on='op', how='left', suffixes=('_IMP', '_COR'))
-            st.dataframe(merged, use_container_width=True)
-        else: st.info("Sin datos para cruce")
+            st.subheader("Cruce Operativo de Producción con KPIs por OP")
+            if not imp.empty:
+                # 1. Preparar datos de Impresión
+                df_i = imp[['op', 'trabajo', 'maquina', 'h_inicio', 'h_fin', 'metros_impresos', 'desp_kg']].copy()
+                df_i.columns = ['OP', 'TRABAJO', 'MAQ_IMP', 'INI_I', 'FIN_I', 'METROS', 'DESP_I']
+                
+                # 2. Preparar datos de Corte
+                df_c = cor[['op', 'maquina', 'h_inicio', 'h_fin', 'total_rollos', 'desp_kg']].copy() if not cor.empty else pd.DataFrame(columns=['op'])
+                if not cor.empty:
+                    df_c.columns = ['OP', 'MAQ_COR', 'INI_C', 'FIN_C', 'ROLLOS', 'DESP_C']
+                else:
+                    df_c = pd.DataFrame(columns=['OP', 'MAQ_COR', 'INI_C', 'FIN_C', 'ROLLOS', 'DESP_C'])
+
+                # 3. Cruzar información
+                merged = pd.merge(df_i, df_c, on='OP', how='left')
+
+                # --- CÁLCULO DE KPIs POR FILA (OP) ---
+                # KPI 1: Desperdicio Acumulado por OP (Impresión + Corte)
+                merged['KPI_Desp_Total_Kg'] = merged['DESP_I'].fillna(0) + merged['DESP_C'].fillna(0)
+                
+                # KPI 2: Rendimiento (Rollos obtenidos por cada metro impreso)
+                merged['KPI_Rollos_x_Metro'] = (merged['ROLLOS'].fillna(0) / merged['METROS']).replace([float('inf'), -float('inf')], 0).round(2)
+                
+                # KPI 3: Estatus de Proceso
+                merged['ESTATUS'] = merged['MAQ_COR'].apply(lambda x: "✅ Finalizado" if pd.notnull(x) else "⏳ Pend. Corte")
+
+                # Reordenar para que los KPIs sean visibles al principio o final
+                cols_ordenadas = ['OP', 'ESTATUS', 'TRABAJO', 'KPI_Desp_Total_Kg', 'KPI_Rollos_x_Metro', 'METROS', 'ROLLOS', 'MAQ_IMP', 'MAQ_COR']
+                st.dataframe(merged[cols_ordenadas], use_container_width=True)
+            else:
+                st.info("No hay datos de impresión para cruzar.")
 
     with t2:
         if not paradas.empty:
@@ -228,3 +254,4 @@ else:
                         supabase.table("trabajos_activos").delete().eq("id", act['id']).execute()
                         st.rerun()
                     except Exception as e: st.error(f"Error: {e}")
+
