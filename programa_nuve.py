@@ -65,7 +65,7 @@ if opcion == "🖥️ Monitor":
                     st.markdown(f"<div class='card-libre'>⚪ {m}<br>LIBRE</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. CONSOLIDADO MAESTRO CON CRUCE KPI
+# 2. CONSOLIDADO MAESTRO CON CRUCE KPI (FULL COLUMNS)
 # ==========================================
 elif opcion == "📊 Consolidado":
     st.title("📊 Consolidado Maestro de Producción")
@@ -77,22 +77,47 @@ elif opcion == "📊 Consolidado":
     enc_df = pd.DataFrame(supabase.table("encuadernacion").select("*").execute().data)
     seg_df = pd.DataFrame(supabase.table("seguimiento_corte").select("*").execute().data)
     
-    t0, t1, t2, t3, t4, t5 = st.tabs(["🔗 Cruce Operativo", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "⏱️ Seguimiento"])
+    t0, t1, t2, t3, t4, t5 = st.tabs(["🔗 Cruce Operativo KPI", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "⏱️ Seguimiento"])
     
     with t0:
-        st.subheader("Cruce KPI: Impresión vs Corte")
+        st.subheader("Cruce de Trazabilidad: Impresión -> Corte")
         if not imp_df.empty and not cor_df.empty:
-            df_i = imp_df[['op', 'trabajo', 'maquina', 'metros_impresos', 'desp_kg']].copy()
-            df_i.columns = ['OP', 'TRABAJO', 'MAQ_IMP', 'METROS_IMP', 'DESP_IMP']
-            df_c = cor_df[['op', 'maquina', 'total_rollos', 'desp_kg']].copy()
-            df_c.columns = ['OP', 'MAQ_COR', 'ROLLOS_COR', 'DESP_COR']
+            # Seleccionamos TODAS las columnas relevantes de Impresión
+            df_i = imp_df[['op', 'trabajo', 'maquina', 'tipo_papel', 'ancho', 'gramaje', 'metros_impresos', 'desp_kg', 'fecha_fin']].copy()
+            df_i.columns = ['OP', 'TRABAJO', 'MAQ_IMP', 'PAPEL', 'ANCHO', 'GR', 'METROS_IMP', 'DESP_IMP', 'FECHA']
             
+            # Seleccionamos TODAS las columnas relevantes de Corte
+            df_c = cor_df[['op', 'maquina', 'total_rollos', 'cant_varillas', 'desp_kg', 'medida_rollos']].copy()
+            df_c.columns = ['OP', 'MAQ_COR', 'ROLLOS_FINALES', 'VARILLAS', 'DESP_COR', 'MEDIDA_CORTE']
+            
+            # Realizamos el Cruce por OP
             cruce = pd.merge(df_i, df_c, on='OP', how='inner')
-            cruce['DESP_TOTAL'] = cruce['DESP_IMP'].fillna(0) + cruce['DESP_COR'].fillna(0)
-            cruce['EFICIENCIA'] = (cruce['ROLLOS_COR'] / cruce['METROS_IMP']).replace([float('inf')], 0).round(4)
-            st.dataframe(cruce, use_container_width=True)
+            
+            # Cálculos de la fila completa
+            cruce['DESP_TOTAL_KG'] = cruce['DESP_IMP'].fillna(0) + cruce['DESP_COR'].fillna(0)
+            
+            # Cálculo de rendimiento: Metros aprovechados vs impresos
+            # Suponiendo una relación de metros/rollos si fuera necesaria, 
+            # o simplemente la relación directa para ver consistencia.
+            cruce['RENDIMIENTO_%'] = ((cruce['ROLLOS_FINALES'] / cruce['METROS_IMP']) * 100).replace([float('inf')], 0).round(2)
+            
+            # Reordenar columnas para lectura lógica de proceso
+            columnas_ordenadas = [
+                'FECHA', 'OP', 'TRABAJO', 'PAPEL', 'ANCHO', 'GR', 
+                'MAQ_IMP', 'METROS_IMP', 'DESP_IMP', 
+                'MAQ_COR', 'ROLLOS_FINALES', 'VARILLAS', 'MEDIDA_CORTE', 'DESP_COR',
+                'DESP_TOTAL_KG', 'RENDIMIENTO_%'
+            ]
+            
+            st.dataframe(cruce[columnas_ordenadas], use_container_width=True)
+            
+            # Métricas rápidas arriba del cruce
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Total Metros Impresos", f"{cruce['METROS_IMP'].sum():,.0f} m")
+            m2.metric("Total Rollos Producidos", f"{cruce['ROLLOS_FINALES'].sum():,.0f}")
+            m3.metric("Desperdicio Total Accum.", f"{cruce['DESP_TOTAL_KG'].sum():,.1f} Kg")
         else:
-            st.info("Sin datos suficientes para cruce.")
+            st.info("💡 Para ver el cruce, una OP debe haber finalizado en Impresión y en Corte.")
 
     with t1: st.dataframe(imp_df, use_container_width=True)
     with t2: st.dataframe(cor_df, use_container_width=True)
@@ -233,3 +258,4 @@ else:
                         st.rerun()
                     except Exception as e:
                         st.error(f"Error: {e}")
+
