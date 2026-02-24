@@ -65,7 +65,7 @@ if opcion == "🖥️ Monitor":
                     st.markdown(f"<div class='card-libre'>⚪ {m}<br>LIBRE</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 2. CONSOLIDADO MAESTRO CON CRUCE KPI 
+# 2. CONSOLIDADO MAESTRO CON CRUCE KPI (FULL COLUMNS)
 # ==========================================
 elif opcion == "📊 Consolidado":
     st.title("📊 Consolidado Maestro de Producción")
@@ -126,9 +126,9 @@ elif opcion == "📊 Consolidado":
     with t5: st.dataframe(seg_df, use_container_width=True)
 
 # ==========================================
-# 3. SEGUIMIENTO HORARIO
+# 3. SEGUIMIENTO HORARIO (BOTONES)
 # ==========================================
-elif opcion == "⏱️ Seguimiento de maquinas":
+elif opcion == "⏱️ Seguimiento":
     st.title("⏱️ Seguimiento Cortadoras")
     cols_s = st.columns(3)
     for i, m_btn in enumerate(MAQUINAS["CORTE"]):
@@ -162,7 +162,7 @@ elif opcion == "⏱️ Seguimiento de maquinas":
 else:
     area_map = {"🖨️ Impresión": "IMPRESIÓN", "✂️ Corte": "CORTE", "📥 Colectoras": "COLECTORAS", "📕 Encuadernación": "ENCUADERNACIÓN"}
     area_act = area_map[opcion]
-    st.title(f"Area: {area_act}")
+    st.title(f"AREA: {area_act}")
     
     activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data}
     paradas = {p['maquina']: p for p in supabase.table("paradas_maquina").select("*").is_("h_fin", "null").execute().data}
