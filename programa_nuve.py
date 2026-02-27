@@ -55,47 +55,82 @@ menu = st.sidebar.radio("SISTEMA NUVE V7.5", [
 ])
 
 # ==========================================
-# 1. MONITOR GENERAL (DETALLADO)
+# 1. MONITOR GENERAL (DETALLADO + PENDIENTES)
 # ==========================================
 if menu == "🖥️ Monitor General":
     st.title("🖥️ Tablero de Control de Planta")
     
+    # Traer datos de OPs activas y planeadas
     try:
         act_data = supabase.table("trabajos_activos").select("*").execute().data
         act = {a['maquina']: a for a in act_data}
-    except:
-        act = {}
+        
+        # Traer todas las OPs que aún no terminan (Pendientes)
+        ops_pendientes = supabase.table("ordenes_planeadas").select("*").neq("estado", "Finalizado").execute().data
+    except Exception as e:
+        st.error(f"Error al conectar con la base de datos: {e}")
+        act, ops_pendientes = {}, []
 
+    # --- PARTE A: ESTADO DE MÁQUINAS ---
+    st.subheader("Estado de Máquinas")
     tabs = st.tabs(list(MAQUINAS.keys()))
     
     for i, area in enumerate(MAQUINAS.keys()):
         with tabs[i]:
-            cols = st.columns(3) # 3 columnas para que las fichas sean legibles
+            cols = st.columns(3)
             for idx, m in enumerate(MAQUINAS[area]):
                 with cols[idx % 3]:
                     if m in act:
                         d = act[m]
-                        # Determinar qué mostrar según el tipo
-                        tipo = d.get('tipo_acabado', '')
-                        especifico = f"Core: {d.get('core')}" if "R" in tipo else f"Copias: {d.get('copias')}"
-                        
-                        st.markdown(f"""
-                        <div class='card-proceso'>
-                            <b>⚙️ {m}</b> | <span style='color:red;'>EN PROCESO</span><br>
-                            <hr style='margin: 8px 0;'>
-                            <b>OP:</b> {d['op']}<br>
-                            <b>Cliente:</b> {d.get('nombre_cliente', 'N/A')}<br>
-                            <b>Trabajo:</b> {d['trabajo']}<br>
-                            <div class='detalles-op'>
-                                <b>Cant:</b> {d.get('unidades_solicitadas', 0)} | <b>Mat:</b> {d.get('material', 'N/A')}<br>
-                                <b>Medida:</b> {d.get('ancho_medida', 'N/A')}<br>
-                                <b>{especifico}</b> | <b>Tintas:</b> {d.get('cant_tintas', 0)}<br>
-                                <b>Inicio:</b> {d.get('hora_inicio', '--:--')}
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
+                        st.markdown(f"<div class='card-proceso'><b>⚙️ {m}</b><br>OCUPADA: {d['op']}</div>", unsafe_allow_html=True)
                     else:
-                        st.markdown(f"<div class='card-libre'>⚪ <b>{m}</b><br><br>DISPONIBLE</div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='card-libre'>⚪ <b>{m}</b><br>DISPONIBLE</div>", unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- PARTE B: COLA DE TRABAJO (PENDIENTES POR ÁREA) ---
+    st.subheader("📋 Órdenes en Cola (Pendientes)")
+    
+    if ops_pendientes:
+        df_pendientes = pd.DataFrame(ops_pendientes)
+        
+        # Filtro por área en el monitor
+        area_f = st.selectbox("Filtrar cola por área:", ["TODAS"] + list(MAQUINAS.keys()))
+        cola_mostrar = df_pendientes if area_f == "TODAS" else df_pendientes[df_pendientes['proxima_area'] == area_f]
+
+        for _, row in cola_mostrar.iterrows():
+            with st.expander(f"📌 OP: {row['op']} | {row['trabajo']} | {row['proxima_area']}"):
+                col1, col2 = st.columns([2, 1])
+                
+                with col1:
+                    # Mostrar toda la información técnica que pediste
+                    st.write(f"**Cliente:** {row['nombre_cliente']}")
+                    st.write(f"**Material:** {row['material']} | **Medida:** {row['ancho_medida']}")
+                    st.write(f"**Cantidad:** {row['unidades_solicitadas']}")
+                    if row['tipo_acabado'] in ["RI", "FRI"]:
+                        st.write(f"**Tintas:** {row['cant_tintas']} ({row['especificacion_tintas']})")
+                    st.write(f"**Observaciones:** {row['observaciones']}")
+
+                with col2:
+                    # BOTÓN DE DESCARGA EXCEL PARA ESTA OP
+                    # Creamos un DF de una sola fila para el Excel
+                    df_export = pd.DataFrame([row])
+                    
+                    # Convertir a Excel en memoria
+                    import io
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        df_export.to_excel(writer, index=False, sheet_name='Orden_Produccion')
+                    
+                    st.download_button(
+                        label="📥 Descargar Excel OP",
+                        data=output.getvalue(),
+                        file_name=f"OP_{row['op']}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        key=f"dl_{row['op']}"
+                    )
+    else:
+        st.info("No hay órdenes pendientes en este momento.")
 
 # ==========================================
 # 2. PLANIFICACIÓN (VENDEDORES)
@@ -247,3 +282,4 @@ elif menu == "📊 Historial KPI":
             data = supabase.table(t_names[i]).select("*").order("fecha_fin", desc=True).execute().data
             if data: st.dataframe(pd.DataFrame(data), use_container_width=True)
                 
+
