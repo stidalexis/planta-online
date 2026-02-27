@@ -34,7 +34,7 @@ MAQUINAS = {
 }
 
 # ==========================================
-# MODALES ORIGINALES MODIFICADOS (SEGUIMIENTO)
+# MODALES ORIGINALES (SIN MODIFICACIONES)
 # ==========================================
 
 @st.dialog("Detalles de la Orden de Producción", width="large")
@@ -47,31 +47,22 @@ def mostrar_detalle_op(row):
         st.write(f"👤 **Cliente:** {row.get('nombre_cliente')}")
         st.write(f"💼 **Vendedor:** {row.get('vendedor')}")
         st.write(f"🛠️ **Trabajo:** {row.get('trabajo')}")
-        st.write(f"📊 **Estado Actual:** {row.get('estado')}")
     with col2:
         st.markdown("**ESPECIFICACIONES**")
         st.write(f"📄 **Material:** {row.get('material')}")
         st.write(f"📏 **Medida:** {row.get('ancho_medida')}")
         st.write(f"📦 **Cantidad:** {row.get('unidades_solicitadas')}")
-        st.write(f"🎨 **Tintas:** {row.get('cant_tintas')} ({row.get('especificacion_tintas')})")
     with col3:
         st.markdown("**PROCESO TÉCNICO**")
+        st.write(f"🎨 **Tintas:** {row.get('cant_tintas')}")
         st.write(f"📍 **Área Siguiente:** {row.get('proxima_area')}")
-        st.write(f"⚙️ **Core:** {row.get('core')}")
-        st.write(f"🔢 **Numeración:** {row.get('num_desde')} al {row.get('num_hasta')}")
-        st.write(f"📑 **Copias:** {row.get('copias')}")
-
+        st.write(f"**Core/Copias:** {row.get('core') if row.get('core') != 'N/A' else row.get('copias')}")
     st.info(f"📝 **Observaciones:** {row.get('observaciones')}")
-    
-    # --- VISUALIZACIÓN DE ARTE (PDF) ---
-    if row.get('url_arte'):
-        st.markdown("### 🎨 Arte del Trabajo")
-        st.link_button("👁️ Ver Arte / PDF en Pantalla Completa", row['url_arte'])
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         pd.DataFrame([row]).to_excel(writer, index=False)
-    st.download_button("📥 DESCARGAR EXCEL DE ESTA OP", output.getvalue(), f"OP_{row['op']}.xlsx", use_container_width=True)
+    st.download_button("📥 DESCARGAR EXCEL", output.getvalue(), f"OP_{row['op']}.xlsx", use_container_width=True)
 
 @st.dialog("REPORTE TÉCNICO DE IMPRESIÓN", width="large")
 def modal_reporte_impresion(t, m_s, tipo="FINAL"):
@@ -100,6 +91,7 @@ def modal_reporte_impresion(t, m_s, tipo="FINAL"):
                 try: dur = str(datetime.now() - datetime.strptime(h_ini, "%H:%M"))
                 except: dur = "N/A"
                 
+                # --- FIX: Inserción robusta con tipos de datos forzados ---
                 data_insert = {
                     "op": str(t['op']), "maquina": str(m_s), "trabajo": str(t['trabajo']), "h_inicio": str(h_ini),
                     "h_fin": datetime.now().strftime("%H:%M"), "duracion": dur, "metros": int(metros),
@@ -133,7 +125,7 @@ def modal_parada(t, m_s):
             st.rerun()
 
 # ==========================================
-# NAVEGACIÓN Y SECCIONES
+# NAVEGACIÓN Y SECCIONES ORIGINALES RESTAURADAS
 # ==========================================
 menu = st.sidebar.radio("SISTEMA NUVE V10.2", ["🖥️ Monitor General (TV)", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
 
@@ -156,37 +148,20 @@ if menu == "🖥️ Monitor General (TV)":
                     st.markdown(f"<div class='card-vacia'><b>{m}</b><br><small>LIBRE</small></div>", unsafe_allow_html=True)
     time.sleep(15); st.rerun()
 
-# 2. SEGUIMIENTO (MODIFICADO)
+# 2. SEGUIMIENTO RESTAURADO
 elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes")
-    
-    # Obtener todas las órdenes que no están finalizadas
     ops = supabase.table("ordenes_planeadas").select("*").neq("estado", "Finalizado").execute().data
-    
     if ops:
         df = pd.DataFrame(ops)
-        
-        # --- BOTÓN DESCARGA GRUPAL ---
-        output_all = io.BytesIO()
-        with pd.ExcelWriter(output_all, engine='xlsxwriter') as writer:
-            df.to_excel(writer, index=False, sheet_name='Seguimiento_General')
-        st.download_button("📥 DESCARGAR REPORTE GENERAL (TODAS LAS OPS)", output_all.getvalue(), "Seguimiento_Nuve.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-        
-        st.divider()
-        
-        # Tabla de Seguimiento
         c1, c2, c3, c4 = st.columns([1, 2, 1, 1])
-        c1.markdown("**OP**"); c2.markdown("**TRABAJO**"); c3.markdown("**UBICACIÓN ACTUAL**"); c4.markdown("**DETALLES**")
-        
+        c1.markdown("**OP**"); c2.markdown("**TRABAJO**"); c3.markdown("**ÁREA ACTUAL**"); c4.markdown("**DETALLES**")
         for _, fila in df.iterrows():
             r1, r2, r3, r4 = st.columns([1, 2, 1, 1])
-            r1.write(fila['op'])
-            r2.write(fila['trabajo'])
-            r3.info(f"📍 {fila['proxima_area']}")
-            if r4.button("🔎 Ver Más / Arte", key=f"btn_seg_{fila['op']}"):
-                mostrar_detalle_op(fila)
+            r1.write(fila['op']); r2.write(fila['trabajo']); r3.write(fila['proxima_area'])
+            if r4.button("🔎 Ver Más", key=f"btn_seg_{fila['op']}"): mostrar_detalle_op(fila)
 
-# 3. PLANIFICACIÓN (MODIFICADO CON CARGA DE ARTE)
+# 3. PLANIFICACIÓN RESTAURADA (CON TODO EL FORMULARIO)
 elif menu == "📅 Planificación":
     st.title("📅 Ingreso de Órdenes de Producción")
     tipo_op_sel = st.selectbox("Tipo de Producto:", ["-- Seleccione --", "RI (Rollo Impreso)", "RB (Rollo Blanco)", "FRI (Forma Impresa)", "FRB (Forma Blanca)"])
@@ -224,32 +199,18 @@ elif menu == "📅 Planificación":
                 pArea = "IMPRESIÓN" if pref == "FRI" else "COLECTORAS"
             
             tin_n, tin_c = (0, "N/A")
-            url_pdf = None
             if es_impreso:
                 i1, i2 = st.columns(2)
                 tin_n = i1.number_input("Número de Tintas", 0)
                 tin_c = i2.text_input("Especificación de Colores")
-                # --- NUEVO: Carga de Arte ---
-                arte_file = st.file_uploader("Subir Arte (PDF / Imagen)", type=["pdf", "png", "jpg", "jpeg"])
-                if arte_file:
-                    # Nota: Aquí se requiere configurar el bucket 'artes' en Supabase Storage
-                    path = f"artes/{pref}_{op_num}_{arte_file.name}"
-                    supabase.storage.from_("artes").upload(path, arte_file.getvalue())
-                    url_pdf = supabase.storage.from_("artes").get_public_url(path)
             
             obs = st.text_area("Observaciones")
             if st.form_submit_button("🚀 REGISTRAR ORDEN"):
-                data = {
-                    "op": f"{pref}-{op_num}".upper(), "nombre_cliente": cliente, "trabajo": trabajo, 
-                    "vendedor": vendedor, "tipo_acabado": pref, "material": material, 
-                    "ancho_medida": medida, "unidades_solicitadas": cantidad, "cant_tintas": tin_n, 
-                    "especificacion_tintas": tin_c, "proxima_area": pArea, "observaciones": obs, 
-                    "estado": "Pendiente", "url_arte": url_pdf, **pld
-                }
+                data = {"op": f"{pref}-{op_num}".upper(), "nombre_cliente": cliente, "trabajo": trabajo, "vendedor": vendedor, "tipo_acabado": pref, "material": material, "ancho_medida": medida, "unidades_solicitadas": cantidad, "cant_tintas": tin_n, "especificacion_tintas": tin_c, "proxima_area": pArea, "observaciones": obs, "estado": "Pendiente", **pld}
                 supabase.table("ordenes_planeadas").insert(data).execute()
-                st.success("Orden registrada con éxito.")
+                st.success("Orden registrada.")
 
-# 4. IMPRESIÓN (SIN CAMBIOS)
+# 4. IMPRESIÓN
 elif menu == "🖨️ Impresión":
     st.title("🖨️ Operaciones de Impresión")
     act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", "IMPRESIÓN").execute().data}
@@ -290,7 +251,7 @@ elif menu == "🖨️ Impresión":
                     supabase.table("trabajos_activos").update({"estado_maquina": "PRODUCIENDO"}).eq("maquina", ms).execute()
                     st.rerun()
 
-# 5. RESTO DE ÁREAS (SIN CAMBIOS)
+# 5. RESTO DE ÁREAS
 elif menu in ["✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     a_nom = menu.split(" ")[1].upper()
     st.title(a_nom)
