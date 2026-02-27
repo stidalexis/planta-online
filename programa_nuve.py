@@ -84,7 +84,7 @@ menu = st.sidebar.radio("SISTEMA NUVE V7.5", [
 ])
 
 # ==========================================
-# 1. MONITOR GENERAL (MODO TV CON ROTACIÓN)
+# 1. MONITOR GENERAL (MODO TV CON ROTACIÓN ESPECÍFICA)
 # ==========================================
 if menu == "🖥️ Monitor General (TV)":
     st.title("🖥️ Tablero de Control de Planta")
@@ -98,12 +98,10 @@ if menu == "🖥️ Monitor General (TV)":
         act = {a['maquina']: a for a in act_data}
     except: act = {}
 
-    areas = list(MAQUINAS.keys())
+    areas = list(MAQUINAS.keys()) # ["IMPRESIÓN", "CORTE", "COLECTORAS", "ENCUADERNACIÓN"]
     tabs = st.tabs(areas)
     
-    # Forzar la pestaña activa si hay rotación
-    current_area = areas[st.session_state.tab_idx] if auto_rotate else None
-
+    # Mostrar el contenido de cada pestaña
     for i, area in enumerate(areas):
         with tabs[i]:
             cols = st.columns(3)
@@ -128,8 +126,25 @@ if menu == "🖥️ Monitor General (TV)":
                     else:
                         st.markdown(f"<div class='card-libre'>⚪ <b>{m}</b><br><br>DISPONIBLE</div>", unsafe_allow_html=True)
 
+    # --- LÓGICA DE TIEMPOS PERSONALIZADOS POR ÁREA ---
     if auto_rotate:
-        time.sleep(12)
+        area_actual = areas[st.session_state.tab_idx]
+        
+        # Definir los segundos según tu requerimiento
+        if area_actual == "IMPRESIÓN":
+            tiempo_espera = 25
+        elif area_actual == "CORTE":
+            tiempo_espera = 25
+        elif area_actual == "COLECTORAS":
+            tiempo_espera = 15
+        elif area_actual == "ENCUADERNACIÓN":
+            tiempo_espera = 15
+        else:
+            tiempo_espera = 15 # Por defecto
+            
+        time.sleep(tiempo_espera)
+        
+        # Cambiar al siguiente índice y refrescar
         st.session_state.tab_idx = (st.session_state.tab_idx + 1) % len(areas)
         st.rerun()
 
@@ -272,3 +287,4 @@ elif menu == "📊 Historial KPI":
         with tab:
             data = supabase.table(t_names[i]).select("*").execute().data
             if data: st.dataframe(pd.DataFrame(data), use_container_width=True)
+
