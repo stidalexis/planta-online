@@ -84,70 +84,68 @@ menu = st.sidebar.radio("SISTEMA NUVE V7.5", [
 ])
 
 # ==========================================
-# 1. MONITOR GENERAL (MODO TV CON ROTACIÓN ESPECÍFICA)
+# 1. MONITOR GENERAL (VISTA TOTAL DE PLANTA)
 # ==========================================
 if menu == "🖥️ Monitor General (TV)":
-    st.title("🖥️ Tablero de Control de Planta")
+    st.title("🏭 Tablero de Control de Planta - Vista Total")
     
-    # Lógica de Carrusel
-    auto_rotate = st.sidebar.toggle("🔄 Rotación Automática (Modo TV)", value=True)
-    if "tab_idx" not in st.session_state: st.session_state.tab_idx = 0
-    
+    # Estilo específico para el brillo verde y las tarjetas
+    st.markdown("""
+        <style>
+        .card-activa-brillante { 
+            padding: 15px; border-radius: 12px; 
+            background-color: #00E676; /* Verde Brillante */
+            border: 2px solid #00C853;
+            box-shadow: 0px 0px 15px rgba(0, 230, 118, 0.5);
+            margin-bottom: 15px; text-align: center; color: #1B5E20;
+        }
+        .card-vacia-monitor { 
+            padding: 15px; border-radius: 12px; 
+            background-color: #F5F5F5; border: 1px solid #E0E0E0;
+            margin-bottom: 15px; text-align: center; color: #9E9E9E;
+        }
+        .text-maquina { font-size: 1.3rem; font-weight: 800; margin-bottom: 5px; display: block; }
+        .text-op { font-size: 1.1rem; font-weight: 700; color: #000; display: block; }
+        .text-trabajo { font-size: 0.85rem; font-weight: 500; display: block; line-height: 1.1; }
+        </style>
+    """, unsafe_allow_html=True)
+
     try:
         act_data = supabase.table("trabajos_activos").select("*").execute().data
         act = {a['maquina']: a for a in act_data}
-    except: act = {}
+    except:
+        act = {}
 
-    areas = list(MAQUINAS.keys()) # ["IMPRESIÓN", "CORTE", "COLECTORAS", "ENCUADERNACIÓN"]
-    tabs = st.tabs(areas)
-    
-    # Mostrar el contenido de cada pestaña
-    for i, area in enumerate(areas):
-        with tabs[i]:
-            cols = st.columns(3)
-            for idx, m in enumerate(MAQUINAS[area]):
-                with cols[idx % 3]:
-                    if m in act:
-                        d = act[m]
-                        tipo = d.get('tipo_acabado', '')
-                        especifico = f"Core: {d.get('core')}" if "R" in tipo else f"Copias: {d.get('copias')}"
-                        st.markdown(f"""
-                        <div class='card-proceso'>
-                            <b>⚙️ {m}</b> | <span style='color:red;'>EN PROCESO</span><br>
-                            <hr style='margin: 8px 0;'>
-                            <b>OP:</b> {d['op']}<br>
-                            <b>Trabajo:</b> {d['trabajo']}<br>
-                            <div class='detalles-op'>
-                                <b>Cant:</b> {d.get('unidades_solicitadas', 0)} | <b>Mat:</b> {d.get('material', 'N/A')}<br>
-                                <b>{especifico}</b> | <b>Inicio:</b> {d.get('hora_inicio', '--:--')}
-                            </div>
+    # Renderizamos cada área una tras otra
+    for area, maquinas in MAQUINAS.items():
+        st.markdown(f"<div class='title-area'>ÁREA: {area}</div>", unsafe_allow_html=True)
+        cols = st.columns(4) # 4 columnas para que quepan más en pantalla
+        
+        for idx, m in enumerate(maquinas):
+            with cols[idx % 4]:
+                if m in act:
+                    d = act[m]
+                    st.markdown(f"""
+                        <div class='card-activa-brillante'>
+                            <span class='text-maquina'>{m}</span>
+                            <span class='text-op'>{d['op']}</span>
+                            <span class='text-trabajo'>{d['trabajo']}</span>
+                            <hr style='margin: 8px 0; border: 0.5px solid #00C853;'>
+                            <small>Inicio: {d.get('hora_inicio', '--:--')}</small>
                         </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"<div class='card-libre'>⚪ <b>{m}</b><br><br>DISPONIBLE</div>", unsafe_allow_html=True)
-
-    # --- LÓGICA DE TIEMPOS PERSONALIZADOS POR ÁREA ---
-    if auto_rotate:
-        area_actual = areas[st.session_state.tab_idx]
-        
-        # Definir los segundos según tu requerimiento
-        if area_actual == "IMPRESIÓN":
-            tiempo_espera = 25
-        elif area_actual == "CORTE":
-            tiempo_espera = 25
-        elif area_actual == "COLECTORAS":
-            tiempo_espera = 15
-        elif area_actual == "ENCUADERNACIÓN":
-            tiempo_espera = 15
-        else:
-            tiempo_espera = 15 # Por defecto
-            
-        time.sleep(tiempo_espera)
-        
-        # Cambiar al siguiente índice y refrescar
-        st.session_state.tab_idx = (st.session_state.tab_idx + 1) % len(areas)
-        st.rerun()
-
+                    """, unsafe_allow_html=True)
+                else:
+                    st.markdown(f"""
+                        <div class='card-vacia-monitor'>
+                            <span class='text-maquina'>{m}</span>
+                            <br>
+                            <small>DISPONIBLE</small>
+                        </div>
+                    """, unsafe_allow_html=True)
+    
+    # Auto-refresco de datos cada 30 segundos para que gerencia vea cambios
+    time.sleep(30)
+    st.rerun()
 # ==========================================
 # 2. SEGUIMIENTO DE PEDIDOS (NUEVA VENTANA)
 # ==========================================
@@ -287,4 +285,5 @@ elif menu == "📊 Historial KPI":
         with tab:
             data = supabase.table(t_names[i]).select("*").execute().data
             if data: st.dataframe(pd.DataFrame(data), use_container_width=True)
+
 
