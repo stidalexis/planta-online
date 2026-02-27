@@ -165,45 +165,97 @@ elif menu == "📅 Planificación (Ingreso OP)":
                 supabase.table("ordenes_planeadas").insert(data).execute()
                 st.success("OP Registrada"); st.balloons()
 
-# 4. IMPRESIÓN (OPERATIVO CON DINÁMICA NUEVA)
+# 4. MÓDULO IMPRESIÓN (OPERATIVO CON DINÁMICA NUEVA)
 elif menu == "🖨️ Impresión":
     st.title("🖨️ Área de Impresión")
-    act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", "IMPRESIÓN").execute().data}
-    cols = st.columns(4)
+    
+    # Obtener trabajos activos en tiempo real
+    act_list = supabase.table("trabajos_activos").select("*").eq("area", "IMPRESIÓN").execute().data
+    act = {a['maquina']: a for a in act_list}
+    
+    # Dibujar botones de máquinas
+    m_cols = st.columns(4)
     for i, m in enumerate(MAQUINAS["IMPRESIÓN"]):
-        if cols[i%4].button(f"{'🔴' if m in act else '⚪'} {m}", key=f"btn_{m}"): st.session_state.m_sel = m
+        # Color del botón según estado
+        label_btn = f"⚪ {m}"
+        if m in act:
+            est_m = act[m].get('estado_maquina', 'PRODUCIENDO')
+            if est_m == 'PARADA': label_btn = f"🔴 {m} (PARADA)"
+            elif est_m == 'TURNO_CERRADO': label_btn = f"🟡 {m} (ESPERA)"
+            else: label_btn = f"🟢 {m} (ACTIVA)"
+        
+        if m_cols[i%4].button(label_btn, key=f"btn_imp_{m}"):
+            st.session_state.m_sel = m
+
+    # PANEL DE CONTROL DE LA MÁQUINA SELECCIONADA
     if "m_sel" in st.session_state and st.session_state.m_sel in MAQUINAS["IMPRESIÓN"]:
         ms = st.session_state.m_sel
+        st.divider()
+        st.subheader(f"🕹️ Panel de Control: {ms}")
+        
         if ms not in act:
+            # --- FLUJO DE INICIO ---
+            st.info(f"La máquina {ms} está disponible.")
             ops = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "IMPRESIÓN").eq("estado", "Pendiente").execute().data
             if ops:
-                sel = st.selectbox("OP:", [o['op'] for o in ops])
-                if st.button("INICIAR"):
-                    d = next(o for o in ops if o['op'] == sel)
-                    supabase.table("trabajos_activos").insert({"maquina": ms, "area": "IMPRESIÓN", "op": d['op'], "trabajo": d['trabajo'], "hora_inicio": datetime.now().strftime("%H:%M"), "tipo_acabado": d['tipo_acabado'], "estado_maquina": "PRODUCIENDO"}).execute()
-                    supabase.table("ordenes_planeadas").update({"estado": "En Proceso"}).eq("op", d['op']).execute()
-                    st.rerun()
+                op_list = [f"{o['op']} | {o['trabajo']}" for o in ops]
+                sel_op = st.selectbox("Seleccione Orden para Iniciar:", ["--"] + op_list)
+                if st.button("▶️ INICIAR TRABAJO"):
+                    if sel_op != "--":
+                        op_id = sel_op.split(" | ")[0]
+                        d = next(o for o in ops if o['op'] == op_id)
+                        supabase.table("trabajos_activos").insert({
+                            "maquina": ms, "area": "IMPRESIÓN", "op": d['op'], 
+                            "trabajo": d['trabajo'], "hora_inicio": datetime.now().strftime("%H:%M"),
+                            "tipo_acabado": d['tipo_acabado'], "estado_maquina": "PRODUCIENDO"
+                        }).execute()
+                        supabase.table("ordenes_planeadas").update({"estado": "En Proceso"}).eq("op", d['op']).execute()
+                        st.rerun()
+            else:
+                st.warning("No hay órdenes pendientes para Impresión.")
         else:
+            # --- FLUJO DE OPERACIÓN ACTIVA ---
             t = act[ms]
-            est = t.get('estado_maquina', 'PRODUCIENDO')
-            st.subheader(f"MÁQUINA: {ms} | OP: {t['op']}")
-            if est == "PRODUCIENDO":
-                st.success("⚡ PRODUCIENDO")
+            est_actual = t.get('estado_maquina', 'PRODUCIENDO')
+            
+            st.markdown(f"**TRABAJANDO EN:** `{t['op']} - {t['trabajo']}`")
+            st.write(f"⏱️ Hora de inicio: {t['hora_inicio']}")
+
+            # 1. SI LA MÁQUINA ESTÁ PRODUCIENDO
+            if est_actual == "PRODUCIENDO":
+                st.success("✅ ESTADO: EN PRODUCCIÓN")
                 c1, c2, c3, c4 = st.columns(4)
-                if c1.button("🚨 PARADA"): modal_parada_emergencia(t, ms)
-                if c2.button("🌙 CERRAR TURNO"):
+                
+                if c1.button("🚨 PARADA DE EMERGENCIA", help="Detener por falla o ajuste"):
+                    modal_parada_emergencia(t, ms)
+                
+                if c2.button("🌙 CIERRE DE TURNO", help="Pausar trabajo hasta el siguiente turno"):
                     supabase.table("trabajos_activos").update({"estado_maquina": "TURNO_CERRADO"}).eq("maquina", ms).execute()
                     st.rerun()
-                if c3.button("📦 PARCIAL"): modal_parcial(t, ms)
-                if c4.button("🏁 FINALIZAR TOTAL"): modal_finalizar_total(t, ms)
-            elif est == "PARADA":
-                st.error(f"🚨 PARADA DESDE {t.get('h_parada')}")
-                if st.button("▶️ REANUDAR PARADA"):
-                    supabase.table("trabajos_activos").update({"estado_maquina": "PRODUCIENDO", "h_parada": None}).eq("maquina", ms).execute()
+                
+                if c3.button("📦 ENTREGA PARCIAL", help="Enviar una parte a corte sin cerrar la OP"):
+                    modal_parcial(t, ms)
+                
+                if c4.button("🏁 FINALIZAR TODO", help="Cerrar OP y registrar metros/kilos"):
+                    modal_finalizar_total(t, ms)
+
+            # 2. SI LA MÁQUINA ESTÁ EN PARADA
+            elif est_actual == "PARADA":
+                st.error(f"🚨 MÁQUINA DETENIDA (Desde: {t.get('h_parada')})")
+                st.info("Resuelva el suceso y presione el botón para continuar.")
+                if st.button("▶️ REANUDAR PRODUCCIÓN", type="primary"):
+                    # Cálculo de tiempo de parada opcional para el log
+                    supabase.table("trabajos_activos").update({
+                        "estado_maquina": "PRODUCIENDO", 
+                        "h_parada": None
+                    }).eq("maquina", ms).execute()
                     st.rerun()
-            elif est == "TURNO_CERRADO":
-                st.warning("🌙 TURNO CERRADO")
-                if st.button("☀️ REANUDAR TURNO"):
+
+            # 3. SI LA MÁQUINA ESTÁ EN CIERRE DE TURNO
+            elif est_actual == "TURNO_CERRADO":
+                st.warning("🌙 TRABAJO PAUSADO POR CIERRE DE TURNO")
+                st.write("La máquina está esperando la reanudación del nuevo turno.")
+                if st.button("☀️ REANUDAR TURNO / TRABAJO", type="primary"):
                     supabase.table("trabajos_activos").update({"estado_maquina": "PRODUCIENDO"}).eq("maquina", ms).execute()
                     st.rerun()
 
@@ -231,3 +283,4 @@ elif menu in ["✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
                 # Aquí puedes integrar parámetros de corte después
                 supabase.table("trabajos_activos").delete().eq("maquina", ms).execute()
                 st.rerun()
+
