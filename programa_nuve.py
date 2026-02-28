@@ -61,7 +61,6 @@ def mostrar_detalle_op(row):
     
     st.info(f"📝 **Observaciones:** {row.get('observaciones')}")
     
-    # Visualización de Arte si existe
     if row.get('url_arte'):
         st.markdown("---")
         st.markdown("### 🎨 ARTE DEL TRABAJO")
@@ -140,7 +139,7 @@ if menu == "🖥️ Monitor General (TV)":
     st.title("🏭 Monitor General de Planta")
     act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
     for area, maquinas in MAQUINAS.items():
-        st.markdown(f<div class='title-area'>{area}</div>, unsafe_allow_html=True)
+        st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
@@ -154,13 +153,12 @@ if menu == "🖥️ Monitor General (TV)":
                     st.markdown(f"<div class='card-vacia'><b>{m}</b><br><small>LIBRE</small></div>", unsafe_allow_html=True)
     time.sleep(15); st.rerun()
 
-# 2. SEGUIMIENTO (MODIFICADO: DESCARGA GRUPAL Y DETALLES AMPLIADOS)
+# 2. SEGUIMIENTO
 elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes")
     ops = supabase.table("ordenes_planeadas").select("*").neq("estado", "Finalizado").execute().data
     if ops:
         df = pd.DataFrame(ops)
-        # Descarga grupal
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
             df.to_excel(writer, index=False)
@@ -174,7 +172,7 @@ elif menu == "🔍 Seguimiento":
             r1.write(fila['op']); r2.write(fila['trabajo']); r3.warning(fila['proxima_area'])
             if r4.button("🔎 Ver Más / Arte", key=f"btn_seg_{fila['op']}"): mostrar_detalle_op(fila)
 
-# 3. PLANIFICACIÓN (MODIFICADO: CARGA DE ARTE SEGURA)
+# 3. PLANIFICACIÓN
 elif menu == "📅 Planificación":
     st.title("📅 Ingreso de Órdenes de Producción")
     tipo_op_sel = st.selectbox("Tipo de Producto:", ["-- Seleccione --", "RI (Rollo Impreso)", "RB (Rollo Blanco)", "FRI (Forma Impresa)", "FRB (Forma Blanca)"])
@@ -183,21 +181,20 @@ elif menu == "📅 Planificación":
         pref = tipo_op_sel.split(" ")[0]
         es_impreso = pref in ["RI", "FRI"]
         
-        # El uploader se saca del Form para evitar bloqueos
-        url_arte_final = None
+        # Carga de arte fuera del form para evitar el SyntaxError y bloqueos
         if es_impreso:
             archivo_arte = st.file_uploader("🖼️ Cargar Arte (PDF/JPG/PNG)", type=["pdf", "png", "jpg", "jpeg"])
             if archivo_arte:
-                if st.button("⬆️ Subir Arte Primero"):
+                if st.button("⬆️ SUBIR ARTE PRIMERO"):
                     with st.spinner("Subiendo archivo..."):
                         path = f"artes/{pref}_{int(time.time())}_{archivo_arte.name}"
                         try:
                             supabase.storage.from_("artes").upload(path, archivo_arte.getvalue())
-                            url_arte_final = supabase.storage.from_("artes").get_public_url(path)
-                            st.success("✅ Arte subido correctamente.")
-                            st.session_state['url_temp'] = url_arte_final
+                            url_res = supabase.storage.from_("artes").get_public_url(path)
+                            st.session_state['url_temp'] = url_res
+                            st.success("✅ Arte listo para registrar.")
                         except Exception as e:
-                            st.error(f"Error subiendo: {e}. ¿Existe el bucket 'artes'?")
+                            st.error(f"Error: {e}")
 
         with st.form("form_alta_op"):
             c1, c2, c3 = st.columns(3)
@@ -231,8 +228,8 @@ elif menu == "📅 Planificación":
             
             obs = st.text_area("Observaciones")
             if st.form_submit_button("🚀 REGISTRAR ORDEN"):
-                url_to_save = st.session_state.get('url_temp', None)
-                data = {"op": f"{pref}-{op_num}".upper(), "nombre_cliente": cliente, "trabajo": trabajo, "vendedor": vendedor, "tipo_acabado": pref, "material": material, "ancho_medida": medida, "unidades_solicitadas": cantidad, "cant_tintas": tin_n, "especificacion_tintas": tin_c, "proxima_area": pArea, "observaciones": obs, "estado": "Pendiente", "url_arte": url_to_save, **pld}
+                u_final = st.session_state.get('url_temp', None)
+                data = {"op": f"{pref}-{op_num}".upper(), "nombre_cliente": cliente, "trabajo": trabajo, "vendedor": vendedor, "tipo_acabado": pref, "material": material, "ancho_medida": medida, "unidades_solicitadas": cantidad, "cant_tintas": tin_n, "especificacion_tintas": tin_c, "proxima_area": pArea, "observaciones": obs, "estado": "Pendiente", "url_arte": u_final, **pld}
                 supabase.table("ordenes_planeadas").insert(data).execute()
                 if 'url_temp' in st.session_state: del st.session_state['url_temp']
                 st.success("Orden registrada.")
