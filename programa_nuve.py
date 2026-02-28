@@ -5,162 +5,219 @@ from datetime import datetime
 import time
 import io
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(layout="wide", page_title="SISTEMA NUVE V11", page_icon="🏭")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(layout="wide", page_title="SISTEMA NUVE V12", page_icon="🏭")
+
+# --- CONEXIÓN ---
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-# --- ESTADOS DE SESIÓN ---
-if 'url_arte' not in st.session_state: st.session_state.url_arte = None
+# --- ESTILOS VISUALES ORIGINALES ---
+st.markdown("""
+    <style>
+    [data-testid="stSidebar"] { background-color: #1a1a1a; color: white; }
+    .stButton > button { height: 50px !important; border-radius: 8px; font-weight: bold; width: 100%; }
+    .card-produccion { background-color: #2ecc71; border: 2px solid #27ae60; padding: 15px; border-radius: 12px; text-align: center; color: white; margin-bottom:10px;}
+    .card-parada { background-color: #e74c3c; border: 2px solid #c0392b; padding: 15px; border-radius: 12px; text-align: center; color: white; margin-bottom:10px;}
+    .card-vacia { background-color: #ecf0f1; border: 1px solid #bdc3c7; padding: 15px; border-radius: 12px; text-align: center; color: #7f8c8d; margin-bottom:10px;}
+    .area-header { background-color: #2980b9; color: white; padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; margin-bottom:15px;}
+    </style>
+    """, unsafe_allow_html=True)
 
-# --- LÓGICA DE FLUJO POR PREFIJO ---
-FLUJO = {
-    "RB": ["CORTE", "FINALIZADO"],
+# --- CONFIGURACIÓN DE FLUJOS Y MÁQUINAS ---
+FLUJOS = {
     "RI": ["IMPRESIÓN", "CORTE", "FINALIZADO"],
+    "RB": ["CORTE", "FINALIZADO"],
     "FRI": ["IMPRESIÓN", "COLECTORAS", "ENCUADERNACIÓN", "FINALIZADO"],
     "FRB": ["IMPRESIÓN", "COLECTORAS", "ENCUADERNACIÓN", "FINALIZADO"]
 }
 
 MAQUINAS = {
-    "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11"],
-    "CORTE": ["COR-01", "COR-02", "COR-03"],
+    "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
+    "CORTE": [f"COR-{i:02d}" for i in range(1, 13)],
     "COLECTORAS": ["COL-01", "COL-02"],
-    "ENCUADERNACIÓN": ["LINEA-01", "LINEA-02"]
+    "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)]
 }
 
-# --- FUNCIONES DE APOYO ---
-def avanzar_area(op_id, prefijo, area_actual):
-    ruta = FLUJO.get(prefijo, [])
+# --- FUNCIONES DE LÓGICA ---
+def avanzar_proceso(op_full, area_actual):
+    pref = op_full.split("-")[0]
+    ruta = FLUJOS.get(pref, [])
     if area_actual in ruta:
-        nueva_idx = ruta.index(area_actual) + 1
-        nueva_area = ruta[nueva_idx]
-        estado = "Terminado" if nueva_area == "FINALIZADO" else "En Proceso"
-        supabase.table("ordenes_planeadas").update({"proxima_area": nueva_area, "estado": estado}).eq("op", op_id).execute()
+        idx = ruta.index(area_actual)
+        siguiente = ruta[idx + 1]
+        estado = "Terminado" if siguiente == "FINALIZADO" else "En Proceso"
+        supabase.table("ordenes_planeadas").update({"proxima_area": siguiente, "estado": estado}).eq("op", op_full).execute()
 
-# --- INTERFAZ: MENÚ LATERAL ---
+# --- MENÚ LATERAL ---
 with st.sidebar:
-    st.title("🏭 NUVE V11")
-    menu = st.radio("MÓDULOS", ["🖥️ MONITOR", "🔍 SEGUIMIENTO", "📅 PLANIFICACIÓN"])
+    st.image("https://cdn-icons-png.flaticon.com/512/2622/2622267.png", width=80)
+    st.title("SISTEMA NUVE")
+    mod_principal = st.radio("PRINCIPAL", ["🖥️ MONITOR", "🔍 SEGUIMIENTO", "📅 PLANIFICACIÓN"])
     st.divider()
-    st.subheader("🛠️ ÁREAS DE PRODUCCIÓN")
-    area_menu = st.radio("IR A:", ["🖨️ IMPRESIÓN", "✂️ CORTE", "📥 COLECTORAS", "📕 ENCUADERNACIÓN"])
+    st.subheader("ÁREAS")
+    mod_area = st.radio("MODULOS DE ÁREA", ["🖨️ IMPRESIÓN", "✂️ CORTE", "📥 COLECTORAS", "📕 ENCUADERNACIÓN"])
 
-# --- MÓDULO: PLANIFICACIÓN ---
-if menu == "📅 PLANIFICACIÓN":
-    st.header("📅 Registro de Nueva Orden")
-    cols = st.columns(4)
-    if cols[0].button("RI"): st.session_state.pref = "RI"
-    if cols[1].button("RB"): st.session_state.pref = "RB"
-    if cols[2].button("FRI"): st.session_state.pref = "FRI"
-    if cols[3].button("FRB"): st.session_state.pref = "FRB"
+# --- 1. MONITOR ---
+if mod_principal == "🖥️ MONITOR":
+    st.title("Monitor de Planta")
+    act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
+    for area, lista in MAQUINAS.items():
+        st.markdown(f"<div class='area-header'>{area}</div>", unsafe_allow_html=True)
+        cols = st.columns(4)
+        for i, m in enumerate(lista):
+            with cols[i%4]:
+                if m in act:
+                    clase = "card-produccion" if act[m]['estado_maquina'] == "PRODUCIENDO" else "card-parada"
+                    st.markdown(f"<div class='{clase}'><b>{m}</b><br>{act[m]['op']}</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown(f"<div class='card-vacia'><b>{m}</b><br>LIBRE</div>", unsafe_allow_html=True)
+    time.sleep(15); st.rerun()
 
-    if 'pref' in st.session_state:
-        pref = st.session_state.pref
-        st.subheader(f"Formulario: {pref}")
+# --- 2. SEGUIMIENTO ---
+elif mod_principal == "🔍 SEGUIMIENTO":
+    st.title("Seguimiento de Órdenes")
+    data = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
+    if data:
+        df = pd.DataFrame(data)
+        st.dataframe(df[['op', 'nombre_cliente', 'trabajo', 'proxima_area', 'estado']], use_container_width=True)
         
-        # Cargador de Arte (Corregido: no bloquea)
-        archivo = st.file_uploader("Subir Arte (Opcional)", type=["pdf", "png", "jpg"])
+        # Historial técnico consolidado
+        sel_op = st.selectbox("Ver detalle técnico de:", [d['op'] for d in data])
+        reps = supabase.table("reportes_produccion").select("*").eq("op", sel_op).execute().data
+        if reps:
+            st.table(pd.DataFrame(reps)[['fecha', 'area', 'maquina', 'operario', 'cantidad_reportada', 'tipo_entrega']])
+            
+# --- 3. PLANIFICACIÓN ---
+elif mod_principal == "📅 PLANIFICACIÓN":
+    st.title("📅 Nueva Orden de Producción")
+    
+    # Botones de Prefijo
+    c1, c2, c3, c4 = st.columns(4)
+    if c1.button("RI (Rollo Impreso)"): st.session_state.pref = "RI"
+    if c2.button("RB (Rollo Blanco)"): st.session_state.pref = "RB"
+    if c3.button("FRI (Forma Impresa)"): st.session_state.pref = "FRI"
+    if c4.button("FRB (Forma Blanca)"): st.session_state.pref = "FRB"
+
+    if "pref" in st.session_state:
+        pref = st.session_state.pref
+        
+        # Subida de arte corregida
+        archivo = st.file_uploader("🖼️ Cargar Arte", type=["pdf", "png", "jpg"])
         if archivo:
-            if st.button("Validar y Subir Archivo"):
+            if st.button("Subir Arte"):
                 with st.spinner("Subiendo..."):
                     path = f"artes/{int(time.time())}_{archivo.name}"
                     supabase.storage.from_("artes").upload(path, archivo.getvalue())
-                    st.session_state.url_arte = supabase.storage.from_("artes").get_public_url(path)
-                    st.success("Archivo listo!")
+                    st.session_state.url_temp = supabase.storage.from_("artes").get_public_url(path)
+                    st.success("Arte cargado con éxito")
 
-        with st.form("form_op"):
-            c1, c2, c3 = st.columns(3)
-            op_n = c1.text_input("Número OP")
-            cli = c2.text_input("Cliente")
-            tra = c3.text_input("Trabajo")
+        with st.form("form_alta"):
+            st.subheader(f"Formulario Original - {pref}")
+            col1, col2, col3 = st.columns(3)
+            op_num = col1.text_input("Número OP")
+            vendedor = col2.text_input("Vendedor")
+            cliente = col3.text_input("Cliente")
+            trabajo = st.text_input("Nombre del Trabajo")
             
-            # Datos técnicos según prefijo
-            core, desde, hasta = "N/A", "N/A", "N/A"
+            f1, f2, f3 = st.columns(3)
+            material = f1.text_input("Papel / Material")
+            medida = f2.text_input("Medida")
+            cantidad = f3.number_input("Cantidad Solicitada", 0)
+            
+            core, bolsa, caja, desde, hasta, copias = "N/A", 0, 0, "N/A", "N/A", "N/A"
             if "R" in pref:
-                core = st.selectbox("Core", ["13mm", "19mm", "1 pulg", "3 pulg"])
+                t1, t2, t3 = st.columns(3)
+                core = t1.selectbox("Core", ["13MM", "19MM", "1 PULG", "3 PULG"])
+                bolsa = t2.number_input("Unds/Bolsa", 0)
+                caja = t3.number_input("Unds/Caja", 0)
             else:
-                d1, d2 = st.columns(2)
-                desde = d1.text_input("Desde")
-                hasta = d2.text_input("Hasta")
-            
-            if st.form_submit_button("REGISTRAR ORDEN"):
-                area_ini = FLUJO[pref][0]
-                data = {
-                    "op": f"{pref}-{op_n}".upper(), "nombre_cliente": cli, "trabajo": tra,
-                    "tipo_acabado": pref, "proxima_area": area_ini, "core": core,
-                    "num_desde": desde, "num_hasta": hasta, "url_arte": st.session_state.url_arte
-                }
-                supabase.table("ordenes_planeadas").insert(data).execute()
-                st.session_state.url_arte = None
-                st.success("Orden Creada")
+                t1, t2, t3 = st.columns(3)
+                desde = t1.text_input("Desde")
+                hasta = t2.text_input("Hasta")
+                copias = t3.selectbox("Copias", ["1", "2", "3", "4"])
 
-# --- MÓDULO: ÁREAS (LÓGICA GENÉRICA) ---
-def render_area(nombre_area):
-    st.header(f"Área: {nombre_area}")
-    activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", nombre_area).execute().data}
+            tintas = st.number_input("Número de Tintas", 0) if "I" in pref else 0
+            obs = st.text_area("Observaciones")
+            
+            if st.form_submit_button("🚀 REGISTRAR"):
+                # Determinar área inicial según flujo
+                area_inicial = FLUJOS[pref][0]
+                
+                payload = {
+                    "op": f"{pref}-{op_num}".upper(), "nombre_cliente": cliente, "trabajo": trabajo,
+                    "vendedor": vendedor, "tipo_acabado": pref, "material": material, "ancho_medida": medida,
+                    "unidades_solicitadas": int(cantidad), "cant_tintas": int(tintas),
+                    "proxima_area": area_inicial, "observaciones": obs, "url_arte": st.session_state.get('url_temp'),
+                    "core": core, "unidades_bolsa": bolsa, "unidades_caja": caja,
+                    "num_desde": desde, "num_hasta": hasta, "copias": copias
+                }
+                supabase.table("ordenes_planeadas").insert(payload).execute()
+                st.success("Orden Guardada"); st.session_state.url_temp = None
+
+# --- LÓGICA DE ÁREA INDEPENDIENTE ---
+def gestionar_area(nombre_area):
+    st.title(f"Módulo de {nombre_area}")
     
+    # 1. Máquinas Activas
+    act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", nombre_area).execute().data}
     cols = st.columns(4)
     for i, m in enumerate(MAQUINAS[nombre_area]):
-        with cols[i%4]:
-            if m in activos:
-                t = activos[m]
-                st.error(f"● {m} - {t['op']}")
-                if st.button(f"Reportar {m}", key=f"rep_{m}"):
-                    st.session_state.m_rep = t
-            else:
-                st.success(f"○ {m} - LIBRE")
-                ops = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", nombre_area).execute().data
-                if ops:
-                    op_sel = st.selectbox(f"OP para {m}", [o['op'] for o in ops], key=f"sel_{m}")
-                    if st.button(f"Iniciar {m}", key=f"btn_{m}"):
-                        d = next(o for o in ops if o['op'] == op_sel)
-                        supabase.table("trabajos_activos").insert({"maquina": m, "area": nombre_area, "op": d['op'], "trabajo": d['trabajo'], "hora_inicio": datetime.now().strftime("%H:%M")}).execute()
-                        st.rerun()
+        btn_txt = f"🔴 {m}" if m in act else f"⚪ {m}"
+        if cols[i%4].button(btn_txt, key=m):
+            st.session_state.m_sel = m
+            st.session_state.area_sel = nombre_area
 
-    # Formulario de Reporte Técnico (Emergente si se selecciona máquina)
-    if 'm_rep' in st.session_state:
-        t = st.session_state.m_rep
-        with st.expander(f"FINALIZAR TRABAJO: {t['op']}", expanded=True):
-            with st.form("form_tecnico"):
-                st.write("Datos de Producción")
-                op_n = st.text_input("Operario")
-                dato_extra = st.number_input("Metros / Unidades Finales", 0)
-                parcial = st.checkbox("¿Es entrega Parcial?")
+    # 2. Panel de Control de la Máquina
+    if "m_sel" in st.session_state and st.session_state.area_sel == nombre_area:
+        m = st.session_state.m_sel
+        st.divider()
+        if m in act:
+            t = act[m]
+            st.subheader(f"Control de {m} - OP: {t['op']}")
+            
+            with st.form(f"form_reporte_{m}"):
+                operario = st.text_input("Operario")
+                cantidad = st.number_input("Cantidad Producida", 0)
+                desp = st.number_input("Kilos Desperdicio", 0.0)
+                parcial = st.checkbox("¿Entrega PARCIAL?")
                 
                 c1, c2 = st.columns(2)
-                if c1.form_submit_button("🏁 FINALIZAR Y ENVIAR"):
-                    # Guardar en historial de área
-                    supabase.table(f"reporte_{nombre_area.lower().replace('ó','o')}").insert({"op": t['op'], "maquina": t['maquina'], "operario": op_n, "metros": dato_extra, "tipo_entrega": "PARCIAL" if parcial else "FINAL"}).execute()
+                if c1.form_submit_button("🏁 FINALIZAR"):
+                    # Registrar Historial
+                    supabase.table("reportes_produccion").insert({
+                        "op": t['op'], "area": nombre_area, "maquina": m, 
+                        "operario": operario, "cantidad_reportada": cantidad,
+                        "kilos_desp": desp, "tipo_entrega": "PARCIAL" if parcial else "FINAL"
+                    }).execute()
                     
+                    # Avanzar flujo si es final
                     if not parcial:
-                        avanzar_area(t['op'], t['op'].split("-")[0], nombre_area)
+                        avanzar_proceso(t['op'], nombre_area)
                     
-                    supabase.table("trabajos_activos").delete().eq("maquina", t['maquina']).execute()
-                    del st.session_state.m_rep
+                    supabase.table("trabajos_activos").delete().eq("maquina", m).execute()
                     st.rerun()
                 
-                if c2.form_submit_button("🚨 PARADA DE EMERGENCIA"):
-                    supabase.table("trabajos_activos").update({"estado_maquina": "PARADA", "h_parada": datetime.now().strftime("%H:%M")}).eq("maquina", t['maquina']).execute()
+                if c2.form_submit_button("🚨 PARADA"):
+                    supabase.table("trabajos_activos").update({"estado_maquina": "PARADA"}).eq("maquina", m).execute()
                     st.rerun()
+        else:
+            # Seleccionar nueva OP
+            ops = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", nombre_area).execute().data
+            if ops:
+                sel = st.selectbox("Seleccione OP:", [o['op'] for o in ops])
+                if st.button(f"Iniciar {m}"):
+                    d = next(o for o in ops if o['op'] == sel)
+                    supabase.table("trabajos_activos").insert({
+                        "maquina": m, "area": nombre_area, "op": d['op'], 
+                        "trabajo": d['trabajo'], "hora_inicio": datetime.now().strftime("%H:%M")
+                    }).execute()
+                    st.rerun()
+            else: st.warning("Sin órdenes pendientes.")
 
-# --- RENDERIZADO DE ÁREAS ---
-if area_menu == "🖨️ IMPRESIÓN": render_area("IMPRESIÓN")
-elif area_menu == "✂️ CORTE": render_area("CORTE")
-elif area_menu == "📥 COLECTORAS": render_area("COLECTORAS")
-elif area_menu == "📕 ENCUADERNACIÓN": render_area("ENCUADERNACIÓN")
-
-# --- MÓDULO: SEGUIMIENTO (CONSOLIDADO) ---
-if menu == "🔍 SEGUIMIENTO":
-    st.header("🔍 Seguimiento de Órdenes")
-    ops = supabase.table("ordenes_planeadas").select("*").execute().data
-    if ops:
-        for o in ops:
-            with st.expander(f"OP: {o['op']} - {o['nombre_cliente']}"):
-                st.write(f"**Estado:** {o['estado']} | **Ubicación:** {o['proxima_area']}")
-                st.write("**Datos Iniciales:**", o)
-                
-                # Buscar reportes de todas las áreas para esta OP
-                for area in ["impresion", "corte", "colectoras"]:
-                    rep = supabase.table(f"reporte_{area}").select("*").eq("op", o['op']).execute().data
-                    if rep: st.write(f"**Reporte {area.upper()}:**", rep)
+# --- RENDER DE ÁREAS ---
+if mod_area == "🖨️ IMPRESIÓN": gestionar_area("IMPRESIÓN")
+elif mod_area == "✂️ CORTE": gestionar_area("CORTE")
+elif mod_area == "📥 COLECTORAS": gestionar_area("COLECTORAS")
+elif mod_area == "📕 ENCUADERNACIÓN": gestionar_area("ENCUADERNACIÓN")
