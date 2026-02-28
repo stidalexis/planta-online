@@ -181,7 +181,7 @@ elif menu == "📅 Planificación":
         pref = tipo_op_sel.split(" ")[0]
         es_impreso = pref in ["RI", "FRI"]
         
-        # Carga de arte fuera del form para evitar el SyntaxError y bloqueos
+        # Carga de arte independiente
         if es_impreso:
             archivo_arte = st.file_uploader("🖼️ Cargar Arte (PDF/JPG/PNG)", type=["pdf", "png", "jpg", "jpeg"])
             if archivo_arte:
@@ -192,7 +192,7 @@ elif menu == "📅 Planificación":
                             supabase.storage.from_("artes").upload(path, archivo_arte.getvalue())
                             url_res = supabase.storage.from_("artes").get_public_url(path)
                             st.session_state['url_temp'] = url_res
-                            st.success("✅ Arte listo para registrar.")
+                            st.success("✅ Arte listo.")
                         except Exception as e:
                             st.error(f"Error: {e}")
 
@@ -235,7 +235,7 @@ elif menu == "📅 Planificación":
                 st.success("Orden registrada.")
                 st.rerun()
 
-# 4. IMPRESIÓN (SIN CAMBIOS)
+# 4. IMPRESIÓN
 elif menu == "🖨️ Impresión":
     st.title("🖨️ Operaciones de Impresión")
     act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", "IMPRESIÓN").execute().data}
@@ -276,7 +276,7 @@ elif menu == "🖨️ Impresión":
                     supabase.table("trabajos_activos").update({"estado_maquina": "PRODUCIENDO"}).eq("maquina", ms).execute()
                     st.rerun()
 
-# 5. RESTO DE ÁREAS (SIN CAMBIOS)
+# 5. RESTO DE ÁREAS
 elif menu in ["✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     a_nom = menu.split(" ")[1].upper()
     st.title(a_nom)
