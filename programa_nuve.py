@@ -4,22 +4,22 @@ from supabase import create_client
 from datetime import datetime
 import time
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(layout="wide", page_title="SISTEMA NUVE V16", page_icon="🏭")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(layout="wide", page_title="SISTEMA NUVE V18", page_icon="🏭")
 
-# --- CONEXIÓN ---
+# --- CONEXIÓN SUPABASE ---
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-# --- ESTILOS ---
+# --- ESTILOS VISUALES ---
 st.markdown("""
     <style>
     .stButton > button { height: 60px !important; border-radius: 12px; font-weight: bold; width: 100%; }
     .card-produccion { background-color: #00E676; border: 2px solid #00C853; padding: 15px; border-radius: 12px; text-align: center; color: #1B5E20; box-shadow: 0px 0px 15px rgba(0,230,118,0.5); margin-bottom:10px;}
-    .card-parada { background-color: #FF5252; border: 2px solid #D32F2F; padding: 15px; border-radius: 12px; text-align: center; color: white; box-shadow: 0px 0px 15px rgba(255,82,82,0.5); margin-bottom:10px;}
     .card-vacia { background-color: #F5F5F5; border: 1px solid #E0E0E0; padding: 15px; border-radius: 12px; text-align: center; color: #9E9E9E; margin-bottom:10px;}
     .title-area { background-color: #0D47A1; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
+    .seguimiento-card { background-color: #E3F2FD; border-left: 5px solid #2196F3; padding: 10px; margin-bottom: 5px; border-radius: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -30,14 +30,12 @@ MAQUINAS = {
     "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)]
 }
 
-# --- BARRA LATERAL ---
+# --- MENÚ LATERAL ---
 with st.sidebar:
-    st.title("🏭 NUVE V16")
+    st.title("🏭 NUVE V18")
     menu = st.radio("MENÚ", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
 
-# ==========================================
-# MONITOR Y SEGUIMIENTO (BÁSICO)
-# ==========================================
+# --- 1. MONITOR ---
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
     act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
@@ -47,201 +45,201 @@ if menu == "🖥️ Monitor":
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    clase = "card-produccion" if act[m]['estado_maquina'] == 'PRODUCIENDO' else "card-parada"
-                    st.markdown(f"<div class='{clase}'><b>{m}</b><br>{act[m]['op']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card-produccion'><b>{m}</b><br>{act[m]['op']}</div>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<div class='card-vacia'><b>{m}</b><br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(15); st.rerun()
 
+# --- 2. SEGUIMIENTO DETALLADO ---
 elif menu == "🔍 Seguimiento":
-    st.title("Historial de Órdenes")
+    st.title("Seguimiento Detallado de Órdenes")
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
     if res:
         df = pd.DataFrame(res)
-        st.dataframe(df[['op', 'tipo_orden', 'cliente', 'nombre_trabajo', 'proxima_area']], use_container_width=True)
+        sel_op = st.selectbox("Seleccione OP para ver su historial:", df['op'].tolist())
+        det = df[df['op'] == sel_op].iloc[0]
+        
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            st.subheader("Datos Generales")
+            st.write(f"**Cliente:** {det['cliente']}")
+            st.write(f"**Trabajo:** {det['nombre_trabajo']}")
+            st.write(f"**Estado Actual:** {det['proxima_area']}")
+            st.write(f"**Tipo:** {det['tipo_orden']}")
+        
+        with c2:
+            st.subheader("Bitácora de Producción")
+            historial = det['historial_procesos']
+            if historial:
+                for paso in historial:
+                    st.markdown(f"""
+                    <div class='seguimiento-card'>
+                        <b>ÁREA: {paso['area']}</b> | Máquina: {paso['maquina']}<br>
+                        <small>Operario: {paso['operario']} | Fecha: {paso['fecha']}</small><br>
+                        Status: {paso['tipo_entrega']}
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Esta orden aún no ha iniciado procesos en máquinas.")
 
-# ==========================================
-# PLANIFICACIÓN (EL CAMBIO MASIVO)
-# ==========================================
+# --- 3. PLANIFICACIÓN (FORMULARIOS PDF MASIVOS) ---
 elif menu == "📅 Planificación":
-    st.title("Registro de Órdenes de Producción")
-    
-    op_tipo = st.radio("SELECCIONE TIPO DE TRABAJO:", ["FORMAS IMPRESAS", "FORMAS BLANCAS", "ROLLOS (Impresos/Blancos)"], horizontal=True)
+    st.title("Registro de Órdenes")
+    op_tipo = st.radio("SELECCIONE TIPO:", ["FORMAS IMPRESAS", "FORMAS BLANCAS", "ROLLOS"], horizontal=True)
 
-    with st.form("form_masivo"):
-        # --- ENCABEZADO COMÚN ---
+    with st.form("form_master_v18"):
         c1, c2, c3 = st.columns(3)
         op_num = c1.text_input("Número de OP")
         op_ant = c2.text_input("OP Anterior")
         cliente = c3.text_input("Cliente")
         
-        c4, c5, c6 = st.columns(3)
+        c4, c5 = st.columns(2)
         vendedor = c4.text_input("Vendedor")
-        nombre_forma = c5.text_input("Nombre de la Forma / Trabajo")
-        referencia_r = c6.text_input("Referencia (Solo para Rollos)")
+        n_trabajo = c5.text_input("Nombre de la Forma / Trabajo")
 
-        # --- LÓGICA PARA FORMAS (IMPRESAS Y BLANCAS) ---
         if "FORMAS" in op_tipo:
             st.markdown("### CONFIGURACIÓN DE FORMAS")
             f1, f2 = st.columns(2)
             cant_f = f1.number_input("Cantidad de Formas", 0)
             partes_n = f2.selectbox("Número de Partes", [1, 2, 3, 4, 5, 6])
             
-            # Perforaciones
-            perf_si = st.checkbox("¿Lleva Perforaciones?")
-            perf_det = st.text_input("Defina Perforaciones", "N/A") if perf_si else "NO"
+            cp1, cp2 = st.columns(2)
+            perf_si = cp1.selectbox("¿Lleva Perforaciones?", ["NO", "SI"])
+            perf_det = cp1.text_area("Detalle Perforaciones", "N/A") if perf_si == "SI" else "NO"
             
-            # Numeración
+            cb_si = cp2.selectbox("¿Código de Barras?", ["NO", "SI"])
+            cb_det = cp2.text_area("Detalle Código de Barras", "N/A") if cb_si == "SI" else "NO"
+
             st.write("**Numeración:**")
             n1, n2, n3 = st.columns(3)
             n_del = n1.text_input("DEL:")
             n_al = n2.text_input("AL:")
             n_tipo = n3.selectbox("Tipo Numeración", ["MECANICA", "INKJET"])
-            
-            # Código de Barras
-            cb_si = st.checkbox("¿Código de Barras?")
-            cb_det = st.text_input("Tipo de Código de Barras", "N/A") if cb_si else "NO"
 
-            # TABLA DINÁMICA DE PARTES (LA PARTE DEL DOBLE PARÉNTESIS)
-            st.markdown("#### ESPECIFICACIONES POR PARTE")
-            lista_detalles_partes = []
+            st.markdown("#### DETALLE TÉCNICO POR PARTE")
+            lista_partes = []
             for i in range(1, partes_n + 1):
-                with st.expander(f"PARTE #{i}", expanded=True):
-                    d1, d2, d3 = st.columns(3)
-                    ancho = d1.text_input(f"Ancho Forma P{i}")
-                    largo = d2.text_input(f"Largo Forma P{i}")
-                    papel = d3.text_input(f"Tipo Papel P{i}")
-                    
-                    d4, d5, d6 = st.columns(3)
-                    fondo = d4.text_input(f"Fondo P{i}")
-                    gramaje = d5.text_input(f"Gramaje P{i}")
-                    trafico_si = d6.checkbox(f"¿Tráfico P{i}?")
-                    trafico_det = st.text_input(f"Defina Tráfico P{i}", "N/A") if trafico_si else "NO"
-                    
+                st.markdown(f"--- **PARTE #{i}** ---")
+                d1, d2, d3, d4 = st.columns(4)
+                ancho = d1.text_input(f"Ancho P{i}", key=f"a_{i}")
+                largo = d2.text_input(f"Largo P{i}", key=f"l_{i}")
+                papel = d3.text_input(f"Tipo Papel P{i}", key=f"p_{i}")
+                grama = d4.text_input(f"Gramaje P{i}", key=f"g_{i}")
+                
+                d5, d6, d7 = st.columns(3)
+                fondo = d5.text_input(f"Fondo P{i}", key=f"f_{i}")
+                trafico_si = d6.selectbox(f"Tráfico P{i}?", ["NO", "SI"], key=f"ts_{i}")
+                trafico_det = d7.text_input(f"Defina Tráfico P{i}", key=f"td_{i}") if trafico_si == "SI" else "N/A"
+                
+                t_f, t_r = "N/A", "N/A"
+                if op_tipo == "FORMAS IMPRESAS":
                     t1, t2 = st.columns(2)
-                    # Si es Formas Blancas, no pedimos tintas
-                    t_frente = ""
-                    t_respaldo = ""
-                    if op_tipo == "FORMAS IMPRESAS":
-                        t_frente = t1.text_input(f"Tintas FRENTE P{i} (Cuales)")
-                        t_respaldo = t2.text_input(f"Tintas RESPALDO P{i} (Cuales)")
-                    
-                    lista_detalles_partes.append({
-                        "parte": i, "ancho": ancho, "largo": largo, "papel": papel,
-                        "fondo": fondo, "gramaje": gramaje, "trafico": trafico_det,
-                        "t_frente": t_frente, "t_respaldo": t_respaldo
-                    })
-            
-            st.markdown("#### PRESENTACIÓN Y ACABADO")
-            p1, p2 = st.columns(2)
-            presenta = p1.selectbox("Tipo Presentación", ["LIBRETAS TAPADURA", "BLOCK LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS"])
-            terminado = p2.selectbox("Cosidas o Encoladas por", ["CABEZA", "IZQUIERDA", "PATA", "N/A"])
+                    t_f = t1.text_input(f"Tintas FRENTE P{i}", key=f"tf_{i}")
+                    t_r = t2.text_input(f"Tintas RESPALDO P{i}", key=f"tr_{i}")
+                
+                lista_partes.append({"p": i, "an": ancho, "la": largo, "pa": papel, "gr": grama, "fo": fondo, "tr": trafico_det, "tf": t_f, "tr": t_r})
 
-        # --- LÓGICA PARA ROLLOS ---
-        else:
+            st.markdown("#### ACABADO")
+            p1, p2 = st.columns(2)
+            pres = p1.selectbox("Presentación", ["LIBRETAS TAPADURA", "BLOCK LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS"])
+            term = p2.selectbox("Cosidas/Encoladas por", ["CABEZA", "IZQUIERDA", "PATA", "N/A"])
+            obs_f = st.text_area("Observaciones Generales")
+
+        else: # ROLLOS
             st.markdown("### CONFIGURACIÓN DE ROLLOS")
             r1, r2, r3 = st.columns(3)
-            material_r = r1.text_input("Material")
-            gramaje_r = r2.text_input("Gramaje")
-            ref_comercial = r3.text_input("Referencia Comercial")
+            mat = r1.text_input("Material")
+            gram_r = r2.text_input("Gramaje")
+            ref_com = r3.text_input("Referencia Comercial")
             
             r4, r5, r6 = st.columns(3)
             cant_r = r4.number_input("Cantidad Solicitada", 0)
             core_r = r5.selectbox("Core", ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"])
-            tiene_imp = r6.selectbox("¿Lleva Impresión?", ["SI", "NO"])
+            tiene_i = r6.selectbox("¿Lleva Impresión?", ["NO", "SI"])
             
-            t_frente_r, t_respaldo_r = "", ""
-            if tiene_imp == "SI":
-                c_tintas = st.number_input("Cantidad de Tintas", 0)
+            t_f_r, t_r_r, c_t = "N/A", "N/A", 0
+            if tiene_i == "SI":
+                c_t = st.number_input("Cantidad Tintas", 0)
                 ct1, ct2 = st.columns(2)
-                t_frente_r = ct1.text_input("Tintas FRENTE")
-                t_respaldo_r = ct2.text_input("Tintas RESPALDO")
+                t_f_r = ct1.text_input("Tintas FRENTE")
+                t_r_r = ct2.text_input("Tintas RESPALDO")
             
-            r7, r8 = st.columns(2)
-            u_bolsa = r7.number_input("Unidades por Bolsa", 0)
-            u_caja = r8.number_input("Unidades por Caja", 0)
-            obs_r = st.text_area("Observaciones")
+            r7, r8, r9 = st.columns(3)
+            u_b = r7.number_input("Cant x Bolsa", 0)
+            u_c = r8.number_input("Cant x Caja", 0)
+            obs_r = st.text_area("Observaciones Rollos")
 
-        # --- BOTÓN DE GUARDADO ---
-        if st.form_submit_button("🚀 GUARDAR ORDEN DE PRODUCCIÓN"):
-            if not op_num:
-                st.error("Falta el número de OP")
+        if st.form_submit_button("🚀 REGISTRAR OP"):
+            if not op_num: st.error("OP requerida")
             else:
-                # Construcción del Payload según el tipo
                 if "FORMAS" in op_tipo:
                     payload = {
-                        "op": op_num.upper(), "op_anterior": op_ant, "cliente": cliente, 
-                        "vendedor": vendedor, "nombre_trabajo": nombre_forma, "tipo_orden": op_tipo,
-                        "cantidad_formas": int(cant_f), "num_partes": partes_n,
-                        "perforaciones_detalle": perf_det, "num_desde": n_del, "num_hasta": n_al,
-                        "presentacion": presenta, "terminado_por": terminado, "tipo_numeracion": n_tipo,
-                        "codigo_barras_detalle": cb_det, "detalles_partes_json": lista_detalles_partes,
+                        "op": op_num.upper(), "op_anterior": op_ant, "cliente": cliente, "vendedor": vendedor, "nombre_trabajo": n_trabajo,
+                        "tipo_orden": op_tipo, "cantidad_formas": int(cant_f), "num_partes": partes_n, "perforaciones_si_no": perf_si,
+                        "perforaciones_detalle": perf_det, "num_desde": n_del, "num_hasta": n_al, "presentacion": pres,
+                        "terminado_por": term, "tipo_numeracion": n_tipo, "codigo_barras_si_no": cb_si,
+                        "codigo_barras_detalle": cb_det, "detalles_partes_json": lista_partes, "observaciones_formas": obs_f,
                         "proxima_area": "IMPRESIÓN" if op_tipo == "FORMAS IMPRESAS" else "COLECTORAS"
                     }
                 else:
                     payload = {
-                        "op": op_num.upper(), "op_anterior": op_ant, "cliente": cliente,
-                        "referencia": referencia_r, "vendedor": vendedor, "nombre_trabajo": nombre_forma,
-                        "tipo_orden": "ROLLOS", "material": material_r, "gramaje_rollos": gramaje_r,
-                        "ref_comercial": ref_comercial, "cantidad_rollos": int(cant_r),
-                        "core": core_r, "tiene_impresion": tiene_imp, "tintas_frente_rollos": t_frente_r,
-                        "tintas_respaldo_rollos": t_respaldo_r, "unidades_bolsa": int(u_bolsa),
-                        "unidades_caja": int(u_caja), "observaciones": obs_r,
-                        "proxima_area": "IMPRESIÓN" if tiene_imp == "SI" else "CORTE"
+                        "op": op_num.upper(), "op_anterior": op_ant, "cliente": cliente, "vendedor": vendedor, "nombre_trabajo": n_trabajo,
+                        "tipo_orden": "ROLLOS", "material": mat, "gramaje_rollos": gram_r, "ref_comercial": ref_com, "cantidad_rollos": int(cant_r),
+                        "core": core_r, "tiene_impresion": tiene_i, "cantidad_tintas": int(c_t), "tintas_frente_rollos": t_f_r,
+                        "tintas_respaldo_rollos": t_r_r, "unidades_bolsa": int(u_b), "unidades_caja": int(u_c), "observaciones_rollos": obs_r,
+                        "proxima_area": "IMPRESIÓN" if tiene_i == "SI" else "CORTE"
                     }
-                
                 try:
                     supabase.table("ordenes_planeadas").insert(payload).execute()
-                    st.success("✅ ORDEN REGISTRADA EXITOSAMENTE")
-                    time.sleep(1); st.rerun()
-                except Exception as e:
-                    st.error(f"Error al guardar: {e}")
+                    st.success("✅ Orden Guardada"); time.sleep(1); st.rerun()
+                except Exception as e: st.error(f"Error: {e}")
 
-# ==========================================
-# GESTIÓN DE ÁREAS (IMPRESIÓN, CORTE, ETC)
-# ==========================================
+# --- MÓDULOS DE ÁREA (CON ACTUALIZACIÓN DE SEGUIMIENTO) ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
     st.title(f"Área: {area_act}")
-    
     activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data}
     cols = st.columns(4)
-    
     for idx, m in enumerate(MAQUINAS[area_act]):
         with cols[idx % 4]:
             if m in activos:
                 st.error(f"● {m} - {activos[m]['op']}")
-                if st.button(f"Cerrar {m}", key=f"c_{m}"):
-                    st.session_state.temp_m = activos[m]
+                if st.button(f"Cerrar {m}", key=f"c_{m}"): st.session_state.temp = activos[m]
             else:
                 st.success(f"○ {m} - LIBRE")
                 ops = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
                 if ops:
-                    sel = st.selectbox(f"Asignar OP a {m}", [o['op'] for o in ops], key=f"s_{m}")
+                    sel = st.selectbox(f"Asignar OP", [o['op'] for o in ops], key=f"s_{m}")
                     if st.button(f"Iniciar {m}", key=f"i_{m}"):
                         d = next(o for o in ops if o['op'] == sel)
-                        supabase.table("trabajos_activos").insert({
-                            "maquina": m, "area": area_act, "op": d['op'], 
-                            "trabajo": d['nombre_trabajo'], "hora_inicio": datetime.now().strftime("%H:%M")
-                        }).execute()
+                        supabase.table("trabajos_activos").insert({"maquina":m,"area":area_act,"op":d['op'],"trabajo":d['nombre_trabajo'],"hora_inicio":datetime.now().strftime("%H:%M")}).execute()
                         st.rerun()
 
-    if 'temp_m' in st.session_state:
-        tm = st.session_state.temp_m
-        with st.expander(f"FINALIZAR TAREA EN {tm['maquina']}", expanded=True):
-            if st.button("🏁 COMPLETAR Y AVANZAR"):
+    if 'temp' in st.session_state:
+        tm = st.session_state.temp
+        with st.expander(f"REPORTE DE FINALIZACIÓN {tm['maquina']}", expanded=True):
+            nom_op = st.text_input("Nombre Operario")
+            parcial = st.checkbox("¿Entrega Parcial?")
+            if st.button("🏁 COMPLETAR Y ACTUALIZAR SEGUIMIENTO"):
                 d_op = supabase.table("ordenes_planeadas").select("*").eq("op", tm['op']).single().execute().data
-                tipo = d_op['tipo_orden']
                 
-                # Lógica de flujo
+                # ACTUALIZAR BITÁCORA DE SEGUIMIENTO
+                nuevo_paso = {
+                    "area": area_act, "maquina": tm['maquina'], "operario": nom_op,
+                    "fecha": datetime.now().strftime("%d/%m/%Y %H:%M"),
+                    "tipo_entrega": "Parcial" if parcial else "Completa"
+                }
+                historial = d_op['historial_procesos']
+                historial.append(nuevo_paso)
+                
+                # LÓGICA DE RUTA
                 n_area = "FINALIZADO"
-                if tipo == "ROLLOS":
-                    if area_act == "IMPRESIÓN": n_area = "CORTE"
-                else: # FORMAS
+                if d_op['tipo_orden'] == "ROLLOS" and area_act == "IMPRESIÓN": n_area = "CORTE"
+                elif "FORMAS" in d_op['tipo_orden']:
                     if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
                     elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
                 
-                supabase.table("ordenes_planeadas").update({"proxima_area": n_area}).eq("op", tm['op']).execute()
+                supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": historial}).eq("op", tm['op']).execute()
                 supabase.table("trabajos_activos").delete().eq("maquina", tm['maquina']).execute()
-                del st.session_state.temp_m
+                del st.session_state.temp
                 st.rerun()
