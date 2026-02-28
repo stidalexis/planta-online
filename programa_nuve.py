@@ -2,28 +2,46 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client
 from datetime import datetime
-import time
 import io
+import time
 
-# --- CONFIGURACIÓN ---
-st.set_page_config(layout="wide", page_title="SISTEMA NUVE V25", page_icon="🏭")
+# --- CONFIGURACIÓN DE PÁGINA ---
+st.set_page_config(layout="wide", page_title="SISTEMA NUVE V7.5", page_icon="🏭")
 
-# --- CONEXIÓN ---
+# --- CONEXIÓN A SUPABASE ---
 URL = st.secrets["SUPABASE_URL"]
 KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(URL, KEY)
 
-# --- ESTILOS ---
+# --- ESTILOS VISUALES ---
 st.markdown("""
     <style>
-    .stButton > button { height: 40px !important; border-radius: 8px; font-weight: bold; width: 100%; }
-    .card-produccion { background-color: #00E676; border: 2px solid #00C853; padding: 15px; border-radius: 12px; text-align: center; color: #1B5E20; font-weight: bold; }
-    .card-vacia { background-color: #F5F5F5; border: 1px solid #E0E0E0; padding: 15px; border-radius: 12px; text-align: center; color: #9E9E9E; }
+    .stButton > button { height: 60px !important; border-radius: 12px; font-weight: bold; width: 100%; }
+    .card-proceso { 
+        padding: 15px; border-radius: 12px; background-color: #E8F5E9; 
+        border-left: 8px solid #2E7D32; margin-bottom: 15px; 
+    }
+    .card-activa-brillante { 
+        padding: 15px; border-radius: 12px; 
+        background-color: #00E676; border: 2px solid #00C853;
+        box-shadow: 0px 0px 15px rgba(0, 230, 118, 0.5);
+        margin-bottom: 15px; text-align: center; color: #1B5E20;
+    }
+    .card-vacia-monitor { 
+        padding: 15px; border-radius: 12px; 
+        background-color: #F5F5F5; border: 1px solid #E0E0E0;
+        margin-bottom: 15px; text-align: center; color: #9E9E9E;
+    }
+    .card-libre { padding: 15px; border-radius: 12px; background-color: #F5F5F5; border-left: 8px solid #9E9E9E; text-align: center; color: #757575; margin-bottom: 15px; }
     .title-area { background-color: #0D47A1; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 15px; }
-    .info-box { background-color: #f8f9fa; border-left: 5px solid #0d47a1; padding: 10px; margin-bottom: 5px; border-radius: 4px; }
+    .text-maquina { font-size: 1.3rem; font-weight: 800; margin-bottom: 5px; display: block; }
+    .text-op { font-size: 1.1rem; font-weight: 700; color: #000; display: block; }
+    .text-trabajo { font-size: 0.85rem; font-weight: 500; display: block; line-height: 1.1; }
+    .detalles-op { font-size: 0.85rem; color: #1B5E20; line-height: 1.2; }
     </style>
     """, unsafe_allow_html=True)
 
+# --- CONFIGURACIÓN DE MÁQUINAS ---
 MAQUINAS = {
     "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": [f"COR-{i:02d}" for i in range(1, 13)],
@@ -31,239 +49,157 @@ MAQUINAS = {
     "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)]
 }
 
-if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
-if 'detalle_op_id' not in st.session_state: st.session_state.detalle_op_id = None
+def normalizar(t):
+    for k, v in {"Í":"I","Ó":"O","Á":"A","É":"E","Ú":"U"," ":"_"}.items(): t = t.upper().replace(k,v)
+    return t.lower()
 
-with st.sidebar:
-    st.title("🏭 NUVE V25")
-    menu = st.radio("MENÚ", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
+# --- VENTANA EMERGENTE (DETALLE OP) ---
+@st.dialog("Detalles de la Orden de Producción", width="large")
+def mostrar_detalle_op(row):
+    st.markdown(f"### 📄 Orden: {row['op']}")
+    st.divider()
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown("**CLIENTE Y TRABAJO**")
+        st.write(f"👤 **Cliente:** {row.get('nombre_cliente')}")
+        st.write(f"💼 **Vendedor:** {row.get('vendedor')}")
+        st.write(f"🛠️ **Trabajo:** {row.get('trabajo')}")
+    with col2:
+        st.markdown("**ESPECIFICACIONES**")
+        st.write(f"📄 **Material:** {row.get('material')}")
+        st.write(f"📏 **Medida:** {row.get('ancho_medida')}")
+        st.write(f"📦 **Cantidad:** {row.get('unidades_solicitadas')}")
+    with col3:
+        st.markdown("**PROCESO**")
+        st.write(f"🎨 **Tintas:** {row.get('cant_tintas')}")
+        st.write(f"📍 **Área Sig:** {row.get('proxima_area')}")
+        core_val = row.get('core') if row.get('core') != 'N/A' else row.get('copias')
+        st.write(f"Core/Copias: {core_val}")
 
-# --- MONITOR ---
-if menu == "🖥️ Monitor":
-    st.title("Monitor de Planta")
-    act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
+    st.info(f"📝 **Observaciones:** {row.get('observaciones')}")
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+        pd.DataFrame([row]).to_excel(writer, index=False)
+    st.download_button("📥 DESCARGAR EXCEL", output.getvalue(), f"OP_{row['op']}.xlsx", use_container_width=True)
+
+# --- MODAL DE CIERRE (A LA ESPERA DE TUS PARÁMETROS) ---
+@st.dialog("Finalizar Trabajo", width="medium")
+def modal_finalizar_trabajo(t, m_s, area):
+    st.warning(f"Cerrando OP: {t['op']} en {m_s}")
+    with st.form("form_kpi"):
+        st.write("Datos de Producción")
+        # Aquí es donde incluiremos tus parámetros personalizados
+        operario = st.text_input("Nombre del Operario")
+        if st.form_submit_button("✅ GUARDAR Y FINALIZAR"):
+            if operario:
+                sig = "FINALIZADO"
+                if t['tipo_acabado'] == "RI" and area == "IMPRESIÓN": sig = "CORTE"
+                elif t['tipo_acabado'] == "FRI" and area == "IMPRESIÓN": sig = "COLECTORAS"
+                elif t['tipo_acabado'] in ["FRI","FRB"] and area == "COLECTORAS": sig = "ENCUADERNACIÓN"
+
+                hist = {"op":t['op'], "maquina":m_s, "trabajo":t['trabajo'], "h_inicio":t['hora_inicio'], "h_fin":datetime.now().strftime("%H:%M"), "operario": operario}
+                supabase.table(normalizar(area)).insert(hist).execute()
+                supabase.table("ordenes_planeadas").update({"proxima_area":sig, "estado":"Pendiente" if sig != "FINALIZADO" else "Finalizado"}).eq("op", t['op']).execute()
+                supabase.table("trabajos_activos").delete().eq("maquina", m_s).execute()
+                st.rerun()
+
+# --- BARRA LATERAL ---
+menu = st.sidebar.radio("SISTEMA NUVE V7.5", ["🖥️ Monitor General (TV)", "🔍 Seguimiento de Pedidos", "📅 Planificación (Ingreso OP)", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "📊 Historial KPI"])
+
+# 1. MONITOR GENERAL (TV) - SIN TOCAR
+if menu == "🖥️ Monitor General (TV)":
+    st.title("🏭 Tablero de Control de Planta - Vista Total")
+    try:
+        act_data = supabase.table("trabajos_activos").select("*").execute().data
+        act = {a['maquina']: a for a in act_data}
+    except: act = {}
+
     for area, maquinas in MAQUINAS.items():
-        st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='title-area'>ÁREA: {area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    st.markdown(f"<div class='card-produccion'>{m}<br>{act[m]['op']}</div>", unsafe_allow_html=True)
+                    d = act[m]
+                    st.markdown(f"<div class='card-activa-brillante'><span class='text-maquina'>{m}</span><span class='text-op'>{d['op']}</span><span class='text-trabajo'>{d['trabajo']}</span><hr style='margin: 8px 0; border: 0.5px solid #00C853;'><small>Inicio: {d.get('hora_inicio', '--:--')}</small></div>", unsafe_allow_html=True)
                 else:
-                    st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
-    time.sleep(20); st.rerun()
+                    st.markdown(f"<div class='card-vacia-monitor'><span class='text-maquina'>{m}</span><br><small>DISPONIBLE</small></div>", unsafe_allow_html=True)
+    time.sleep(30)
+    st.rerun()
 
-# --- SEGUIMIENTO (FILTRADO DE HUECOS Y VISTA TÉCNICA) ---
-elif menu == "🔍 Seguimiento":
-    st.title("Seguimiento y Registro Histórico")
-    res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
-    
-    if res:
-        df = pd.DataFrame(res)
-        
-        # FUNCION PARA EXCEL SIN HUECOS (ELIMINA COLUMNAS VACÍAS Y CAMPOS N/A)
-        def to_excel_limpio(df_input, tipo=None):
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-                if tipo == "GENERAL":
-                    df_f = df_input[df_input['tipo_orden'].str.contains("FORMAS", na=False)].dropna(axis=1, how='all')
-                    df_r = df_input[df_input['tipo_orden'].str.contains("ROLLOS", na=False)].dropna(axis=1, how='all')
-                    if not df_f.empty: df_f.to_excel(writer, index=False, sheet_name='FORMAS')
-                    if not df_r.empty: df_r.to_excel(writer, index=False, sheet_name='ROLLOS')
-                else:
-                    # Unitario: eliminamos columnas que sean todas NaN o tengan string "N/A"
-                    df_unit = df_input.dropna(axis=1, how='all')
-                    # También quitamos columnas de control interno que no aportan al usuario
-                    cols_to_drop = [c for c in ['id', 'detalles_partes_json'] if c in df_unit.columns]
-                    df_unit.drop(columns=cols_to_drop).to_excel(writer, index=False, sheet_name='DETALLE_OP')
-            return output.getvalue()
+# 2. SEGUIMIENTO DE PEDIDOS - SIN TOCAR
+elif menu == "🔍 Seguimiento de Pedidos":
+    st.title("🔍 Seguimiento de Órdenes")
+    try:
+        ops = supabase.table("ordenes_planeadas").select("*").neq("estado", "Finalizado").execute().data
+        if ops:
+            df = pd.DataFrame(ops)
+            c1, c2, c3, c4 = st.columns([1, 2, 1, 1])
+            c1.write("**OP**"); c2.write("**TRABAJO**"); c3.write("**PROX. ÁREA**"); c4.write("**ACCIÓN**")
+            for _, fila in df.iterrows():
+                r1, r2, r3, r4 = st.columns([1, 2, 1, 1])
+                r1.write(fila['op']); r2.write(fila['trabajo']); r3.write(fila['proxima_area'])
+                if r4.button("🔎 Detalles", key=f"seg_{fila['op']}"): mostrar_detalle_op(fila)
+    except: st.info("No hay órdenes pendientes.")
 
-        st.download_button("📥 Reporte General Sin Huecos", to_excel_limpio(df, "GENERAL"), "Reporte_Limpio.xlsx")
-
-        st.write("---")
-        h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 2, 2, 1])
-        h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Ubicación**"); h6.write("**Acción**")
-        st.divider()
-
-        for index, row in df.iterrows():
-            r1, r2, r3, r4, r5, r6 = st.columns([1, 2, 2, 2, 2, 1])
-            r1.write(row['op'])
-            r2.write(row['cliente'])
-            r3.write(row['nombre_trabajo'])
-            r4.write(row['tipo_orden'])
-            color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
-            r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
-            if r6.button("👁️ Ver", key=f"v_{row['op']}"):
-                st.session_state.detalle_op_id = row['op']
-
-        # --- VISTA TÉCNICA AMPLIADA ---
-        if st.session_state.detalle_op_id:
-            d = df[df['op'] == st.session_state.detalle_op_id].iloc[0].to_dict()
-            st.markdown("---")
-            with st.container():
-                st.subheader(f"📋 FICHA TÉCNICA COMPLETA - OP: {d['op']}")
-                
-                # Descarga unitaria filtrada
-                df_u = pd.DataFrame([d])
-                st.download_button("📥 Descargar esta OP (Excel Limpio)", to_excel_limpio(df_u), f"OP_{d['op']}_Limpia.xlsx")
-                
-                t_col1, t_col2, t_col3 = st.columns(3)
-                with t_col1:
-                    st.markdown("<div class='info-box'><b>INFORMACIÓN COMERCIAL</b></div>", unsafe_allow_html=True)
-                    st.write(f"**Cliente:** {d['cliente']}")
-                    st.write(f"**Vendedor:** {d['vendedor']}")
-                    st.write(f"**Trabajo:** {d['nombre_trabajo']}")
-                    st.write(f"**OP Anterior:** {d.get('op_anterior', 'N/A')}")
-                
-                with t_col2:
-                    st.markdown("<div class='info-box'><b>ESPECIFICACIONES TÉCNICAS</b></div>", unsafe_allow_html=True)
-                    if "FORMAS" in d['tipo_orden']:
-                        st.write(f"**Cantidad:** {d.get('cantidad_formas', 0)}")
-                        st.write(f"**Partes:** {d.get('num_partes', 1)}")
-                        st.write(f"**Presentación:** {d.get('presentacion', 'N/A')}")
-                        st.write(f"**Perforaciones:** {d.get('perforaciones_detalle', 'NO')}")
-                        st.write(f"**C. Barras:** {d.get('codigo_barras_detalle', 'NO')}")
-                    else:
-                        st.write(f"**Material:** {d.get('material', 'N/A')}")
-                        st.write(f"**Core:** {d.get('core', 'N/A')}")
-                        st.write(f"**Cantidad:** {d.get('cantidad_rollos', 0)}")
-                        st.write(f"**Tintas:** {d.get('tintas_frente_rollos', 'N/A')} / {d.get('tintas_respaldo_rollos', 'N/A')}")
-                        st.write(f"**Empaque:** Bolsa: {d.get('unidades_bolsa', 0)} | Caja: {d.get('unidades_caja', 0)}")
-
-                with t_col3:
-                    st.markdown("<div class='info-box'><b>STATUS Y LOGÍSTICA</b></div>", unsafe_allow_html=True)
-                    st.write(f"**Estado:** {d['proxima_area']}")
-                    st.write(f"**Fecha Creación:** {d['created_at']}")
-                    st.write(f"**Observaciones:** {d.get('observaciones_formas') or d.get('observaciones_rollos') or 'Sin obs.'}")
-
-                # TABLA DE PARTES (Solo para Formas)
-                if "FORMAS" in d['tipo_orden'] and d.get('detalles_partes_json'):
-                    st.write("**DETALLE DE PAPELES POR PARTE:**")
-                    st.table(pd.DataFrame(d['detalles_partes_json']))
-
-                # BITÁCORA HISTÓRICA
-                st.write("**👣 HISTORIAL DE PROCESOS (BITÁCORA):**")
-                if d['historial_procesos']:
-                    for p in d['historial_procesos']:
-                        st.info(f"✅ **{p['area']}** - Finalizado en máquina **{p['maquina']}** por **{p['operario']}** el {p['fecha']}")
-                else:
-                    st.warning("Esta orden aún no ha iniciado procesos en planta.")
-
-                if st.button("❌ Cerrar Detalle"):
-                    st.session_state.detalle_op_id = None
-                    st.rerun()
-
-# --- PLANIFICACIÓN (SIN CAMBIOS, SOLO MEJORA DE UI) ---
-elif menu == "📅 Planificación":
-    st.title("Nueva Orden de Producción")
-    c1, c2, c3, c4 = st.columns(4)
-    if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
-    if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
-    if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
-    if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
-
-    if st.session_state.sel_tipo:
-        t = st.session_state.sel_tipo
-        with st.form("form_v25", clear_on_submit=True):
-            st.subheader(f"Configurando: {t}")
-            f1, f2, f3 = st.columns(3)
-            op_n = f1.text_input("Número de OP")
-            op_a = f2.text_input("OP Anterior")
-            cli = f3.text_input("Cliente")
-            f4, f5 = st.columns(2)
-            vend = f4.text_input("Vendedor")
-            trab = f5.text_input("Nombre Trabajo")
-
-            if "FORMAS" in t:
-                g1, g2 = st.columns(2)
-                cant_f = g1.number_input("Cantidad Formas", 0)
-                partes = g2.selectbox("Partes", [1,2,3,4,5,6])
-                p1, p2 = st.columns(2)
-                perf_d = p1.text_area("Detalle Perforación", "N/A")
-                barr_d = p2.text_area("Detalle Barras", "N/A")
-                lista_p = []
-                for i in range(1, partes + 1):
-                    st.markdown(f"**PARTE {i}**")
-                    d1, d2, d3, d4 = st.columns(4)
-                    anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}")
-                    lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
-                    pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
-                    gra = d4.text_input(f"Gramos P{i}", key=f"g_{i}")
-                    tf, tr = "N/A", "N/A"
-                    if t == "FORMAS IMPRESAS":
-                        t1, t2 = st.columns(2)
-                        tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}")
-                        tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}")
-                    lista_p.append({"p":i, "anc":anc, "lar":lar, "tf":tf, "tr":tr})
-                pres = st.selectbox("Presentación", ["LIBRETAS TAPADURA", "BLOCK LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS"])
-                obs = st.text_area("Observaciones")
+# 3. PLANIFICACIÓN - SIN TOCAR
+elif menu == "📅 Planificación (Ingreso OP)":
+    st.title("📅 Registro de Nueva OP")
+    tipo_op_sel = st.selectbox("TIPO DE PRODUCTO:", ["-- Seleccione --", "RI (Rollo Impreso)", "RB (Rollo Blanco)", "FRI (Forma Impresa)", "FRB (Forma Blanca)"])
+    if tipo_op_sel != "-- Seleccione --":
+        pref = tipo_op_sel.split(" ")[0]
+        es_forma = pref in ["FRI", "FRB"]; es_impreso = pref in ["RI", "FRI"]
+        with st.form("form_op"):
+            st.markdown(f"<div class='title-area'>FORMULARIO: {tipo_op_sel}</div>", unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3); op_num = c1.text_input("NÚMERO DE OP"); vendedor = c2.text_input("VENDEDOR"); cliente = c3.text_input("CLIENTE"); trabajo = st.text_input("TRABAJO")
+            pld = {"core": "N/A", "unidades_bolsa": 0, "unidades_caja": 0, "num_desde": "N/A", "num_hasta": "N/A", "copias": "N/A", "fondo_copias": "N/A", "traficos_orden": "N/A", "codigo_barras": "NO", "perforaciones": "N/A", "presentacion": "N/A"}
+            f1, f2, f3 = st.columns(3); material = f1.text_input("PAPEL"); medida = f2.text_input("MEDIDA"); cantidad = f3.number_input("CANTIDAD", min_value=0)
+            if not es_forma:
+                r1, r2, r3 = st.columns(3); pld["core"] = r1.selectbox("CORE", ["13MM", "19MM", "1 PULG", "2 PULG", "3 PULG"]); pld["unidades_bolsa"] = r2.number_input("U. BOLSA", 0); pld["unidades_caja"] = r3.number_input("U. CAJA", 0)
+                pArea = "IMPRESIÓN" if pref == "RI" else "CORTE"
             else:
-                r1, r2, r3 = st.columns(3)
-                mat = r1.text_input("Material")
-                gram = r2.text_input("Gramaje")
-                ref_c = r3.text_input("Ref. Comercial")
-                r4, r5 = st.columns(2)
-                cant_r = r4.number_input("Cantidad Rollos", 0)
-                core = r5.selectbox("Core", ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"])
-                tf_r, tr_r = "N/A", "N/A"
-                if t == "ROLLOS IMPRESOS":
-                    ct1, ct2 = st.columns(2)
-                    tf_r = ct1.text_input("Tintas Frente")
-                    tr_r = ct2.text_input("Tintas Respaldo")
-                r6, r7 = st.columns(2)
-                ub = r6.number_input("Cant x Bolsa", 0)
-                uc = r7.number_input("Cant x Caja", 0)
-                obs = st.text_area("Observaciones")
+                n1, n2, n3 = st.columns(3); pld["num_desde"], pld["num_hasta"] = n1.text_input("DESDE"), n2.text_input("HASTA"); pld["copias"] = n3.selectbox("COPIAS", ["1", "2", "3", "4"])
+                pArea = "IMPRESIÓN" if pref == "FRI" else "COLECTORAS"
+            tin_n, tin_c = (0, "N/A")
+            if es_impreso:
+                i1, i2 = st.columns(2); tin_n = i1.number_input("TINTAS", 0); tin_c = i2.text_input("COLORES")
+            obs = st.text_area("OBSERVACIONES")
+            if st.form_submit_button("🚀 REGISTRAR"):
+                final_data = {"op": f"{pref}-{op_num}".upper(), "nombre_cliente": cliente, "trabajo": trabajo, "vendedor": vendedor, "tipo_acabado": pref, "material": material, "ancho_medida": medida, "unidades_solicitadas": cantidad, "cant_tintas": tin_n, "especificacion_tintas": tin_c, "proxima_area": pArea, "observaciones": obs, "estado": "Pendiente", **pld}
+                supabase.table("ordenes_planeadas").insert(final_data).execute()
+                st.success("✅ OP Registrada"); st.balloons()
 
-            if st.form_submit_button("🚀 GUARDAR"):
-                ruta = "IMPRESIÓN"
-                if t == "ROLLOS BLANCOS": ruta = "CORTE"
-                if t == "FORMAS BLANCAS": ruta = "COLECTORAS"
-                payload = {"op": op_n.upper(), "op_anterior": op_a, "cliente": cli, "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, "proxima_area": ruta}
-                if "FORMAS" in t:
-                    payload.update({"cantidad_formas": int(cant_f), "num_partes": partes, "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, "detalles_partes_json": lista_p, "presentacion": pres, "observaciones_formas": obs})
-                else:
-                    payload.update({"material": mat, "gramaje_rollos": gram, "ref_comercial": ref_c, "cantidad_rollos": int(cant_r), "core": core, "tintas_frente_rollos": tf_r, "tintas_respaldo_rollos": tr_r, "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs})
-                supabase.table("ordenes_planeadas").insert(payload).execute()
-                st.session_state.sel_tipo = None
-                st.success(f"Guardado. Próxima área: {ruta}")
-                time.sleep(1); st.rerun()
-
-# --- MÓDULOS DE PRODUCCIÓN ---
+# 4. MÓDULOS OPERATIVOS (AQUÍ ES DONDE TRABAJAREMOS TUS PARÁMETROS)
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
-    area_act = menu.split(" ")[1].upper()
-    st.title(f"Módulo: {area_act}")
-    activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data}
+    area = {"🖨️ Impresión": "IMPRESIÓN", "✂️ Corte": "CORTE", "📥 Colectoras": "COLECTORAS", "📕 Encuadernación": "ENCUADERNACIÓN"}[menu]
+    st.title(f"Área: {area}")
+    try: activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", area).execute().data}
+    except: activos = {}
     cols = st.columns(4)
-    for idx, m in enumerate(MAQUINAS[area_act]):
-        with cols[idx % 4]:
-            if m in activos:
-                st.error(f"● {m} - {activos[m]['op']}")
-                if st.button(f"Terminar {m}", key=f"c_{m}"): st.session_state.rep = activos[m]
-            else:
-                st.success(f"○ {m} - LIBRE")
-                ops = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
-                if ops:
-                    sel = st.selectbox(f"Asignar", [o['op'] for o in ops], key=f"s_{m}")
-                    if st.button(f"Iniciar", key=f"i_{m}"):
-                        d = next(o for o in ops if o['op'] == sel)
-                        supabase.table("trabajos_activos").insert({"maquina":m,"area":area_act,"op":d['op'],"trabajo":d['nombre_trabajo'],"hora_inicio":datetime.now().strftime("%H:%M")}).execute()
-                        st.rerun()
+    for i, m in enumerate(MAQUINAS[area]):
+        if cols[i % 4].button(f"{'🔴' if m in activos else '⚪'} {m}", key=f"btn_{m}"): st.session_state.m_sel = m
+    if "m_sel" in st.session_state and st.session_state.m_sel in MAQUINAS[area]:
+        ms = st.session_state.m_sel
+        if ms not in activos:
+            ops = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area).eq("estado", "Pendiente").execute().data
+            if ops:
+                sel = st.selectbox("Seleccione OP:", ["--"] + [f"{o['op']} | {o['trabajo']}" for o in ops])
+                if st.button("▶️ INICIAR"):
+                    d = next(o for o in ops if o['op'] == sel.split(" | ")[0])
+                    supabase.table("trabajos_activos").insert({"maquina": ms, "area": area, "op": d['op'], "trabajo": d['trabajo'], "hora_inicio": datetime.now().strftime("%H:%M"), "tipo_acabado": d['tipo_acabado']}).execute()
+                    supabase.table("ordenes_planeadas").update({"estado": "En Proceso"}).eq("op", d['op']).execute()
+                    st.rerun()
+        else:
+            t = activos[ms]
+            st.success(f"TRABAJANDO: {t['op']}")
+            if st.button("🏁 FINALIZAR"): modal_finalizar_trabajo(t, ms, area)
 
-    if 'rep' in st.session_state:
-        r = st.session_state.rep
-        with st.expander(f"FINALIZAR TAREA EN {r['maquina']}", expanded=True):
-            op_name = st.text_input("Nombre Operario")
-            if st.button("🏁 COMPLETAR Y ENVIAR"):
-                d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                tipo = d_op['tipo_orden']
-                n_area = "FINALIZADO"
-                if "ROLLOS" in tipo and area_act == "IMPRESIÓN": n_area = "CORTE"
-                elif "FORMAS" in tipo:
-                    if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
-                    elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
-                h = d_op['historial_procesos']
-                h.append({"area":area_act, "maquina":r['maquina'], "operario":op_name, "fecha":datetime.now().strftime("%d/%m/%Y %H:%M")})
-                supabase.table("ordenes_planeadas").update({"proxima_area":n_area, "historial_procesos":h}).eq("op", r['op']).execute()
-                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                del st.session_state.rep; st.rerun()
+# 5. HISTORIAL KPI
+elif menu == "📊 Historial KPI":
+    st.title("📊 Historial")
+    t_names = ["impresion", "corte", "colectoras", "encuadernacion"]
+    tabs = st.tabs([n.capitalize() for n in t_names])
+    for i, tab in enumerate(tabs):
+        with tab:
+            data = supabase.table(t_names[i]).select("*").execute().data
+            if data: st.dataframe(pd.DataFrame(data), use_container_width=True)
