@@ -62,7 +62,15 @@ def to_excel_limpio(df_input, tipo=None):
 # VENTANA EMERGENTE (MODAL) RADIOGRAFÍA
 # ==========================================
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
-def modal_detalle_op(row):
+def modal_detalle_op(row):# Al final del modal_detalle_op(row):
+st.divider()
+pdf_bytes = generar_pdf_op(row)
+st.download_button(
+    label="🖨️ Descargar Hoja para Imprimir (PDF)",
+    data=pdf_bytes,
+    file_name=f"OP_{row['op']}.pdf",
+    mime="application/pdf"
+)
     st.markdown(f"## OP: {row['op']} — {row['nombre_trabajo']}")
     st.write(f"🏭 **Estado en Planta:** `{row['proxima_area']}`")
     st.divider()
@@ -319,5 +327,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None; st.success("Tarea guardada correctamente!"); time.sleep(1); st.rerun()
+
 
 
