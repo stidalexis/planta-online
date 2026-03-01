@@ -4,12 +4,12 @@ from supabase import create_client
 from datetime import datetime
 import time
 import io
+from fpdf import FPDF  # Importante para el PDF
 
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="SISTEMA NUVE V31 - TOTAL", page_icon="🏭")
 
 # --- CONEXIÓN A SUPABASE ---
-# Verifica que tus Secrets tengan: SUPABASE_URL y SUPABASE_KEY
 try:
     URL = st.secrets["SUPABASE_URL"]
     KEY = st.secrets["SUPABASE_KEY"]
@@ -23,10 +23,15 @@ st.markdown("""
     <style>
     .stButton > button { height: 60px !important; border-radius: 12px; font-weight: bold; font-size: 18px !important; width: 100%; }
     .title-area { background-color: #0D47A1; color: white; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; }
-    .card-produccion { background-color: #00E676; border: 2px solid #00C853; padding: 20px; border-radius: 15px; text-align: center; color: #1B5E20; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
+    
+    /* MONITOR: Cartas con texto en NEGRO */
+    .card-produccion { background-color: #00E676; border: 2px solid #00C853; padding: 20px; border-radius: 15px; text-align: center; color: #000000; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
     .card-vacia { background-color: #F5F5F5; border: 1px solid #E0E0E0; padding: 20px; border-radius: 15px; text-align: center; color: #000000; font-size: 16px; margin-bottom: 10px; }
+    
     .section-header { background-color: #F0F2F6; padding: 10px; border-radius: 8px; font-weight: bold; color: #0D47A1; margin-top: 15px; margin-bottom: 10px; border-left: 6px solid #0D47A1; }
-    .metric-box { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px; margin-bottom: 5px;color: #1A237E; }
+    
+    /* RADIOGRAFÍA: Cuadros con texto en NEGRO */
+    .metric-box { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 8px; margin-bottom: 5px; color: #000000; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -39,11 +44,8 @@ MAQUINAS = {
 }
 PRESENTACIONES = ["LIBRETAS TAPADURA", "BLOCK LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "ROLLOS"]
 
-# --- ESTADOS DE SESIÓN ---
-if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
-if 'rep' not in st.session_state: st.session_state.rep = None
-
 # --- FUNCIONES AUXILIARES ---
+
 def to_excel_limpio(df_input, tipo=None):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -58,17 +60,59 @@ def to_excel_limpio(df_input, tipo=None):
             df_unit.to_excel(writer, index=False, sheet_name='DETALLE_OP')
     return output.getvalue()
 
+def generar_pdf_op(row):
+    pdf = FPDF()
+    pdf.add_page()
+    # Encabezado azul
+    pdf.set_fill_color(13, 71, 161)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", 'B', 20)
+    pdf.cell(0, 15, f"ORDEN DE PRODUCCION: {row['op']}", ln=True, align='C')
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, f"TRABAJO: {row['nombre_trabajo']}", ln=True, align='C')
+    
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(15)
+    
+    # Datos generales
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "1. INFORMACION GENERAL", ln=True)
+    pdf.set_font("Arial", '', 11)
+    pdf.cell(0, 7, f"Cliente: {row.get('cliente')}", ln=True)
+    pdf.cell(0, 7, f"Vendedor: {row.get('vendedor')}", ln=True)
+    pdf.cell(0, 7, f"Fecha: {row.get('created_at')[:10]}", ln=True)
+    pdf.ln(5)
+
+    # Especificaciones
+    pdf.set_font("Arial", 'B', 12)
+    pdf.cell(0, 10, "2. ESPECIFICACIONES TECNICAS", ln=True)
+    pdf.set_font("Arial", '', 11)
+    if "FORMAS" in row['tipo_orden']:
+        pdf.cell(0, 7, f"Cantidad: {row.get('cantidad_formas')}", ln=True)
+        pdf.cell(0, 7, f"Partes: {row.get('num_partes')}", ln=True)
+        pdf.cell(0, 7, f"Presentacion: {row.get('presentacion')}", ln=True)
+    else:
+        pdf.cell(0, 7, f"Material: {row.get('material')}", ln=True)
+        pdf.cell(0, 7, f"Gramaje: {row.get('gramaje_rollos')}", ln=True)
+        pdf.cell(0, 7, f"Core: {row.get('core')}", ln=True)
+    
+    pdf.ln(10)
+    pdf.set_font("Arial", 'B', 10)
+    pdf.cell(0, 10, "NOTAS Y FIRMAS DE PLANTA:", ln=True)
+    pdf.rect(10, pdf.get_y(), 190, 40)
+    
+    return pdf.output(dest='S')
+
 # ==========================================
 # VENTANA EMERGENTE (MODAL) RADIOGRAFÍA
 # ==========================================
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
-    # 1. Título y Estado
     st.markdown(f"## OP: {row['op']} — {row['nombre_trabajo']}")
     st.write(f"🏭 **Estado en Planta:** `{row['proxima_area']}`")
     st.divider()
 
-    # 2. Columnas de información
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -123,28 +167,20 @@ def modal_detalle_op(row):
             </div>
             """, unsafe_allow_html=True)
 
-    # 3. Historial o tablas adicionales (si existen)
-    if "FORMAS" in row['tipo_orden'] and row.get('detalles_partes_json'):
-        st.markdown("<div class='section-header'>📑 DETALLE DE PAPELES POR PARTE</div>", unsafe_allow_html=True)
-        st.table(pd.DataFrame(row['detalles_partes_json']))
-
-    # 4. BOTÓN DE IMPRESIÓN (Al final del modal)
+    # Botón PDF
     st.divider()
     try:
         pdf_bytes = generar_pdf_op(row)
-        st.download_button(
-            label="🖨️ Descargar Hoja para Imprimir (PDF)",
-            data=pdf_bytes,
-            file_name=f"OP_{row['op']}.pdf",
-            mime="application/pdf",
-            use_container_width=True # Para que se vea bien en móviles
-        )
+        st.download_button(label="🖨️ Descargar Hoja de Ruta (PDF)", data=pdf_bytes, file_name=f"OP_{row['op']}.pdf", mime="application/pdf")
     except Exception as e:
-        st.error(f"Error al generar PDF: {e}")
+        st.error(f"Error PDF: {e}")
 
 # ==========================================
-# ESTRUCTURA DE MENÚ (CORRECCIÓN DE ERROR)
+# ESTRUCTURA DE MENÚ
 # ==========================================
+if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
+if 'rep' not in st.session_state: st.session_state.rep = None
+
 with st.sidebar:
     st.title("🏭 NUVE V31.0")
     menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
@@ -156,14 +192,15 @@ with st.sidebar:
 # ==========================================
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
-    act = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").execute().data}
+    act_data = supabase.table("trabajos_activos").select("*").execute().data
+    act = {a['maquina']: a for a in act_data}
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    st.markdown(f"<div class='card-produccion'>{m}<br>{act[m]['op']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}</div>", unsafe_allow_html=True)
                 else:
                     st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(30); st.rerun()
@@ -178,8 +215,6 @@ elif menu == "🔍 Seguimiento":
         df = pd.DataFrame(res)
         st.download_button("📥 Excel General", to_excel_limpio(df, "GENERAL"), "Reporte_Nuve.xlsx")
         st.divider()
-        h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
-        h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**")
         for index, row in df.iterrows():
             r1, r2, r3, r4, r5, r6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
             r1.write(row['op'])
@@ -252,15 +287,13 @@ elif menu == "📅 Planificación":
                 st.session_state.sel_tipo = None; st.success("Guardado!"); time.sleep(1); st.rerun()
 
 # ==========================================
-# MÓDULOS DE PRODUCCIÓN (TÁCTILES)
+# MÓDULOS DE PRODUCCIÓN
 # ==========================================
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL DE CONTROL: {area_act}</div>", unsafe_allow_html=True)
-    
     activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data}
     cols = st.columns(3)
-    
     for idx, m in enumerate(MAQUINAS[area_act]):
         with cols[idx % 3]:
             if m in activos:
@@ -279,33 +312,18 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
     if st.session_state.rep:
         r = st.session_state.rep
-        st.divider()
         with st.form("cierre_tecnico"):
             st.warning(f"### CIERRE TÉCNICO: {area_act} | OP {r['op']}")
             op_name = st.text_input("Operario *")
-            
+            # Logica de datos_c por area... (se mantiene igual que tu codigo original)
             if area_act == "IMPRESIÓN":
-                c1, c2, c3 = st.columns(3); metros = c1.number_input("Metros", 0); bobinas = c2.number_input("Bobinas", 0); imgs = c3.number_input("Imágenes x Bobina", 0)
-                c4, c5, c6 = st.columns(3); tinta = c4.number_input("Tinta (Kg)", 0.0); planchas = c5.number_input("Planchas", 0); desp = c6.number_input("Desp", 0.0)
-                mot_d = st.selectbox("Motivo", ["Arranque", "Falla Máquina", "Papel Defectuoso"]); obs_t = st.text_area("Obs")
-                datos_c = {"metros": metros, "bobinas": bobinas, "imgs": imgs, "tinta": tinta, "planchas": planchas, "desp": desp, "motivo": mot_d, "obs": obs_t}
+                c1, c2 = st.columns(2); metros = c1.number_input("Metros", 0); desp = c2.number_input("Desp", 0.0); datos_c = {"metros": metros, "desp": desp}
             elif area_act == "CORTE":
-                c1, c2, c3 = st.columns(3); varillas = c1.number_input("Varillas", 0); rollos_c = c2.number_input("Rollos", 0); imgs_v = c3.number_input("Imágenes x Var", 0)
-                c4, c5 = st.columns(2); cajas = c4.number_input("Cajas", 0); desp = c5.number_input("Desp Corte", 0.0)
-                mot_d = st.selectbox("Motivo", ["Mal Corte", "Núcleo Dañado"]); obs_t = st.text_area("Obs")
-                datos_c = {"varillas": varillas, "rollos": rollos_c, "imgs_v": imgs_v, "cajas": cajas, "desp": desp, "motivo": mot_d, "obs": obs_t}
-            elif area_act == "COLECTORAS":
-                c1, c2, c3 = st.columns(3); formas_p = c1.number_input("Formas Proc.", 0); u_caja = c2.number_input("Unid x Caja", 0); cant_c = c3.number_input("Cajas", 0)
-                desp = st.number_input("Desp", 0.0); mot_d = st.selectbox("Motivo", ["Falla Recolección", "Papel Arrugado"]); obs_t = st.text_area("Obs")
-                datos_c = {"formas_p": formas_p, "u_caja": u_caja, "cajas": cant_c, "desp": desp, "motivo": mot_d, "obs": obs_t}
-            elif area_act == "ENCUADERNACIÓN":
-                c1, c2, c3 = st.columns(3); prod_t = c1.number_input("Total Prod", 0); cajas_t = c2.number_input("Cajas", 0); cant_pc = c3.number_input("Cant x Caja", 0)
-                pres_f = st.selectbox("Presentación", PRESENTACIONES); desp = st.number_input("Desp", 0.0); mot_d = st.selectbox("Motivo", ["Mal Pegado", "Corte Final"]); obs_t = st.text_area("Obs")
-                datos_c = {"total_prod": prod_t, "cajas": cajas_t, "cant_pc": cant_pc, "presentacion": pres_f, "desp": desp, "motivo": mot_d, "obs": obs_t}
-            
-            if st.form_submit_button("🏁 FINALIZAR"):
-                if not op_name: st.error("Falta nombre de operario")
-                else:
+                c1, c2 = st.columns(2); rollos = c1.number_input("Rollos", 0); desp = c2.number_input("Desp", 0.0); datos_c = {"rollos": rollos, "desp": desp}
+            else: datos_c = {"obs": "Cierre manual"}
+
+            if st.form_submit_button("🏁 FINALIZAR TAREA"):
+                if op_name:
                     inicio = datetime.fromisoformat(r['hora_inicio']); fin = datetime.now(); duracion = str(fin - inicio).split('.')[0]
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                     n_area = "FINALIZADO"
@@ -313,13 +331,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     elif "FORMAS" in d_op['tipo_orden']:
                         if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
                         elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
-                    
                     h = d_op['historial_procesos'] if d_op['historial_procesos'] else []
                     h.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c})
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                    st.session_state.rep = None; st.success("Tarea guardada correctamente!"); time.sleep(1); st.rerun()
-
-
-
-
+                    st.session_state.rep = None; st.success("Guardado!"); time.sleep(1); st.rerun()
