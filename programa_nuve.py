@@ -76,16 +76,30 @@ if menu == "🖥️ Monitor":
                     st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(30); st.rerun()
 
-# ==========================================
-# 2. SEGUIMIENTO (BLOQUEADO/SIN CAMBIOS)
-# ==========================================
+# --- SEGUIMIENTO ---
 elif menu == "🔍 Seguimiento":
-    st.title("Seguimiento Histórico")
+    st.title("Seguimiento y Registro Histórico")
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
+    
     if res:
         df = pd.DataFrame(res)
-        st.download_button("📥 Reporte General Excel", to_excel_limpio(df, "GENERAL"), "Reporte_Nuve.xlsx")
+        
+        def to_excel_multisheet(df_input):
+            output = io.BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_f = df_input[df_input['tipo_orden'].str.contains("FORMAS", na=False)].dropna(axis=1, how='all')
+                df_r = df_input[df_input['tipo_orden'].str.contains("ROLLOS", na=False)].dropna(axis=1, how='all')
+                if not df_f.empty: df_f.to_excel(writer, index=False, sheet_name='FORMAS')
+                if not df_r.empty: df_r.to_excel(writer, index=False, sheet_name='ROLLOS')
+            return output.getvalue()
+
+        st.download_button("📥 Descargar Reporte General (Excel)", to_excel_multisheet(df), f"Reporte_General.xlsx")
+
+        st.write("---")
+        h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 2, 2, 1])
+        h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Ubicación**"); h6.write("**Ver**")
         st.divider()
+
         for index, row in df.iterrows():
             r1, r2, r3, r4, r5, r6 = st.columns([1, 2, 2, 2, 2, 1])
             r1.write(row['op'])
@@ -94,19 +108,33 @@ elif menu == "🔍 Seguimiento":
             r4.write(row['tipo_orden'])
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
-            if r6.button("👁️", key=f"v_{row['op']}"): st.session_state.detalle_op_id = row['op']
+            
+            if r6.button("👁️", key=f"v_{row['op']}"):
+                st.session_state.detalle_op_id = row['op']
 
         if st.session_state.detalle_op_id:
             d = df[df['op'] == st.session_state.detalle_op_id].iloc[0].to_dict()
             st.markdown("---")
-            with st.expander(f"Ficha: {d['op']}", expanded=True):
-                c1, c2, c3 = st.columns(3)
-                with c1: st.info(f"Cliente: {d['cliente']}\n\nTrabajo: {d['nombre_trabajo']}")
-                with c2: st.write(f"Tipo: {d['tipo_orden']}\n\nEstado: {d['proxima_area']}")
-                with c3:
-                    if d['historial_procesos']:
-                        for h in d['historial_procesos']: st.caption(f"✅ {h['area']} - {h['operario']}")
-                if st.button("Cerrar"): st.session_state.detalle_op_id = None; st.rerun()
+            with st.container():
+                st.subheader(f"FICHA TÉCNICA: {d['op']}")
+                df_unit = pd.DataFrame([d]).dropna(axis=1, how='all')
+                output_unit = io.BytesIO()
+                with pd.ExcelWriter(output_unit, engine='xlsxwriter') as writer:
+                    df_unit.to_excel(writer, index=False, sheet_name='Detalle_OP')
+                st.download_button(f"📥 Descargar Excel OP {d['op']}", output_unit.getvalue(), f"OP_{d['op']}.xlsx")
+
+                c_a, c_b = st.columns(2)
+                c_a.info(f"**Cliente:** {d['cliente']}\n\n**Tipo:** {d['tipo_orden']}")
+                c_b.info(f"**Trabajo:** {d['nombre_trabajo']}\n\n**Status Actual:** {d['proxima_area']}")
+                
+                if d['historial_procesos']:
+                    st.write("**BITÁCORA:**")
+                    for p in d['historial_procesos']:
+                        st.success(f"📍 {p['fecha']} - {p['area']} - {p['maquina']} - Op: {p['operario']}")
+                
+                if st.button("❌ Cerrar"):
+                    st.session_state.detalle_op_id = None
+                    st.rerun()
 
 # --- PLANIFICACIÓN (FIX PARA ROLLOS BLANCOS) ---
 elif menu == "📅 Planificación":
@@ -321,4 +349,5 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     
                     st.session_state.rep = None; st.success("¡OP Actualizada!"); time.sleep(1); st.rerun()
+
 
