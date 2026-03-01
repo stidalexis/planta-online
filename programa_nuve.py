@@ -62,19 +62,13 @@ def to_excel_limpio(df_input, tipo=None):
 # VENTANA EMERGENTE (MODAL) RADIOGRAFÍA
 # ==========================================
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
-def modal_detalle_op(row):# Al final del modal_detalle_op(row):
-st.divider()
-pdf_bytes = generar_pdf_op(row)
-st.download_button(
-    label="🖨️ Descargar Hoja para Imprimir (PDF)",
-    data=pdf_bytes,
-    file_name=f"OP_{row['op']}.pdf",
-    mime="application/pdf"
-)
+def modal_detalle_op(row):
+    # 1. Título y Estado
     st.markdown(f"## OP: {row['op']} — {row['nombre_trabajo']}")
     st.write(f"🏭 **Estado en Planta:** `{row['proxima_area']}`")
     st.divider()
 
+    # 2. Columnas de información
     col1, col2, col3 = st.columns(3)
     
     with col1:
@@ -129,26 +123,24 @@ st.download_button(
             </div>
             """, unsafe_allow_html=True)
 
-    # Tabla de partes (Si aplica)
+    # 3. Historial o tablas adicionales (si existen)
     if "FORMAS" in row['tipo_orden'] and row.get('detalles_partes_json'):
         st.markdown("<div class='section-header'>📑 DETALLE DE PAPELES POR PARTE</div>", unsafe_allow_html=True)
         st.table(pd.DataFrame(row['detalles_partes_json']))
 
-    # Historial de Producción Real
-    st.markdown("<div class='section-header'>📜 BITÁCORA DE CIERRES EN PLANTA</div>", unsafe_allow_html=True)
-    hist = row.get('historial_procesos', [])
-    if not hist:
-        st.info("No hay registros de producción todavía.")
-    else:
-        for h in hist:
-            with st.expander(f"✅ {h['area']} — {h['maquina']} ({h['operario']}) — Tiempo: {h['duracion']}"):
-                c_c1, c_c2 = st.columns(2)
-                with c_c1:
-                    st.write("**Datos de Cierre:**")
-                    st.json(h.get('datos_cierre', {}))
-                with c_c2:
-                    st.warning(f"⚠️ Desperdicio: {h.get('datos_cierre', {}).get('desp', 0)}")
-                    st.info(f"📝 Notas: {h.get('datos_cierre', {}).get('obs', 'Sin notas')}")
+    # 4. BOTÓN DE IMPRESIÓN (Al final del modal)
+    st.divider()
+    try:
+        pdf_bytes = generar_pdf_op(row)
+        st.download_button(
+            label="🖨️ Descargar Hoja para Imprimir (PDF)",
+            data=pdf_bytes,
+            file_name=f"OP_{row['op']}.pdf",
+            mime="application/pdf",
+            use_container_width=True # Para que se vea bien en móviles
+        )
+    except Exception as e:
+        st.error(f"Error al generar PDF: {e}")
 
 # ==========================================
 # ESTRUCTURA DE MENÚ (CORRECCIÓN DE ERROR)
@@ -327,6 +319,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None; st.success("Tarea guardada correctamente!"); time.sleep(1); st.rerun()
+
 
 
 
