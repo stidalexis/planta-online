@@ -313,11 +313,9 @@ elif menu == "🔍 Seguimiento":
             if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
-# ==========================================
-# MÓDULO 3: PLANIFICACIÓN
-# ==========================================
+# --- PLANIFICACIÓN (FIX PARA ROLLOS BLANCOS) ---
 elif menu == "📅 Planificación":
-    st.title("Planificación de Órdenes")
+    st.title("Nueva Orden de Producción")
     c1, c2, c3, c4 = st.columns(4)
     if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
     if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
@@ -326,52 +324,95 @@ elif menu == "📅 Planificación":
 
     if st.session_state.sel_tipo:
         t = st.session_state.sel_tipo
-        with st.form("form_p", clear_on_submit=True):
-            st.subheader(f"Configuración: {t}")
+        with st.form("form_v24", clear_on_submit=True):
+            st.subheader(f"Configurando: {t}")
             f1, f2, f3 = st.columns(3)
-            op_n = f1.text_input("OP Número *").upper()
+            op_n = f1.text_input("Número de OP")
             op_a = f2.text_input("OP Anterior")
-            cli = f3.text_input("Cliente *")
+            cli = f3.text_input("Cliente")
             f4, f5 = st.columns(2)
             vend = f4.text_input("Vendedor")
             trab = f5.text_input("Nombre Trabajo")
-            
+
             if "FORMAS" in t:
                 g1, g2 = st.columns(2)
                 cant_f = g1.number_input("Cantidad Formas", 0)
-                partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6])
+                partes = g2.selectbox("Partes", [1,2,3,4,5,6])
                 p1, p2 = st.columns(2)
-                t_perf = p1.selectbox("¿Perforaciones?", ["NO", "SI"])
-                perf_d = p1.text_area("Detalle Perf.") if t_perf == "SI" else "NO"
-                t_barr = p2.selectbox("¿Barras?", ["NO", "SI"])
-                barr_d = p2.text_area("Detalle Barras") if t_barr == "SI" else "NO"
+                perf_d = p1.text_area("Detalle Perforación", "N/A")
+                barr_d = p2.text_area("Detalle Barras", "N/A")
                 lista_p = []
                 for i in range(1, partes + 1):
                     st.markdown(f"**PARTE {i}**")
-                    d1, d2, d3, d4, d5, d6 = st.columns(6)
+                    d1, d2, d3, d4 = st.columns(4)
                     anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}")
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
                     gra = d4.text_input(f"Gramos P{i}", key=f"g_{i}")
-                    tf = d5.text_input(f"Tintas F P{i}", value="N/A", key=f"tf_{i}")
-                    tr = d6.text_input(f"Tintas R P{i}", value="N/A", key=f"tr_{i}")
-                    lista_p.append({"p":i, "anc":anc, "lar":lar, "papel":pap, "gramos":gra, "tf":tf, "tr":tr})
-                pres = st.selectbox("Presentación", PRESENTACIONES)
+                    tf, tr = "N/A", "N/A"
+                    if t == "FORMAS IMPRESAS":
+                        t1, t2 = st.columns(2)
+                        tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}")
+                        tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}")
+                    lista_p.append({"p":i, "anc":anc, "lar":lar, "tf":tf, "tr":tr})
+                pres = st.selectbox("Presentación", ["LIBRETAS TAPADURA", "BLOCK LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS"])
                 obs = st.text_area("Observaciones")
-            else:
-                r1, r2, r3 = st.columns(3); mat = r1.text_input("Material"); gram = r2.text_input("Gramaje"); ref_c = r3.text_input("Ref. Comercial")
-                r4, r5, r6 = st.columns(3); cant_r = r4.number_input("Cantidad Rollos", 0); core = r5.selectbox("Core", ["13MM", "19MM", "1 PULGADA", "3 PULGADAS"]); tf_r = r6.text_input("Tintas Frente", value="N/A")
-                u_b = st.number_input("Cant x Bolsa", 0); u_c = st.number_input("Cant x Caja", 0); obs = st.text_area("Observaciones")
 
-            if st.form_submit_button("🚀 GUARDAR ORDEN"):
+            else: # ROLLOS
+                r1, r2, r3 = st.columns(3)
+                mat = r1.text_input("Material")
+                gram = r2.text_input("Gramaje")
+                ref_c = r3.text_input("Ref. Comercial")
+                r4, r5 = st.columns(2)
+                cant_r = r4.number_input("Cantidad Rollos", 0)
+                core = r5.selectbox("Core", ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"])
+                tf_r, tr_r = "N/A", "N/A"
+                if t == "ROLLOS IMPRESOS":
+                    ct1, ct2 = st.columns(2)
+                    tf_r = ct1.text_input("Tintas Frente")
+                    tr_r = ct2.text_input("Tintas Respaldo")
+                r6, r7 = st.columns(2)
+                ub = r6.number_input("Cant x Bolsa", 0)
+                uc = r7.number_input("Cant x Caja", 0)
+                obs = st.text_area("Observaciones")
+
+            if st.form_submit_button("🚀 GUARDAR"):
+                # RUTA SEGÚN TIPO
                 ruta = "IMPRESIÓN"
                 if t == "ROLLOS BLANCOS": ruta = "CORTE"
                 if t == "FORMAS BLANCAS": ruta = "COLECTORAS"
-                payload = {"op": op_n, "op_anterior": op_a, "cliente": cli, "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, "proxima_area": ruta}
-                if "FORMAS" in t: payload.update({"cantidad_formas": int(cant_f), "num_partes": partes, "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, "detalles_partes_json": lista_p, "presentacion": pres, "observaciones_formas": obs})
-                else: payload.update({"material": mat, "gramaje_rollos": gram, "ref_comercial": ref_c, "cantidad_rollos": int(cant_r), "core": core, "tintas_frente_rollos": tf_r, "unidades_bolsa": int(u_b), "unidades_caja": int(u_c), "observaciones_rollos": obs})
-                supabase.table("ordenes_planeadas").insert(payload).execute()
-                st.session_state.sel_tipo = None; st.success("¡Guardado correctamente!"); time.sleep(1); st.rerun()
+                
+                # Payload Base
+                payload = {
+                    "op": op_n.upper(), "op_anterior": op_a, "cliente": cli,
+                    "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t,
+                    "proxima_area": ruta
+                }
+                
+                # Campos dinámicos según tipo
+                if "FORMAS" in t:
+                    payload.update({
+                        "cantidad_formas": int(cant_f), "num_partes": partes,
+                        "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d,
+                        "detalles_partes_json": lista_p, "presentacion": pres,
+                        "observaciones_formas": obs
+                    })
+                else:
+                    payload.update({
+                        "material": mat, "gramaje_rollos": gram, "ref_comercial": ref_c,
+                        "cantidad_rollos": int(cant_r), "core": core,
+                        "tintas_frente_rollos": tf_r, "tintas_respaldo_rollos": tr_r,
+                        "unidades_bolsa": int(ub), "unidades_caja": int(uc),
+                        "observaciones_rollos": obs
+                    })
+                
+                try:
+                    supabase.table("ordenes_planeadas").insert(payload).execute()
+                    st.success(f"Guardado. Próxima área: {ruta}")
+                    st.session_state.sel_tipo = None
+                    time.sleep(1); st.rerun()
+                except Exception as e:
+                    st.error(f"Error en Base de Datos: {e}")
 
 # ==========================================
 # MÓDULOS DE PRODUCCIÓN (TÁCTILES)
@@ -433,5 +474,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None; st.success("¡Tarea finalizada!"); time.sleep(1); st.rerun()
+
 
 
