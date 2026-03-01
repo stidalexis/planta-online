@@ -102,7 +102,7 @@ def generar_pdf_op(row):
     pdf.cell(0, 10, "NOTAS Y FIRMAS DE PLANTA:", ln=True)
     pdf.rect(10, pdf.get_y(), 190, 40)
     
-    return pdf.output(dest='S')
+    return bytes(pdf.output())
 
 # ==========================================
 # VENTANA EMERGENTE (MODAL) RADIOGRAFÍA
@@ -336,3 +336,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None; st.success("Guardado!"); time.sleep(1); st.rerun()
+
