@@ -164,7 +164,7 @@ def generar_pdf_op(row):
     pdf.set_font("Arial", 'I', 7)
     pdf.cell(0, 10, f"NUVE V31 - Documento de control interno - Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
     
-    return bytes(pdf.output()
+    return bytes(pdf.output())
 
 # ==========================================
 # VENTANA EMERGENTE (MODAL) RADIOGRAFÍA
@@ -433,4 +433,5 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None; st.success("¡Tarea finalizada!"); time.sleep(1); st.rerun()
+
 
