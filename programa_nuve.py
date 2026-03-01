@@ -65,75 +65,106 @@ def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
     
-    # --- ENCABEZADO ---
+    # --- ENCABEZADO INDUSTRIAL ---
     pdf.set_fill_color(13, 71, 161)
-    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.rect(0, 0, 210, 40, 'F')
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 18)
-    pdf.cell(0, 12, f"RADIOGRAFIA INTEGRAL DE PRODUCCION", ln=True, align='C')
+    pdf.set_font("Arial", 'B', 20)
+    pdf.cell(0, 15, f"REPORTE TECNICO INTEGRAL - OP: {row['op']}", ln=True, align='C')
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 8, f"OP: {row['op']} - {row['nombre_trabajo']}", ln=True, align='C')
+    pdf.cell(0, 8, f"TRABAJO: {row['nombre_trabajo']}", ln=True, align='C')
     
     pdf.set_text_color(0, 0, 0)
-    pdf.ln(15)
+    pdf.ln(20)
     
-    # --- SECCIÓN 1: ESPECIFICACIONES ---
+    # --- SECCIÓN 1: DATOS DE VENTA (INGRESADOS POR VENDEDOR) ---
     pdf.set_font("Arial", 'B', 11)
-    pdf.set_fill_color(240, 240, 240)
-    pdf.cell(0, 8, " 1. ESPECIFICACIONES TECNICAS", ln=True, fill=True)
+    pdf.set_fill_color(230, 230, 230)
+    pdf.cell(0, 8, " 1. INFORMACION DE VENTA Y ORIGEN", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     
-    col_w = 95
-    pdf.cell(col_w, 7, f"Cliente: {row.get('cliente')}", border='B')
-    pdf.cell(col_w, 7, f" Vendedor: {row.get('vendedor')}", border='B', ln=True)
-    pdf.cell(col_w, 7, f"Tipo: {row.get('tipo_orden')}", border='B')
-    pdf.cell(col_w, 7, f" Fecha Creacion: {row.get('created_at', '')[:10]}", border='B', ln=True)
+    c1 = 100
+    pdf.cell(c1, 7, f"Cliente: {row.get('cliente')}", border='B')
+    pdf.cell(0, 7, f"Vendedor: {row.get('vendedor')}", border='B', ln=True)
+    pdf.cell(c1, 7, f"Tipo de Orden: {row.get('tipo_orden')}", border='B')
+    pdf.cell(0, 7, f"Fecha de Creacion: {row.get('created_at', '')[:10]}", border='B', ln=True)
+    pdf.cell(0, 7, f"Referencia Comercial: {row.get('ref_comercial', 'N/A')}", border='B', ln=True)
     
-    if "FORMAS" in row.get('tipo_orden', ''):
-        pdf.cell(col_w, 7, f"Cantidad: {row.get('cantidad_formas')}", border='B')
-        pdf.cell(col_w, 7, f" Partes: {row.get('num_partes')}", border='B', ln=True)
-        pdf.multi_cell(0, 7, f"Presentacion: {row.get('presentacion')} | Perf: {row.get('perforaciones_detalle')}", border='B')
-    else:
-        pdf.cell(col_w, 7, f"Material: {row.get('material')} ({row.get('gramaje_rollos')}g)", border='B')
-        pdf.cell(col_w, 7, f" Core: {row.get('core')}", border='B', ln=True)
-        pdf.cell(0, 7, f"Cantidad: {row.get('cantidad_rollos')} unidades", border='B', ln=True)
+    pdf.ln(5)
 
-    pdf.ln(8)
-
-    # --- SECCIÓN 2: TRAZABILIDAD (HISTORIAL DE ÁREAS) ---
+    # --- SECCIÓN 2: DETALLES TECNICOS DE MONTAJE ---
     pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, " 2. HISTORIAL DE PRODUCCION POR AREAS", ln=True, fill=True)
+    pdf.cell(0, 8, " 2. ESPECIFICACIONES DE MATERIALES", ln=True, fill=True)
+    pdf.set_font("Arial", '', 10)
+
+    if "FORMAS" in row.get('tipo_orden', ''):
+        pdf.cell(c1, 7, f"Cantidad Total: {row.get('cantidad_formas')}", border='B')
+        pdf.cell(0, 7, f"Num. Partes: {row.get('num_partes')}", border='B', ln=True)
+        pdf.cell(c1, 7, f"Presentacion: {row.get('presentacion')}", border='B')
+        pdf.cell(0, 7, f"Perforaciones: {row.get('perforaciones_detalle')}", border='B', ln=True)
+        
+        # Detalle de cada papel (Si existe el JSON)
+        partes = row.get('detalles_partes_json', [])
+        if partes:
+            pdf.set_font("Arial", 'B', 9)
+            pdf.cell(0, 7, "DESGLOSE POR PARTE:", ln=True)
+            pdf.set_font("Arial", '', 8)
+            for p in partes:
+                pdf.cell(0, 6, f"P{p['p']}: {p['papel']} {p['gramos']}g | Medida: {p['anc']}x{p['lar']} | Tintas: F:{p['tf']} / R:{p['tr']}", ln=True, border='L')
+    else:
+        pdf.cell(c1, 7, f"Material Base: {row.get('material')}", border='B')
+        pdf.cell(0, 7, f"Gramaje: {row.get('gramaje_rollos')}", border='B', ln=True)
+        pdf.cell(c1, 7, f"Cantidad Rollos: {row.get('cantidad_rollos')}", border='B')
+        pdf.cell(0, 7, f"Core / Centro: {row.get('core')}", border='B', ln=True)
+        pdf.cell(c1, 7, f"Tintas Frente: {row.get('tintas_frente_rollos')}", border='B')
+        pdf.cell(0, 7, f"Empaque: {row.get('unidades_bolsa')} p/b | {row.get('unidades_caja')} p/c", border='B', ln=True)
+
+    pdf.ln(5)
+
+    # --- SECCIÓN 3: RESULTADOS DE PRODUCCION (DATOS DE PLANTA) ---
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 8, " 3. TRAZABILIDAD Y CIERRES DE PRODUCCION", ln=True, fill=True)
     
     historial = row.get('historial_procesos', [])
     if not historial:
         pdf.set_font("Arial", 'I', 10)
-        pdf.cell(0, 10, "No existen registros de cierres en planta todavía.", ln=True)
+        pdf.cell(0, 10, "Orden pendiente de iniciar procesos en planta.", ln=True)
     else:
         for h in historial:
             pdf.ln(2)
             pdf.set_font("Arial", 'B', 10)
             pdf.set_text_color(13, 71, 161)
-            pdf.cell(0, 7, f"AREA: {h['area']} - Maquina: {h['maquina']}", ln=True)
+            pdf.cell(0, 7, f">> AREA: {h['area']} ({h['maquina']})", ln=True)
             pdf.set_text_color(0, 0, 0)
             
             pdf.set_font("Arial", 'B', 9)
-            pdf.cell(50, 6, f"Operario: {h['operario']}", border=0)
-            pdf.cell(50, 6, f"Tiempo: {h['duracion']}", border=0)
-            pdf.cell(0, 6, f"Finalizado: {h['fecha']}", border=0, ln=True)
+            pdf.cell(70, 6, f"Operario: {h['operario']}", border=0)
+            pdf.cell(60, 6, f"Duracion: {h['duracion']}", border=0)
+            pdf.cell(0, 6, f"Fecha Cierre: {h['fecha']}", border=0, ln=True)
             
-            # Detalle de los datos ingresados en el cierre
+            # Aquí imprimimos los datos variables que cada área guardó
             pdf.set_font("Arial", '', 9)
             datos_c = h.get('datos_cierre', {})
-            detalle_c = " | ".join([f"{k.upper()}: {v}" for k, v in datos_c.items()])
-            pdf.multi_cell(0, 6, f"REGISTROS TECNICOS: {detalle_c}", border='L')
-            pdf.ln(2)
-            pdf.cell(0, 0, "", border='T', ln=True)
+            if datos_c:
+                detalle_texto = " | ".join([f"{k.replace('_',' ').upper()}: {v}" for k, v in datos_c.items()])
+                pdf.set_fill_color(245, 245, 245)
+                pdf.multi_cell(0, 6, f"DATOS DE CAMPO: {detalle_texto}", border='L', fill=True)
+            pdf.ln(1)
 
+    # --- SECCIÓN 4: OBSERVACIONES ---
+    pdf.ln(5)
+    pdf.set_font("Arial", 'B', 11)
+    pdf.cell(0, 8, " 4. OBSERVACIONES GENERALES", ln=True, fill=True)
+    pdf.set_font("Arial", '', 9)
+    obs_text = row.get('observaciones_formas') or row.get('observaciones_rollos') or "Sin observaciones registradas."
+    pdf.multi_cell(0, 6, obs_text, border=1)
+
+    # Pie de página
     pdf.ln(10)
-    pdf.set_font("Arial", 'I', 8)
-    pdf.cell(0, 10, f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')} - Sistema NUVE", align='C')
+    pdf.set_font("Arial", 'I', 7)
+    pdf.cell(0, 10, f"NUVE V31 - Documento de control interno - Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
     
-    return bytes(pdf.output())
+    return bytes(pdf.output()
 
 # ==========================================
 # VENTANA EMERGENTE (MODAL) RADIOGRAFÍA
@@ -402,3 +433,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None; st.success("¡Tarea finalizada!"); time.sleep(1); st.rerun()
+
