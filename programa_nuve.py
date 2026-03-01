@@ -420,8 +420,10 @@ elif menu == "📅 Planificación":
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL DE CONTROL: {area_act}</div>", unsafe_allow_html=True)
+    
     activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data}
     cols = st.columns(3)
+    
     for idx, m in enumerate(MAQUINAS[area_act]):
         with cols[idx % 3]:
             if m in activos:
@@ -440,25 +442,32 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
     if st.session_state.rep:
         r = st.session_state.rep
+        st.divider()
         with st.form("cierre_tecnico"):
             st.warning(f"### CIERRE TÉCNICO: {area_act} | OP {r['op']}")
-            op_name = st.text_input("Nombre del Operario *")
+            op_name = st.text_input("Operario *")
             
-            # Dinámica de Cierre
             if area_act == "IMPRESIÓN":
-                c1, c2, c3 = st.columns(3); metros = c1.number_input("Metros", 0); bobinas = c2.number_input("Bobinas", 0); desp = c3.number_input("Desp (Kg)", 0.0)
-                datos_c = {"metros": metros, "bobinas": bobinas, "desperdicio": desp}
+                c1, c2, c3 = st.columns(3); metros = c1.number_input("Metros", 0); bobinas = c2.number_input("Bobinas", 0); imgs = c3.number_input("Imágenes x Bobina", 0)
+                c4, c5, c6 = st.columns(3); tinta = c4.number_input("Tinta (Kg)", 0.0); planchas = c5.number_input("Planchas", 0); desp = c6.number_input("Desp", 0.0)
+                mot_d = st.selectbox("Motivo", ["Arranque", "Falla Máquina", "Papel Defectuoso"]); obs_t = st.text_area("Obs")
+                datos_c = {"metros": metros, "bobinas": bobinas, "imgs": imgs, "tinta": tinta, "planchas": planchas, "desp": desp, "motivo": mot_d, "obs": obs_t}
             elif area_act == "CORTE":
-                c1, c2, c3 = st.columns(3); rollos_c = c1.number_input("Rollos Proc.", 0); cajas = c2.number_input("Cajas", 0); desp = c3.number_input("Desp", 0.0)
-                datos_c = {"rollos": rollos_c, "cajas": cajas, "desperdicio": desp}
+                c1, c2, c3 = st.columns(3); varillas = c1.number_input("Varillas", 0); rollos_c = c2.number_input("Rollos", 0); imgs_v = c3.number_input("Imágenes x Var", 0)
+                c4, c5 = st.columns(2); cajas = c4.number_input("Cajas", 0); desp = c5.number_input("Desp Corte", 0.0)
+                mot_d = st.selectbox("Motivo", ["Mal Corte", "Núcleo Dañado"]); obs_t = st.text_area("Obs")
+                datos_c = {"varillas": varillas, "rollos": rollos_c, "imgs_v": imgs_v, "cajas": cajas, "desp": desp, "motivo": mot_d, "obs": obs_t}
             elif area_act == "COLECTORAS":
-                c1, c2 = st.columns(2); formas_p = c1.number_input("Formas", 0); desp = c2.number_input("Desp", 0.0)
-                datos_c = {"formas": formas_p, "desperdicio": desp}
-            else:
-                prod_t = st.number_input("Total Producido", 0); datos_c = {"total": prod_t}
-
-            if st.form_submit_button("🏁 REGISTRAR CIERRE"):
-                if not op_name: st.error("Debe ingresar el nombre del operario")
+                c1, c2, c3 = st.columns(3); formas_p = c1.number_input("Formas Proc.", 0); u_caja = c2.number_input("Unid x Caja", 0); cant_c = c3.number_input("Cajas", 0)
+                desp = st.number_input("Desp", 0.0); mot_d = st.selectbox("Motivo", ["Falla Recolección", "Papel Arrugado"]); obs_t = st.text_area("Obs")
+                datos_c = {"formas_p": formas_p, "u_caja": u_caja, "cajas": cant_c, "desp": desp, "motivo": mot_d, "obs": obs_t}
+            elif area_act == "ENCUADERNACIÓN":
+                c1, c2, c3 = st.columns(3); prod_t = c1.number_input("Total Prod", 0); cajas_t = c2.number_input("Cajas", 0); cant_pc = c3.number_input("Cant x Caja", 0)
+                pres_f = st.selectbox("Presentación", PRESENTACIONES); desp = st.number_input("Desp", 0.0); mot_d = st.selectbox("Motivo", ["Mal Pegado", "Corte Final"]); obs_t = st.text_area("Obs")
+                datos_c = {"total_prod": prod_t, "cajas": cajas_t, "cant_pc": cant_pc, "presentacion": pres_f, "desp": desp, "motivo": mot_d, "obs": obs_t}
+            
+            if st.form_submit_button("🏁 FINALIZAR"):
+                if not op_name: st.error("Falta nombre de operario")
                 else:
                     inicio = datetime.fromisoformat(r['hora_inicio']); fin = datetime.now(); duracion = str(fin - inicio).split('.')[0]
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
@@ -470,10 +479,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     
                     h = d_op['historial_procesos'] if d_op['historial_procesos'] else []
                     h.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c})
-                    
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                    st.session_state.rep = None; st.success("¡Tarea finalizada!"); time.sleep(1); st.rerun()
-
+                    st.session_state.rep = None; st.success("Tarea guardada correctamente!"); time.sleep(1); st.rerun()
 
 
