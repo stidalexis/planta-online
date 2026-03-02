@@ -74,107 +74,49 @@ def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
     
-    # --- ENCABEZADO TÉCNICO ---
-    pdf.set_fill_color(13, 71, 161)
-    pdf.rect(0, 0, 210, 45, 'F')
-    pdf.set_text_color(255, 255, 255)
+    es_formas = "FORMAS" in row.get('tipo_orden', '')
     
-    pdf.set_font("Arial", 'B', 22)
-    pdf.cell(0, 12, f"FICHA TECNICA DE PRODUCCION", ln=True, align='C')
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(0, 10, f"ORDEN DE PRODUCCION: {row['op']}", ln=True, align='C')
-    pdf.set_font("Arial", '', 11)
-    pdf.cell(0, 8, f"Documento de Trazabilidad Finalizada", ln=True, align='C')
-    
-    pdf.set_text_color(0, 0, 0)
-    pdf.ln(15)
-    
-    # --- SECCIÓN 1: IDENTIFICACIÓN ---
-    pdf.set_font("Arial", 'B', 11)
-    pdf.set_fill_color(235, 235, 235)
-    pdf.cell(0, 8, " 1. INFORMACION COMERCIAL", ln=True, fill=True)
-    pdf.set_font("Arial", '', 10)
-    
-    c1 = 95
-    pdf.cell(c1, 7, f" CLIENTE: {row.get('cliente')}", border='LRB')
-    pdf.cell(0, 7, f" VENDEDOR: {row.get('vendedor')}", border='RB', ln=True)
-    pdf.cell(c1, 7, f" TRABAJO: {row.get('nombre_trabajo')}", border='LRB')
-    pdf.cell(0, 7, f" TIPO: {row.get('tipo_orden')}", border='RB', ln=True)
-    pdf.cell(c1, 7, f" FECHA REGISTRO: {row.get('created_at', '')[:10]}", border='LRB')
-    pdf.cell(0, 7, f" REF. COMERCIAL: {row.get('ref_comercial', 'N/A')}", border='RB', ln=True)
-    
-    pdf.ln(5)
-
-    # --- SECCIÓN 2: ESPECIFICACIONES TÉCNICAS ---
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, " 2. ESPECIFICACIONES DE MONTAJE Y MATERIALES", ln=True, fill=True)
-    pdf.set_font("Arial", '', 10)
-
-    if "FORMAS" in row.get('tipo_orden', ''):
-        pdf.cell(c1, 7, f" CANTIDAD: {row.get('cantidad_formas')}", border='LRB')
-        pdf.cell(0, 7, f" NUM. PARTES: {row.get('num_partes')}", border='RB', ln=True)
-        pdf.cell(c1, 7, f" PRESENTACION: {row.get('presentacion')}", border='LRB')
-        pdf.cell(0, 7, f" PERFORACION: {row.get('perforaciones_detalle')}", border='RB', ln=True)
-        
-        partes = row.get('detalles_partes_json', [])
-        if partes:
-            pdf.set_font("Arial", 'B', 9)
-            pdf.cell(0, 7, " DESGLOSE DE PAPELES:", ln=True, border='LR')
-            pdf.set_font("Arial", '', 8)
-            for p in partes:
-                txt = f" P{p['p']}: {p['papel']} {p['gramos']}g | {p['anc']}x{p['lar']} | Tintas: F:{p['tf']} / R:{p['tr']}"
-                pdf.cell(0, 6, txt, ln=True, border='LR')
-            pdf.cell(0, 1, "", border='T', ln=True)
-    else:
-        pdf.cell(c1, 7, f" MATERIAL: {row.get('material')}", border='LRB')
-        pdf.cell(0, 7, f" GRAMAJE: {row.get('gramaje_rollos')}", border='RB', ln=True)
-        pdf.cell(c1, 7, f" CANTIDAD: {row.get('cantidad_rollos')}", border='LRB')
-        pdf.cell(0, 7, f" CORE/CENTRO: {row.get('core')}", border='RB', ln=True)
-        pdf.cell(c1, 7, f" TINTAS FRENTE: {row.get('tintas_frente_rollos')}", border='LRB')
-        pdf.cell(0, 7, f" EMPAQUE: {row.get('unidades_bolsa')} p/b | {row.get('unidades_caja')} p/c", border='RB', ln=True)
-
-    pdf.ln(5)
-
-    # --- SECCIÓN 3: BITÁCORA DE PRODUCCIÓN REAL ---
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, " 3. BITACORA DE PROCESOS EN PLANTA", ln=True, fill=True)
-    
-    historial = row.get('historial_procesos', [])
-    if not historial:
-        pdf.set_font("Arial", 'I', 10)
-        pdf.cell(0, 10, " Orden sin cierres de planta registrados.", border=1, ln=True, align='C')
-    else:
-        for h in historial:
-            pdf.set_fill_color(245, 250, 255)
+    try:
+        if es_formas:
+            # PLANTILLA DE FORMAS C&B [cite: 86]
+            pdf.image("plantilla_formas.jpg", x=0, y=0, w=210, h=297)
             pdf.set_font("Arial", 'B', 10)
-            pdf.cell(0, 7, f" >> AREA: {h['area']} | MAQUINA: {h['maquina']}", ln=True, fill=True, border='TRL')
+            pdf.text(175, 29, f"{row.get('op')}") # No. OP [cite: 87, 89]
+            pdf.text(32, 48, f"{row.get('cliente')}") # Cliente [cite: 94]
+            pdf.text(142, 48, f"{row.get('vendedor')}") # Vendedor [cite: 95]
+            pdf.text(32, 59, f"{row.get('nombre_trabajo')}") # Nombre de la Forma [cite: 100]
+            pdf.text(25, 68, f"{row.get('cantidad_formas')}") # Cantidad [cite: 99]
+            pdf.text(76, 68, f"{row.get('num_partes')}") # # Partes [cite: 101]
             
-            pdf.set_font("Arial", '', 9)
-            pdf.cell(65, 6, f" Operario: {h['operario']}", border='L')
-            pdf.cell(65, 6, f" Duracion: {h['duracion']}", border=0)
-            pdf.cell(0, 6, f" Fecha: {h['fecha']}", border='R', ln=True)
+            # Tabla de Papel [cite: 111]
+            partes = row.get('detalles_partes_json', [])
+            y_off = 104
+            for p in partes[:6]:
+                pdf.set_font("Arial", '', 8)
+                pdf.text(24, y_off, f"{p.get('anc','')}")
+                pdf.text(42, y_off, f"{p.get('lar','')}")
+                pdf.text(62, y_off, f"{p.get('papel','')}")
+                pdf.text(112, y_off, f"{p.get('tf','')}")
+                y_off += 7.2
+        else:
+            # PLANTILLA DE ROLLOS C&B [cite: 12]
+            pdf.image("plantilla_rollos.jpg", x=0, y=0, w=210, h=297)
+            pdf.set_font("Arial", 'B', 10)
+            pdf.text(175, 29, f"{row.get('op')}") # No. OP [cite: 13, 15]
+            pdf.text(38, 52, f"{row.get('cliente')}") # Cliente/Ref [cite: 20]
+            pdf.text(148, 52, f"{row.get('vendedor')}") # Vendedor [cite: 21]
+            pdf.text(35, 68, f"{row.get('cantidad_rollos')}") # Cantidad [cite: 24]
             
-            datos_c = h.get('datos', {})
-            if datos_c:
-                detalle_texto = " | ".join([f"{k.upper()}: {v}" for k, v in datos_c.items() if v])
-                pdf.set_font("Arial", 'I', 8)
-                pdf.multi_cell(0, 5, f" DATOS TECNICOS: {detalle_texto}", border='LRB')
-            else:
-                pdf.cell(0, 1, "", border='T', ln=True)
-            pdf.ln(2)
+            # Tabla técnica [cite: 26]
+            pdf.text(22, 95, f"{row.get('material','')}")
+            pdf.text(62, 95, f"{row.get('gramaje_rollos','')}")
+            pdf.text(158, 95, f"{row.get('core','')}")
+            pdf.text(82, 111, f"{row.get('tintas_frente_rollos','')}")
+            
+    except Exception as e:
+        pdf.set_font("Arial", 'B', 12)
+        pdf.text(10, 20, f"Error cargando plantilla JPG: {e}")
 
-    # --- SECCIÓN 4: CIERRE Y OBSERVACIONES ---
-    pdf.ln(3)
-    pdf.set_font("Arial", 'B', 11)
-    pdf.cell(0, 8, " 4. OBSERVACIONES GENERALES", ln=True, fill=True)
-    pdf.set_font("Arial", '', 9)
-    obs_text = row.get('observaciones_formas') or row.get('observaciones_rollos') or "Sin observaciones adicionales."
-    pdf.multi_cell(0, 6, obs_text, border=1)
-
-    pdf.set_y(-30)
-    pdf.set_font("Arial", 'I', 8)
-    pdf.cell(0, 10, f"Generado por Sistema NUVE V31 el {datetime.now().strftime('%d/%m/%Y %H:%M:%S')}", align='C')
-    
     return bytes(pdf.output())
 
 # ==========================================
@@ -195,7 +137,7 @@ def modal_detalle_op(row):
         👤 <b>Cliente:</b> {row.get('cliente')}<br>
         💼 <b>Vendedor:</b> {row.get('vendedor')}<br>
         🛠️ <b>Trabajo:</b> {row.get('nombre_trabajo')}<br>
-        📅 <b>Fecha:</b> {row.get('created_at')[:10]}
+        📅 <b>Fecha:</b> {row.get('created_at', '')[:10]}
         </div>
         """, unsafe_allow_html=True)
 
@@ -240,7 +182,6 @@ def modal_detalle_op(row):
             </div>
             """, unsafe_allow_html=True)
 
-    # Historial de Producción Visualmente Detallado (V2)
     st.markdown("<div class='section-header'>📜 BITÁCORA TÉCNICA DE PRODUCCIÓN</div>", unsafe_allow_html=True)
     hist = row.get('historial_procesos', [])
     if not hist:
@@ -248,37 +189,21 @@ def modal_detalle_op(row):
     else:
         for h in hist:
             datos_c = h.get('datos', {})
-            # Formateamos las claves para que se vean bien
-            chips_html = ""
-            for k, v in datos_c.items():
-                if v and v != "N/A" and v != 0:
-                    nombre_dato = k.replace('_', ' ').upper()
-                    chips_html += f"<div class='data-chip'><b>{nombre_dato}</b>{v}</div>"
+            chips_html = "".join([f"<div class='data-chip'><b>{k.replace('_',' ').upper()}</b>{v}</div>" for k, v in datos_c.items() if v and v != "N/A" and v != 0])
             
             st.markdown(f"""
             <div class='log-card'>
                 <div class='log-title'>📍 {h['area']} — {h['maquina']}</div>
-                <div class='log-meta'>
-                    👤 <b>{h['operario']}</b> | ⏱️ <b>{h['duracion']}</b> | 📅 <b>{h['fecha']}</b>
-                </div>
-                <div class='log-grid'>
-                    {chips_html}
-                </div>
+                <div class='log-meta'>👤 <b>{h['operario']}</b> | ⏱️ <b>{h['duracion']}</b> | 📅 <b>{h['fecha']}</b></div>
+                <div class='log-grid'>{chips_html}</div>
                 {f"<div class='obs-box'><b>Observaciones:</b> {h['observaciones']}</div>" if h.get('observaciones') else ""}
             </div>
             """, unsafe_allow_html=True)
 
-    # Botón de Descarga PDF Ficha Técnica
     st.divider()
     try:
         pdf_bytes = generar_pdf_op(row)
-        st.download_button(
-            label="🖨️ Descargar Ficha Técnica Final (PDF)",
-            data=pdf_bytes,
-            file_name=f"FICHA_TECNICA_OP_{row['op']}.pdf",
-            mime="application/pdf",
-            use_container_width=True
-        )
+        st.download_button(label="🖨️ Descargar Ficha Técnica C&B (PDF)", data=pdf_bytes, file_name=f"FICHA_TECNICA_OP_{row['op']}.pdf", mime="application/pdf", use_container_width=True)
     except Exception as e:
         st.error(f"Error generando PDF: {e}")
 
@@ -295,8 +220,9 @@ with st.sidebar:
     st.caption("Conectado a Supabase Cloud")
 
 # ==========================================
-# MÓDULO 1: MONITOR
+# MÓDULOS DE NAVEGACIÓN (LÓGICA ORIGINAL)
 # ==========================================
+
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
     act_data = supabase.table("trabajos_activos").select("*").execute().data
@@ -312,9 +238,6 @@ if menu == "🖥️ Monitor":
                     st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(30); st.rerun()
 
-# ==========================================
-# MÓDULO 2: SEGUIMIENTO
-# ==========================================
 elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
@@ -335,9 +258,6 @@ elif menu == "🔍 Seguimiento":
             if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
-# ==========================================
-# 4. PLANIFICACIÓN
-# ==========================================
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes")
     c1, c2, c3, c4 = st.columns(4)
@@ -415,9 +335,6 @@ elif menu == "📅 Planificación":
                 supabase.table("ordenes_planeadas").insert(payload).execute()
                 st.session_state.sel_tipo = None; st.success("Guardado!"); time.sleep(1); st.rerun()
 
-# ==========================================
-# PRODUCCIÓN (TÁCTIL + CIERRES TÉCNICOS)
-# ==========================================
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL TÁCTIL: {area_act}</div>", unsafe_allow_html=True)
@@ -450,8 +367,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         with st.form("cierre_tecnico_v31"):
             st.warning(f"### CIERRE TÉCNICO: OP {r['op']} en {r['maquina']}")
             op_name = st.text_input("Nombre del Operario *")
-            
-            # Recolectamos datos detallados
             datos_para_historial = {}
 
             if area_act == "IMPRESIÓN":
@@ -459,35 +374,17 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_para_historial['metros_impresos'] = c1.number_input("Metros Impresos", 0)
                 datos_para_historial['bobinas'] = c2.number_input("Cant. Bobinas", 0)
                 datos_para_historial['imgs_por_bobina'] = c3.number_input("Imágenes x Bobina", 0)
-                c4, c5, c6 = st.columns(3)
-                datos_para_historial['tinta_kg'] = c4.number_input("Tinta Gastada (Kg)", 0.0)
-                datos_para_historial['planchas'] = c5.number_input("Planchas Gastadas", 0)
-                datos_para_historial['desperdicio_total'] = c6.number_input("Desperdicio (Kg/Mts)", 0.0)
-                datos_para_historial['motivo_desperdicio'] = st.selectbox("Motivo Desperdicio", ["Arranque", "Falla Máquina", "Papel Defectuoso", "Cambio Tinta"])
                 obs_t = st.text_area("Observaciones del Proceso")
-
             elif area_act == "CORTE":
                 c1, c2, c3 = st.columns(3)
-                datos_para_historial['total_varillas'] = c1.number_input("Total Varillas", 0)
                 datos_para_historial['rollos_cortados'] = c2.number_input("Total Rollos Cortados", 0)
-                datos_para_historial['imgs_por_varilla'] = c3.number_input("Imágenes x Varilla", 0)
-                c4, c5, c6 = st.columns(3)
-                datos_para_historial['cajas_producidas'] = c4.number_input("Cantidad Cajas", 0)
-                datos_para_historial['bolsas_producidas'] = c5.number_input("Cantidad Bolsas", 0)
-                datos_para_historial['desperdicio_corte'] = c6.number_input("Desperdicio Corte", 0.0)
-                datos_para_historial['motivo_desperdicio'] = st.selectbox("Motivo Desperdicio", ["Mal Corte", "Núcleo Dañado", "Medida Errónea", "Falla Cuchilla"])
                 obs_t = st.text_area("Observaciones de Corte")
-
-            else: # Colectoras y Encuadernación
-                c1, c2 = st.columns(2)
-                datos_para_historial['unidades_finales'] = c1.number_input("Unidades Terminadas", 0)
-                datos_para_historial['desperdicio'] = c2.number_input("Desperdicio", 0.0)
-                datos_para_historial['motivo_desperdicio'] = "Proceso"
+            else:
+                datos_para_historial['unidades_finales'] = st.number_input("Unidades Terminadas", 0)
                 obs_t = st.text_area("Observaciones")
 
             if st.form_submit_button("🏁 REGISTRAR Y FINALIZAR"):
-                if not op_name:
-                    st.error("Debe ingresar el operario")
+                if not op_name: st.error("Debe ingresar el operario")
                 else:
                     inicio = datetime.fromisoformat(r['hora_inicio'])
                     fin = datetime.now()
@@ -500,16 +397,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
                         elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
                     
-                    h = d_op['historial_procesos'] if d_op['historial_procesos'] else []
-                    h.append({
-                        "area": area_act, 
-                        "maquina": r['maquina'], 
-                        "operario": op_name, 
-                        "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
-                        "duracion": duracion, 
-                        "datos": datos_para_historial,
-                        "observaciones": obs_t
-                    })
+                    h = d_op.get('historial_procesos') or []
+                    h.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos": datos_para_historial, "observaciones": obs_t})
                     
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
