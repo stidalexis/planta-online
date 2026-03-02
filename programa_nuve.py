@@ -34,11 +34,14 @@ st.markdown("""
     .metric-box { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 12px; border-radius: 8px; margin-bottom: 5px; color: #000000 !important; line-height: 1.6; }
     .metric-box b { color: #000000 !important; }
 
-    /* ESTILO BITÁCORA MEJORADA */
-    .log-card { background-color: #f8f9fa; border-left: 5px solid #1976D2; padding: 15px; border-radius: 5px; margin-bottom: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
-    .log-title { color: #0D47A1; font-weight: bold; font-size: 16px; margin-bottom: 5px; }
-    .log-data { font-size: 14px; color: #333; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
-    .data-item { background: #fff; padding: 4px 8px; border: 1px solid #eee; border-radius: 4px; }
+    /* ESTILO BITÁCORA MEJORADA V2 */
+    .log-card { background-color: #ffffff; border: 1px solid #dee2e6; border-left: 8px solid #1976D2; padding: 20px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    .log-title { color: #0D47A1; font-weight: bold; font-size: 18px; margin-bottom: 8px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    .log-meta { font-size: 14px; color: #555; margin-bottom: 12px; background: #f1f3f5; padding: 5px 10px; border-radius: 5px; display: inline-block; }
+    .log-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+    .data-chip { background: #e3f2fd; padding: 8px; border-radius: 6px; border: 1px solid #bbdefb; font-size: 13px; color: #0D47A1; }
+    .data-chip b { color: #000; display: block; font-size: 11px; text-transform: uppercase; margin-bottom: 2px; }
+    .obs-box { margin-top: 12px; padding: 10px; background: #fffde7; border-radius: 5px; border-left: 4px solid #fbc02d; font-style: italic; font-size: 13px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -72,7 +75,7 @@ def generar_pdf_op(row):
     pdf.add_page()
     
     # --- ENCABEZADO TÉCNICO ---
-    pdf.set_fill_color(13, 71, 161) # Azul Industrial
+    pdf.set_fill_color(13, 71, 161)
     pdf.rect(0, 0, 210, 45, 'F')
     pdf.set_text_color(255, 255, 255)
     
@@ -237,26 +240,31 @@ def modal_detalle_op(row):
             </div>
             """, unsafe_allow_html=True)
 
-    # Historial de Producción Visualmente Mejorado
-    st.markdown("<div class='section-header'>📜 BITÁCORA DE CIERRES EN PLANTA (TIEMPO REAL)</div>", unsafe_allow_html=True)
+    # Historial de Producción Visualmente Detallado (V2)
+    st.markdown("<div class='section-header'>📜 BITÁCORA TÉCNICA DE PRODUCCIÓN</div>", unsafe_allow_html=True)
     hist = row.get('historial_procesos', [])
     if not hist:
         st.info("No hay registros de producción todavía.")
     else:
         for h in hist:
             datos_c = h.get('datos', {})
-            # Creamos una visualización limpia para cada cierre
-            items_html = "".join([f"<div class='data-item'><b>{k.upper()}:</b> {v}</div>" for k, v in datos_c.items() if v])
+            # Formateamos las claves para que se vean bien
+            chips_html = ""
+            for k, v in datos_c.items():
+                if v and v != "N/A" and v != 0:
+                    nombre_dato = k.replace('_', ' ').upper()
+                    chips_html += f"<div class='data-chip'><b>{nombre_dato}</b>{v}</div>"
             
             st.markdown(f"""
             <div class='log-card'>
-                <div class='log-title'>✅ {h['area']} — Máquina: {h['maquina']}</div>
-                <div style='font-size:13px; color:#666; margin-bottom:10px;'>
-                    👤 Operario: <b>{h['operario']}</b> | ⏱️ Tiempo: <b>{h['duracion']}</b> | 📅 Fecha: <b>{h['fecha']}</b>
+                <div class='log-title'>📍 {h['area']} — {h['maquina']}</div>
+                <div class='log-meta'>
+                    👤 <b>{h['operario']}</b> | ⏱️ <b>{h['duracion']}</b> | 📅 <b>{h['fecha']}</b>
                 </div>
-                <div class='log-data'>
-                    {items_html}
+                <div class='log-grid'>
+                    {chips_html}
                 </div>
+                {f"<div class='obs-box'><b>Observaciones:</b> {h['observaciones']}</div>" if h.get('observaciones') else ""}
             </div>
             """, unsafe_allow_html=True)
 
@@ -439,39 +447,42 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
     if st.session_state.rep:
         r = st.session_state.rep
         st.divider()
-        with st.form("cierre_tecnico_v27"):
+        with st.form("cierre_tecnico_v31"):
             st.warning(f"### CIERRE TÉCNICO: OP {r['op']} en {r['maquina']}")
             op_name = st.text_input("Nombre del Operario *")
             
-            # Recolectamos datos según el área
+            # Recolectamos datos detallados
             datos_para_historial = {}
 
             if area_act == "IMPRESIÓN":
                 c1, c2, c3 = st.columns(3)
-                datos_para_historial['metros'] = c1.number_input("Metros Impresos", 0)
+                datos_para_historial['metros_impresos'] = c1.number_input("Metros Impresos", 0)
                 datos_para_historial['bobinas'] = c2.number_input("Cant. Bobinas", 0)
-                datos_para_historial['imgs_bobina'] = c3.number_input("Imágenes x Bobina", 0)
+                datos_para_historial['imgs_por_bobina'] = c3.number_input("Imágenes x Bobina", 0)
                 c4, c5, c6 = st.columns(3)
                 datos_para_historial['tinta_kg'] = c4.number_input("Tinta Gastada (Kg)", 0.0)
                 datos_para_historial['planchas'] = c5.number_input("Planchas Gastadas", 0)
-                datos_para_historial['desperdicio'] = c6.number_input("Desperdicio", 0.0)
-                datos_para_historial['motivo'] = st.selectbox("Motivo Desperdicio", ["Arranque", "Falla Máquina", "Papel Defectuoso"])
-                obs_t = st.text_area("Observaciones")
+                datos_para_historial['desperdicio_total'] = c6.number_input("Desperdicio (Kg/Mts)", 0.0)
+                datos_para_historial['motivo_desperdicio'] = st.selectbox("Motivo Desperdicio", ["Arranque", "Falla Máquina", "Papel Defectuoso", "Cambio Tinta"])
+                obs_t = st.text_area("Observaciones del Proceso")
 
             elif area_act == "CORTE":
                 c1, c2, c3 = st.columns(3)
-                datos_para_historial['varillas'] = c1.number_input("Total Varillas", 0)
+                datos_para_historial['total_varillas'] = c1.number_input("Total Varillas", 0)
                 datos_para_historial['rollos_cortados'] = c2.number_input("Total Rollos Cortados", 0)
-                datos_para_historial['imgs_varilla'] = c3.number_input("Imágenes x Varilla", 0)
-                c4, c5 = st.columns(2)
-                datos_para_historial['cajas'] = c4.number_input("Cantidad Cajas", 0)
-                datos_para_historial['desperdicio_corte'] = c5.number_input("Desperdicio Corte", 0.0)
-                datos_para_historial['motivo'] = st.selectbox("Motivo Desperdicio", ["Mal Corte", "Núcleo Dañado", "Medida Errónea"])
-                obs_t = st.text_area("Observaciones")
+                datos_para_historial['imgs_por_varilla'] = c3.number_input("Imágenes x Varilla", 0)
+                c4, c5, c6 = st.columns(3)
+                datos_para_historial['cajas_producidas'] = c4.number_input("Cantidad Cajas", 0)
+                datos_para_historial['bolsas_producidas'] = c5.number_input("Cantidad Bolsas", 0)
+                datos_para_historial['desperdicio_corte'] = c6.number_input("Desperdicio Corte", 0.0)
+                datos_para_historial['motivo_desperdicio'] = st.selectbox("Motivo Desperdicio", ["Mal Corte", "Núcleo Dañado", "Medida Errónea", "Falla Cuchilla"])
+                obs_t = st.text_area("Observaciones de Corte")
 
             else: # Colectoras y Encuadernación
-                datos_para_historial['desperdicio'] = st.number_input("Desperdicio", 0.0)
-                datos_para_historial['motivo'] = "Proceso"
+                c1, c2 = st.columns(2)
+                datos_para_historial['unidades_finales'] = c1.number_input("Unidades Terminadas", 0)
+                datos_para_historial['desperdicio'] = c2.number_input("Desperdicio", 0.0)
+                datos_para_historial['motivo_desperdicio'] = "Proceso"
                 obs_t = st.text_area("Observaciones")
 
             if st.form_submit_button("🏁 REGISTRAR Y FINALIZAR"):
