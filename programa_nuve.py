@@ -322,7 +322,7 @@ elif menu == "📅 Planificación":
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t}")
             f1, f2, f3 = st.columns(3)
-            op_n = f1.text_input("OP Número *")
+            op_input = f1.text_input("Número de Orden (sin prefijo) *")
             op_a = f2.text_input("OP Anterior")
             cli = f3.text_input("Cliente *")
             f4, f5 = st.columns(2)
@@ -335,13 +335,11 @@ elif menu == "📅 Planificación":
                 partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6])
                 p1, p2 = st.columns(2)
                 
-                # CAMBIO QUIRÚRGICO: Perforación SÍ/NO
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"])
                 perf_d = "NO"
                 if t_perf == "SI":
                     perf_d = st.text_area("Especifique Perforación")
                 
-                # CAMBIO QUIRÚRGICO: Barras SÍ/NO
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"])
                 barr_d = "NO"
                 if t_barr == "SI":
@@ -355,7 +353,6 @@ elif menu == "📅 Planificación":
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
                     gra = d4.text_input(f"Gramos P{i}", key=f"g_{i}")
-                    # CAMBIO QUIRÚRGICO: Fondo Parte
                     fnd = d5.text_input(f"Fondo P{i}", key=f"fnd_{i}", placeholder="Blanco, Rosa...")
                     
                     tf, tr = "N/A", "N/A"
@@ -386,16 +383,27 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Rollos")
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
+                # AUTOMATIZACIÓN DE PREFIJO
+                prefijo = ""
+                if t == "FORMAS IMPRESAS": prefijo = "FRI-"
+                elif t == "FORMAS BLANCAS": prefijo = "FRB-"
+                elif t == "ROLLOS IMPRESOS": prefijo = "RI-"
+                elif t == "ROLLOS BLANCOS": prefijo = "RB-"
+                
+                op_final = f"{prefijo}{op_input.upper()}"
+                
                 ruta = "IMPRESIÓN"
                 if t == "ROLLOS BLANCOS": ruta = "CORTE"
                 if t == "FORMAS BLANCAS": ruta = "COLECTORAS"
-                payload = {"op": op_n.upper(), "op_anterior": op_a, "cliente": cli, "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, "proxima_area": ruta}
+                
+                payload = {"op": op_final, "op_anterior": op_a, "cliente": cli, "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, "proxima_area": ruta}
                 if "FORMAS" in t:
                     payload.update({"cantidad_formas": int(cant_f), "num_partes": partes, "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, "detalles_partes_json": lista_p, "presentacion": pres, "observaciones_formas": obs})
                 else:
                     payload.update({"material": mat, "gramaje_rollos": gram, "ref_comercial": ref_c, "cantidad_rollos": int(cant_r), "core": core, "tintas_frente_rollos": tf_r, "tintas_respaldo_rollos": tr_r, "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs})
+                
                 supabase.table("ordenes_planeadas").insert(payload).execute()
-                st.session_state.sel_tipo = None; st.success("Guardado!"); time.sleep(1); st.rerun()
+                st.session_state.sel_tipo = None; st.success(f"Orden {op_final} Guardada!"); time.sleep(1); st.rerun()
 
 # ==========================================
 # 4. PRODUCCIÓN (TÁCTIL + CIERRES)
@@ -403,7 +411,8 @@ elif menu == "📅 Planificación":
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL TÁCTIL: {area_act}</div>", unsafe_allow_html=True)
-    activos = {a['maquina']: a for a in supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data}
+    activos_data = supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data
+    activos = {a['maquina']: a for a in activos_data}
     
     cols = st.columns(3)
     for idx, m in enumerate(MAQUINAS[area_act]):
@@ -433,7 +442,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             st.warning(f"### CIERRE TÉCNICO: OP {r['op']} en {r['maquina']}")
             op_name = st.text_input("Nombre del Operario *")
             
-            # CAMBIO QUIRÚRGICO: Tipo de Papel en el cierre (General para todas las áreas)
             tipo_papel_cierre = st.text_input("Tipo de Papel Utilizado *")
             
             if area_act == "IMPRESIÓN":
@@ -473,7 +481,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     inicio = datetime.fromisoformat(r['hora_inicio'])
                     fin = datetime.now()
                     duracion = str(fin - inicio).split('.')[0]
-                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+                    d_op_res = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute()
+                    d_op = d_op_res.data
                     
                     n_area = "FINALIZADO"
                     if "ROLLOS" in d_op['tipo_orden'] and area_act == "IMPRESIÓN": n_area = "CORTE"
