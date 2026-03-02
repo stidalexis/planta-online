@@ -284,7 +284,7 @@ if menu == "🖥️ Monitor":
     time.sleep(30); st.rerun()
 
 # ==========================================
-# MÓDULO 2: SEGUIMIENTO
+# MÓDULO 2: SEGUIMIENTO (DISEÑO ORIGINAL RESTAURADO)
 # ==========================================
 elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
@@ -293,8 +293,12 @@ elif menu == "🔍 Seguimiento":
         df = pd.DataFrame(res)
         st.download_button("📥 Excel General", to_excel_limpio(df, "GENERAL"), "Reporte_General_Nuve.xlsx")
         st.divider()
+        
+        # --- ENCABEZADOS ORIGINALES ---
         h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
         h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**")
+        
+        # --- FILAS ORIGINALES ---
         for index, row in df.iterrows():
             r1, r2, r3, r4, r5, r6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
             r1.write(row['op'])
@@ -320,7 +324,7 @@ elif menu == "📅 Planificación":
     if st.session_state.sel_tipo:
         t = st.session_state.sel_tipo
         
-        # --- CAMBIO QUIRÚRGICO: Definición de Prefijos ---
+        # --- DEFINICIÓN DE PREFIJOS ---
         prefijo_automatico = ""
         if t == "ROLLOS IMPRESOS": prefijo_automatico = "RI"
         elif t == "ROLLOS BLANCOS": prefijo_automatico = "RB"
@@ -391,7 +395,7 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Rollos")
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
-                # --- CAMBIO QUIRÚRGICO: Aplicación del prefijo antes de guardar ---
+                # APLICACIÓN DEL PREFIJO
                 op_con_prefijo = f"{prefijo_automatico}{op_n_input.strip().upper()}"
                 
                 ruta = "IMPRESIÓN"
