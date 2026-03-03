@@ -259,7 +259,7 @@ if menu == "🖥️ Monitor":
     act_data = supabase.table("trabajos_activos").select("*").execute().data
     act = {a['maquina']: a for a in act_data}
     for area, maquinas in MAQUINAS.items():
-        st.markdown(f<div class='title-area'>{area}</div>, unsafe_allow_html=True)
+        st.markdown(f<"div class='title-area'>{area}</div">, unsafe_allow_html=True)
         cols = st.columns(4)
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
@@ -476,3 +476,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success("Producción Registrada!")
                     time.sleep(1); st.rerun()
+
