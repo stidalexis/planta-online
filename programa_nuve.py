@@ -155,7 +155,7 @@ def generar_pdf_op(row):
     
     return bytes(pdf.output())
 
-# --- DIALOGo RADIOGRAFÍA ---
+# --- DIALOG RADIOGRAFÍA ---
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
     st.markdown(f"## OP: {row['op']} — {row['nombre_trabajo']}")
@@ -182,11 +182,11 @@ def modal_detalle_op(row):
             📦 <b>Cantidad:</b> {row.get('cantidad_formas')}<br>
             📑 <b>Partes:</b> {row.get('num_partes')}<br>
             🎨 <b>Presentación:</b> {row.get('presentacion')}
-            <div class='metric-box'>
-             </div>
+            </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
+            <div class='metric-box'>
             📄 <b>Material:</b> {row.get('material')}<br>
             📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
             📦 <b>Cantidad:</b> {row.get('cantidad_rollos')}<br>
@@ -316,9 +316,9 @@ elif menu == "📅 Planificación":
                 
                 p1, p2 = st.columns(2)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"])
-                perf_d = p1.text_imput("Detalle Perforación") if t_perf == "SI" else "NO"
+                perf_d = p1.text_area("Detalle Perforación") if t_perf == "SI" else "NO"
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"])
-                barr_d = p2.text_imput("Detalle Barras") if t_barr == "SI" else "NO"
+                barr_d = p2.text_area("Detalle Barras") if t_barr == "SI" else "NO"
                 
                 lista_p = []
                 for i in range(1, partes + 1):
