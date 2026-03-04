@@ -7,7 +7,7 @@ import io
 from fpdf import FPDF
 
 # --- CONFIGURACIÓN DE PÁGINA ---
-st.set_page_config(layout="wide", page_title="SISTEMA NUVE V31 - TOTAL", page_icon="🏭")
+st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
 
 # --- CONEXIÓN A SUPABASE ---
 try:
@@ -281,7 +281,7 @@ elif menu == "🔍 Seguimiento":
 
 # --- MÓDULO 3: PLANIFICACIÓN (CON PREFIJOS AUTOMÁTICOS) ---
 elif menu == "📅 Planificación":
-    st.title("Planificación de Órdenes")
+    st.title("Planificación de Órdenes 🌐")
     c1, c2, c3, c4 = st.columns(4)
     if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
     if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
@@ -323,13 +323,11 @@ elif menu == "📅 Planificación":
                 lista_p = []
                 for i in range(1, partes + 1):
                     st.markdown(f"**PARTE {i}**")
-                     d1, d2, d3, d4, d5, d6 = st.columns(6)
+                    d1, d2, d3, d4 = st.columns(4)
                     anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}")
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
                     gra = d4.text_input(f"Gramos P{i}", key=f"g_{i}")
-                    fon = d5.text_input(f"fondo P{i}", key=f"f_{i}")
-                    tra = d6.text_input(f"trafico P{i}", key=f"t_{i}")
                     tf, tr = "N/A", "N/A"
                     if t == "FORMAS IMPRESAS":
                         t1, t2 = st.columns(2)
