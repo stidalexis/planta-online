@@ -1,4 +1,4 @@
-mport streamlit as st
+import streamlit as st
 import pandas as pd
 from supabase import create_client
 from datetime import datetime
@@ -323,7 +323,7 @@ elif menu == "📅 Planificación":
                 lista_p = []
                 for i in range(1, partes + 1):
                     st.markdown(f"**PARTE {i}**")
-                    d1, d2, d3, d4 ,d5 ,d6 = st.columns(4)
+                     d1, d2, d3, d4, d5, d6 = st.columns(6)
                     anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}")
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
