@@ -155,7 +155,7 @@ def generar_pdf_op(row):
     
     return bytes(pdf.output())
 
-# --- DIALOG RADIOGRAFÍA ---
+# --- DIALOGo RADIOGRAFÍA ---
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
     st.markdown(f"## OP: {row['op']} — {row['nombre_trabajo']}")
@@ -182,10 +182,6 @@ def modal_detalle_op(row):
             📦 <b>Cantidad:</b> {row.get('cantidad_formas')}<br>
             📑 <b>Partes:</b> {row.get('num_partes')}<br>
             🎨 <b>Presentación:</b> {row.get('presentacion')}
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
             <div class='metric-box'>
             📄 <b>Material:</b> {row.get('material')}<br>
             📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
