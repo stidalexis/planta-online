@@ -317,6 +317,8 @@ elif menu == "📅 Planificación":
                 pres = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
                 p1, p2 = st.columns(2)
+                num_i = p1.number_input("Numeracion Desde", 0)
+                num_f = p2.number_input("Numeracion Hasta", 0)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"])
                 perf_d = p1.text_area("Detalle Perforación") if t_perf == "SI" else "NO"
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"])
@@ -502,6 +504,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
