@@ -332,10 +332,10 @@ elif menu == "📅 Planificación":
                     tra = d6.text_input(f"Trafico P{i}", key=f"t_{i}")
                     tf, tr = "N/A", "N/A"
                     if t == "FORMAS IMPRESAS":
-                        t1, t2,t3 = st.columns(3)
+                        t1, t2, t3 = st.columns(3)
                         tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}")
                         tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}")
-                        obe = t2.text_input(f"Observaciones p especial P{i}", key=f"obe_{i}")
+                        obe = t3.text_input(f"Observaciones p especial P{i}", key=f"obe_{i}")
                     lista_p.append({"p":i, "anc":anc, "lar":lar, "papel":pap, "gramos":gra, "tf":tf, "tr":tr})
                 obs = st.text_area("Observaciones Generales Formas")
 
@@ -500,6 +500,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
