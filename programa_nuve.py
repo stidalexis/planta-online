@@ -316,10 +316,10 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES)
                 pres = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                p1, p2 = st.columns(4)
-                 t_num = p1.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
-                num_id = p1.text_area("Numeracion Desde") if t_num == "SI" else "NO"
-                num_fd = p2.text_area("Numeracion Hasta") if t_num == "SI" else "NO"
+                p1, p2, p3, p4 = st.columns(4)
+                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
+                num_id = p3.text_area("Numeracion Desde") if t_num == "SI" else "NO"
+                num_fd = p4.text_area("Numeracion Hasta") if t_num == "SI" else "NO"
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"])
                 perf_d = p1.text_area("Detalle Perforación") if t_perf == "SI" else "NO"
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"])
@@ -505,6 +505,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
