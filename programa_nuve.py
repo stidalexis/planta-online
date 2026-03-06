@@ -354,8 +354,8 @@ elif menu == "📅 Planificación":
                 r4, r5, r6 = st.columns(3)
                 cant_r = r4.number_input("Cantidad Rollos", 0)
                 core = r5.selectbox("Core / Centro", ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"])
-                tra = p1.selectbox("transportadora", ["NO", "SI"])
-                c_tra = p1.text_area("espesifique ciudad de destino") if tra == "SI" else "NO"
+                tra = r6.selectbox("transportadora", ["NO", "SI"])
+                c_tra = r6.text_area("espesifique ciudad de destino") if tra == "SI" else "NO"
                                 
                 tf_r, tr_r = "N/A", "N/A"
                 if t == "ROLLOS IMPRESOS":
@@ -508,6 +508,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
