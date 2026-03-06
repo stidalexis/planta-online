@@ -327,14 +327,15 @@ elif menu == "📅 Planificación":
                     anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}")
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
-                    gra = d4.text_input(f"Gramos P{i}", key=f"g_{i}")
-                    fon = d5.text_input(f"Fondo P{i}", key=f"f_{i}")
+                    fon = d4.text_input(f"color fondo P{i}", key=f"f_{i}")
+                    gra = d5.text_input(f"gramos P{i}", key=f"g_{i}")
                     tra = d6.text_input(f"Trafico P{i}", key=f"t_{i}")
                     tf, tr = "N/A", "N/A"
                     if t == "FORMAS IMPRESAS":
                         t1, t2,t3 = st.columns(3)
                         tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}")
                         tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}")
+                        obe = t2.text_input(f"Observaciones p especial P{i}", key=f"obe_{i}")
                     lista_p.append({"p":i, "anc":anc, "lar":lar, "papel":pap, "gramos":gra, "tf":tf, "tr":tr})
                 obs = st.text_area("Observaciones Generales Formas")
 
@@ -499,6 +500,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
