@@ -43,7 +43,8 @@ MAQUINAS = {
     "COLECTORAS": ["COL-01", "COL-02"],
     "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)]
 }
-PRESENTACIONES = ["LIBRETAS TAPADURA", "BLOCK LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "ROLLOS"]
+PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS"]
+PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
 # --- FUNCIONES AUXILIARES ---
 
@@ -309,10 +310,11 @@ elif menu == "📅 Planificación":
             trab = f5.text_input("Nombre del Trabajo")
 
             if "FORMAS" in t:
-                g1, g2, g3 = st.columns(3)
+                g1, g2, g3, g4 = st.columns(4)
                 cant_f = g1.number_input("Cantidad Formas", 0)
                 partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6])
                 pres = g3.selectbox("Presentación", PRESENTACIONES)
+                pres = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
                 p1, p2 = st.columns(2)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"])
@@ -500,6 +502,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
