@@ -396,7 +396,7 @@ elif menu == "📅 Planificación":
                     else:
                         payload.update({
                             "material": mat, "gramaje_rollos": gram, "ref_comercial": ref_c, 
-                            "cantidad_rollos": int(cant_r), "core": core, "tamaño_rollo": t_r,
+                            "cantidad_rollos": int(cant_r), "core": core, "ciudad de destino": t_r,
                             "tintas_frente_rollos": tf_r, "tintas_respaldo_rollos": tr_r, 
                             "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs
                         })
@@ -508,6 +508,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
