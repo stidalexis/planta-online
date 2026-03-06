@@ -328,7 +328,7 @@ elif menu == "📅 Planificación":
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
                     gra = d4.text_input(f"Gramos P{i}", key=f"g_{i}")
-                    fon = d5.text_input(f"fondo P{i}", key=f"g_{i}")
+                    fon = d5.text_input(f"fondo P{i}", key=f"f_{i}")
                     tf, tr = "N/A", "N/A"
                     if t == "FORMAS IMPRESAS":
                         t1, t2,t3 = st.columns(3)
@@ -498,6 +498,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
