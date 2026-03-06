@@ -345,8 +345,7 @@ elif menu == "📅 Planificación":
                 r4, r5, r6 = st.columns(3)
                 cant_r = r4.number_input("Cantidad Rollos", 0)
                 core = r5.selectbox("Core / Centro", ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"])
-                t_r = r6.text_input("Tamaño/Ancho Rollo")
-                
+                                
                 tf_r, tr_r = "N/A", "N/A"
                 if t == "ROLLOS IMPRESOS":
                     ct1, ct2 = st.columns(2)
@@ -498,4 +497,5 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
