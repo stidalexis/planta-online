@@ -518,11 +518,15 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 cc1, cc2, cc3 = st.columns(3)
                 datos_c['rollos_producidos'] = cc1.number_input("Rollos Finales", 0)
                 datos_c['varillas_sacadas'] = cc2.number_input("Varillas", 0)
+                datos_c['unidades_caja'] = cc1.number_input("unidades por caja", 0)
+                datos_c['cajas_sacadas'] = cc2.number_input("total cajas", 0)
                 datos_c['desperdicio_corte'] = cc3.number_input("Desperdicio (Kg)", 0)
             
             elif area_act == "COLECTORAS":
                 cc1, cc2 = st.columns(2)
                 datos_c['formas_colectadas'] = cc1.number_input("Cantidad Colectada", 0)
+                datos_c['unidades por caja'] = cc2.number_input("cantidad d eformas / caja", 0)
+                datos_c['cajas sacadas'] = cc2.number_input("total cajas", 0)
                 datos_c['desperdicio_hojas'] = cc2.number_input("Hojas Desperdicio", 0)
             
             obs_prod = st.text_area("Observaciones presentadas durante el proceso")
@@ -560,6 +564,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
