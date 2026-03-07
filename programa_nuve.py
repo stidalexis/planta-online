@@ -301,7 +301,7 @@ elif menu == "📅 Planificación":
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             f1, f2, f3 = st.columns(3)
-            op_input = f1.number_input("Número de OP (Solo número) *")
+            op_input = f1.number_input("Número de OP (Solo número) *", 0)
             op_a = f2.text_input("OP Anterior")
             cli = f3.text_input("Cliente *")
             
@@ -507,6 +507,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
