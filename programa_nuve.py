@@ -454,7 +454,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             
             if area_act == "IMPRESIÓN":
                 cc1, cc2, cc3 = st.columns(3)
-                datos_c['DATOS'] = st.input_de_streamlit("DIGA")
                 datos_c['metros_lineales'] = cc1.number_input("Metros Impresos", 0)
                 datos_c['bobinas_usadas'] = cc2.number_input("Bobinas Usadas", 0)
                 datos_c['desperdicio_kg'] = cc3.number_input("Desperdicio (Kg)", 0.0)
@@ -508,6 +507,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
