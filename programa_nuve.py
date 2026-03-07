@@ -334,7 +334,7 @@ elif menu == "📅 Planificación":
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}")
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}")
                     fon = d4.text_input(f"color fondo P{i}", key=f"f_{i}")
-                    gra = d5.text_input(f"gramos P{i}", key=f"g_{i}", 0)
+                    gra = d5.text_input(f"gramos P{i}", key=f"g_{i}")
                     tra = d6.text_input(f"Trafico P{i}", key=f"t_{i}")
                     tf, tr = "N/A", "N/A"
                     if t == "FORMAS IMPRESAS":
@@ -348,7 +348,7 @@ elif menu == "📅 Planificación":
             else: # SECCIÓN ROLLOS
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base")
-                gram = r2.number_input("Gramaje")
+                gram = r2.number_input("Gramaje", 0)
                 ref_c = r3.text_input("Referencia Comercial")
                 
                 r4, r5, r6 = st.columns(3)
@@ -507,6 +507,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
