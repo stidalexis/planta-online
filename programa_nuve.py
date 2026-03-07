@@ -496,7 +496,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     hist = d_op.get('historial_procesos') or []
                     hist.append({
                         "area": area_act, "maquina": r['maquina'], "operario": op_name, 
-                        "ayudante": ayudante, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
+                        "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
                         "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
                     })
                     
@@ -507,6 +507,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
