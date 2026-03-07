@@ -301,7 +301,7 @@ elif menu == "📅 Planificación":
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             f1, f2, f3 = st.columns(3)
-            op_input = f1.text_input("Número de OP (Solo número) *")
+            op_input = f1.number_input("Número de OP (Solo número) *")
             op_a = f2.text_input("OP Anterior")
             cli = f3.text_input("Cliente *")
             
@@ -318,9 +318,9 @@ elif menu == "📅 Planificación":
                 
                 p1, p2, p3, p4 = st.columns(4)
                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
-                num_id = p3.text_area("Numeracion Desde") if t_num == "SI" else "NO"
+                num_id = p3.number_area("Numeracion Desde") if t_num == "SI" else "NO"
                 pend = p4.selectbox("pendiente  dejar en NO", ["NO", "SI"])
-                num_fd = p4.text_area("Numeracion Hasta") if t_num == "SI" else "NO"
+                num_fd = p4.number_area("Numeracion Hasta") if t_num == "SI" else "NO"
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"])
                 perf_d = p1.text_area("Detalle Perforación") if t_perf == "SI" else "NO"
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"])
@@ -348,7 +348,7 @@ elif menu == "📅 Planificación":
             else: # SECCIÓN ROLLOS
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base")
-                gram = r2.text_input("Gramaje")
+                gram = r2.number_input("Gramaje")
                 ref_c = r3.text_input("Referencia Comercial")
                 
                 r4, r5, r6 = st.columns(3)
@@ -459,7 +459,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['desperdicio_kg'] = cc3.number_input("Desperdicio (Kg)", 0)
                 cc4, cc5 = st.columns(2)
                 datos_c['tintas_usadas'] = cc4.text_input("Tintas/Colores Usados")
-                datos_c['planchas_cliches'] = cc5.number_input("Planchas/Cliches Usados", 0)
+                datos_c['planchas_cliches'] = cc5.number_input("Planchas/Usadas", 0)
             
             elif area_act == "CORTE":
                 cc1, cc2, cc3 = st.columns(3)
@@ -507,6 +507,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
