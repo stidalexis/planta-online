@@ -447,7 +447,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             st.warning(f"### REGISTRO DE CIERRE: OP {r['op']} en {r['maquina']}")
             col_inf1, col_inf2 = st.columns(2)
             op_name = col_inf1.text_input("Nombre del Operario *")
-            ayudante = col_inf2.text_input("Ayudante (opcional)")
+            auxiliar = col_inf2.text_input("Auxiliar (opcional)")
             
             st.markdown("**DATOS TÉCNICOS DE SALIDA**")
             datos_c = {}
@@ -455,8 +455,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if area_act == "IMPRESIÓN":
                 cc1, cc2, cc3 = st.columns(3)
                 datos_c['metros_lineales'] = cc1.number_input("Metros Impresos", 0)
-                datos_c['bobinas_usadas'] = cc2.number_input("Bobinas Usadas", 0)
-                datos_c['desperdicio_kg'] = cc3.number_input("Desperdicio (Kg)", 0.0)
+                datos_c['bobinas_impresas'] = cc2.number_input("Bobinas impresas", 0)
+                datos_c['desperdicio_kg'] = cc3.number_input("Desperdicio (Kg)", 0)
                 cc4, cc5 = st.columns(2)
                 datos_c['tintas_usadas'] = cc4.text_input("Tintas/Colores Usados")
                 datos_c['planchas_cliches'] = cc5.number_input("Planchas/Cliches Usados", 0)
@@ -464,15 +464,15 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             elif area_act == "CORTE":
                 cc1, cc2, cc3 = st.columns(3)
                 datos_c['rollos_producidos'] = cc1.number_input("Rollos Finales", 0)
-                datos_c['varillas_usadas'] = cc2.number_input("Varillas", 0)
-                datos_c['desperdicio_corte'] = cc3.number_input("Desperdicio (Kg)", 0.0)
+                datos_c['varillas_sacadas'] = cc2.number_input("Varillas", 0)
+                datos_c['desperdicio_corte'] = cc3.number_input("Desperdicio (Kg)", 0)
             
             elif area_act == "COLECTORAS":
                 cc1, cc2 = st.columns(2)
                 datos_c['formas_colectadas'] = cc1.number_input("Cantidad Colectada", 0)
                 datos_c['desperdicio_hojas'] = cc2.number_input("Hojas Desperdicio", 0)
             
-            obs_prod = st.text_area("Observaciones o Incidencias durante el proceso")
+            obs_prod = st.text_area("Observaciones presentadas durante el proceso")
 
             if st.form_submit_button("🏁 REGISTRAR Y MOVER A SIGUIENTE ÁREA"):
                 if not op_name:
@@ -507,6 +507,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
