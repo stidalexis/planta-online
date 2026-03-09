@@ -364,7 +364,8 @@ elif menu == "📅 Planificación":
                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
                 num_fd = p4.text_input("Hasta") if t_num == "SI" else "NO"
-                c_des = p4.selectbox("¿va por transportadora?", ["NO", "SI"])
+                
+                c_des = p5.selectbox("¿va por transportadora?", ["NO", "SI"])
                 dc_des = p5.text_input("Desde") if t_num == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
@@ -566,6 +567,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
