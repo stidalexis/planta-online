@@ -486,16 +486,22 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = tr
                     st.rerun()
             else:
-                st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
-                ops_p = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
-                if ops_p:
-                    sel_op = st.selectbox("Seleccionar OP", [o['op'] for o in ops_p], key=f"s_{m}")
+                st.markdown(f"<div class='card-vacia'>⚪ {m}<br>LIBRE</div>", unsafe_allow_html=True)
+                ops = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
+                if ops:
+                    sel = st.selectbox("Asignar OP", [o['op'] for o in ops], key=f"s_{m}")
                     if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
-                        supabase.table("trabajos_activos").insert({
-                            "maquina": m, "area": area_act, "op": sel_op, 
-                            "hora_inicio": datetime.now().isoformat()
-                        }).execute()
+                        d = next(o for o in ops if o['op'] == sel)
+                        supabase.table("trabajos_activos").insert({"maquina": m, "area": area_act, "op": d['op'], "trabajo": d['nombre_trabajo'], "hora_inicio": datetime.now().isoformat()}).execute()
                         st.rerun()
+
+    if st.session_state.rep:
+        r = st.session_state.rep
+        st.divider()
+        with st.form("cierre_tecnico_v27"):
+            st.warning(f"### CIERRE TÉCNICO: OP {r['op']} en {r['maquina']}")
+            op_name = st.text_input("Nombre del Operario *")
+
 
     # Formulario de Cierre de Producción
     if st.session_state.rep:
@@ -557,17 +563,18 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     
                     hist = d_op.get('historial_procesos') or []
                     hist.append({
-                        "area": area_act, "maquina": r['maquina'], "operario": op_name, 
+                     act, "maquina": r['maquina'], "operario": op_name, 
                         "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
                         "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
                     })
                     
-                    # Actualizar OP y Liberar Máquina
+                    # Actualizar OP y Liberar Máquina   "area": area_
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
