@@ -367,7 +367,7 @@ elif menu == "📅 Planificación":
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
                 num_fd = p3.text_input("Hasta") if t_num == "SI" else "NO"
                 t_trans_f = p4.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
-                dest_f = p4.text_area("Destino/Agencia", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
+                dest_f = p4.text_area("ciudad de destino", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
@@ -569,6 +569,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
