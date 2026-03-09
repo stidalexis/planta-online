@@ -356,7 +356,7 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                p1, p2, p3, p4, p5 = st.columns(5)
+                p1, p2, p3, p4, = st.columns(4)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
                 perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
                 
@@ -569,5 +569,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
