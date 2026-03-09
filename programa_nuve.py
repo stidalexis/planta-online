@@ -153,13 +153,7 @@ def generar_pdf_op(row):
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 7)
     pdf.cell(0, 10, f"NUVE V31 - Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
-
-    st.markdown(f"""
-    <div class='metric-box'>
-    🚚 <b>Transportadora:</b> {row.get('transportadora_formas', 'NO')}<br>
-   📍 <b>Destino:</b> {row.get('destino_formas', 'N/A')}
-    </div>
-    """, unsafe_allow_html=True)
+    
     return bytes(pdf.output())
 
 # --- DIALOG RADIOGRAFÍA ---
@@ -360,11 +354,7 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                p1, p2, p3, p4, p5 = st.columns(4)
-                t_trans = p5.selectbox("¿ va por transportadora?", ["NO", "SI"], 
-                      index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
-                dest_f = st.text_input("ciudad de destino", 
-                      value=datos_rec.get('destino_formas', "")) if t_trans == "SI" else "NO"
+                p1, p2, p3, p4 = st.columns(4)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
                 perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
                 
@@ -453,8 +443,6 @@ elif menu == "📅 Planificación":
                         payload.update({
                             "cantidad_formas": int(cant_f), "num_partes": partes, 
                             "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, 
-                            "transportadora_formas": t_trans,
-                            "destino_formas": dest_f,
                             "detalles_partes_json": lista_p, "presentacion": pres, 
                             "observaciones_formas": obs
                         })
@@ -576,24 +564,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
