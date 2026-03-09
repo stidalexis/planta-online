@@ -540,9 +540,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if not op_name:
                     st.error("Debe ingresar el nombre del operario.")
                 else:
-                    inicio = datetime.fromisoformat(r['hora_inicio'])
-                    fin = datetime.now()
-                    duracion = str(fin-inicio).split('.')[0]
+                    inicio = r.get('hora_inicio')
+
+try:
+    if isinstance(inicio, str):
+        inicio = datetime.fromisoformat(inicio.replace("Z",""))
+except:
+    inicio = datetime.now()
+
+fin = datetime.now()
+duracion = str(fin - inicio).split('.')[0]
                     
                     # Obtener datos de la OP para determinar flujo
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
@@ -569,6 +576,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
