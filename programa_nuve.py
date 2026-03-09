@@ -282,17 +282,15 @@ elif menu == "🔍 Seguimiento":
             if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
-# --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
+# --- MÓDULO 3: PLANIFICACIÓN ---
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
     
-    # 1. Selector de Origen de la Orden
     st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
     origen = st.radio("¿Cómo desea ingresar la orden?", 
                       ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                       horizontal=True)
     
-    # Variable para almacenar datos recuperados
     datos_rec = {}
     
     if "Repetición" in origen:
@@ -314,7 +312,6 @@ elif menu == "📅 Planificación":
 
     st.divider()
 
-    # . Selección de Tipo de Producto 
     c1, c2, c3, c4 = st.columns(4)
     if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
     if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
@@ -328,14 +325,10 @@ elif menu == "📅 Planificación":
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             
-            # --- SECCIÓN: DATOS GENERALES ---
             f1, f2, f3 = st.columns(3)
             op_input = f1.text_input("Número de Nueva OP (Solo número) *")
-            
-            # Si es repetición, sugerimos la OP anterior buscada
             val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
             op_a = f2.text_input("OP Anterior", value=val_op_ant)
-            
             cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
             
             f4, f5 = st.columns(2)
@@ -343,15 +336,11 @@ elif menu == "📅 Planificación":
             trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
 
             if "FORMAS" in t:
-                # --- SECCIÓN: ESPECIFICACIONES FORMAS ---
                 g1, g2, g3, g4 = st.columns(4)
                 cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
-                
-                # Manejo de índices para Selectbox (evita errores si el valor no existe)
                 val_partes = int(datos_rec.get('num_partes', 1))
                 idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
                 partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
-                
                 idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
@@ -359,90 +348,71 @@ elif menu == "📅 Planificación":
                 p1, p2, p3, p4, = st.columns(4)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
                 perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
-                
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"], index=1 if datos_rec.get('codigo_barras_detalle') != "NO" and datos_rec.get('codigo_barras_detalle') else 0)
                 barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
-                
                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
                 num_fd = p3.text_input("Hasta") if t_num == "SI" else "NO"
                 t_trans_f = p4.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
                 dest_f = p4.text_area("ciudad de destino", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
-                # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
                 rec_partes = datos_rec.get('detalles_partes_json', [])
-                
                 for i in range(1, partes + 1):
-                    # Intentar extraer datos de la parte específica si existe en la repetición
                     p_data = rec_partes[i-1] if i <= len(rec_partes) else {}
-                    
                     st.markdown(f"**PARTE {i}**")
                     d1, d2, d3, d4, d5, d6 = st.columns(6)
                     anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}", value=p_data.get('anc', ""))
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', ""))
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', ""))
-                    fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) # Campo nuevo detectado en tu código
+                    fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', ""))
                     gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', ""))
                     tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
-                    
                     tf, tr = "N/A", "N/A"
                     if t == "FORMAS IMPRESAS":
                         t1, t2, t3 = st.columns(3)
                         tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', ""))
                         tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', ""))
                         obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}")
-                    
                     lista_p.append({"p":i, "anc":anc, "lar":lar, "papel":pap, "gramos":gra, "tf":tf, "tr":tr})
-                
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
 
-            else: # --- SECCIÓN: ROLLOS ---
+            else:
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
                 gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
                 ref_c = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
-                
                 r4, r5, r6 = st.columns(3)
                 cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
-                
                 cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"]
                 idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
-                
                 tra_opt = ["NO", "SI"]
                 tra = r6.selectbox("¿Requiere Transportadora?", tra_opt, index=1 if datos_rec.get('ciudad de destino') != "NO" and datos_rec.get('ciudad de destino') else 0)
                 c_tra = st.text_input("Especifique Ciudad de Destino", value=datos_rec.get('ciudad de destino', "")) if tra == "SI" else "NO"
-                                
                 tf_r, tr_r = "N/A", "N/A"
                 if t == "ROLLOS IMPRESOS":
                     ct1, ct2 = st.columns(2)
                     tf_r = ct1.text_input("Tintas Frente", value=datos_rec.get('tintas_frente_rollos', ""))
                     tr_r = ct2.text_input("Tintas Respaldo", value=datos_rec.get('tintas_respaldo_rollos', ""))
-                
                 r7, r8 = st.columns(2)
                 ub = r7.number_input("Unidades x Bolsa", 0, value=int(datos_rec.get('unidades_bolsa', 0)))
                 uc = r8.number_input("Unidades x Caja", 0, value=int(datos_rec.get('unidades_caja', 0)))
                 obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
 
-            # --- BOTÓN DE GUARDADO ---
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
                 if not op_input or not cli:
                     st.error("El número de OP y el Cliente son obligatorios.")
                 else:
                     op_final = f"{prefijo}{op_input.upper()}"
-                    
-                    # Definición de ruta inicial automática
                     ruta_inicial = "IMPRESIÓN"
                     if t == "ROLLOS BLANCOS": ruta_inicial = "CORTE"
                     if t == "FORMAS BLANCAS": ruta_inicial = "COLECTORAS"
-                    
                     payload = {
                         "op": op_final, "op_anterior": op_a, "cliente": cli, 
                         "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, 
                         "proxima_area": ruta_inicial, "historial_procesos": []
                     }
-                    
                     if "FORMAS" in t:
                         payload.update({
                             "cantidad_formas": int(cant_f), "num_partes": partes, 
@@ -458,21 +428,17 @@ elif menu == "📅 Planificación":
                             "tintas_frente_rollos": tf_r, "tintas_respaldo_rollos": tr_r, 
                             "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs
                         })
-                    
                     try:
                         supabase.table("ordenes_planeadas").insert(payload).execute()
-                        st.success(f"¡Éxito! Orden {op_final} registrada en sistema.")
-                        st.session_state.sel_tipo = None
+                        st.success(f"¡Éxito! Orden {op_final} registrada."); st.session_state.sel_tipo = None
                         time.sleep(1.5); st.rerun()
-                    except Exception as e:
-                        st.error(f"Error al guardar: {e}")
+                    except Exception as e: st.error(f"Error al guardar: {e}")
 
 # --- MÓDULO 4: PRODUCCIÓN (PANEL TÁCTIL) ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL DE PRODUCCIÓN: {area_act}</div>", unsafe_allow_html=True)
     
-    # Consultar máquinas ocupadas
     activos_data = supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data
     activos = {a['maquina']: a for a in activos_data}
     
@@ -497,7 +463,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         }).execute()
                         st.rerun()
 
-    # Formulario de Cierre de Producción
     if st.session_state.rep:
         r = st.session_state.rep
         st.divider()
@@ -540,14 +505,19 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if not op_name:
                     st.error("Debe ingresar el nombre del operario.")
                 else:
-                    inicio = datetime.fromisoformat(r['hora_inicio'])
+                    # --- BLOQUE DE CORRECCIÓN PARA EL ERROR DE TIPO ---
+                    hora_inicio_raw = r['hora_inicio']
+                    if isinstance(hora_inicio_raw, str):
+                        inicio = datetime.fromisoformat(hora_inicio_raw)
+                    else:
+                        inicio = hora_inicio_raw
+                        
                     fin = datetime.now()
-                    duracion = str(fin-inicio).split('.')[0]
+                    duracion = str(fin - inicio).split('.')[0]
+                    # --- FIN DEL BLOQUE DE CORRECCIÓN ---
                     
-                    # Obtener datos de la OP para determinar flujo
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                     
-                    # Lógica de Flujo Industrial
                     n_area = "FINALIZADO"
                     if "ROLLOS" in d_op['tipo_orden']:
                         if area_act == "IMPRESIÓN": n_area = "CORTE"
@@ -562,12 +532,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
                     })
                     
-                    # Actualizar OP y Liberar Máquina
                     supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
-
-
