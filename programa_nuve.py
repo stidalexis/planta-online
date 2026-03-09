@@ -354,14 +354,14 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                p1, p2, p3, p4 = st.columns(4)
-                c_des = p4.text_input(f"ciudad de destino P{i}", key=f"c_des", value=p_data.get('c_des', ""))
+                p1, p2, p3, p4, p5 = st.columns(4)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
                 perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
                 
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"], index=1 if datos_rec.get('codigo_barras_detalle') != "NO" and datos_rec.get('codigo_barras_detalle') else 0)
                 barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
-                
+
+                cdes = p4.text_input("ciudad de destino", value=datos_rec.get('ciudad de destino', ""))
                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
                 num_fd = p4.text_input("Hasta") if t_num == "SI" else "NO"
@@ -565,6 +565,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
