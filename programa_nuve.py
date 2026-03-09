@@ -553,3 +553,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         st.success("¡Proceso finalizado con éxito!")
                         time.sleep(1.5)
                         st.rerun()
+
