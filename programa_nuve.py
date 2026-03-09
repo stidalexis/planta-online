@@ -160,7 +160,7 @@ def generar_pdf_op(row):
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
     st.markdown(f"## OP: {row['op']} — {row['nombre_trabajo']}")
-    st.write(f"🏭 **Estado en Planta:** <code class="rounded-sm bg-(--theme-user-msg-text)/10 dark:bg-(--theme-user-msg-text)/15 px-1 py-0.5 text-(--theme-user-msg-text) text-sm">{row['proxima_area']}</code>")
+    st.write(f"🏭 Estado en Planta: {row['proxima_area']}")
     st.divider()
 
     col1, col2, col3 = st.columns(3)
@@ -568,3 +568,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
