@@ -500,25 +500,56 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 mot_d = "Proceso"
                 obs_t = st.text_area("Observaciones")
 
-            if st.form_submit_button("🏁 REGISTRAR Y FINALIZAR"):
+          if st.form_submit_button("🏁 REGISTRAR Y FINALIZAR"):
                 if not op_name:
                     st.error("Debe ingresar el operario")
                 else:
-                    inicio = datetime.fromisoformat(r['hora_inicio'])
-                    fin = datetime.now()
-                    duracion = str(fin - inicio).split('.')[0]
-                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                    
-                    n_area = "FINALIZADO"
-                    if "ROLLOS" in d_op['tipo_orden'] and area_act == "IMPRESIÓN": n_area = "CORTE"
-                    elif "FORMAS" in d_op['tipo_orden']:
-                        if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
-                    
-                    h = d_op['historial_procesos'] if d_op['historial_procesos'] else []
-                    h.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos": {"desp": locals().get('desp', 0), "obs": obs_t}})
-                    
-                    supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
-                    supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                    st.session_state.rep = None; st.success("Finalizado!"); time.sleep(1); st.rerun()
+                    # --- CORRECCIÓN DE FECHA (INICIO) ---
+                    hora_raw = r['hora_inicio']
+                    try:
+                        if isinstance(hora_raw, str):
+                            # Maneja el formato ISO que envía Supabase
+                            inicio = datetime.fromisoformat(hora_raw.replace('Z', '+00:00'))
+                        else:
+                            inicio = hora_raw
+                        
+                        # Quitar zona horaria para comparar manzanas con manzanas
+                        inicio = inicio.replace(tzinfo=None)
+                        fin = datetime.now()
+                        duracion = str(fin - inicio).split('.')[0]
+                    except Exception as e:
+                        st.error(f"Error procesando tiempo: {e}")
+                        duracion = "00:00:00"
+                    # --- FIN CORRECCIÓN ---
 
+                    d_op_res = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).execute()
+                    if d_op_res.data:
+                        d_op = d_op_res.data[0]
+                        
+                        n_area = "FINALIZADO"
+                        if "ROLLOS" in d_op['tipo_orden'] and area_act == "IMPRESIÓN": n_area = "CORTE"
+                        elif "FORMAS" in d_op['tipo_orden']:
+                            if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
+                            elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
+                        
+                        h = d_op['historial_procesos'] if d_op['historial_procesos'] else []
+                        
+                        # Recolectar datos técnicos dinámicamente
+                        datos_cierre = {"desperdicio": locals().get('desp', 0) or locals().get('desp_c', 0), "observaciones": obs_t}
+                        
+                        h.append({
+                            "area": area_act, 
+                            "maquina": r['maquina'], 
+                            "operario": op_name, 
+                            "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
+                            "duracion": duracion, 
+                            "datos_cierre": datos_cierre
+                        })
+                        
+                        supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
+                        supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+                        
+                        st.session_state.rep = None
+                        st.success("¡Proceso finalizado con éxito!")
+                        time.sleep(1.5)
+                        st.rerun()
