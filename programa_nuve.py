@@ -540,7 +540,13 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if not op_name:
                     st.error("Debe ingresar el nombre del operario.")
                 else:
-                    inicio = datetime.fromisoformat(r['hora_inicio'])
+                    # Convertimos el string de la DB a objeto datetime para poder restar
+hora_inicio_str = r['hora_inicio']
+if isinstance(hora_inicio_str, str):
+    # Usamos replace para manejar formatos de zona horaria si los hay
+    inicio = datetime.fromisoformat(hora_inicio_str.replace('Z', '+00:00'))
+else:
+    inicio = hora_inicio_str
                     fin = datetime.now()
                     duracion = str(fin-inicio).split('.')[0]
                     
@@ -569,3 +575,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
