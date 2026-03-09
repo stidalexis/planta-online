@@ -251,7 +251,7 @@ if menu == "🖥️ Monitor":
     act_data = supabase.table("trabajos_activos").select("*").execute().data
     act = {a['maquina']: a for a in act_data}
     for area, maquinas in MAQUINAS.items():
-        st.markdown(f<div class='title-area'>{area}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
@@ -413,7 +413,7 @@ elif menu == "📅 Planificación":
                 tra_opt = ["NO", "SI"]
                 tra = r6.selectbox("¿Requiere Transportadora?", tra_opt, index=1 if datos_rec.get('ciudad de destino') != "NO" and datos_rec.get('ciudad de destino') else 0)
                 c_tra = st.text_input("Especifique Ciudad de Destino", value=datos_rec.get('ciudad de destino', "")) if tra == "SI" else "NO"
-                                        
+                                
                 tf_r, tr_r = "N/A", "N/A"
                 if t == "ROLLOS IMPRESOS":
                     ct1, ct2 = st.columns(2)
@@ -500,84 +500,74 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
     # Formulario de Cierre de Producción
     if st.session_state.rep:
         r = st.session_state.rep
-        
-        # --- CAMBIO QUIRÚRGICO: VALIDACIÓN DE ÁREA ---
-        if r['area'] == area_act:
-            st.divider()
-            with st.form("cierre_tecnico_completo"):
-                st.warning(f"### REGISTRO DE CIERRE: OP {r['op']} en {r['maquina']}")
-                col_inf1, col_inf2 = st.columns(2)
-                op_name = col_inf1.text_input("Nombre del Operario *")
-                auxiliar = col_inf2.text_input("Auxiliar (opcional)")
-                
-                st.markdown("**DATOS TÉCNICOS DE SALIDA**")
-                datos_c = {}
-                
-                if area_act == "IMPRESIÓN":
-                    cc1, cc2, cc3 = st.columns(3)
-                    datos_c['metros_lineales'] = cc1.number_input("Metros Impresos", 0)
-                    datos_c['bobinas_impresas'] = cc2.number_input("Bobinas impresas", 0)
-                    datos_c['desperdicio_kg'] = cc3.number_input("Desperdicio (Kg)", 0)
-                    cc4, cc5 = st.columns(2)
-                    datos_c['tintas_usadas'] = cc4.text_input("Tintas/Colores Usados")
-                    datos_c['planchas_cliches'] = cc5.number_input("Planchas/Usadas", 0)
-                
-                elif area_act == "CORTE":
-                    cc1, cc2, cc3 = st.columns(3)
-                    datos_c['rollos_producidos'] = cc1.number_input("Rollos Finales", 0)
-                    datos_c['varillas_sacadas'] = cc2.number_input("Varillas", 0)
-                    datos_c['unidades_caja'] = cc1.number_input("unidades por caja", 0)
-                    datos_c['cajas_sacadas'] = cc2.number_input("total cajas", 0)
-                    datos_c['desperdicio_corte'] = cc3.number_input("Desperdicio (Kg)", 0)
-                
-                elif area_act == "COLECTORAS":
-                    cc1, cc2 = st.columns(2)
-                    datos_c['formas_colectadas'] = cc1.number_input("Cantidad Colectada", 0)
-                    datos_c['unidades por caja'] = cc2.number_input("cantidad d eformas / caja", 0)
-                    datos_c['cajas sacadas'] = cc2.number_input("total cajas", 0)
-                    datos_c['desperdicio_hojas'] = cc2.number_input("Hojas Desperdicio", 0)
-                
-                obs_prod = st.text_area("Observaciones presentadas durante el proceso")
+        st.divider()
+        with st.form("cierre_tecnico_completo"):
+            st.warning(f"### REGISTRO DE CIERRE: OP {r['op']} en {r['maquina']}")
+            col_inf1, col_inf2 = st.columns(2)
+            op_name = col_inf1.text_input("Nombre del Operario *")
+            auxiliar = col_inf2.text_input("Auxiliar (opcional)")
+            
+            st.markdown("**DATOS TÉCNICOS DE SALIDA**")
+            datos_c = {}
+            
+            if area_act == "IMPRESIÓN":
+                cc1, cc2, cc3 = st.columns(3)
+                datos_c['metros_lineales'] = cc1.number_input("Metros Impresos", 0)
+                datos_c['bobinas_impresas'] = cc2.number_input("Bobinas impresas", 0)
+                datos_c['desperdicio_kg'] = cc3.number_input("Desperdicio (Kg)", 0)
+                cc4, cc5 = st.columns(2)
+                datos_c['tintas_usadas'] = cc4.text_input("Tintas/Colores Usados")
+                datos_c['planchas_cliches'] = cc5.number_input("Planchas/Usadas", 0)
+            
+            elif area_act == "CORTE":
+                cc1, cc2, cc3 = st.columns(3)
+                datos_c['rollos_producidos'] = cc1.number_input("Rollos Finales", 0)
+                datos_c['varillas_sacadas'] = cc2.number_input("Varillas", 0)
+                datos_c['unidades_caja'] = cc1.number_input("unidades por caja", 0)
+                datos_c['cajas_sacadas'] = cc2.number_input("total cajas", 0)
+                datos_c['desperdicio_corte'] = cc3.number_input("Desperdicio (Kg)", 0)
+            
+            elif area_act == "COLECTORAS":
+                cc1, cc2 = st.columns(2)
+                datos_c['formas_colectadas'] = cc1.number_input("Cantidad Colectada", 0)
+                datos_c['unidades por caja'] = cc2.number_input("cantidad d eformas / caja", 0)
+                datos_c['cajas sacadas'] = cc2.number_input("total cajas", 0)
+                datos_c['desperdicio_hojas'] = cc2.number_input("Hojas Desperdicio", 0)
+            
+            obs_prod = st.text_area("Observaciones presentadas durante el proceso")
 
-                if st.form_submit_button("🏁 REGISTRAR Y MOVER A SIGUIENTE ÁREA"):
-                    if not op_name:
-                        st.error("Debe ingresar el nombre del operario.")
-                    else:
-                        # --- CAMBIO QUIRÚRGICO: PARSEO DE FECHA PARA EVITAR TYPEERROR ---
-                        hora_inicio_val = r['hora_inicio']
-                        if isinstance(hora_inicio_val, str):
-                            inicio = datetime.fromisoformat(hora_inicio_val.replace('Z', '+00:00'))
-                        else:
-                            inicio = hora_inicio_val
-                            
-                        fin = datetime.now()
-                        duracion = str(fin-inicio).split('.')[0]
-                        
-                        # Obtener datos de la OP para determinar flujo
-                        d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                        
-                        # Lógica de Flujo Industrial
-                        n_area = "FINALIZADO"
-                        if "ROLLOS" in d_op['tipo_orden']:
-                            if area_act == "IMPRESIÓN": n_area = "CORTE"
-                        elif "FORMAS" in d_op['tipo_orden']:
-                            if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
-                            elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
-                        
-                        hist = d_op.get('historial_procesos') or []
-                        hist.append({
-                            "area": area_act, "maquina": r['maquina'], "operario": op_name, 
-                            "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
-                            "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
-                        })
-                        
-                        # Actualizar OP y Liberar Máquina
-                        supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
-                        supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                        
-                        st.session_state.rep = None
-                        st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
-                        time.sleep(1.5); st.rerun()
-        else:
-            # Si el área no coincide, limpiamos para no mostrar el formulario en el panel equivocado
-            st.session_state.rep = None
+            if st.form_submit_button("🏁 REGISTRAR Y MOVER A SIGUIENTE ÁREA"):
+                if not op_name:
+                    st.error("Debe ingresar el nombre del operario.")
+                else:
+                    inicio = datetime.fromisoformat(r['hora_inicio'])
+                    fin = datetime.now()
+                    duracion = str(fin-inicio).split('.')[0]
+                    
+                    # Obtener datos de la OP para determinar flujo
+                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+                    
+                    # Lógica de Flujo Industrial
+                    n_area = "FINALIZADO"
+                    if "ROLLOS" in d_op['tipo_orden']:
+                        if area_act == "IMPRESIÓN": n_area = "CORTE"
+                    elif "FORMAS" in d_op['tipo_orden']:
+                        if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
+                        elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
+                    
+                    hist = d_op.get('historial_procesos') or []
+                    hist.append({
+                        "area": area_act, "maquina": r['maquina'], "operario": op_name, 
+                        "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
+                        "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
+                    })
+                    
+                    # Actualizar OP y Liberar Máquina
+                    supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
+                    supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+                    
+                    st.session_state.rep = None
+                    st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
+                    time.sleep(1.5); st.rerun()
+
+
