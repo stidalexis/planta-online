@@ -462,69 +462,105 @@ elif menu == "📅 Planificación":
                     except Exception as e:
                         st.error(f"Error al guardar: {e}")
 
+# --- MÓDULO 4: PRODUCCIÓN (PANEL TÁCTIL) ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
-    st.markdown(f"<div class='title-area'>PANEL TÁCTIL: {area_act}</div>", unsafe_allow_html=True)
-@@ -348,7 +409,7 @@
-                st.markdown(f"<div class='card-produccion'>🟡 {m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
-                c_b1, c_b2 = st.columns(2)
-                if c_b1.button(f"🛑 PARADA", key=f"p_{m}"):
-                    st.toast(f"Parada registrada en {m}")
-                if c_b2.button(f"✅ FINALIZAR", key=f"f_{m}"):
+    st.markdown(f"<div class='title-area'>PANEL DE PRODUCCIÓN: {area_act}</div>", unsafe_allow_html=True)
+    
+    # Consultar máquinas ocupadas
+    activos_data = supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data
+    activos = {a['maquina']: a for a in activos_data}
+    
+    cols = st.columns(3)
+    for idx, m in enumerate(MAQUINAS[area_act]):
+        with cols[idx % 3]:
+            if m in activos:
+                tr = activos[m]
+                st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
+                if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
+                    st.rerun()
             else:
-@@ -364,27 +425,43 @@
+                st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
+                ops_p = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
+                if ops_p:
+                    sel_op = st.selectbox("Seleccionar OP", [o['op'] for o in ops_p], key=f"s_{m}")
+                    if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
+                        supabase.table("trabajos_activos").insert({
+                            "maquina": m, "area": area_act, "op": sel_op, 
+                            "hora_inicio": datetime.now().isoformat()
+                        }).execute()
+                        st.rerun()
+
+    # Formulario de Cierre de Producción
     if st.session_state.rep:
         r = st.session_state.rep
         st.divider()
-        with st.form("cierre_tecnico_v31"):
-            st.warning(f"### CIERRE TÉCNICO: OP {r['op']} en {r['maquina']}")
-            op_name = st.text_input("Nombre del Operario *")
-            datos_para_historial = {}
-
+        with st.form("cierre_tecnico_completo"):
+            st.warning(f"### REGISTRO DE CIERRE: OP {r['op']} en {r['maquina']}")
+            col_inf1, col_inf2 = st.columns(2)
+            op_name = col_inf1.text_input("Nombre del Operario *")
+            auxiliar = col_inf2.text_input("Auxiliar (opcional)")
+            
+            st.markdown("**DATOS TÉCNICOS DE SALIDA**")
+            datos_c = {}
+            
             if area_act == "IMPRESIÓN":
-
-                c1, c2, c3 = st.columns(3)
-                datos_para_historial['metros_impresos'] = c1.number_input("Metros Impresos", 0)
-                datos_para_historial['bobinas'] = c2.number_input("Cant. Bobinas", 0)
-                datos_para_historial['imgs_por_bobina'] = c3.number_input("Imágenes x Bobina", 0)
-                obs_t = st.text_area("Observaciones del Proceso")
-
-
-
-
-
-
+                cc1, cc2, cc3 = st.columns(3)
+                datos_c['metros_lineales'] = cc1.number_input("Metros Impresos", 0)
+                datos_c['bobinas_impresas'] = cc2.number_input("Bobinas impresas", 0)
+                datos_c['desperdicio_kg'] = cc3.number_input("Desperdicio (Kg)", 0)
+                cc4, cc5 = st.columns(2)
+                datos_c['tintas_usadas'] = cc4.text_input("Tintas/Colores Usados")
+                datos_c['planchas_cliches'] = cc5.number_input("Planchas/Usadas", 0)
+            
             elif area_act == "CORTE":
+                cc1, cc2, cc3 = st.columns(3)
+                datos_c['rollos_producidos'] = cc1.number_input("Rollos Finales", 0)
+                datos_c['varillas_sacadas'] = cc2.number_input("Varillas", 0)
+                datos_c['unidades_caja'] = cc1.number_input("unidades por caja", 0)
+                datos_c['cajas_sacadas'] = cc2.number_input("total cajas", 0)
+                datos_c['desperdicio_corte'] = cc3.number_input("Desperdicio (Kg)", 0)
+            
+            elif area_act == "COLECTORAS":
+                cc1, cc2 = st.columns(2)
+                datos_c['formas_colectadas'] = cc1.number_input("Cantidad Colectada", 0)
+                datos_c['unidades por caja'] = cc2.number_input("cantidad d eformas / caja", 0)
+                datos_c['cajas sacadas'] = cc2.number_input("total cajas", 0)
+                datos_c['desperdicio_hojas'] = cc2.number_input("Hojas Desperdicio", 0)
+            
+            obs_prod = st.text_area("Observaciones presentadas durante el proceso")
 
-                c1, c2, c3 = st.columns(3)
-                datos_para_historial['rollos_cortados'] = c2.number_input("Total Rollos Cortados", 0)
-                obs_t = st.text_area("Observaciones de Corte")
-            else:
-                datos_para_historial['unidades_finales'] = st.number_input("Unidades Terminadas", 0)
-
-
-
-
-
-
-
-
-                obs_t = st.text_area("Observaciones")
-
-            if st.form_submit_button("🏁 REGISTRAR Y FINALIZAR"):
-                if not op_name: st.error("Debe ingresar el operario")
-
+            if st.form_submit_button("🏁 REGISTRAR Y MOVER A SIGUIENTE ÁREA"):
+                if not op_name:
+                    st.error("Debe ingresar el nombre del operario.")
                 else:
                     inicio = datetime.fromisoformat(r['hora_inicio'])
                     fin = datetime.now()
-@@ -397,9 +474,10 @@
+                    duracion = str(fin - inicio).split('.')[0]
+                    
+                    # Obtener datos de la OP para determinar flujo
+                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+                    
+                    # Lógica de Flujo Industrial
+                    n_area = "FINALIZADO"
+                    if "ROLLOS" in d_op['tipo_orden']:
+                        if area_act == "IMPRESIÓN": n_area = "CORTE"
+                    elif "FORMAS" in d_op['tipo_orden']:
                         if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
                         elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
-
-                    h = d_op.get('historial_procesos') or []
-                    h.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos": datos_para_historial, "observaciones": obs_t})
-
-                    supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": h}).eq("op", r['op']).execute()
+                    
+                    hist = d_op.get('historial_procesos') or []
+                    hist.append({
+                        "area": area_act, "maquina": r['maquina'], "operario": op_name, 
+                        "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
+                        "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
+                    })
+                    
+                    # Actualizar OP y Liberar Máquina
+                    supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                    st.session_state.rep = None; st.success("Finalizado!"); time.sleep(1); st.rerun()
+                    
+                    st.session_state.rep = None
+                    st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
+                    time.sleep(1.5); st.rerun()
