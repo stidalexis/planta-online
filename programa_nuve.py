@@ -411,7 +411,7 @@ elif menu == "📅 Planificación":
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
                 
                 tra_opt = ["NO", "SI"]
-                tra = r6.selectbox("¿Requiere Transportadora?", tra_opt, index=1 if datos_rec.get('ciudad de destino') != "NO" and datos_rec.get('ciudad de destino') else 0)
+                tra = r6.selectbox("¿Requiere Transportadora?", tra_opt, index=1 if datos_rec.get('ciudad de destino') != "NO" and datos_rec.get('ciudad_de_destino') else 0)
                 c_tra = st.text_input("Especifique Ciudad de Destino", value=datos_rec.get('ciudad de destino', "")) if tra == "SI" else "NO"
                                 
                 tf_r, tr_r = "N/A", "N/A"
@@ -454,7 +454,7 @@ elif menu == "📅 Planificación":
                     else:
                         payload.update({
                             "material": mat, "gramaje_rollos": gram, "ref_comercial": ref_c, 
-                            "cantidad_rollos": int(cant_r), "core": core, "ciudad de destino": c_tra,
+                            "cantidad_rollos": int(cant_r), "core": core, "ciudad_de_destino": c_tra,
                             "tintas_frente_rollos": tf_r, "tintas_respaldo_rollos": tr_r, 
                             "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs
                         })
@@ -569,6 +569,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
