@@ -535,8 +535,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if not op_name:
                     st.error("Debe ingresar el nombre del operario.")
                 else:
-                    inicio = datetime.fromisoformat(r['hora_inicio'])
-                    fin = datetime.now()
+                    inicio = datetime.fromisoformat(str(r['hora_inicio'])).replace(tzinfo=timezone.utc)
+                    fin = datetime.now(timezone.utc)
                     duracion = str(fin - inicio).split('.')[0]
                     
                     # Obtener datos de la OP para determinar flujo
@@ -564,3 +564,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
