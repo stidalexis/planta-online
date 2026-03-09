@@ -363,14 +363,11 @@ elif menu == "📅 Planificación":
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"], index=1 if datos_rec.get('codigo_barras_detalle') != "NO" and datos_rec.get('codigo_barras_detalle') else 0)
                 barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
                 
-                t_num = p4.selectbox("¿nada?", ["NO", "SI"])
                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
-                num_fd = p4.text_input("Hasta") if t_num == "SI" else "NO"
-
-                # --- ADICIÓN: TRANSPORTADORA PARA FORMAS ---
-                t_trans_f = p5.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
-                dest_f = p5.text_area("Destino/Agencia", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
+                num_fd = p3.text_input("Hasta") if t_num == "SI" else "NO"
+                t_trans_f = p4.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
+                dest_f = p4.text_area("Destino/Agencia", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
@@ -572,4 +569,5 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
