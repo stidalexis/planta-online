@@ -154,13 +154,12 @@ def generar_pdf_op(row):
     pdf.set_font("Arial", 'I', 7)
     pdf.cell(0, 10, f"NUVE V31 - Generado el {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
 
-st.markdown(f"""
-<div class='metric-box'>
-...
-🚚 <b>Transportadora:</b> {row.get('transportadora_formas', 'NO')}<br>
-📍 <b>Destino:</b> {row.get('destino_formas', 'N/A')}
-</div>
-""", unsafe_allow_html=True)
+    st.markdown(f"""
+    <div class='metric-box'>
+    🚚 <b>Transportadora:</b> {row.get('transportadora_formas', 'NO')}<br>
+   📍 <b>Destino:</b> {row.get('destino_formas', 'N/A')}
+    </div>
+    """, unsafe_allow_html=True)
     return bytes(pdf.output())
 
 # --- DIALOG RADIOGRAFÍA ---
@@ -577,6 +576,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
