@@ -102,6 +102,7 @@ def generar_pdf_op(row):
         pdf.cell(c1, 7, f"Cantidad Total: {row.get('cantidad_formas')}", border='B')
         pdf.cell(0, 7, f"Num. Partes: {row.get('num_partes')}", border='B', ln=True)
         pdf.cell(c1, 7, f"Presentacion: {row.get('presentacion')}", border='B')
+        pdf.cell(0, 7, f"Transporte: {row.get('transportadora_formas', 'NO')} - {row.get('destino_formas', '')}", border='B', ln=True)
         pdf.cell(0, 7, f"Perforaciones: {row.get('perforaciones_detalle')}", border='B', ln=True)
         
         partes = row.get('detalles_partes_json', [])
@@ -202,6 +203,7 @@ def modal_detalle_op(row):
             <div class='metric-box'>
             ✂️ <b>Perforación:</b> {row.get('perforaciones_detalle')}<br>
             🔢 <b>Barras:</b> {row.get('codigo_barras_detalle')}<br>
+            🚚 <b>Transporte:</b> {row.get('transportadora_formas', 'NO')} ({row.get('destino_formas', 'N/A')})<br>
             📋 <b>Obs:</b> {row.get('observaciones_formas') or 'N/A'}
             </div>
             """, unsafe_allow_html=True)
@@ -354,7 +356,7 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                p1, p2, p3, p4 = st.columns(4)
+                p1, p2, p3, p4, p5 = st.columns(5)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
                 perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
                 
@@ -364,6 +366,10 @@ elif menu == "📅 Planificación":
                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
                 num_fd = p4.text_input("Hasta") if t_num == "SI" else "NO"
+
+                # --- ADICIÓN: TRANSPORTADORA PARA FORMAS ---
+                t_trans_f = p5.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
+                dest_f = p5.text_area("Destino/Agencia", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
@@ -443,6 +449,7 @@ elif menu == "📅 Planificación":
                         payload.update({
                             "cantidad_formas": int(cant_f), "num_partes": partes, 
                             "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, 
+                            "transportadora_formas": t_trans_f, "destino_formas": dest_f,
                             "detalles_partes_json": lista_p, "presentacion": pres, 
                             "observaciones_formas": obs
                         })
@@ -564,6 +571,3 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
-
-
-
