@@ -1,3 +1,4 @@
+import streamlit as st
 import pandas as pd
 from supabase import create_client
 from datetime import datetime
@@ -19,8 +20,8 @@ except Exception as e:
 
 # --- ESTILOS CSS (DISEÑO INDUSTRIAL Y TÁCTIL) ---
 st.markdown("""
-    &lt;style&gt;
-    .stButton &gt; button { height: 60px !important; border-radius: 12px; font-weight: bold; font-size: 18px !important; width: 100%; }
+    <style>
+    .stButton > button { height: 60px !important; border-radius: 12px; font-weight: bold; font-size: 18px !important; width: 100%; }
     .title-area { background-color: #0D47A1; color: white; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; }
     
     /* MONITOR: Cartas con fondo vibrante y texto en NEGRO absoluto */
@@ -32,7 +33,7 @@ st.markdown("""
     /* RADIOGRAFÍA: Cuadros blancos con texto en NEGRO */
     .metric-box { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 12px; border-radius: 8px; margin-bottom: 5px; color: #000000 !important; line-height: 1.6; }
     .metric-box b { color: #000000 !important; }
-    &lt;/style&gt;
+    </style>
     """, unsafe_allow_html=True)
 
 # --- CONSTANTES ---
@@ -134,7 +135,7 @@ def generar_pdf_op(row):
             pdf.ln(2)
             pdf.set_font("Arial", 'B', 10)
             pdf.set_text_color(13, 71, 161)
-            pdf.cell(0, 7, f"&gt;&gt; AREA: {h['area']} ({h['maquina']})", ln=True)
+            pdf.cell(0, 7, f">> AREA: {h['area']} ({h['maquina']})", ln=True)
             pdf.set_text_color(0, 0, 0)
             
             pdf.set_font("Arial", 'B', 9)
@@ -160,67 +161,67 @@ def generar_pdf_op(row):
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
     st.markdown(f"## OP: {row['op']} — {row['nombre_trabajo']}")
-    st.write(f"🏭 Estado en Planta: {row['proxima_area']}")
+    st.write(f"🏭 **Estado en Planta:** `{row['proxima_area']}`")
     st.divider()
 
     col1, col2, col3 = st.columns(3)
     with col1:
-        st.markdown("&lt;div class='section-header'&gt;👤 DATOS GENERALES&lt;/div&gt;", unsafe_allow_html=True)
+        st.markdown("<div class='section-header'>👤 DATOS GENERALES</div>", unsafe_allow_html=True)
         st.markdown(f"""
-        &lt;div class='metric-box'&gt;
-        👤 &lt;b&gt;Cliente:&lt;/b&gt; {row.get('cliente')}&lt;br&gt;
-        💼 &lt;b&gt;Vendedor:&lt;/b&gt; {row.get('vendedor')}&lt;br&gt;
-        🛠️ &lt;b&gt;Trabajo:&lt;/b&gt; {row.get('nombre_trabajo')}&lt;br&gt;
-        📅 &lt;b&gt;Fecha:&lt;/b&gt; {row.get('created_at', '')[:10]}
-        &lt;/div&gt;
+        <div class='metric-box'>
+        👤 <b>Cliente:</b> {row.get('cliente')}<br>
+        💼 <b>Vendedor:</b> {row.get('vendedor')}<br>
+        🛠️ <b>Trabajo:</b> {row.get('nombre_trabajo')}<br>
+        📅 <b>Fecha:</b> {row.get('created_at', '')[:10]}
+        </div>
         """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown("&lt;div class='section-header'&gt;📐 ESPECIFICACIONES&lt;/div&gt;", unsafe_allow_html=True)
+        st.markdown("<div class='section-header'>📐 ESPECIFICACIONES</div>", unsafe_allow_html=True)
         if "FORMAS" in row['tipo_orden']:
             st.markdown(f"""
-            &lt;div class='metric-box'&gt;
-            📦 &lt;b&gt;Cantidad:&lt;/b&gt; {row.get('cantidad_formas')}&lt;br&gt;
-            📑 &lt;b&gt;Partes:&lt;/b&gt; {row.get('num_partes')}&lt;br&gt;
-            🎨 &lt;b&gt;Presentación:&lt;/b&gt; {row.get('presentacion')}
-            &lt;/div&gt;
+            <div class='metric-box'>
+            📦 <b>Cantidad:</b> {row.get('cantidad_formas')}<br>
+            📑 <b>Partes:</b> {row.get('num_partes')}<br>
+            🎨 <b>Presentación:</b> {row.get('presentacion')}
+            </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            &lt;div class='metric-box'&gt;
-            📄 &lt;b&gt;Material:&lt;/b&gt; {row.get('material')}&lt;br&gt;
-            📏 &lt;b&gt;Gramaje:&lt;/b&gt; {row.get('gramaje_rollos')}&lt;br&gt;
-            📦 &lt;b&gt;Cantidad:&lt;/b&gt; {row.get('cantidad_rollos')}&lt;br&gt;
-            🌀 &lt;b&gt;Core:&lt;/b&gt; {row.get('core')}
-            &lt;/div&gt;
+            <div class='metric-box'>
+            📄 <b>Material:</b> {row.get('material')}<br>
+            📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
+            📦 <b>Cantidad:</b> {row.get('cantidad_rollos')}<br>
+            🌀 <b>Core:</b> {row.get('core')}
+            </div>
             """, unsafe_allow_html=True)
 
     with col3:
-        st.markdown("&lt;div class='section-header'&gt;⚙️ PROCESO TÉCNICO&lt;/div&gt;", unsafe_allow_html=True)
+        st.markdown("<div class='section-header'>⚙️ PROCESO TÉCNICO</div>", unsafe_allow_html=True)
         if "FORMAS" in row['tipo_orden']:
             st.markdown(f"""
-            &lt;div class='metric-box'&gt;
-            ✂️ &lt;b&gt;Perforación:&lt;/b&gt; {row.get('perforaciones_detalle')}&lt;br&gt;
-            🔢 &lt;b&gt;Barras:&lt;/b&gt; {row.get('codigo_barras_detalle')}&lt;br&gt;
-            🚚 &lt;b&gt;Transporte:&lt;/b&gt; {row.get('transportadora_formas', 'NO')} ({row.get('destino_formas', 'N/A')})&lt;br&gt;
-            📋 &lt;b&gt;Obs:&lt;/b&gt; {row.get('observaciones_formas') or 'N/A'}
-            &lt;/div&gt;
+            <div class='metric-box'>
+            ✂️ <b>Perforación:</b> {row.get('perforaciones_detalle')}<br>
+            🔢 <b>Barras:</b> {row.get('codigo_barras_detalle')}<br>
+            🚚 <b>Transporte:</b> {row.get('transportadora_formas', 'NO')} ({row.get('destino_formas', 'N/A')})<br>
+            📋 <b>Obs:</b> {row.get('observaciones_formas') or 'N/A'}
+            </div>
             """, unsafe_allow_html=True)
         else:
             st.markdown(f"""
-            &lt;div class='metric-box'&gt;
-            🎨 &lt;b&gt;Tintas F:&lt;/b&gt; {row.get('tintas_frente_rollos')}&lt;br&gt;
-            🎨 &lt;b&gt;Tintas R:&lt;/b&gt; {row.get('tintas_respaldo_rollos')}&lt;br&gt;
-            🛍️ &lt;b&gt;Empaque:&lt;/b&gt; {row.get('unidades_bolsa')} p/b&lt;br&gt;
-            📦 &lt;b&gt;Cajas:&lt;/b&gt; {row.get('unidades_caja')} p/c
-            &lt;/div&gt;
+            <div class='metric-box'>
+            🎨 <b>Tintas F:</b> {row.get('tintas_frente_rollos')}<br>
+            🎨 <b>Tintas R:</b> {row.get('tintas_respaldo_rollos')}<br>
+            🛍️ <b>Empaque:</b> {row.get('unidades_bolsa')} p/b<br>
+            📦 <b>Cajas:</b> {row.get('unidades_caja')} p/c
+            </div>
             """, unsafe_allow_html=True)
 
     if "FORMAS" in row['tipo_orden'] and row.get('detalles_partes_json'):
-        st.markdown("&lt;div class='section-header'&gt;📑 DETALLE DE PAPELES POR PARTE&lt;/div&gt;", unsafe_allow_html=True)
+        st.markdown("<div class='section-header'>📑 DETALLE DE PAPELES POR PARTE</div>", unsafe_allow_html=True)
         st.table(pd.DataFrame(row['detalles_partes_json']))
 
-    st.markdown("&lt;div class='section-header'&gt;📜 BITÁCORA DE CIERRES EN PLANTA&lt;/div&gt;", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>📜 BITÁCORA DE CIERRES EN PLANTA</div>", unsafe_allow_html=True)
     hist = row.get('historial_procesos', [])
     if not hist:
         st.info("No hay registros de producción todavía.")
@@ -250,14 +251,14 @@ if menu == "🖥️ Monitor":
     act_data = supabase.table("trabajos_activos").select("*").execute().data
     act = {a['maquina']: a for a in act_data}
     for area, maquinas in MAQUINAS.items():
-        st.markdown(f"&lt;div class='title-area'&gt;{area}&lt;/div&gt;", unsafe_allow_html=True)
+        st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    st.markdown(f"&lt;div class='card-produccion'&gt;{m}&lt;br&gt;OP: {act[m]['op']}&lt;/div&gt;", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}</div>", unsafe_allow_html=True)
                 else:
-                    st.markdown(f"&lt;div class='card-vacia'&gt;{m}&lt;br&gt;LIBRE&lt;/div&gt;", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(30); st.rerun()
 
 # --- MÓDULO 2: SEGUIMIENTO ---
@@ -277,7 +278,7 @@ elif menu == "🔍 Seguimiento":
             r3.write(row['nombre_trabajo'])
             r4.write(row['tipo_orden'])
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
-            r5.markdown(f"&lt;span style='color:{color}; font-weight:bold;'&gt;{row['proxima_area']}&lt;/span&gt;", unsafe_allow_html=True)
+            r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
             if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
@@ -286,7 +287,7 @@ elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
     
     # 1. Selector de Origen de la Orden
-    st.markdown("&lt;div class='section-header'&gt;📂 ORIGEN DE LA INFORMACIÓN&lt;/div&gt;", unsafe_allow_html=True)
+    st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
     origen = st.radio("¿Cómo desea ingresar la orden?", 
                       ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                       horizontal=True)
@@ -348,7 +349,7 @@ elif menu == "📅 Planificación":
                 
                 # Manejo de índices para Selectbox (evita errores si el valor no existe)
                 val_partes = int(datos_rec.get('num_partes', 1))
-                idx_partes = val_partes - 1 if 1 &lt;= val_partes &lt;= 6 else 0
+                idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
                 partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
                 
                 idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
@@ -374,7 +375,7 @@ elif menu == "📅 Planificación":
                 
                 for i in range(1, partes + 1):
                     # Intentar extraer datos de la parte específica si existe en la repetición
-                    p_data = rec_partes[i-1] if i &lt;= len(rec_partes) else {}
+                    p_data = rec_partes[i-1] if i <= len(rec_partes) else {}
                     
                     st.markdown(f"**PARTE {i}**")
                     d1, d2, d3, d4, d5, d6 = st.columns(6)
@@ -469,7 +470,7 @@ elif menu == "📅 Planificación":
 # --- MÓDULO 4: PRODUCCIÓN (PANEL TÁCTIL) ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
     area_act = menu.split(" ")[1].upper()
-    st.markdown(f"&lt;div class='title-area'&gt;PANEL DE PRODUCCIÓN: {area_act}&lt;/div&gt;", unsafe_allow_html=True)
+    st.markdown(f"<div class='title-area'>PANEL DE PRODUCCIÓN: {area_act}</div>", unsafe_allow_html=True)
     
     # Consultar máquinas ocupadas
     activos_data = supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data
@@ -480,12 +481,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         with cols[idx % 3]:
             if m in activos:
                 tr = activos[m]
-                st.markdown(f"&lt;div class='card-produccion'&gt;🟡 EN PROCESO&lt;br&gt;{m}&lt;br&gt;OP: {tr['op']}&lt;/div&gt;", unsafe_allow_html=True)
+                st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
                     st.rerun()
             else:
-                st.markdown(f"&lt;div class='card-vacia'&gt;⚪ DISPONIBLE&lt;br&gt;{m}&lt;/div&gt;", unsafe_allow_html=True)
+                st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
                 ops_p = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
                 if ops_p:
                     sel_op = st.selectbox("Seleccionar OP", [o['op'] for o in ops_p], key=f"s_{m}")
@@ -568,4 +569,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
+
+
 
