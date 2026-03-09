@@ -523,18 +523,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 cc1, cc2, cc3 = st.columns(3)
                 datos_c['rollos_producidos'] = cc1.number_input("Rollos Finales", 0)
                 datos_c['varillas_sacadas'] = cc2.number_input("Varillas", 0)
-                # SE AGREGA KEY ÚNICO PARA EVITAR ERROR DE STREAMLIT
-                datos_c['unidades_caja'] = cc1.number_input("unidades por caja", 0, key="corte_uc")
-                datos_c['cajas_sacadas'] = cc2.number_input("total cajas", 0, key="corte_cs")
+                datos_c['unidades_caja'] = cc1.number_input("unidades por caja", 0)
+                datos_c['cajas_sacadas'] = cc2.number_input("total cajas", 0)
                 datos_c['desperdicio_corte'] = cc3.number_input("Desperdicio (Kg)", 0)
             
             elif area_act == "COLECTORAS":
                 cc1, cc2 = st.columns(2)
                 datos_c['formas_colectadas'] = cc1.number_input("Cantidad Colectada", 0)
-                # SE AGREGA KEY ÚNICO PARA EVITAR ERROR DE STREAMLIT
-                datos_c['unidades_por_caja'] = cc2.number_input("cantidad de formas / caja", 0, key="col_uc")
-                datos_c['cajas_sacadas'] = cc2.number_input("total cajas", 0, key="col_cs")
-                datos_c['desperdicio_hojas'] = cc2.number_input("Hojas Desperdicio", 0, key="col_dh")
+                datos_c['unidades por caja'] = cc2.number_input("cantidad d eformas / caja", 0)
+                datos_c['cajas sacadas'] = cc2.number_input("total cajas", 0)
+                datos_c['desperdicio_hojas'] = cc2.number_input("Hojas Desperdicio", 0)
             
             obs_prod = st.text_area("Observaciones presentadas durante el proceso")
 
@@ -542,39 +540,36 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if not op_name:
                     st.error("Debe ingresar el nombre del operario.")
                 else:
-                    try:
-                        # CORRECCIÓN DE ERROR DE TIPO: Convertir inicio a datetime naive
-                        # Manejamos el formato ISO de Supabase que a veces trae 'Z' o '+00:00'
-                        inicio_str = r['hora_inicio'].replace("Z", "+00:00")
-                        inicio = datetime.fromisoformat(inicio_str).replace(tzinfo=None)
-                        fin = datetime.now().replace(tzinfo=None)
-                        
-                        duracion = str(fin - inicio).split('.')[0]
-                        
-                        # Obtener datos de la OP para determinar flujo
-                        d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                        
-                        # Lógica de Flujo Industrial
-                        n_area = "FINALIZADO"
-                        if "ROLLOS" in d_op['tipo_orden']:
-                            if area_act == "IMPRESIÓN": n_area = "CORTE"
-                        elif "FORMAS" in d_op['tipo_orden']:
-                            if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
-                            elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
-                        
-                        hist = d_op.get('historial_procesos') or []
-                        hist.append({
-                            "area": area_act, "maquina": r['maquina'], "operario": op_name, 
-                            "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
-                            "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
-                        })
-                        
-                        # Actualizar OP y Liberar Máquina
-                        supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
-                        supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                        
-                        st.session_state.rep = None
-                        st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
-                        time.sleep(1.5); st.rerun()
-                    except Exception as e:
-                        st.error(f"Error técnico en el cierre: {e}")
+                    inicio = datetime.fromisoformat(r['hora_inicio'])
+                    fin = datetime.now()
+                    duracion = str(fin - inicio).split('.')[0]
+                    
+                    # Obtener datos de la OP para determinar flujo
+                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+                    
+                    # Lógica de Flujo Industrial
+                    n_area = "FINALIZADO"
+                    if "ROLLOS" in d_op['tipo_orden']:
+                        if area_act == "IMPRESIÓN": n_area = "CORTE"
+                    elif "FORMAS" in d_op['tipo_orden']:
+                        if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
+                        elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
+                    
+                    hist = d_op.get('historial_procesos') or []
+                    hist.append({
+                        "area": area_act, "maquina": r['maquina'], "operario": op_name, 
+                        "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), 
+                        "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod
+                    })
+                    
+                    # Actualizar OP y Liberar Máquina
+                    supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
+                    supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+                    
+                    st.session_state.rep = None
+                    st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
+                    time.sleep(1.5); st.rerun()
+
+
+
+
