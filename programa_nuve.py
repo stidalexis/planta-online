@@ -354,7 +354,7 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                p1, p2, p3, p4 = st.columns(4)
+                p1, p2, p3, p4, p5 = st.columns(4)
                 t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
                 perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
                 
@@ -364,6 +364,8 @@ elif menu == "📅 Planificación":
                 t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
                 num_fd = p4.text_input("Hasta") if t_num == "SI" else "NO"
+                c_des = p4.selectbox("¿va por transportadora?", ["NO", "SI"])
+                dc_des = p5.text_input("Desde") if t_num == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
@@ -564,6 +566,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.session_state.rep = None
                     st.success(f"Trabajo Finalizado. OP movida a: {n_area}")
                     time.sleep(1.5); st.rerun()
+
 
 
 
