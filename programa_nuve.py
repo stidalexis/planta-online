@@ -306,46 +306,22 @@ if menu == "🖥️ Monitor":
 # --- MÓDULO 2: SEGUIMIENTO ---
 elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
-    busqueda = st.text_input("🔎 Buscar por OP o Nombre de Trabajo").upper()
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
     if res:
         df = pd.DataFrame(res)
-        if busqueda:
-            df = df[
-                df["op"].str.contains(busqueda, case=False, na=False) |
-                df["nombre_trabajo"].str.contains(busqueda, case=False, na=False)
-            ]
         st.download_button("📥 Excel General", to_excel_limpio(df, "GENERAL"), "Reporte_General_Nuve.xlsx")
         st.divider()
-        h1, h2, h3, h4, h5, h6, h7, h8 = st.columns([1,2,2,1.5,1.5,1.5,1.5,1])
-
-        h1.write("**OP**")
-        h2.write("**Cliente**")
-        h3.write("**Trabajo**")
-        h4.write("**Tipo**")
-        h5.write("**Status**")
-        h6.write("**Fecha**")
-        h7.write("**Cantidad**")
-        h8.write("**Ver**")
+        h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
+        h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**")
         for index, row in df.iterrows():
-            r1, r2, r3, r4, r5, r6, r7, r8 = st.columns([1,2,2,1.5,1.5,1.5,1.5,1])
-
+            r1, r2, r3, r4, r5, r6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
             r1.write(row['op'])
             r2.write(row['cliente'])
             r3.write(row['nombre_trabajo'])
             r4.write(row['tipo_orden'])
-
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
-
-            r6.write(row.get("created_at","")[:10])
-
-            if "FORMAS" in row['tipo_orden']:
-                r7.write(row.get("cantidad_formas",""))
-            else:
-                r7.write(row.get("cantidad_rollos",""))
-
-            if r8.button("👁️", key=f"ver_{row['op']}_{index}"):
+            if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
 # --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
@@ -493,63 +469,24 @@ elif menu == "📅 Planificación":
 
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
-                # VALIDACIONES DE CAMPOS OBLIGATORIOS
-
-                if not op_input.strip() or not cli.strip() or not trab.strip():
-                    st.error("⚠️ Debe completar OP, Cliente y Nombre del Trabajo.")
-                    st.stop()
-
-                # validar perforaciones
-                if t_perf == "":
-                    st.error("⚠️ Debe definir si tiene perforaciones.")
-                    st.stop()
-
-                # validar codigo barras
-                if t_barr == "":
-                    st.error("⚠️ Debe definir si tiene código de barras.")
-                    st.stop()
-
-                # validar numeración
-                if t_num == "":
-                    st.error("⚠️ Debe definir si tiene numeración.")
-                    st.stop()
-
-               # validar transportadora
-            if "FORMAS" in t and t_trans_f == "":
-                   st.error("⚠️ Debe definir si lleva transportadora.")
-                   st.stop()
-            op_final = f"{prefijo}{op_input.upper()}"
-            if t == "ROLLOS BLANCOS":
-                    ruta_inicial = "CORTE"
-            else:
-                    ruta_inicial = "IMPRESIÓN"
+                op_final = f"{prefijo}{op_input.upper()}"
+                ruta_inicial = "IMPRESIÓN" if "ROLLOS" in t or "IMPRESAS" in t else "CORTE"
                 
-            payload = {
-                       "op": op_final,
-                       "cliente": cliente,
-                       "vendedor": vendedor,
-                       "nombre_trabajo": nombre_trabajo,
-                       "tipo_orden": tipo_orden,
-                       "proxima_area": proxima_area,
-                       "historial_procesos": [],
-                       }
+                payload = {
+                    "op": op_final, "op_anterior": op_a, "cliente": cli, 
+                    "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, 
+                    "proxima_area": ruta_inicial, "historial_procesos": []
+                }
                 
-            if "FORMAS" in t:
+                if "FORMAS" in t:
                     payload.update({"cantidad_formas": int(cant_f), "num_partes": partes, "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, "transportadora_formas": t_trans_f, "destino_formas": dest_f, "detalles_partes_json": lista_p, "presentacion": pres, "observaciones_formas": obs})
-            else:
+                else:
                     payload.update({"material": mat, "gramaje_rollos": gram, "cantidad_rollos": int(cant_r), "core": core, "tintas_frente_rollos": tf_r, "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs})
                 
-            try:
                 supabase.table("ordenes_planeadas").insert(payload).execute()
-                st.success("OP guardada correctamente")
-            except Exception as e:
-                st.error("Error al guardar la OP")
-                st.write(e)
-                st.write(payload)
-                st.stop()
-            st.success(f"Orden {op_final} registrada.")
-            st.session_state.sel_tipo = None
-            time.sleep(1.5); st.rerun()
+                st.success(f"Orden {op_final} registrada.")
+                st.session_state.sel_tipo = None
+                time.sleep(1.5); st.rerun()
 
 # --- MÓDULO 4: PRODUCCIÓN ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
@@ -566,8 +503,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 tr = activos[m]
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
-                    if st.session_state.rep and st.session_state.rep["area"] == area_act:
-                     st.rerun()
+                    st.session_state.rep = tr
+                    st.rerun()
             else:
                 st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
                 ops_p = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
@@ -618,10 +555,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
                 datos_c['tipo_presentacion'] = c1.text_input("precetacion final",)
-                datos_c['unidades_caja'] = c2.text_input("cantidad por caja",)
+                datos_c['unidades_caja'] = c2.number_input("cantidad por caja", 0)
                 datos_c['total_cajas'] = c3.number_input("total cajas empacadas", 0)
-                datos_c['tipo_pegado'] = c1.text_input("lado de pegado",)
-                datos_c['desperdicio'] = c2.number_input("cantidad hojas dañadas", 0)
+                datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
+                datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
                 datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
                  
             obs_prod = st.text_area("Observaciones de producción / saldos ")
@@ -642,39 +579,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     duracion = str(fin - inicio).split('.')[0]
                     
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                    tipo = d_op['tipo_orden']
-
                     n_area = "FINALIZADO"
-
-                    # --- ROLLOS IMPRESOS (RI) ---
-                    if tipo == "ROLLOS IMPRESOS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "CORTE"
-                        elif area_act == "CORTE":
-                            n_area = "FINALIZADO"
-
-                    # --- ROLLOS BLANCOS (RB) ---
-                    elif tipo == "ROLLOS BLANCOS":
-                         if area_act == "CORTE":
-                             n_area = "FINALIZADO"
-
-                    # --- FORMAS IMPRESAS (FRI) ---
-                    elif tipo == "FORMAS IMPRESAS":
-                         if area_act == "IMPRESIÓN":
-                             n_area = "COLECTORAS"
-                         elif area_act == "COLECTORAS":
-                             n_area = "ENCUADERNACIÓN"
-                         elif area_act == "ENCUADERNACIÓN":
-                             n_area = "FINALIZADO"
-
-                    # --- FORMAS BLANCAS (FRB) ---
-                    elif tipo == "FORMAS BLANCAS":
-                         if area_act == "IMPRESIÓN":
-                             n_area = "COLECTORAS"
-                         elif area_act == "COLECTORAS":
-                               n_area = "ENCUADERNACIÓN"
-                         elif area_act == "ENCUADERNACIÓN":
-                               n_area = "FINALIZADO"
+                    if "ROLLOS" in d_op['tipo_orden'] and area_act == "IMPRESIÓN": n_area = "CORTE"
+                    elif "FORMAS" in d_op['tipo_orden']:
+                        if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
+                        elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
                     
                     hist = d_op.get('historial_procesos') or []
                     hist.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod})
@@ -683,45 +592,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
