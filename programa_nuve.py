@@ -493,6 +493,31 @@ elif menu == "📅 Planificación":
 
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
+                # VALIDACIONES DE CAMPOS OBLIGATORIOS
+
+                if not op_input.strip() or not cli.strip() or not trab.strip():
+                    st.error("⚠️ Debe completar OP, Cliente y Nombre del Trabajo.")
+                    st.stop()
+
+                # validar perforaciones
+                if t_perf == "":
+                    st.error("⚠️ Debe definir si tiene perforaciones.")
+                    st.stop()
+
+                # validar codigo barras
+                if t_barr == "":
+                    st.error("⚠️ Debe definir si tiene código de barras.")
+                    st.stop()
+
+                # validar numeración
+                if t_num == "":
+                    st.error("⚠️ Debe definir si tiene numeración.")
+                    st.stop()
+
+               # validar transportadora
+               if "FORMAS" in t and t_trans_f == "":
+                   st.error("⚠️ Debe definir si lleva transportadora.")
+                   st.stop()
                 op_final = f"{prefijo}{op_input.upper()}"
                 if t == "ROLLOS BLANCOS":
                     ruta_inicial = "CORTE"
