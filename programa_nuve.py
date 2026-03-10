@@ -341,7 +341,7 @@ elif menu == "🔍 Seguimiento":
                 r7.write(row.get("cantidad_formas",""))
             else:
                 r7.write(row.get("cantidad_rollos",""))
-        if r6.button("👁️", key=f"v_{row['op']}"):
+        if r8.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
 # --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
@@ -612,6 +612,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
