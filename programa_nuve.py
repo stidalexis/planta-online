@@ -306,10 +306,8 @@ if menu == "🖥️ Monitor":
 # --- MÓDULO 2: SEGUIMIENTO ---
 elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
-    res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
-elif menu == "🔍 Seguimiento":
-    st.title("Seguimiento de Producción")
-
+    res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().dat
+    
     # --- BUSCADOR ---
     buscar = st.text_input("🔎 Buscar por OP, Cliente o Nombre del Trabajo")
 
@@ -646,6 +644,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
