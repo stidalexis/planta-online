@@ -524,7 +524,7 @@ elif menu == "📅 Planificación":
             else:
                     ruta_inicial = "IMPRESIÓN"
                 
-                payload = {
+            payload = {
                     "op": op_final, "op_anterior": op_a, "cliente": cli, 
                     "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, 
                     "proxima_area": ruta_inicial, "historial_procesos": []
@@ -672,6 +672,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
