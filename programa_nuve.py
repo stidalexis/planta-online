@@ -617,8 +617,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         elif area_act == "CORTE":
                             n_area = "FINALIZADO"
 
-                     # --- ROLLOS BLANCOS (RB) ---
-                     elif tipo == "ROLLOS BLANCOS":
+                    # --- ROLLOS BLANCOS (RB) ---
+                    elif tipo == "ROLLOS BLANCOS":
                          if area_act == "CORTE":
                              n_area = "FINALIZADO"
 
@@ -647,6 +647,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
