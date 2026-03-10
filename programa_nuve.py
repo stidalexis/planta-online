@@ -518,7 +518,7 @@ elif menu == "📅 Planificación":
             if "FORMAS" in t and t_trans_f == "":
                    st.error("⚠️ Debe definir si lleva transportadora.")
                    st.stop()
-                op_final = f"{prefijo}{op_input.upper()}"
+            op_final = f"{prefijo}{op_input.upper()}"
                 if t == "ROLLOS BLANCOS":
                     ruta_inicial = "CORTE"
                 else:
@@ -672,6 +672,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
