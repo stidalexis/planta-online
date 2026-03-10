@@ -329,20 +329,24 @@ elif menu == "🔍 Seguimiento":
         h8.write("**Ver**")
         for index, row in df.iterrows():
             r1, r2, r3, r4, r5, r6, r7, r8 = st.columns([1,2,2,1.5,1.5,1.5,1.5,1])
+
             r1.write(row['op'])
             r2.write(row['cliente'])
             r3.write(row['nombre_trabajo'])
             r4.write(row['tipo_orden'])
+
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
+
             r6.write(row.get("created_at","")[:10])
 
             if "FORMAS" in row['tipo_orden']:
                 r7.write(row.get("cantidad_formas",""))
             else:
                 r7.write(row.get("cantidad_rollos",""))
-         if r8.button("👁️", key=f"ver_{row['op']}_{index}"):
-             modal_detalle_op(row.to_dict())
+
+            if r8.button("👁️", key=f"ver_{row['op']}_{index}"):
+                modal_detalle_op(row.to_dict())
 
 # --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
 elif menu == "📅 Planificación":
@@ -612,6 +616,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
