@@ -545,12 +545,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 
             elif area_act == "COLECTORAS":
                 c1, c2, c3 = st.columns(3) 
-                datos_c['t_papel'] = c1.number_input("tipo de papel", 0)
+                datos_c['tipo_papel'] = c1.number_input("tipo de papel", 0)
                 datos_c['formas_colectadas'] = c2.number_input("total formas colectadas", 0)
                 datos_c['partes'] = c3.number_input("total partes colecatdas", 0)
                 datos_c['cajas_empacadas'] = c1.number_input("total cajas empacadas", 0)
-                datos_c['f_dañadas'] = c2.number_input("formas dañadas", 0)
-                datos_c['t_pegado'] = c3.text_input("que tipo de pegue lleva", 0)
+                datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
+                datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva", 0)
                 
             obs_prod = st.text_area("Observaciones de producción / saldos ")
 
@@ -583,6 +583,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
