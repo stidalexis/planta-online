@@ -317,16 +317,30 @@ elif menu == "🔍 Seguimiento":
             ]
         st.download_button("📥 Excel General", to_excel_limpio(df, "GENERAL"), "Reporte_General_Nuve.xlsx")
         st.divider()
-        h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
-        h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**")
+        h1, h2, h3, h4, h5, h6, h7, h8 = st.columns([1,2,2,1.5,1.5,1.5,1.5,1])
+
+        h1.write("**OP**")
+        h2.write("**Cliente**")
+        h3.write("**Trabajo**")
+        h4.write("**Tipo**")
+        h5.write("**Status**")
+        h6.write("**Fecha**")
+        h7.write("**Cantidad**")
+        h8.write("**Ver**")
         for index, row in df.iterrows():
-            r1, r2, r3, r4, r5, r6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
+            r1, r2, r3, r4, r5, r6, r7, r8 = st.columns([1,2,2,1.5,1.5,1.5,1.5,1])
             r1.write(row['op'])
             r2.write(row['cliente'])
             r3.write(row['nombre_trabajo'])
             r4.write(row['tipo_orden'])
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
+            r6.write(row.get("created_at","")[:10])
+
+            if "FORMAS" in row['tipo_orden']:
+                r7.write(row.get("cantidad_formas",""))
+            else:
+                r7.write(row.get("cantidad_rollos",""))
             if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
@@ -598,6 +612,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
