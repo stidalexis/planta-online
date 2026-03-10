@@ -535,11 +535,17 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             obs_prod = st.text_area("Observaciones de producción")
 
             if st.form_submit_button("🏁 FINALIZAR Y MOVER"):
+                
                 if op_name:
-                    from datetime import datetime, timezone
+                    inicio_raw = r['hora_inicio']
 
-                    inicio = datetime.fromisoformat(r['hora_inicio'])
-                    fin = datetime.now(timezone.utc)
+                    # Convertir correctamente venga como string o datetime
+                    if isinstance(inicio_raw, str):
+                        inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
+                    else:
+                        inicio = inicio_raw
+
+                    fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
 
                     duracion = str(fin - inicio).split('.')[0]
                     
@@ -557,5 +563,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
