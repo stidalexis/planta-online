@@ -525,18 +525,25 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             
             if area_act == "IMPRESIÓN":
                 c1, c2, c3 = st.columns(3)
-                datos_c['marca_papel'] = c1.text_input("marca de papel",)
+                datos_c['marca_papel_i'] = c1.text_input("marca de papel",)
                 datos_c['medida_papel'] = c2.number_input("medida de papel", 0)
                 datos_c['metros_impresos'] = c3.number_input("Metros", 0)
                 datos_c['imagenes_impresas'] = c1.number_input("n° imagenes ", 0)
                 datos_c['desperdicio_kg'] = c2.number_input("Desperdicio Kg", 0)
                 datos_c['planchas'] = c3.number_input("planchas gastadas", 0)
             elif area_act == "CORTE":
-                c1, c2 = st.columns(2)
-                datos_c['rollos_finales'] = c1.number_input("Rollos", 0)
-                datos_c['cajas_totales'] = c2.number_input("Cajas", 0)
-            
-            obs_prod = st.text_area("Observaciones de producción")
+                c1, c2, c3 = st.columns(3)
+                datos_c['tipo_papel'] = c1.text_input("tipo de papel", 0)
+                datos_c['marca_papel_c'] = c2.text_input("marca de papel",)
+                datos_c['ancho_bobina'] = c3.number_input("ancho de bobina", 0)
+                datos_c['imagenes_corte'] = c1.number_input("imagenes/bobina", 0)
+                datos_c['gramos_bobinas'] = c2.number_input("gramaje de bobina", 0)
+                datos_c['rollos_finales'] = c3.number_input("total Rollos cortados", 0)
+                datos_c['varillas_finales'] = c1.number_input("total varillas", 0)
+                datos_c['cajas_totales'] = c2.number_input("Cajas empacadas", 0)
+                datos_c['desperdicio'] = c3.number_input("total desperdicio", 0)
+                
+            obs_prod = st.text_area("Observaciones de producción / saldos ")
 
             if st.form_submit_button("🏁 FINALIZAR Y MOVER"):
                 
@@ -567,6 +574,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
