@@ -306,9 +306,15 @@ if menu == "🖥️ Monitor":
 # --- MÓDULO 2: SEGUIMIENTO ---
 elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
+    busqueda = st.text_input("🔎 Buscar por OP o Nombre de Trabajo").upper()
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
     if res:
         df = pd.DataFrame(res)
+        if busqueda:
+            df = df[
+                df["op"].str.contains(busqueda, case=False, na=False) |
+                df["nombre_trabajo"].str.contains(busqueda, case=False, na=False)
+            ]
         st.download_button("📥 Excel General", to_excel_limpio(df, "GENERAL"), "Reporte_General_Nuve.xlsx")
         st.divider()
         h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
@@ -592,6 +598,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
