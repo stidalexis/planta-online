@@ -494,7 +494,10 @@ elif menu == "📅 Planificación":
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
                 op_final = f"{prefijo}{op_input.upper()}"
-                ruta_inicial = "IMPRESIÓN" if "ROLLOS" in t or "IMPRESAS" in t else "CORTE"
+                if t == "ROLLOS BLANCOS":
+                    ruta_inicial = "CORTE"
+                else:
+                    ruta_inicial = "IMPRESIÓN"
                 
                 payload = {
                     "op": op_final, "op_anterior": op_a, "cliente": cli, 
@@ -605,37 +608,37 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                     tipo = d_op['tipo_orden']
 
-n_area = "FINALIZADO"
+                    n_area = "FINALIZADO"
 
-# --- ROLLOS IMPRESOS (RI) ---
-if tipo == "ROLLOS IMPRESOS":
-    if area_act == "IMPRESIÓN":
-        n_area = "CORTE"
-    elif area_act == "CORTE":
-        n_area = "FINALIZADO"
+                    # --- ROLLOS IMPRESOS (RI) ---
+                    if tipo == "ROLLOS IMPRESOS":
+                        if area_act == "IMPRESIÓN":
+                            n_area = "CORTE"
+                        elif area_act == "CORTE":
+                            n_area = "FINALIZADO"
 
-# --- ROLLOS BLANCOS (RB) ---
-elif tipo == "ROLLOS BLANCOS":
-    if area_act == "CORTE":
-        n_area = "FINALIZADO"
+                     # --- ROLLOS BLANCOS (RB) ---
+                     elif tipo == "ROLLOS BLANCOS":
+                         if area_act == "CORTE":
+                             n_area = "FINALIZADO"
 
-# --- FORMAS IMPRESAS (FRI) ---
-elif tipo == "FORMAS IMPRESAS":
-    if area_act == "IMPRESIÓN":
-        n_area = "COLECTORAS"
-    elif area_act == "COLECTORAS":
-        n_area = "ENCUADERNACIÓN"
-    elif area_act == "ENCUADERNACIÓN":
-        n_area = "FINALIZADO"
+                     # --- FORMAS IMPRESAS (FRI) ---
+                     elif tipo == "FORMAS IMPRESAS":
+                         if area_act == "IMPRESIÓN":
+                             n_area = "COLECTORAS"
+                         elif area_act == "COLECTORAS":
+                             n_area = "ENCUADERNACIÓN"
+                         elif area_act == "ENCUADERNACIÓN":
+                             n_area = "FINALIZADO"
 
-# --- FORMAS BLANCAS (FRB) ---
-elif tipo == "FORMAS BLANCAS":
-    if area_act == "IMPRESIÓN":
-        n_area = "COLECTORAS"
-    elif area_act == "COLECTORAS":
-        n_area = "ENCUADERNACIÓN"
-    elif area_act == "ENCUADERNACIÓN":
-        n_area = "FINALIZADO"
+                     # --- FORMAS BLANCAS (FRB) ---
+                     elif tipo == "FORMAS BLANCAS":
+                         if area_act == "IMPRESIÓN":
+                             n_area = "COLECTORAS"
+                         elif area_act == "COLECTORAS":
+                               n_area = "ENCUADERNACIÓN"
+                         elif area_act == "ENCUADERNACIÓN":
+                               n_area = "FINALIZADO"
                     
                     hist = d_op.get('historial_procesos') or []
                     hist.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod})
@@ -644,6 +647,7 @@ elif tipo == "FORMAS BLANCAS":
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
