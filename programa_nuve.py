@@ -527,7 +527,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 c1, c2, c3 = st.columns(3)
                 datos_c['marca_papel'] = c1.number_input("marca de papel", 0)
                 datos_c['medida_papel'] = c2.number_input("medida de papel", 0)
-                datos_c['metros_impresos'] = c3.number_input("Metros", 0)
+                datos_c['metros_impresos'] = c3.text_input("Metros", 0)
                 datos_c['imagenes_impresas'] = c1.number_input("n° imagenes ", 0)
                 datos_c['desperdicio_kg'] = c2.number_input("Desperdicio Kg", 0)
                 datos_c['planchas'] = c3.number_input("planchas gastadas", 0)
@@ -567,6 +567,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
