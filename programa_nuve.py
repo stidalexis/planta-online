@@ -470,7 +470,18 @@ elif menu == "📅 Planificación":
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
                 op_final = f"{prefijo}{op_input.upper()}"
-                ruta_inicial = "IMPRESIÓN" if "ROLLOS" in t or "IMPRESAS" in t else "CORTE"
+                # DEFINIR AREA INICIAL SEGUN TIPO
+                if t == "FORMAS IMPRESAS":
+                    ruta_inicial = "IMPRESIÓN"
+
+                elif t == "FORMAS BLANCAS":
+                    ruta_inicial = "IMPRESIÓN"
+
+                elif t == "ROLLOS IMPRESOS":
+                    ruta_inicial = "IMPRESIÓN"
+
+                elif t == "ROLLOS BLANCOS":
+                    ruta_inicial = "CORTE"
                 
                 payload = {
                     "op": op_final, "op_anterior": op_a, "cliente": cli, 
@@ -579,11 +590,38 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     duracion = str(fin - inicio).split('.')[0]
                     
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+                    tipo = d_op['tipo_orden']
                     n_area = "FINALIZADO"
-                    if "ROLLOS" in d_op['tipo_orden'] and area_act == "IMPRESIÓN": n_area = "CORTE"
-                    elif "FORMAS" in d_op['tipo_orden']:
-                        if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
+
+                    # -------- FORMAS IMPRESAS --------
+                    if tipo == "FORMAS IMPRESAS":
+                        if area_act == "IMPRESIÓN":
+                            n_area = "COLECTORAS"
+                     elif area_act == "COLECTORAS":
+                        n_area = "ENCUADERNACIÓN"
+                     elif area_act == "ENCUADERNACIÓN":
+                         n_area = "FINALIZADO"
+
+                    # -------- FORMAS BLANCAS --------
+                    elif tipo == "FORMAS BLANCAS":
+                        if area_act == "IMPRESIÓN":
+                            n_area = "COLECTORAS"
+                        elif area_act == "COLECTORAS":
+                            n_area = "ENCUADERNACIÓN"
+                        elif area_act == "ENCUADERNACIÓN":
+                            n_area = "FINALIZADO"
+
+                    # -------- ROLLOS IMPRESOS --------
+                    elif tipo == "ROLLOS IMPRESOS":
+                        if area_act == "IMPRESIÓN":
+                            n_area = "CORTE"
+                        elif area_act == "CORTE":
+                            n_area = "FINALIZADO"
+
+                    # -------- ROLLOS BLANCOS --------
+                    elif tipo == "ROLLOS BLANCOS":
+                        if area_act == "CORTE":
+                            n_area = "FINALIZADO"
                     
                     hist = d_op.get('historial_procesos') or []
                     hist.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod})
@@ -592,6 +630,3 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
-
-
-
