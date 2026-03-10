@@ -603,11 +603,39 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     duracion = str(fin - inicio).split('.')[0]
                     
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                    n_area = "FINALIZADO"
-                    if "ROLLOS" in d_op['tipo_orden'] and area_act == "IMPRESIÓN": n_area = "CORTE"
-                    elif "FORMAS" in d_op['tipo_orden']:
-                        if area_act == "IMPRESIÓN": n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS": n_area = "ENCUADERNACIÓN"
+                    tipo = d_op['tipo_orden']
+
+n_area = "FINALIZADO"
+
+# --- ROLLOS IMPRESOS (RI) ---
+if tipo == "ROLLOS IMPRESOS":
+    if area_act == "IMPRESIÓN":
+        n_area = "CORTE"
+    elif area_act == "CORTE":
+        n_area = "FINALIZADO"
+
+# --- ROLLOS BLANCOS (RB) ---
+elif tipo == "ROLLOS BLANCOS":
+    if area_act == "CORTE":
+        n_area = "FINALIZADO"
+
+# --- FORMAS IMPRESAS (FRI) ---
+elif tipo == "FORMAS IMPRESAS":
+    if area_act == "IMPRESIÓN":
+        n_area = "COLECTORAS"
+    elif area_act == "COLECTORAS":
+        n_area = "ENCUADERNACIÓN"
+    elif area_act == "ENCUADERNACIÓN":
+        n_area = "FINALIZADO"
+
+# --- FORMAS BLANCAS (FRB) ---
+elif tipo == "FORMAS BLANCAS":
+    if area_act == "IMPRESIÓN":
+        n_area = "COLECTORAS"
+    elif area_act == "COLECTORAS":
+        n_area = "ENCUADERNACIÓN"
+    elif area_act == "ENCUADERNACIÓN":
+        n_area = "FINALIZADO"
                     
                     hist = d_op.get('historial_procesos') or []
                     hist.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod})
@@ -616,6 +644,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
