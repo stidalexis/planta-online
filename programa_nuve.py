@@ -536,8 +536,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
             if st.form_submit_button("🏁 FINALIZAR Y MOVER"):
                 if op_name:
+                    from datetime import datetime, timezone
+
                     inicio = datetime.fromisoformat(r['hora_inicio'])
-                    fin = datetime.now()
+                    fin = datetime.now(timezone.utc)
+
                     duracion = str(fin - inicio).split('.')[0]
                     
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
@@ -554,4 +557,5 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
