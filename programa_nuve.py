@@ -555,7 +555,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 tr = activos[m]
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
-                    st.session_state.rep = tr
+                    if st.session_state.rep and st.session_state.rep["area"] == area_act:
                     st.rerun()
             else:
                 st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
@@ -672,6 +672,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
