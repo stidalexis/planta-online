@@ -525,10 +525,14 @@ elif menu == "📅 Planificación":
                     ruta_inicial = "IMPRESIÓN"
                 
             payload = {
-                    "op": op_final, "op_anterior": op_a, "cliente": cli, 
-                    "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, 
-                    "proxima_area": ruta_inicial, "historial_procesos": []
-                }
+                       "op": op_final,
+                       "cliente": cliente,
+                       "vendedor": vendedor,
+                       "nombre_trabajo": nombre_trabajo,
+                       "tipo_orden": tipo_orden,
+                       "proxima_area": proxima_area,
+                       "historial_procesos": [],
+                       }
                 
             if "FORMAS" in t:
                     payload.update({"cantidad_formas": int(cant_f), "num_partes": partes, "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, "transportadora_formas": t_trans_f, "destino_formas": dest_f, "detalles_partes_json": lista_p, "presentacion": pres, "observaciones_formas": obs})
@@ -679,6 +683,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
