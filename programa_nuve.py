@@ -536,9 +536,9 @@ elif menu == "📅 Planificación":
                     payload.update({"material": mat, "gramaje_rollos": gram, "cantidad_rollos": int(cant_r), "core": core, "tintas_frente_rollos": tf_r, "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs})
                 
             supabase.table("ordenes_planeadas").insert(payload).execute()
-                st.success(f"Orden {op_final} registrada.")
-                st.session_state.sel_tipo = None
-                time.sleep(1.5); st.rerun()
+            st.success(f"Orden {op_final} registrada.")
+            st.session_state.sel_tipo = None
+            time.sleep(1.5); st.rerun()
 
 # --- MÓDULO 4: PRODUCCIÓN ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
@@ -672,6 +672,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
