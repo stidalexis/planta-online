@@ -307,8 +307,24 @@ if menu == "🖥️ Monitor":
 elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
+    elif menu == "🔍 Seguimiento":
+    st.title("Seguimiento de Producción")
+
+    # --- BUSCADOR ---
+    buscar = st.text_input("🔎 Buscar por OP, Cliente o Nombre del Trabajo")
+
+    res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
     if res:
         df = pd.DataFrame(res)
+
+        # FILTRO DE BUSQUEDA
+        if buscar:
+            buscar = buscar.upper()
+            df = df[
+                df["op"].str.upper().str.contains(buscar, na=False) |
+                df["nombre_trabajo"].str.upper().str.contains(buscar, na=False) |
+                df["cliente"].str.upper().str.contains(buscar, na=False)
+             ]
         st.download_button("📥 Excel General", to_excel_limpio(df, "GENERAL"), "Reporte_General_Nuve.xlsx")
         st.divider()
         h1, h2, h3, h4, h5, h6 = st.columns([1, 2, 2, 1.5, 1.5, 1])
@@ -630,5 +646,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
