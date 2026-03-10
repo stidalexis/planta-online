@@ -515,7 +515,7 @@ elif menu == "📅 Planificación":
                     st.stop()
 
                # validar transportadora
-               if "FORMAS" in t and t_trans_f == "":
+            if "FORMAS" in t and t_trans_f == "":
                    st.error("⚠️ Debe definir si lleva transportadora.")
                    st.stop()
                 op_final = f"{prefijo}{op_input.upper()}"
@@ -672,6 +672,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
