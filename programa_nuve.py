@@ -525,7 +525,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         supabase.table("trabajos_activos").insert({"maquina": m, "area": area_act, "op": sel_op, "hora_inicio": datetime.now().isoformat()}).execute()
                         st.rerun()
 
-    if st.session_state.rep:
+    if st.session_state.rep and st.session_state.rep["area"] == area_act:
         r = st.session_state.rep
         st.divider()
         with st.form("cierre_tecnico_completo"):
@@ -630,4 +630,5 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
