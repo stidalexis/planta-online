@@ -162,18 +162,28 @@ def generar_pdf_op(row):
             pdf.cell(0, 6, "", border='RB', ln=True)
 
             # Datos Técnicos de Salida (JSON formateado)
-            pdf.set_font("Arial", 'B', 8)
-            pdf.set_fill_color(252, 252, 252)
-            pdf.cell(0, 5, " DETALLES TECNICOS REGISTRADOS:", ln=True, fill=True, border='LR')
-            
             pdf.set_font("Arial", '', 8)
             datos_c = h.get('datos_cierre', {})
+
             if datos_c:
-                # Dibujamos los datos en formato de tabla pequeña
-                for k, v in datos_c.items():
-                    key_clean = k.replace('_', ' ').upper()
-                    pdf.cell(45, 5, f" {key_clean}:", border='L')
-                    pdf.cell(0, 5, f"{v}", border='R', ln=True)
+                items = list(datos_c.items())
+
+                # recorrer de 2 en 2 para crear 4 columnas
+                for i in range(0, len(items), 2):
+
+                    k1, v1 = items[i]
+                    key1 = k1.replace('_', ' ').upper()
+
+                    if i + 1 < len(items):
+                        k2, v2 = items[i + 1]
+                        key2 = k2.replace('_', ' ').upper()
+                    else:
+                        key2, v2 = "", "
+
+                    pdf.cell(45, 5, f" {key1}", border=1)
+                    pdf.cell(45, 5, f"{v1}", border=1)
+                    pdf.cell(45, 5, f" {key2}", border=1)
+                    pdf.cell(45, 5, f"{v2}", border=1, ln=True)
             
             # Observaciones
             if h.get('observaciones'):
@@ -644,6 +654,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
