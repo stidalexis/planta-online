@@ -100,8 +100,8 @@ def generar_pdf_op(row):
     pdf.image("logo_cb.png", 10, 8, 60)
 
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("Arial", 'B', 20)
-    pdf.cell(0, 15, f"CERTIFICADO DE PRODUCCION - OP: {row['op']}", ln=True, align='C')
+    pdf.set_font("Arial", 'B', 15)
+    pdf.cell(0, 15, f"           CERTIFICADO DE PRODUCCION - OP: {row['op']}", ln=True, align='C')
     
     pdf.set_text_color(0, 0, 0)
     pdf.ln(20)
@@ -670,6 +670,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
