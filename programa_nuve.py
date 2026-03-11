@@ -103,10 +103,10 @@ def generar_pdf_op(row):
     pdf.set_font("Arial", 'B', 18)
     pdf.cell(0, 35, f" CERTIFICADO DE PRODUCCION - OP: {row['op']}", ln=True, align='C')
     pdf.set_font("Arial", 'B', 12)
-    pdf.cell(0, 40, f"TRABAJO: {row['nombre_trabajo']}", ln=True, align='C')
+    pdf.cell(0, 15, f"TRABAJO: {row['nombre_trabajo']}", ln=True, align='C')
     
     pdf.set_text_color(0, 0, 0)
-    pdf.ln(5)
+    pdf.ln(0.5)
     
     # --- SECCIÓN 1: DATOS DE VENTA ---
     pdf.set_font("Arial", 'B', 10)
@@ -672,6 +672,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
