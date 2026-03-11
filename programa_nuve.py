@@ -467,7 +467,7 @@ elif menu == "🔍 Seguimiento":
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
 
            # BOTON VER DETALLE
-           if r6.button("👁️", key=f"v_{row['op']}"):
+        if r6.button("👁️", key=f"v_{row['op']}"):
                modal_detalle_op(row.to_dict())
 
            # BOTON ORDEN PDF
@@ -793,6 +793,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
