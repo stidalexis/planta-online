@@ -611,10 +611,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     if tipo == "FORMAS IMPRESAS":
                         if area_act == "IMPRESIÓN":
                             n_area = "COLECTORAS"
-                    elif area_act == "COLECTORAS":
-                        n_area = "ENCUADERNACIÓN"
-                    elif area_act == "ENCUADERNACIÓN":
-                         n_area = "FINALIZADO"
+                        elif area_act == "COLECTORAS":
+                            n_area = "ENCUADERNACIÓN"
+                        elif area_act == "ENCUADERNACIÓN":
+                            n_area = "FINALIZADO"
 
                     # -------- FORMAS BLANCAS --------
                     elif tipo == "FORMAS BLANCAS":
@@ -644,6 +644,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
