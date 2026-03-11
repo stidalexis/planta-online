@@ -442,7 +442,15 @@ elif menu == "🔍 Seguimiento":
                 df["nombre_trabajo"].str.upper().str.contains(buscar, na=False) |
                 df["cliente"].str.upper().str.contains(buscar, na=False)
              ]
-        st.download_button("📥 Excel General", to_excel_limpio(df, "GENERAL"), "Reporte_General_Nuve.xlsx")
+        excel_file = to_excel_limpio(df, "GENERAL")
+
+        if excel_file:
+            st.download_button(
+                "📥 Excel General",
+                data=excel_file,
+                file_name="Reporte_General_Nuve.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
         st.divider()
         h1, h2, h3, h4, h5, h6, h7 = st.columns([1,2,2,1.5,1.5,1,1.5])
         h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**"); h7.write("**Orden**")
@@ -776,6 +784,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
