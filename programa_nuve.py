@@ -319,8 +319,7 @@ elif menu == "🔍 Seguimiento":
     
     # --- BUSCADOR ---
     buscar = st.text_input("🔎 Buscar por OP, Cliente o Nombre del Trabajo")
-
-    res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
+    
     if res:
         df = pd.DataFrame(res)
 
@@ -653,6 +652,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
