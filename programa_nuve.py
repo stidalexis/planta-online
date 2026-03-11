@@ -165,24 +165,40 @@ def generar_pdf_op(row):
             pdf.set_font("Arial", '', 8)
             datos_c = h.get('datos_cierre', {})
 
+            # Datos Técnicos de Salida (tabla de 4 columnas)
+            datos_c = h.get('datos_cierre', {})
+
             if datos_c:
+
+                pdf.set_font("Arial", 'B', 7)
+                pdf.set_fill_color(230,230,230)
+
+                # Encabezado tabla
+                pdf.cell(45,6,"OBJETO",1,0,'C',True)
+                pdf.cell(45,6,"DATO",1,0,'C',True)
+                pdf.cell(45,6,"OBJETO",1,0,'C',True)
+                pdf.cell(45,6,"DATO",1,1,'C',True)
+
+                pdf.set_font("Arial",'',8)
+
                 items = list(datos_c.items())
 
-                for i in range(0, len(items), 2):
+                for i in range(0,len(items),2):
 
-                    k1, v1 = items[i]
-                    key1 = k1.replace('_', ' ').upper()
+                    k1,v1 = items[i]
+                    key1 = k1.replace("_"," ").upper()
 
-                    if i + 1 < len(items):
-                        k2, v2 = items[i + 1]
-                        key2 = k2.replace('_', ' ').upper()
+                    if i+1 < len(items):
+                        k2,v2 = items[i+1]
+                        key2 = k2.replace("_"," ").upper()
                     else:
-                        key2, v2 = "", ""
+                        key2=""
+                        v2=""
 
-                    pdf.cell(47, 6, key1, border=1)
-                    pdf.cell(48, 6, str(v1), border=1)
-                    pdf.cell(47, 6, key2, border=1)
-                    pdf.cell(48, 6, str(v2), border=1, ln=True)
+                    pdf.cell(45,6,key1,1)
+                    pdf.cell(45,6,str(v1),1)
+                    pdf.cell(45,6,key2,1)
+                    pdf.cell(45,6,str(v2),1,1)
             
             # Observaciones
             if h.get('observaciones'):
@@ -652,6 +668,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
