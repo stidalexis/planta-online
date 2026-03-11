@@ -168,7 +168,6 @@ def generar_pdf_op(row):
             if datos_c:
                 items = list(datos_c.items())
 
-                # recorrer de 2 en 2 para crear 4 columnas
                 for i in range(0, len(items), 2):
 
                     k1, v1 = items[i]
@@ -178,12 +177,12 @@ def generar_pdf_op(row):
                         k2, v2 = items[i + 1]
                         key2 = k2.replace('_', ' ').upper()
                     else:
-                        key2, v2 = "", "
+                        key2, v2 = "", ""
 
-                    pdf.cell(45, 5, f" {key1}", border=1)
-                    pdf.cell(45, 5, f"{v1}", border=1)
-                    pdf.cell(45, 5, f" {key2}", border=1)
-                    pdf.cell(45, 5, f"{v2}", border=1, ln=True)
+                    pdf.cell(40, 6, key1, border=1)
+                    pdf.cell(35, 6, str(v1), border=1)
+                    pdf.cell(40, 6, key2, border=1)
+                    pdf.cell(35, 6, str(v2), border=1, ln=True)
             
             # Observaciones
             if h.get('observaciones'):
@@ -654,6 +653,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
