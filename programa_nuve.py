@@ -109,7 +109,7 @@ def generar_pdf_op(row):
     # --- SECCIÓN 1: DATOS DE VENTA ---
     pdf.set_font("Arial", 'B', 11)
     pdf.set_fill_color(230, 230, 230)
-    pdf.cell(0, 8, " 1. INFORMACION GENERAL Y ORIGEN", ln=True, fill=True)
+    pdf.cell(0, 1, " 1. INFORMACION GENERAL Y ORIGEN", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     
     c1 = 100
@@ -670,6 +670,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
