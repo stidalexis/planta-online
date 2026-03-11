@@ -455,27 +455,36 @@ elif menu == "🔍 Seguimiento":
         h1, h2, h3, h4, h5, h6, h7 = st.columns([1,2,2,1.5,1.5,1,1.5])
         h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**"); h7.write("**Orden**")
         for index, row in df.iterrows():
+
             r1, r2, r3, r4, r5, r6, r7 = st.columns([1,2,2,1.5,1.5,1,1.5])
+
             r1.write(row['op'])
             r2.write(row['cliente'])
             r3.write(row['nombre_trabajo'])
             r4.write(row['tipo_orden'])
+
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
-            if r6.button("👁️", key=f"v_{row['op']}"):
-             if r7.button("📄 PDF", key=f"pdf_{row['op']}"):
 
-                if "FORMAS" in row["tipo_orden"]:
-                    pdf_bytes = generar_op_formas(row.to_dict())
-                else:
-                    pdf_bytes = generar_op_rollos(row.to_dict())
+           # BOTON VER DETALLE
+           if r6.button("👁️", key=f"v_{row['op']}"):
+               modal_detalle_op(row.to_dict())
 
-                st.download_button(
-                    "⬇ Descargar Orden",
-                    pdf_bytes,
-                    file_name=f"OP_{row['op']}.pdf",
-                    mime="application/pdf"
-                )    
+           # BOTON ORDEN PDF
+           if r7.button("📄", key=f"pdf_{row['op']}"):
+
+               if "FORMAS" in row["tipo_orden"]:
+                   pdf_bytes = generar_op_formas(row.to_dict())
+               else:
+                   pdf_bytes = generar_op_rollos(row.to_dict())
+
+               st.download_button(
+                   "⬇ Descargar Orden",
+                   data=pdf_bytes,
+                   file_name=f"OP_{row['op']}.pdf",
+                   mime="application/pdf",
+                   key=f"down_{row['op']}"
+               )    
                 modal_detalle_op(row.to_dict())
 
 # --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
@@ -784,6 +793,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
