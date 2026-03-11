@@ -217,6 +217,96 @@ def generar_pdf_op(row):
     pdf.cell(0, 10, f"DOCUMENTO OFICIAL NUVE - GENERADO AUTOMATICAMENTE - {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
     
     return bytes(pdf.output())
+    # --- FUNCIONES AUXILIARES ---
+
+def to_excel_limpio(df_input, tipo=None):
+    ...
+    
+
+def generar_pdf_op(row):
+    ...
+    
+
+# ===============================
+# PDF ORDEN PRODUCCION ROLLOS
+# ===============================
+
+def generar_op_rollos(row):
+
+    pdf = FPDF()
+    pdf.add_page()
+
+    pdf.set_font("Arial","B",14)
+    pdf.cell(0,10,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(90,8,f"OP: {row['op']}",1)
+    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
+
+    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
+    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
+
+    pdf.cell(90,8,f"Material: {row.get('material','')}",1)
+    pdf.cell(90,8,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
+
+    pdf.cell(90,8,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(90,8,f"Core: {row.get('core','')}",1,1)
+
+    pdf.cell(90,8,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
+    pdf.cell(90,8,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+
+    pdf.ln(10)
+
+    pdf.cell(0,8,"Observaciones",0,1)
+    pdf.multi_cell(0,6,row.get("observaciones_rollos",""))
+
+    return bytes(pdf.output())
+
+
+# ===============================
+# PDF ORDEN PRODUCCION FORMAS
+# ===============================
+
+def generar_op_formas(row):
+
+    pdf = FPDF()
+    pdf.add_page()
+
+    pdf.set_font("Arial","B",14)
+    pdf.cell(0,10,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(90,8,f"OP: {row['op']}",1)
+    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
+
+    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
+    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
+
+    pdf.cell(90,8,f"Cantidad Formas: {row.get('cantidad_formas','')}",1)
+    pdf.cell(90,8,f"Partes: {row.get('num_partes','')}",1,1)
+
+    pdf.cell(180,8,"DATOS DE PAPEL",1,1,"C")
+
+    partes = row.get("detalles_partes_json",[])
+
+    for p in partes:
+
+        pdf.cell(30,8,f"Parte {p['p']}",1)
+        pdf.cell(30,8,p.get("anc",""),1)
+        pdf.cell(30,8,p.get("lar",""),1)
+        pdf.cell(30,8,p.get("papel",""),1)
+        pdf.cell(30,8,p.get("gramos",""),1)
+        pdf.cell(30,8,p.get("tf",""),1)
+        pdf.cell(30,8,p.get("tr",""),1,1)
+
+    pdf.ln(10)
+
+    pdf.cell(0,8,"Observaciones",0,1)
+    pdf.multi_cell(0,6,row.get("observaciones_formas",""))
+
+    return bytes(pdf.output())
 
 # --- DIALOG RADIOGRAFÍA ---
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
@@ -685,6 +775,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
