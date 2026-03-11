@@ -364,7 +364,7 @@ elif menu == "🔍 Seguimiento":
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
             if r6.button("👁️", key=f"v_{row['op']}"):
-            if r7.button("📄 PDF", key=f"pdf_{row['op']}"):
+             if r7.button("📄 PDF", key=f"pdf_{row['op']}"):
 
                 if "FORMAS" in row["tipo_orden"]:
                     pdf_bytes = generar_op_formas(row.to_dict())
@@ -685,6 +685,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
