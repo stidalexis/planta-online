@@ -485,7 +485,6 @@ elif menu == "🔍 Seguimiento":
                    mime="application/pdf",
                    key=f"down_{row['op']}"
                )    
-                   modal_detalle_op(row.to_dict())
 
 # --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
 elif menu == "📅 Planificación":
@@ -793,6 +792,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
