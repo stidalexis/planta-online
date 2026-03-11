@@ -179,10 +179,10 @@ def generar_pdf_op(row):
                     else:
                         key2, v2 = "", ""
 
-                    pdf.cell(40, 6, key1, border=1)
-                    pdf.cell(35, 6, str(v1), border=1)
-                    pdf.cell(40, 6, key2, border=1)
-                    pdf.cell(35, 6, str(v2), border=1, ln=True)
+                    pdf.cell(47, 6, key1, border=1)
+                    pdf.cell(48, 6, str(v1), border=1)
+                    pdf.cell(47, 6, key2, border=1)
+                    pdf.cell(48, 6, str(v2), border=1, ln=True)
             
             # Observaciones
             if h.get('observaciones'):
@@ -653,6 +653,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
