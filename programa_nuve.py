@@ -471,7 +471,7 @@ elif menu == "🔍 Seguimiento":
                modal_detalle_op(row.to_dict())
 
            # BOTON ORDEN PDF
-           if r7.button("📄", key=f"pdf_{row['op']}"):
+        if r7.button("📄", key=f"pdf_{row['op']}"):
 
                if "FORMAS" in row["tipo_orden"]:
                    pdf_bytes = generar_op_formas(row.to_dict())
@@ -793,6 +793,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
