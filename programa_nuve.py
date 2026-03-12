@@ -218,16 +218,6 @@ def generar_pdf_op(row):
     
     return bytes(pdf.output())
 
-def to_excel_limpio(df_input, tipo=None):
-
-    if df_input is None or df_input.empty:
-        return None
-    
-
-def generar_pdf_op(row):
-    ...
-    
-
 # ===============================
 # PDF ORDEN PRODUCCION ROLLOS
 # ===============================
@@ -466,25 +456,25 @@ elif menu == "🔍 Seguimiento":
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
 
-           # BOTON VER DETALLE
-        if r6.button("👁️", key=f"v_{row['op']}"):
-               modal_detalle_op(row.to_dict())
+            # BOTON VER DETALLE
+            if r6.button("👁️", key=f"v_{row['op']}"):
+                modal_detalle_op(row.to_dict())
 
-           # BOTON ORDEN PDF
-        if r7.button("📄", key=f"pdf_{row['op']}"):
+            # BOTON ORDEN PDF
+            if r7.button("📄", key=f"pdf_{row['op']}"):
 
-               if "FORMAS" in row["tipo_orden"]:
-                   pdf_bytes = generar_op_formas(row.to_dict())
-               else:
-                   pdf_bytes = generar_op_rollos(row.to_dict())
+                if "FORMAS" in row["tipo_orden"]:
+                    pdf_bytes = generar_op_formas(row.to_dict())
+                else:
+                    pdf_bytes = generar_op_rollos(row.to_dict())
 
-               st.download_button(
-                   "⬇ Descargar Orden",
-                   data=pdf_bytes,
-                   file_name=f"OP_{row['op']}.pdf",
-                   mime="application/pdf",
-                   key=f"down_{row['op']}"
-               )    
+                st.download_button(
+                    "⬇ Descargar Orden",
+                    data=pdf_bytes,
+                    file_name=f"OP_{row['op']}.pdf",
+                    mime="application/pdf",
+                    key=f"down_{row['op']}"
+                )    
 
 # --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
 elif menu == "📅 Planificación":
@@ -611,7 +601,7 @@ elif menu == "📅 Planificación":
                 cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
                 
                 cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"]
-                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
+                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0 if datos_rec.get('core') in cores else 0
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
                 
                 tra_opt = ["NO", "SI"]
@@ -792,6 +782,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
