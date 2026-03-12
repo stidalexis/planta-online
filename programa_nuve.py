@@ -522,7 +522,7 @@ elif menu == "🔍 Seguimiento":
                     "⬇ Descargar Orden",
                     data=pdf_bytes,
                     file_name=f"OP_{row['op']}.pdf",
-                    mime="application/pdf"
+                    mime="application/pdf",
                     key=f"down_{row['op']}"
                 )    
 
@@ -832,6 +832,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
