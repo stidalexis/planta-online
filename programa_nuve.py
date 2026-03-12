@@ -222,82 +222,132 @@ def generar_pdf_op(row):
 # PDF ORDEN PRODUCCION ROLLOS
 # ===============================
 
-def generar_op_rollos(row):
+from fpdf import FPDF
+import qrcode
+from io import BytesIO
 
-    pdf = FPDF()
+def generar_op_rollos(datos):
+
+    pdf = FPDF("P","mm","A4")
     pdf.add_page()
 
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,10,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
+    # FONDO
+    pdf.image("plantilla_rollos.png",0,0,210,297)
 
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","",9)
 
-    pdf.cell(90,8,f"OP: {row['op']}",1)
-    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
+    # OP
+    pdf.set_xy(120,17)
+    pdf.cell(40,5,str(datos.get("op","")))
 
-    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
-    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
+    # FECHA
+    pdf.set_xy(18,35)
+    pdf.cell(40,5,str(datos.get("fecha","")))
 
-    pdf.cell(90,8,f"Material: {row.get('material','')}",1)
-    pdf.cell(90,8,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
+    # CLIENTE
+    pdf.set_xy(75,35)
+    pdf.cell(110,5,str(datos.get("cliente","")))
 
-    pdf.cell(90,8,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(90,8,f"Core: {row.get('core','')}",1,1)
+    # VENDEDOR
+    pdf.set_xy(18,45)
+    pdf.cell(70,5,str(datos.get("vendedor","")))
 
-    pdf.cell(90,8,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
-    pdf.cell(90,8,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+    # MATERIAL
+    pdf.set_xy(18,70)
+    pdf.cell(90,5,str(datos.get("papel","")))
 
-    pdf.ln(10)
+    # GRAMAJE
+    pdf.set_xy(150,70)
+    pdf.cell(30,5,str(datos.get("gramaje","")))
 
-    pdf.cell(0,8,"Observaciones",0,1)
-    pdf.multi_cell(0,6,row.get("observaciones_rollos",""))
+    # REFERENCIA
+    pdf.set_xy(18,83)
+    pdf.cell(90,5,str(datos.get("nombre_trabajo","")))
 
-    return bytes(pdf.output())
+    # TAMAÑO
+    pdf.set_xy(18,97)
+    pdf.cell(40,5,str(datos.get("medida","")))
 
+    # CANTIDAD
+    pdf.set_xy(18,110)
+    pdf.cell(40,5,str(datos.get("rollos","")))
+
+    # IMPRESIÓN
+    pdf.set_xy(18,125)
+    pdf.cell(60,5,str(datos.get("tintas","")))
+
+    # OBSERVACIONES
+    pdf.set_xy(18,165)
+    pdf.multi_cell(170,5,str(datos.get("obs","")))
+
+    # QR DE LA OP
+    qr = qrcode.make(f"OP {datos.get('op','')}")
+    buffer = BytesIO()
+    qr.save(buffer)
+    pdf.image(buffer,170,10,25)
+
+    return pdf.output(dest="S").encode("latin-1")
 
 # ===============================
 # PDF ORDEN PRODUCCION FORMAS
 # ===============================
 
-def generar_op_formas(row):
+def generar_op_formas(datos):
 
-    pdf = FPDF()
+    pdf = FPDF("P","mm","A4")
     pdf.add_page()
 
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,10,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
+    pdf.image("plantilla_formas.png",0,0,210,297)
 
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","",9)
 
-    pdf.cell(90,8,f"OP: {row['op']}",1)
-    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
+    # OP
+    pdf.set_xy(120,17)
+    pdf.cell(40,5,str(datos.get("op","")))
 
-    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
-    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
+    # FECHA
+    pdf.set_xy(18,35)
+    pdf.cell(40,5,str(datos.get("fecha","")))
 
-    pdf.cell(90,8,f"Cantidad Formas: {row.get('cantidad_formas','')}",1)
-    pdf.cell(90,8,f"Partes: {row.get('num_partes','')}",1,1)
+    # CLIENTE
+    pdf.set_xy(65,35)
+    pdf.cell(120,5,str(datos.get("cliente","")))
 
-    pdf.cell(180,8,"DATOS DE PAPEL",1,1,"C")
+    # VENDEDOR
+    pdf.set_xy(18,45)
+    pdf.cell(90,5,str(datos.get("vendedor","")))
 
-    partes = row.get("detalles_partes_json",[])
+    # TRABAJO
+    pdf.set_xy(18,60)
+    pdf.cell(100,5,str(datos.get("nombre_trabajo","")))
 
-    for p in partes:
+    # PARTES
+    pdf.set_xy(120,60)
+    pdf.cell(20,5,str(datos.get("partes","")))
 
-        pdf.cell(30,8,f"Parte {p['p']}",1)
-        pdf.cell(30,8,p.get("anc",""),1)
-        pdf.cell(30,8,p.get("lar",""),1)
-        pdf.cell(30,8,p.get("papel",""),1)
-        pdf.cell(30,8,p.get("gramos",""),1)
-        pdf.cell(30,8,p.get("tf",""),1)
-        pdf.cell(30,8,p.get("tr",""),1,1)
+    # CANTIDAD
+    pdf.set_xy(150,60)
+    pdf.cell(30,5,str(datos.get("cantidad","")))
 
-    pdf.ln(10)
+    # PAPEL
+    pdf.set_xy(18,95)
+    pdf.cell(70,5,str(datos.get("papel","")))
 
-    pdf.cell(0,8,"Observaciones",0,1)
-    pdf.multi_cell(0,6,row.get("observaciones_formas",""))
+    # GRAMAJE
+    pdf.set_xy(90,95)
+    pdf.cell(30,5,str(datos.get("gramaje","")))
 
-    return bytes(pdf.output())
+    # OBSERVACIONES
+    pdf.set_xy(18,150)
+    pdf.multi_cell(170,5,str(datos.get("obs","")))
+
+    # QR
+    qr = qrcode.make(f"OP {datos.get('op','')}")
+    buffer = BytesIO()
+    qr.save(buffer)
+    pdf.image(buffer,170,10,25)
+
+    return pdf.output(dest="S").encode("latin-1")
 
 # --- DIALOG RADIOGRAFÍA ---
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
@@ -782,6 +832,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
