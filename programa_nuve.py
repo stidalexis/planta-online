@@ -216,7 +216,7 @@ def generar_pdf_op(row):
     pdf.set_font("Arial", 'I', 7)
     pdf.cell(0, 10, f"DOCUMENTO OFICIAL NUVE - GENERADO AUTOMATICAMENTE - {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
     
-    return bytes(pdf.output())
+    return bytes(pdf.output(dest="S"))
 
 # ===============================
 # PDF ORDEN PRODUCCION ROLLOS
@@ -832,6 +832,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
