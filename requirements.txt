@@ -3,3 +3,4 @@ pandas
 supabase
 xlsxwriter
 fpdf2
+qrcode[pil]
