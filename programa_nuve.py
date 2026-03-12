@@ -286,7 +286,7 @@ def generar_op_rollos(datos):
     qr.save(buffer)
     pdf.image(buffer,170,10,25)
 
-    return pdf.output(dest="S").encode("latin-1")
+    return pdf.output(dest="S")
 
 # ===============================
 # PDF ORDEN PRODUCCION FORMAS
@@ -347,7 +347,7 @@ def generar_op_formas(datos):
     qr.save(buffer)
     pdf.image(buffer,170,10,25)
 
-    return pdf.output(dest="S").encode("latin-1")
+    return pdf.output(dest="S")
 
 # --- DIALOG RADIOGRAFÍA ---
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
@@ -832,6 +832,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
 
 
