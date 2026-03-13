@@ -228,63 +228,50 @@ from io import BytesIO
 
 def generar_op_rollos(datos):
 
-    pdf = FPDF("P","mm","A4")
+    pdf = FPDF()
     pdf.add_page()
 
-    # FONDO
-    pdf.image("plantilla_rollos.png",0,0,210,297)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,10,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
 
-    pdf.set_font("Arial","",9)
+    pdf.set_font("Arial","",10)
 
-    # OP
-    pdf.set_xy(120,17)
-    pdf.cell(40,5,str(datos.get("op","")))
+    pdf.cell(95,8,f"OP: {datos.get('op','')}",1)
+    pdf.cell(95,8,f"Fecha: {datos.get('fecha','')}",1,1)
 
-    # FECHA
-    pdf.set_xy(18,35)
-    pdf.cell(40,5,str(datos.get("fecha","")))
+    pdf.cell(190,8,f"Cliente: {datos.get('cliente','')}",1,1)
+    pdf.cell(190,8,f"Trabajo: {datos.get('nombre_trabajo','')}",1,1)
 
-    # CLIENTE
-    pdf.set_xy(75,35)
-    pdf.cell(110,5,str(datos.get("cliente","")))
+    pdf.ln(3)
 
-    # VENDEDOR
-    pdf.set_xy(18,45)
-    pdf.cell(70,5,str(datos.get("vendedor","")))
+    pdf.set_font("Arial","B",10)
+    pdf.cell(0,8,"ESPECIFICACIONES",1,1)
 
-    # MATERIAL
-    pdf.set_xy(18,70)
-    pdf.cell(90,5,str(datos.get("papel","")))
+    pdf.cell(50,8,"Papel",1)
+    pdf.cell(40,8,"Gramaje",1)
+    pdf.cell(40,8,"Ancho",1)
+    pdf.cell(60,8,"Tintas",1,1)
 
-    # GRAMAJE
-    pdf.set_xy(150,70)
-    pdf.cell(30,5,str(datos.get("gramaje","")))
+    pdf.set_font("Arial","",10)
 
-    # REFERENCIA
-    pdf.set_xy(18,83)
-    pdf.cell(90,5,str(datos.get("nombre_trabajo","")))
+    pdf.cell(50,8,str(datos.get("papel","")),1)
+    pdf.cell(40,8,str(datos.get("gramaje","")),1)
+    pdf.cell(40,8,str(datos.get("ancho","")),1)
+    pdf.cell(60,8,str(datos.get("tintas","")),1,1)
 
-    # TAMAÑO
-    pdf.set_xy(18,97)
-    pdf.cell(40,5,str(datos.get("medida","")))
+    pdf.ln(4)
 
-    # CANTIDAD
-    pdf.set_xy(18,110)
-    pdf.cell(40,5,str(datos.get("rollos","")))
+    pdf.set_font("Arial","B",10)
+    pdf.cell(0,8,"PRODUCCION",1,1)
 
-    # IMPRESIÓN
-    pdf.set_xy(18,125)
-    pdf.cell(60,5,str(datos.get("tintas","")))
+    pdf.set_font("Arial","",10)
 
-    # OBSERVACIONES
-    pdf.set_xy(18,165)
-    pdf.multi_cell(170,5,str(datos.get("obs","")))
+    pdf.cell(60,8,f"Metros: {datos.get('metros','')}",1)
+    pdf.cell(60,8,f"Rollos: {datos.get('rollos','')}",1)
+    pdf.cell(70,8,f"Maquina: {datos.get('maquina','')}",1,1)
 
-    # QR DE LA OP
-    qr = qrcode.make(f"OP {datos.get('op','')}")
-    buffer = BytesIO()
-    qr.save(buffer)
-    pdf.image(buffer,170,10,25)
+    pdf.cell(190,8,"Observaciones",1,1)
+    pdf.multi_cell(190,8,datos.get("obs",""),1)
 
     return bytes(pdf.output(dest="S"))
 
@@ -292,60 +279,54 @@ def generar_op_rollos(datos):
 # PDF ORDEN PRODUCCION FORMAS
 # ===============================
 
+from fpdf import FPDF
+
 def generar_op_formas(datos):
 
-    pdf = FPDF("P","mm","A4")
+    pdf = FPDF()
     pdf.add_page()
 
-    pdf.image("plantilla_formas.png",0,0,210,297)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,10,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
 
-    pdf.set_font("Arial","",9)
+    pdf.set_font("Arial","",10)
 
-    # OP
-    pdf.set_xy(120,17)
-    pdf.cell(40,5,str(datos.get("op","")))
+    pdf.cell(95,8,f"OP: {datos.get('op','')}",1)
+    pdf.cell(95,8,f"Fecha: {datos.get('fecha','')}",1,1)
 
-    # FECHA
-    pdf.set_xy(18,35)
-    pdf.cell(40,5,str(datos.get("fecha","")))
+    pdf.cell(190,8,f"Cliente: {datos.get('cliente','')}",1,1)
+    pdf.cell(190,8,f"Trabajo: {datos.get('nombre_trabajo','')}",1,1)
+    pdf.cell(190,8,f"Vendedor: {datos.get('vendedor','')}",1,1)
 
-    # CLIENTE
-    pdf.set_xy(65,35)
-    pdf.cell(120,5,str(datos.get("cliente","")))
+    pdf.ln(3)
 
-    # VENDEDOR
-    pdf.set_xy(18,45)
-    pdf.cell(90,5,str(datos.get("vendedor","")))
+    pdf.set_font("Arial","B",10)
+    pdf.cell(0,8,"ESPECIFICACION POR PARTES",1,1)
 
-    # TRABAJO
-    pdf.set_xy(18,60)
-    pdf.cell(100,5,str(datos.get("nombre_trabajo","")))
+    pdf.cell(30,8,"Parte",1)
+    pdf.cell(40,8,"Papel",1)
+    pdf.cell(30,8,"Gramaje",1)
+    pdf.cell(40,8,"Medida",1)
+    pdf.cell(50,8,"Tintas",1,1)
 
-    # PARTES
-    pdf.set_xy(120,60)
-    pdf.cell(20,5,str(datos.get("partes","")))
+    pdf.set_font("Arial","",10)
 
-    # CANTIDAD
-    pdf.set_xy(150,60)
-    pdf.cell(30,5,str(datos.get("cantidad","")))
+    partes = datos.get("partes",1)
 
-    # PAPEL
-    pdf.set_xy(18,95)
-    pdf.cell(70,5,str(datos.get("papel","")))
+    for i in range(int(partes)):
+        pdf.cell(30,8,str(i+1),1)
+        pdf.cell(40,8,str(datos.get("papel","")),1)
+        pdf.cell(30,8,str(datos.get("gramaje","")),1)
+        pdf.cell(40,8,str(datos.get("medida","")),1)
+        pdf.cell(50,8,str(datos.get("tintas","")),1,1)
 
-    # GRAMAJE
-    pdf.set_xy(90,95)
-    pdf.cell(30,5,str(datos.get("gramaje","")))
+    pdf.ln(4)
 
-    # OBSERVACIONES
-    pdf.set_xy(18,150)
-    pdf.multi_cell(170,5,str(datos.get("obs","")))
+    pdf.cell(95,8,f"Cantidad: {datos.get('cantidad','')}",1)
+    pdf.cell(95,8,f"Maquina: {datos.get('maquina','')}",1,1)
 
-    # QR
-    qr = qrcode.make(f"OP {datos.get('op','')}")
-    buffer = BytesIO()
-    qr.save(buffer)
-    pdf.image(buffer,170,10,25)
+    pdf.cell(190,8,"Observaciones",1,1)
+    pdf.multi_cell(190,8,datos.get("obs",""),1)
 
     return bytes(pdf.output(dest="S"))
 
