@@ -539,7 +539,7 @@ elif menu == "🔍 Seguimiento":
                     key=f"down_{row['op']}"
                 )    
 
-# --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
+# --- MÓDULO 3: PLANIFICACIÓN 
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
     
@@ -581,7 +581,31 @@ elif menu == "📅 Planificación":
     if st.session_state.sel_tipo:
         t = st.session_state.sel_tipo
         prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-"}.get(t, "")
+        p1, p2, p3, p4 = st.columns(4)
 
+t_perf = p1.selectbox(
+    "¿Tiene Perforaciones?",
+    ["NO", "SI"],
+    key="t_perf"
+)
+
+t_barr = p2.selectbox(
+    "¿Tiene Código de Barras?",
+    ["NO", "SI"],
+    key="t_barr"
+)
+
+t_num = p3.selectbox(
+    "¿Tiene Numeración?",
+    ["NO", "SI"],
+    key="t_num"
+)
+
+t_trans_f = p4.selectbox(
+    "¿Transportadora?",
+    ["NO", "SI"],
+    key="t_trans"
+)
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             
@@ -614,16 +638,12 @@ elif menu == "📅 Planificación":
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
                 p1, p2, p3, p4, = st.columns(4)
-                t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
                 perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
                 
-                t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"], index=1 if datos_rec.get('codigo_barras_detalle') != "NO" and datos_rec.get('codigo_barras_detalle') else 0)
                 barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
                 
-                t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
                 num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
                 num_fd = p3.text_input("Hasta") if t_num == "SI" else "NO"
-                t_trans_f = p4.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
                 dest_f = p4.text_area("ciudad de destino", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
