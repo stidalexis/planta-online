@@ -118,38 +118,38 @@ def generar_pdf_op(row):
     (210,40)
     ],'F')
 
-# Azul sombra inferior
-pdf.set_fill_color(0,70,140)
-pdf.polygon([
-(80,40),
-(210,20),
-(210,40)
-],'F')
+    # Azul sombra inferior
+    pdf.set_fill_color(0,70,140)
+    pdf.polygon([
+    (80,40),
+    (210,20),
+    (210,40)
+    ],'F')
 
-# Naranja izquierda
-pdf.set_fill_color(255,102,0)
-pdf.polygon([
-(0,15),
-(60,40),
-(0,40)
-],'F')
+    # Naranja izquierda
+    pdf.set_fill_color(255,102,0)
+    pdf.polygon([
+    (0,15),
+    (60,40),
+    (0,40)
+    ],'F')
 
-# Naranja diagonal central
-pdf.set_fill_color(255,140,40)
-pdf.polygon([
-(100,40),
-(160,0),
-(200,0),
-(140,40)
-],'F')
+    # Naranja diagonal central
+    pdf.set_fill_color(255,140,40)
+    pdf.polygon([
+    (100,40),
+    (160,0),
+    (200,0),
+    (140,40)
+    ],'F')
 
-# Naranja pequeño brillo
-pdf.set_fill_color(255,170,80)
-pdf.polygon([
-(160,0),
-(180,0),
-(130,40)
-],'F')
+    # Naranja pequeño brillo
+    pdf.set_fill_color(255,170,80)
+    pdf.polygon([
+    (160,0),
+    (180,0),
+    (130,40)
+    ],'F')
 
     # LOGO
     pdf.image("logo_cb.png", 7, 5, 60)
