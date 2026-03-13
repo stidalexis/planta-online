@@ -91,7 +91,7 @@ def to_excel_limpio(df_input, tipo=None):
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
-   pdf.set_text_color(255,255,255)
+    pdf.set_text_color(255,255,255)
 
     pdf.set_font("Arial","B",22)
     pdf.set_xy(0,8)
