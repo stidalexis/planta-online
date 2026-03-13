@@ -98,6 +98,7 @@ def generar_pdf_op(row):
     pdf.set_font("Arial","",15)
     pdf.set_xy(0,20)
     pdf.cell(210,10,"DE PRODUCCION",0,1,"C")
+    
     # ===== ENCABEZADO 40mm =====
 
     # Azul principal
