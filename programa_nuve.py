@@ -668,24 +668,24 @@ elif menu == "📅 Planificación":
 
             # CAMPOS DINÁMICOS
 
-            if t_perf == "SI":
+                if t_perf == "SI":
                 perf_d = st.text_area("Detalle Perforación")
             else:
                 perf_d = "NO"
 
-            if t_barr == "SI":
+                if t_barr == "SI":
                 barr_d = st.text_area("Detalle Barras")
             else:
                 barr_d = "NO"
 
-            if t_num == "SI":
+                if t_num == "SI":
                 num_id = st.text_input("Desde")
                 num_fd = st.text_input("Hasta")
             else:
                 num_id = "NO"
                 num_fd = "NO"
 
-            if t_trans_f == "SI":
+                 if t_trans_f == "SI":
                 dest_f = st.text_area("Ciudad de destino")
             else:
                 dest_f = "NO"
