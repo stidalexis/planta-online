@@ -93,8 +93,39 @@ def generar_pdf_op(row):
     pdf.add_page()
     
     # --- ENCABEZADO INDUSTRIAL ---
-    pdf.set_fill_color(13, 71, 161)
-    pdf.rect(0, 0, 210, 40, 'F')
+    # AZUL PRINCIPAL
+    pdf.set_fill_color(13,71,161)
+    pdf.polygon([
+    (0,0),
+    (210,0),
+    (170,40),
+    (40,40)
+    ],'F')
+
+    # AZUL OSCURO
+    pdf.set_fill_color(8,45,100)
+    pdf.polygon([
+    (120,0),
+    (210,0),
+    (210,40)
+    ],'F')
+
+    # NARANJA IZQUIERDO
+    pdf.set_fill_color(255,140,0)
+    pdf.polygon([
+    (0,20),
+    (80,40),
+    (0,40)
+    ],'F')
+
+    # NARANJA DIAGONAL
+    pdf.set_fill_color(255,160,40)
+    pdf.polygon([
+    (120,40),
+    (170,0),
+    (210,0),
+    (170,40)
+    ],'F')
 
     # LOGO
     pdf.image("logo_cb.png", 7, 5, 60)
