@@ -286,46 +286,78 @@ def generar_op_formas(datos):
     pdf = FPDF()
     pdf.add_page()
 
-    pdf.set_font("Arial","B",16)
-    pdf.cell(0,10,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
+    pdf.set_font("Arial","B",15)
+    pdf.cell(0,10,"ORDEN DE PRODUCCION",0,1,"C")
 
     pdf.set_font("Arial","",10)
 
     pdf.cell(95,8,f"OP: {datos.get('op','')}",1)
-    pdf.cell(95,8,f"Fecha: {datos.get('fecha','')}",1,1)
+    pdf.cell(95,8,f"Fecha Creacion: {datos.get('fecha','')}",1,1)
 
+    pdf.cell(190,8,f"Tipo Orden: {datos.get('tipo_orden','')}",1,1)
+
+    pdf.ln(3)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"DATOS DEL CLIENTE",1,1)
+
+    pdf.set_font("Arial","",10)
     pdf.cell(190,8,f"Cliente: {datos.get('cliente','')}",1,1)
-    pdf.cell(190,8,f"Trabajo: {datos.get('nombre_trabajo','')}",1,1)
     pdf.cell(190,8,f"Vendedor: {datos.get('vendedor','')}",1,1)
 
     pdf.ln(3)
 
-    pdf.set_font("Arial","B",10)
-    pdf.cell(0,8,"ESPECIFICACION POR PARTES",1,1)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"INFORMACION DEL TRABAJO",1,1)
 
-    pdf.cell(30,8,"Parte",1)
-    pdf.cell(40,8,"Papel",1)
+    pdf.set_font("Arial","",10)
+    pdf.cell(190,8,f"Trabajo: {datos.get('nombre_trabajo','')}",1,1)
+
+    pdf.cell(60,8,f"Cantidad: {datos.get('cantidad','')}",1)
+    pdf.cell(60,8,f"Medida: {datos.get('medida','')}",1)
+    pdf.cell(70,8,f"Tintas: {datos.get('tintas','')}",1,1)
+
+    pdf.ln(3)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"ESPECIFICACIONES",1,1)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(60,8,f"Papel: {datos.get('papel','')}",1)
+    pdf.cell(40,8,f"Gramaje: {datos.get('gramaje','')}",1)
+    pdf.cell(90,8,f"Maquina: {datos.get('maquina','')}",1,1)
+
+    pdf.ln(3)
+
+    # PARTES SOLO PARA FORMAS
+    partes = int(datos.get("partes",1))
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"DETALLE POR PARTES",1,1)
+
+    pdf.cell(20,8,"Parte",1)
+    pdf.cell(50,8,"Papel",1)
     pdf.cell(30,8,"Gramaje",1)
     pdf.cell(40,8,"Medida",1)
     pdf.cell(50,8,"Tintas",1,1)
 
     pdf.set_font("Arial","",10)
 
-    partes = datos.get("partes",1)
+    for i in range(partes):
 
-    for i in range(int(partes)):
-        pdf.cell(30,8,str(i+1),1)
-        pdf.cell(40,8,str(datos.get("papel","")),1)
+        pdf.cell(20,8,str(i+1),1)
+        pdf.cell(50,8,str(datos.get("papel","")),1)
         pdf.cell(30,8,str(datos.get("gramaje","")),1)
         pdf.cell(40,8,str(datos.get("medida","")),1)
         pdf.cell(50,8,str(datos.get("tintas","")),1,1)
 
     pdf.ln(4)
 
-    pdf.cell(95,8,f"Cantidad: {datos.get('cantidad','')}",1)
-    pdf.cell(95,8,f"Maquina: {datos.get('maquina','')}",1,1)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"OBSERVACIONES",1,1)
 
-    pdf.cell(190,8,"Observaciones",1,1)
+    pdf.set_font("Arial","",10)
     pdf.multi_cell(190,8,datos.get("obs",""),1)
 
     return bytes(pdf.output(dest="S"))
