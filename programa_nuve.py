@@ -91,7 +91,14 @@ def to_excel_limpio(df_input, tipo=None):
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
-    
+    pdf.set_text_color(255,255,255)
+    pdf.set_font("Arial","B",20)
+    pdf.set_xy(0,8)
+    pdf.cell(210,10,"CERTIFICADO",0,1,"C")
+
+    pdf.set_font("Arial","",14)
+    pdf.set_xy(0,18)
+    pdf.cell(210,10,"DE PRODUCCION",0,1,"C")
     # --- ENCABEZADO INDUSTRIAL ---
     # AZUL PRINCIPAL
     pdf.set_fill_color(13,71,161)
