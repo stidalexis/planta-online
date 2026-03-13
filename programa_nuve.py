@@ -99,40 +99,57 @@ def generar_pdf_op(row):
     pdf.set_font("Arial","",14)
     pdf.set_xy(0,18)
     pdf.cell(210,10,"DE PRODUCCION",0,1,"C")
-    # --- ENCABEZADO INDUSTRIAL ---
-    # AZUL PRINCIPAL
-    pdf.set_fill_color(13,71,161)
+    # ===== ENCABEZADO 40mm =====
+
+    # Azul principal
+    pdf.set_fill_color(0,82,155)
     pdf.polygon([
     (0,0),
     (210,0),
-    (170,40),
-    (40,40)
+    (180,40),
+    (30,40)
     ],'F')
 
-    # AZUL OSCURO
-    pdf.set_fill_color(8,45,100)
+    # Azul oscuro diagonal derecha
+    pdf.set_fill_color(0,60,120)
     pdf.polygon([
-    (120,0),
+    (130,0),
     (210,0),
     (210,40)
     ],'F')
 
-    # NARANJA IZQUIERDO
-    pdf.set_fill_color(255,140,0)
-    pdf.polygon([
-    (0,20),
-    (80,40),
-    (0,40)
-    ],'F')
+# Azul sombra inferior
+pdf.set_fill_color(0,70,140)
+pdf.polygon([
+(80,40),
+(210,20),
+(210,40)
+],'F')
 
-    # NARANJA DIAGONAL
-    pdf.set_fill_color(255,160,40)
-    pdf.polygon([
-    (120,40),
-    (170,0),
-    (210,0),
-    (170,40)
-    ],'F')
+# Naranja izquierda
+pdf.set_fill_color(255,102,0)
+pdf.polygon([
+(0,15),
+(60,40),
+(0,40)
+],'F')
+
+# Naranja diagonal central
+pdf.set_fill_color(255,140,40)
+pdf.polygon([
+(100,40),
+(160,0),
+(200,0),
+(140,40)
+],'F')
+
+# Naranja pequeño brillo
+pdf.set_fill_color(255,170,80)
+pdf.polygon([
+(160,0),
+(180,0),
+(130,40)
+],'F')
 
     # LOGO
     pdf.image("logo_cb.png", 7, 5, 60)
