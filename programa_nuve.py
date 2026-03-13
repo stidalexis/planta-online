@@ -216,151 +216,88 @@ def generar_pdf_op(row):
     pdf.set_font("Arial", 'I', 7)
     pdf.cell(0, 10, f"DOCUMENTO OFICIAL NUVE - GENERADO AUTOMATICAMENTE - {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
     
-    return bytes(pdf.output(dest="S"))
+    return bytes(pdf.output())
 
 # ===============================
 # PDF ORDEN PRODUCCION ROLLOS
 # ===============================
 
-from fpdf import FPDF
-import qrcode
-from io import BytesIO
-
-def generar_op_rollos(datos):
+def generar_op_rollos(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-    pdf.set_font("Arial","B",16)
+    pdf.set_font("Arial","B",14)
     pdf.cell(0,10,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
 
     pdf.set_font("Arial","",10)
 
-    pdf.cell(95,8,f"OP: {datos.get('op','')}",1)
-    pdf.cell(95,8,f"Fecha: {datos.get('fecha','')}",1,1)
+    pdf.cell(90,8,f"OP: {row['op']}",1)
+    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
 
-    pdf.cell(190,8,f"Cliente: {datos.get('cliente','')}",1,1)
-    pdf.cell(190,8,f"Trabajo: {datos.get('nombre_trabajo','')}",1,1)
+    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
+    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
 
-    pdf.ln(3)
+    pdf.cell(90,8,f"Material: {row.get('material','')}",1)
+    pdf.cell(90,8,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
 
-    pdf.set_font("Arial","B",10)
-    pdf.cell(0,8,"ESPECIFICACIONES",1,1)
+    pdf.cell(90,8,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(90,8,f"Core: {row.get('core','')}",1,1)
 
-    pdf.cell(50,8,"Papel",1)
-    pdf.cell(40,8,"Gramaje",1)
-    pdf.cell(40,8,"Ancho",1)
-    pdf.cell(60,8,"Tintas",1,1)
+    pdf.cell(90,8,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
+    pdf.cell(90,8,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
 
-    pdf.set_font("Arial","",10)
+    pdf.ln(10)
 
-    pdf.cell(50,8,str(datos.get("papel","")),1)
-    pdf.cell(40,8,str(datos.get("gramaje","")),1)
-    pdf.cell(40,8,str(datos.get("ancho","")),1)
-    pdf.cell(60,8,str(datos.get("tintas","")),1,1)
+    pdf.cell(0,8,"Observaciones",0,1)
+    pdf.multi_cell(0,6,row.get("observaciones_rollos",""))
 
-    pdf.ln(4)
+    return bytes(pdf.output())
 
-    pdf.set_font("Arial","B",10)
-    pdf.cell(0,8,"PRODUCCION",1,1)
-
-    pdf.set_font("Arial","",10)
-
-    pdf.cell(60,8,f"Metros: {datos.get('metros','')}",1)
-    pdf.cell(60,8,f"Rollos: {datos.get('rollos','')}",1)
-    pdf.cell(70,8,f"Maquina: {datos.get('maquina','')}",1,1)
-
-    pdf.cell(190,8,"Observaciones",1,1)
-    pdf.multi_cell(190,8,datos.get("obs",""),1)
-
-    return bytes(pdf.output(dest="S"))
 
 # ===============================
 # PDF ORDEN PRODUCCION FORMAS
 # ===============================
 
-from fpdf import FPDF
-
-def generar_op_formas(datos):
+def generar_op_formas(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-    pdf.set_font("Arial","B",15)
-    pdf.cell(0,10,"ORDEN DE PRODUCCION",0,1,"C")
+    pdf.set_font("Arial","B",14)
+    pdf.cell(0,10,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
 
     pdf.set_font("Arial","",10)
 
-    pdf.cell(95,8,f"OP: {datos.get('op','')}",1)
-    pdf.cell(95,8,f"Fecha Creacion: {datos.get('fecha','')}",1,1)
+    pdf.cell(90,8,f"OP: {row['op']}",1)
+    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
 
-    pdf.cell(190,8,f"Tipo Orden: {datos.get('tipo_orden','')}",1,1)
+    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
+    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
 
-    pdf.ln(3)
+    pdf.cell(90,8,f"Cantidad Formas: {row.get('cantidad_formas','')}",1)
+    pdf.cell(90,8,f"Partes: {row.get('num_partes','')}",1,1)
 
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"DATOS DEL CLIENTE",1,1)
+    pdf.cell(180,8,"DATOS DE PAPEL",1,1,"C")
 
-    pdf.set_font("Arial","",10)
-    pdf.cell(190,8,f"Cliente: {datos.get('cliente','')}",1,1)
-    pdf.cell(190,8,f"Vendedor: {datos.get('vendedor','')}",1,1)
+    partes = row.get("detalles_partes_json",[])
 
-    pdf.ln(3)
+    for p in partes:
 
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"INFORMACION DEL TRABAJO",1,1)
+        pdf.cell(30,8,f"Parte {p['p']}",1)
+        pdf.cell(30,8,p.get("anc",""),1)
+        pdf.cell(30,8,p.get("lar",""),1)
+        pdf.cell(30,8,p.get("papel",""),1)
+        pdf.cell(30,8,p.get("gramos",""),1)
+        pdf.cell(30,8,p.get("tf",""),1)
+        pdf.cell(30,8,p.get("tr",""),1,1)
 
-    pdf.set_font("Arial","",10)
-    pdf.cell(190,8,f"Trabajo: {datos.get('nombre_trabajo','')}",1,1)
+    pdf.ln(10)
 
-    pdf.cell(60,8,f"Cantidad: {datos.get('cantidad','')}",1)
-    pdf.cell(60,8,f"Medida: {datos.get('medida','')}",1)
-    pdf.cell(70,8,f"Tintas: {datos.get('tintas','')}",1,1)
+    pdf.cell(0,8,"Observaciones",0,1)
+    pdf.multi_cell(0,6,row.get("observaciones_formas",""))
 
-    pdf.ln(3)
-
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"ESPECIFICACIONES",1,1)
-
-    pdf.set_font("Arial","",10)
-
-    pdf.cell(60,8,f"Papel: {datos.get('papel','')}",1)
-    pdf.cell(40,8,f"Gramaje: {datos.get('gramaje','')}",1)
-    pdf.cell(90,8,f"Maquina: {datos.get('maquina','')}",1,1)
-
-    pdf.ln(3)
-
-    # PARTES SOLO PARA FORMAS
-    partes = int(datos.get("partes",1))
-
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"DETALLE POR PARTES",1,1)
-
-    pdf.cell(20,8,"Parte",1)
-    pdf.cell(50,8,"Papel",1)
-    pdf.cell(30,8,"Gramaje",1)
-    pdf.cell(40,8,"Medida",1)
-    pdf.cell(50,8,"Tintas",1,1)
-
-    pdf.set_font("Arial","",10)
-
-    for i in range(partes):
-
-        pdf.cell(20,8,str(i+1),1)
-        pdf.cell(50,8,str(datos.get("papel","")),1)
-        pdf.cell(30,8,str(datos.get("gramaje","")),1)
-        pdf.cell(40,8,str(datos.get("medida","")),1)
-        pdf.cell(50,8,str(datos.get("tintas","")),1,1)
-
-    pdf.ln(4)
-
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"OBSERVACIONES",1,1)
-
-    pdf.set_font("Arial","",10)
-    pdf.multi_cell(190,8,datos.get("obs",""),1)
-
-    return bytes(pdf.output(dest="S"))
+    return bytes(pdf.output())
 
 # --- DIALOG RADIOGRAFÍA ---
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
@@ -539,7 +476,7 @@ elif menu == "🔍 Seguimiento":
                     key=f"down_{row['op']}"
                 )    
 
-# --- MÓDULO 3: PLANIFICACIÓN 
+# --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
     
@@ -578,117 +515,53 @@ elif menu == "📅 Planificación":
     if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
     if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
 
-   if st.session_state.sel_tipo:
-    t = st.session_state.sel_tipo
-    prefijo = {
-        "FORMAS IMPRESAS": "FRI-",
-        "FORMAS BLANCAS": "FRB-",
-        "ROLLOS IMPRESOS": "RI-",
-        "ROLLOS BLANCOS": "RB-"
-    }.get(t, "")
+    if st.session_state.sel_tipo:
+        t = st.session_state.sel_tipo
+        prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-"}.get(t, "")
 
-    # SELECTORES DINÁMICOS (FUERA DEL FORM)
-    p1, p2, p3, p4 = st.columns(4)
+        with st.form("form_plan", clear_on_submit=True):
+            st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
+            
+            # --- SECCIÓN: DATOS GENERALES ---
+            f1, f2, f3 = st.columns(3)
+            op_input = f1.text_input("Número de Nueva OP (Solo número) *")
+            
+            # Si es repetición, sugerimos la OP anterior buscada
+            val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
+            op_a = f2.text_input("OP Anterior", value=val_op_ant)
+            
+            cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
+            
+            f4, f5 = st.columns(2)
+            vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
+            trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
 
-    t_perf = p1.selectbox(
-        "¿Tiene Perforaciones?",
-        ["NO", "SI"],
-        key="t_perf"
-    )
-
-    t_barr = p2.selectbox(
-        "¿Tiene Código de Barras?",
-        ["NO", "SI"],
-        key="t_barr"
-    )
-
-    t_num = p3.selectbox(
-        "¿Tiene Numeración?",
-        ["NO", "SI"],
-        key="t_num"
-    )
-
-    t_trans_f = p4.selectbox(
-        "¿Transportadora?",
-        ["NO", "SI"],
-        key="t_trans"
-    )
-
-    # FORMULARIO
-    with st.form("form_plan", clear_on_submit=True):
-
-        st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
-
-        # --- DATOS GENERALES ---
-        f1, f2, f3 = st.columns(3)
-
-        op_input = f1.text_input("Número de Nueva OP (Solo número) *")
-
-        val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
-        op_a = f2.text_input("OP Anterior", value=val_op_ant)
-
-        cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
-
-        f4, f5 = st.columns(2)
-
-        vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
-        trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
-
-        if "FORMAS" in t:
-
-            g1, g2, g3, g4 = st.columns(4)
-
-            cant_f = g1.number_input(
-                "Cantidad Formas",
-                0,
-                value=int(datos_rec.get('cantidad_formas', 0))
-            )
-
-            val_partes = int(datos_rec.get('num_partes', 1))
-            idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
-
-            partes = g2.selectbox(
-                "Número de Partes",
-                [1,2,3,4,5,6],
-                index=idx_partes
-            )
-
-            idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
-
-            pres = g3.selectbox(
-                "Presentación",
-                PRESENTACIONES,
-                index=idx_pres
-            )
-
-            pres_peg = g4.selectbox(
-                "Encolada o Grapada",
-                PRESENTACIONES2
-            )
-
-            # CAMPOS DINÁMICOS
-
-                if t_perf == "SI":
-                perf_d = st.text_area("Detalle Perforación")
-            else:
-                perf_d = "NO"
-
-                if t_barr == "SI":
-                barr_d = st.text_area("Detalle Barras")
-            else:
-                barr_d = "NO"
-
-                if t_num == "SI":
-                num_id = st.text_input("Desde")
-                num_fd = st.text_input("Hasta")
-            else:
-                num_id = "NO"
-                num_fd = "NO"
-
-                 if t_trans_f == "SI":
-                dest_f = st.text_area("Ciudad de destino")
-            else:
-                dest_f = "NO"
+            if "FORMAS" in t:
+                # --- SECCIÓN: ESPECIFICACIONES FORMAS ---
+                g1, g2, g3, g4 = st.columns(4)
+                cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
+                
+                # Manejo de índices para Selectbox (evita errores si el valor no existe)
+                val_partes = int(datos_rec.get('num_partes', 1))
+                idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
+                partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
+                
+                idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+                pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
+                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
+                
+                p1, p2, p3, p4, = st.columns(4)
+                t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO", "SI"], index=1 if datos_rec.get('perforaciones_detalle') != "NO" and datos_rec.get('perforaciones_detalle') else 0)
+                perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
+                
+                t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"], index=1 if datos_rec.get('codigo_barras_detalle') != "NO" and datos_rec.get('codigo_barras_detalle') else 0)
+                barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
+                
+                t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
+                num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
+                num_fd = p3.text_input("Hasta") if t_num == "SI" else "NO"
+                t_trans_f = p4.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
+                dest_f = p4.text_area("ciudad de destino", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
@@ -909,48 +782,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
