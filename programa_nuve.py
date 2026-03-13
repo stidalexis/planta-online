@@ -638,13 +638,27 @@ t_trans_f = p4.selectbox(
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
                 p1, p2, p3, p4, = st.columns(4)
-                perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
-                
-                barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
-                
-                num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
-                num_fd = p3.text_input("Hasta") if t_num == "SI" else "NO"
-                dest_f = p4.text_area("ciudad de destino", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
+                if t_perf == "SI":
+    perf_d = st.text_area("Detalle Perforación")
+else:
+    perf_d = "NO"
+
+if t_barr == "SI":
+    barr_d = st.text_area("Detalle Barras")
+else:
+    barr_d = "NO"
+
+if t_num == "SI":
+    num_id = st.text_input("Desde")
+    num_fd = st.text_input("Hasta")
+else:
+    num_id = "NO"
+    num_fd = "NO"
+
+if t_trans_f == "SI":
+    dest_f = st.text_area("Ciudad de destino")
+else:
+    dest_f = "NO""
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
