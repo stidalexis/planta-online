@@ -578,87 +578,117 @@ elif menu == "📅 Planificación":
     if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
     if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
 
-    if st.session_state.sel_tipo:
-        t = st.session_state.sel_tipo
-        prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-"}.get(t, "")
-        p1, p2, p3, p4 = st.columns(4)
+   if st.session_state.sel_tipo:
+    t = st.session_state.sel_tipo
+    prefijo = {
+        "FORMAS IMPRESAS": "FRI-",
+        "FORMAS BLANCAS": "FRB-",
+        "ROLLOS IMPRESOS": "RI-",
+        "ROLLOS BLANCOS": "RB-"
+    }.get(t, "")
 
-t_perf = p1.selectbox(
-    "¿Tiene Perforaciones?",
-    ["NO", "SI"],
-    key="t_perf"
-)
+    # SELECTORES DINÁMICOS (FUERA DEL FORM)
+    p1, p2, p3, p4 = st.columns(4)
 
-t_barr = p2.selectbox(
-    "¿Tiene Código de Barras?",
-    ["NO", "SI"],
-    key="t_barr"
-)
+    t_perf = p1.selectbox(
+        "¿Tiene Perforaciones?",
+        ["NO", "SI"],
+        key="t_perf"
+    )
 
-t_num = p3.selectbox(
-    "¿Tiene Numeración?",
-    ["NO", "SI"],
-    key="t_num"
-)
+    t_barr = p2.selectbox(
+        "¿Tiene Código de Barras?",
+        ["NO", "SI"],
+        key="t_barr"
+    )
 
-t_trans_f = p4.selectbox(
-    "¿Transportadora?",
-    ["NO", "SI"],
-    key="t_trans"
-)
-        with st.form("form_plan", clear_on_submit=True):
-            st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
-            
-            # --- SECCIÓN: DATOS GENERALES ---
-            f1, f2, f3 = st.columns(3)
-            op_input = f1.text_input("Número de Nueva OP (Solo número) *")
-            
-            # Si es repetición, sugerimos la OP anterior buscada
-            val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
-            op_a = f2.text_input("OP Anterior", value=val_op_ant)
-            
-            cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
-            
-            f4, f5 = st.columns(2)
-            vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
-            trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
+    t_num = p3.selectbox(
+        "¿Tiene Numeración?",
+        ["NO", "SI"],
+        key="t_num"
+    )
 
-            if "FORMAS" in t:
-                # --- SECCIÓN: ESPECIFICACIONES FORMAS ---
-                g1, g2, g3, g4 = st.columns(4)
-                cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
-                
-                # Manejo de índices para Selectbox (evita errores si el valor no existe)
-                val_partes = int(datos_rec.get('num_partes', 1))
-                idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
-                partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
-                
-                idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
-                pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
-                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
-                
-                p1, p2, p3, p4, = st.columns(4)
-                if t_perf == "SI":
-    perf_d = st.text_area("Detalle Perforación")
-else:
-    perf_d = "NO"
+    t_trans_f = p4.selectbox(
+        "¿Transportadora?",
+        ["NO", "SI"],
+        key="t_trans"
+    )
 
-if t_barr == "SI":
-    barr_d = st.text_area("Detalle Barras")
-else:
-    barr_d = "NO"
+    # FORMULARIO
+    with st.form("form_plan", clear_on_submit=True):
 
-if t_num == "SI":
-    num_id = st.text_input("Desde")
-    num_fd = st.text_input("Hasta")
-else:
-    num_id = "NO"
-    num_fd = "NO"
+        st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
 
-if t_trans_f == "SI":
-    dest_f = st.text_area("Ciudad de destino")
-else:
-    dest_f = "NO""
+        # --- DATOS GENERALES ---
+        f1, f2, f3 = st.columns(3)
+
+        op_input = f1.text_input("Número de Nueva OP (Solo número) *")
+
+        val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
+        op_a = f2.text_input("OP Anterior", value=val_op_ant)
+
+        cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
+
+        f4, f5 = st.columns(2)
+
+        vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
+        trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
+
+        if "FORMAS" in t:
+
+            g1, g2, g3, g4 = st.columns(4)
+
+            cant_f = g1.number_input(
+                "Cantidad Formas",
+                0,
+                value=int(datos_rec.get('cantidad_formas', 0))
+            )
+
+            val_partes = int(datos_rec.get('num_partes', 1))
+            idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
+
+            partes = g2.selectbox(
+                "Número de Partes",
+                [1,2,3,4,5,6],
+                index=idx_partes
+            )
+
+            idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+
+            pres = g3.selectbox(
+                "Presentación",
+                PRESENTACIONES,
+                index=idx_pres
+            )
+
+            pres_peg = g4.selectbox(
+                "Encolada o Grapada",
+                PRESENTACIONES2
+            )
+
+            # CAMPOS DINÁMICOS
+
+            if t_perf == "SI":
+                perf_d = st.text_area("Detalle Perforación")
+            else:
+                perf_d = "NO"
+
+            if t_barr == "SI":
+                barr_d = st.text_area("Detalle Barras")
+            else:
+                barr_d = "NO"
+
+            if t_num == "SI":
+                num_id = st.text_input("Desde")
+                num_fd = st.text_input("Hasta")
+            else:
+                num_id = "NO"
+                num_fd = "NO"
+
+            if t_trans_f == "SI":
+                dest_f = st.text_area("Ciudad de destino")
+            else:
+                dest_f = "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
