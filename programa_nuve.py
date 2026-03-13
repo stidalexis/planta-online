@@ -69,7 +69,7 @@ MAQUINAS = {
     "COLECTORAS": ["COL-01", "COL-02"],
     "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)]
 }
-PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS", "FORMACONTINUA"]
+PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS"]
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
 # --- FUNCIONES AUXILIARES ---
@@ -89,67 +89,12 @@ def to_excel_limpio(df_input, tipo=None):
     return output.getvalue()
 
 def generar_pdf_op(row):
-pdf.set_text_color(255,255,255)
-
-    pdf.set_font("Arial","B",22)
-    pdf.set_xy(0,8)
-    pdf.cell(210,10,"CERTIFICADO",0,1,"C")
-
-    pdf.set_font("Arial","",15)
-    pdf.set_xy(0,20)
-    pdf.cell(210,10,"DE PRODUCCION",0,1,"C")
+    pdf = FPDF()
+    pdf.add_page()
     
-    # ===== ENCABEZADO 40mm =====
-
-    # Azul principal
-    pdf.set_fill_color(0,82,155)
-    pdf.polygon([
-    (0,0),
-    (210,0),
-    (180,40),
-    (30,40)
-    ],'F')
-
-    # Azul oscuro diagonal derecha
-    pdf.set_fill_color(0,60,120)
-    pdf.polygon([
-    (130,0),
-    (210,0),
-    (210,40)
-    ],'F')
-
-    # Azul sombra inferior
-    pdf.set_fill_color(0,70,140)
-    pdf.polygon([
-    (80,40),
-    (210,20),
-    (210,40)
-    ],'F')
-
-    # Naranja izquierda
-    pdf.set_fill_color(255,102,0)
-    pdf.polygon([
-    (0,15),
-    (60,40),
-    (0,40)
-    ],'F')
-
-    # Naranja diagonal central
-    pdf.set_fill_color(255,140,40)
-    pdf.polygon([
-    (100,40),
-    (160,0),
-    (200,0),
-    (140,40)
-    ],'F')
-
-    # Naranja pequeño brillo
-    pdf.set_fill_color(255,170,80)
-    pdf.polygon([
-    (160,0),
-    (180,0),
-    (130,40)
-    ],'F')
+    # --- ENCABEZADO INDUSTRIAL ---
+    pdf.set_fill_color(13, 71, 161)
+    pdf.rect(0, 0, 210, 40, 'F')
 
     # LOGO
     pdf.image("logo_cb.png", 7, 5, 60)
