@@ -545,7 +545,7 @@ elif menu == "📅 Planificación":
         else:
             num_id = "NO"
             num_fd = "NO"
-     else:
+        else:
          barr_d = "NO"
          num_id = "NO"
          num_fd = "NO"
