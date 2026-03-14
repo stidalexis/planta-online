@@ -529,33 +529,33 @@ elif menu == "📅 Planificación":
  # -------- SOLO PARA FORMAS --------           
         if "FORMAS" in t:
 
-         t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
+            t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
 
-        if t_barr == "SI":
-            barr_d = p2.text_area("Detalle Barras", key="barr_det")
+            if t_barr == "SI":
+                barr_d = p2.text_area("Detalle Barras", key="barr_det")
+            else:
+                barr_d = "NO"
+
+
+            t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], key="num_select")
+
+            if t_num == "SI":
+                num_id = p3.text_input("Desde", key="num_desde")
+                num_fd = p3.text_input("Hasta", key="num_hasta")
+            else:
+                num_id = "NO"
+                num_fd = "NO"
         else:
             barr_d = "NO"
-
-
-        t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], key="num_select")
-
-        if t_num == "SI":
-            num_id = p3.text_input("Desde", key="num_desde")
-            num_fd = p3.text_input("Hasta", key="num_hasta")
-        else:
             num_id = "NO"
             num_fd = "NO"
-        else:
-         barr_d = "NO"
-         num_id = "NO"
-         num_fd = "NO"
 # -------- TRANSPORTADORA (TODOS) --------
         t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
 
         if t_trans_f == "SI":
-           dest_f = p4.text_area("Ciudad destino", key="dest_trans")
+            dest_f = p4.text_area("Ciudad destino", key="dest_trans")
         else:
-           dest_f = "NO"
+            dest_f = "NO"
 
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
