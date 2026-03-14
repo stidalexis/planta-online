@@ -622,25 +622,26 @@ elif menu == "📅 Planificación":
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
 
-                 campos_faltantes = []
+                campos_faltantes = []
 
-                 if not op_input:
+                if not op_input:
                     campos_faltantes.append("Número OP")
 
-                 if not cli:
+                if not cli:
                     campos_faltantes.append("Cliente")
 
-                 if not vend:
+                if not vend:
                     campos_faltantes.append("Vendedor")
 
-                 if not trab:
+                if not trab:
                     campos_faltantes.append("Nombre del Trabajo")
 
-                 if campos_faltantes:
-                   st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
-                   st.stop()
+                if campos_faltantes:
+                    st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
+                    st.stop()
 
-                 op_final = f"{prefijo}{op_input.upper()}"
+                op_final = f"{prefijo}{op_input.upper()}"
+
                 # DEFINIR AREA INICIAL SEGUN TIPO
                 if t == "FORMAS IMPRESAS":
                     ruta_inicial = "IMPRESIÓN"
@@ -653,22 +654,48 @@ elif menu == "📅 Planificación":
 
                 elif t == "ROLLOS BLANCOS":
                     ruta_inicial = "CORTE"
-                
+
                 payload = {
-                    "op": op_final, "op_anterior": op_a, "cliente": cli, 
-                    "vendedor": vend, "nombre_trabajo": trab, "tipo_orden": t, 
-                    "proxima_area": ruta_inicial, "historial_procesos": []
+                    "op": op_final,
+                    "op_anterior": op_a,
+                    "cliente": cli,
+                    "vendedor": vend,
+                    "nombre_trabajo": trab,
+                    "tipo_orden": t,
+                    "proxima_area": ruta_inicial,
+                    "historial_procesos": []
                 }
-                
+
                 if "FORMAS" in t:
-                    payload.update({"cantidad_formas": int(cant_f), "num_partes": partes, "perforaciones_detalle": perf_d, "codigo_barras_detalle": barr_d, "transportadora_formas": t_trans_f, "destino_formas": dest_f, "detalles_partes_json": lista_p, "presentacion": pres, "observaciones_formas": obs})
-                else:
-                    payload.update({"material": mat, "gramaje_rollos": gram, "cantidad_rollos": int(cant_r), "core": core, "tintas_frente_rollos": tf_r, "unidades_bolsa": int(ub), "unidades_caja": int(uc), "observaciones_rollos": obs})
-                
+                    payload.update({
+                        "cantidad_formas": int(cant_f),
+                        "num_partes": partes,
+                        "perforaciones_detalle": perf_d,
+                        "codigo_barras_detalle": barr_d,
+                        "transportadora_formas": t_trans_f,
+                        "destino_formas": dest_f,
+                        "detalles_partes_json": lista_p,
+                        "presentacion": pres,
+                        "observaciones_formas": obs
+                    })
+               else:
+                   payload.update({
+                        "material": mat,
+                        "gramaje_rollos": gram,
+                        "cantidad_rollos": int(cant_r),
+                        "core": core,
+                        "tintas_frente_rollos": tf_r,
+                        "unidades_bolsa": int(ub),
+                        "unidades_caja": int(uc),
+                        "observaciones_rollos": obs
+                    })
+
                 supabase.table("ordenes_planeadas").insert(payload).execute()
+
                 st.success(f"Orden {op_final} registrada.")
                 st.session_state.sel_tipo = None
-                time.sleep(1.5); 
+
+                time.sleep(1.5)
                 st.rerun()
 
 # --- MÓDULO 4: PRODUCCIÓN ---
