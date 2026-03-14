@@ -5,10 +5,8 @@ from datetime import datetime
 import time
 import io
 from fpdf import FPDF
-
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
-
 # --- CONEXIÓN A SUPABASE ---
 try:
     URL = st.secrets["SUPABASE_URL"]
@@ -17,8 +15,8 @@ try:
 except Exception as e:
     st.error("Error de conexión a Base de Datos. Revisa los Secrets.")
     st.stop()
-
 # --- ESTILOS CSS (DISEÑO INDUSTRIAL Y TÁCTIL) ---
+
 st.markdown("""
     <style>
     .stButton > button { height: 60px !important; border-radius: 12px; font-weight: bold; font-size: 18px !important; width: 100%; }
@@ -73,7 +71,6 @@ PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES"
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
 # --- FUNCIONES AUXILIARES ---
-
 def to_excel_limpio(df_input, tipo=None):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -87,16 +84,17 @@ def to_excel_limpio(df_input, tipo=None):
             if 'id' in df_unit.columns: df_unit = df_unit.drop(columns=['id'])
             df_unit.to_excel(writer, index=False, sheet_name='DETALLE_OP')
     return output.getvalue()
-
+    
+# --- PDF DE CERTIFICADO ---
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
     
-    # --- ENCABEZADO INDUSTRIAL ---
+# --- ENCABEZADO INDUSTRIAL PDF CERTIFICADO ---
     pdf.set_fill_color(13, 71, 161)
     pdf.rect(0, 0, 210, 40, 'F')
 
-    # LOGO
+# LOGO CYB PAPELES
     pdf.image("logo_cb.png", 7, 5, 60)
 
     pdf.set_text_color(255, 255, 255)
@@ -108,7 +106,7 @@ def generar_pdf_op(row):
     pdf.set_text_color(0, 0, 0)
     pdf.ln(0.5)
     
-    # --- SECCIÓN 1: DATOS DE VENTA ---
+# --- SECCIÓN 1: DATOS DE VENTA PDF---
     pdf.set_font("Arial", 'B', 10)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, " 1. INFORMACION GENERAL Y ORIGEN", ln=True, fill=True)
@@ -121,7 +119,7 @@ def generar_pdf_op(row):
     pdf.cell(0, 7, f"Fecha Creacion: {row.get('created_at', '')[:10]}", border='B', ln=True)
     pdf.ln(5)
 
-    # --- SECCIÓN 2: ESPECIFICACIONES ---
+# --- SECCIÓN 2: ESPECIFICACIONES PDF---
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, " 2. ESPECIFICACIONES TECNICAS", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
@@ -139,7 +137,7 @@ def generar_pdf_op(row):
 
     pdf.ln(5)
 
-    # --- SECCIÓN 3: BITÁCORA TÉCNICA (EL CAMBIO SOLICITADO) ---
+# --- SECCIÓN 3: BITÁCORA TÉCNICA  ---
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, " 3. TRAZABILIDAD Y REGISTROS DE PLANTA", ln=True, fill=True)
     
@@ -150,26 +148,26 @@ def generar_pdf_op(row):
     else:
         for h in historial:
             pdf.ln(2)
-            # Fila de Título de Área
+# Fila de Título de Área
             pdf.set_font("Arial", 'B', 10)
             pdf.set_fill_color(240, 245, 255)
             pdf.cell(0, 7, f" AREA: {h['area']} | MAQUINA: {h['maquina']}", ln=True, fill=True, border=1)
             
-            # Fila de Responsables
+# Fila de Responsables
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(65, 6, f"Operador: {h['operario']}", border='LR')
             pdf.cell(65, 6, f"Auxiliar: {h.get('auxiliar', 'N/A')}", border='R')
             pdf.cell(0, 6, f"Fecha: {h['fecha']}", border='R', ln=True)
             
-            # Fila de Tiempos
+# Fila de Tiempos
             pdf.cell(130, 6, f"Duracion del Proceso: {h['duracion']}", border='LRB')
             pdf.cell(0, 6, "", border='RB', ln=True)
 
-            # Datos Técnicos de Salida (JSON formateado)
+# Datos Técnicos de Salida (JSON formateado)
             pdf.set_font("Arial", '', 8)
             datos_c = h.get('datos_cierre', {})
 
-            # Datos Técnicos de Salida (tabla de 4 columnas)
+# Datos Técnicos de Salida (tabla de 4 columnas)
             datos_c = h.get('datos_cierre', {})
 
             if datos_c:
@@ -177,7 +175,7 @@ def generar_pdf_op(row):
                 pdf.set_font("Arial", 'B', 7)
                 pdf.set_fill_color(230,230,230)
 
-                # Encabezado tabla
+# Encabezado tabla
                 pdf.cell(45,6,"OBJETO",1,0,'C',True)
                 pdf.cell(45,6,"DATO",1,0,'C',True)
                 pdf.cell(45,6,"OBJETO",1,0,'C',True)
@@ -204,7 +202,7 @@ def generar_pdf_op(row):
                     pdf.cell(45,6,key2,1)
                     pdf.cell(45,6,str(v2),1,1)
             
-            # Observaciones
+# Observaciones
             if h.get('observaciones'):
                 pdf.set_font("Arial", 'I', 8)
                 pdf.multi_cell(0, 5, f"OBSERVACIONES: {h['observaciones']}", border=1)
