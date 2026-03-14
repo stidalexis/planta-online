@@ -621,6 +621,25 @@ elif menu == "📅 Planificación":
 
 
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
+
+                 campos_faltantes = []
+
+                 if not op_input:
+                    campos_faltantes.append("Número OP")
+
+                 if not cli:
+                    campos_faltantes.append("Cliente")
+
+                 if not vend:
+                    campos_faltantes.append("Vendedor")
+
+                 if not trab:
+                    campos_faltantes.append("Nombre del Trabajo")
+
+                 if campos_faltantes:
+                   st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
+                   st.stop()
+
                 op_final = f"{prefijo}{op_input.upper()}"
                 # DEFINIR AREA INICIAL SEGUN TIPO
                 if t == "FORMAS IMPRESAS":
@@ -649,7 +668,8 @@ elif menu == "📅 Planificación":
                 supabase.table("ordenes_planeadas").insert(payload).execute()
                 st.success(f"Orden {op_final} registrada.")
                 st.session_state.sel_tipo = None
-                time.sleep(1.5); st.rerun()
+                time.sleep(1.5); 
+                st.rerun()
 
 # --- MÓDULO 4: PRODUCCIÓN ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
