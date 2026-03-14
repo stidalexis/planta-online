@@ -518,6 +518,41 @@ elif menu == "📅 Planificación":
     if st.session_state.sel_tipo:
         t = st.session_state.sel_tipo
         prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-"}.get(t, "")
+        # -------- OPCIONES DINAMICAS --------
+p1, p2, p3, p4 = st.columns(4)
+
+t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
+
+if t_perf == "SI":
+    perf_d = p1.text_area("Detalle Perforación", key="perf_det")
+else:
+    perf_d = "NO"
+
+
+t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
+
+if t_barr == "SI":
+    barr_d = p2.text_area("Detalle Barras", key="barr_det")
+else:
+    barr_d = "NO"
+
+
+t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], key="num_select")
+
+if t_num == "SI":
+    num_id = p3.text_input("Desde", key="num_desde")
+    num_fd = p3.text_input("Hasta", key="num_hasta")
+else:
+    num_id = "NO"
+    num_fd = "NO"
+
+
+t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
+
+if t_trans_f == "SI":
+    dest_f = p4.text_area("Ciudad destino", key="dest_trans")
+else:
+    dest_f = "NO"
 
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
@@ -550,24 +585,6 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                p1, p2, p3, p4, = st.columns(4)
-                t_perf = p1.selectbox(
-                    "¿Tiene Perforaciones?",
-                    ["NO", "SI"],
-                    key="perforaciones_select",
-                    index=1 if datos_rec.get('perforaciones_detalle') not in ["", "NO"] else 0
-                )
-                perf_d = p1.text_area("Detalle Perforación", value=datos_rec.get('perforaciones_detalle', "")) if t_perf == "SI" else "NO"
-                
-                t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"], index=1 if datos_rec.get('codigo_barras_detalle') != "NO" and datos_rec.get('codigo_barras_detalle') else 0)
-                barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
-                
-                t_num = p3.selectbox(
-                    "¿Tiene Numeracion?",
-                    ["NO", "SI"],
-                    key="num_select"
-                )
-
                 if st.session_state.num_select == "SI":
                     num_id = p3.text_input("Desde", key="num_desde")
                     num_fd = p3.text_input("Hasta", key="num_hasta")
