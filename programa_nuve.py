@@ -216,10 +216,7 @@ def generar_pdf_op(row):
     
     return bytes(pdf.output())
 
-# ===============================
 # PDF ORDEN PRODUCCION ROLLOS
-# ===============================
-
 def generar_op_rollos(row):
 
     pdf = FPDF()
@@ -252,11 +249,7 @@ def generar_op_rollos(row):
 
     return bytes(pdf.output())
 
-
-# ===============================
 # PDF ORDEN PRODUCCION FORMAS
-# ===============================
-
 def generar_op_formas(row):
 
     pdf = FPDF()
@@ -357,7 +350,7 @@ def modal_detalle_op(row):
         st.info("No hay registros de producción todavía.")
     else:
         for h in hist:
-            # Diseño de tarjeta profesional para cada entrada del historial
+# Diseño de tarjeta profesional para cada entrada del historial
             with st.container():
                 st.markdown(f"""
                 <div class='historial-card'>
@@ -374,7 +367,7 @@ def modal_detalle_op(row):
                 </div>
                 """, unsafe_allow_html=True)
                 
-                # Mostrar datos de cierre en una tabla limpia en lugar de JSON
+# Mostrar datos de cierre en una tabla limpia en lugar de JSON
                 if h.get('datos_cierre'):
                     with st.expander("📊 Ver Datos Técnicos de Salida"):
                         df_datos = pd.DataFrame(list(h['datos_cierre'].items()), columns=['Parámetro', 'Valor'])
@@ -416,13 +409,13 @@ elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
     
-    # --- BUSCADOR ---
+# --- BUSCADOR ---
     buscar = st.text_input("🔎 Buscar por OP, Cliente o Nombre del Trabajo")
     
     if res:
         df = pd.DataFrame(res)
 
-        # FILTRO DE BUSQUEDA
+# FILTRO DE BUSQUEDA
         if buscar:
             buscar = buscar.upper()
             df = df[
@@ -454,11 +447,11 @@ elif menu == "🔍 Seguimiento":
             color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
 
-            # BOTON VER DETALLE
+# BOTON VER DETALLE
             if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
-            # BOTON ORDEN PDF
+# BOTON ORDEN PDF
             if r7.button("📄", key=f"pdf_{row['op']}"):
 
                 if "FORMAS" in row["tipo_orden"]:
@@ -478,13 +471,13 @@ elif menu == "🔍 Seguimiento":
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
     
-    # 1. Selector de Origen de la Orden
+# 1. Selector de Origen de la Orden
     st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
     origen = st.radio("¿Cómo desea ingresar la orden?", 
                       ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                       horizontal=True)
     
-    # Variable para almacenar datos recuperados
+# Variable para almacenar datos recuperados
     datos_rec = {}
     
     if "Repetición" in origen:
@@ -506,7 +499,7 @@ elif menu == "📅 Planificación":
 
     st.divider()
 
-    # . Selección de Tipo de Producto 
+# . Selección de Tipo de Producto 
     c1, c2, c3, c4 = st.columns(4)
     if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
     if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
@@ -587,7 +580,7 @@ elif menu == "📅 Planificación":
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
                 
-                # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
+# --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
                 rec_partes = datos_rec.get('detalles_partes_json', [])
                 
@@ -615,7 +608,8 @@ elif menu == "📅 Planificación":
                 
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
 
-            else: # --- SECCIÓN: ROLLOS ---
+            else: 
+###### --- SECCIÓN: ROLLOS ---
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
                 gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
@@ -643,7 +637,7 @@ elif menu == "📅 Planificación":
                 uc = r8.number_input("Unidades x Caja", 0, value=int(datos_rec.get('unidades_caja', 0)))
                 obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
 
-
+# --- ERROR SI TIENE CAMPOS SIN LLENAR ---
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
 
                 campos_faltantes = []
@@ -802,7 +796,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if op_name:
                     inicio_raw = r['hora_inicio']
 
-                    # Convertir correctamente venga como string o datetime
+# Convertir correctamente venga como string o datetime
                     if isinstance(inicio_raw, str):
                         inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
                     else:
@@ -811,12 +805,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
 
                     duracion = str(fin - inicio).split('.')[0]
-                    
+# --- DEFINICION D ERUTAS PARA LAS OP ---                    
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                     tipo = d_op['tipo_orden']
                     n_area = "FINALIZADO"
 
-                    # -------- FORMAS IMPRESAS --------
+# -------- FORMAS IMPRESAS --------
                     if tipo == "FORMAS IMPRESAS":
                         if area_act == "IMPRESIÓN":
                             n_area = "COLECTORAS"
@@ -825,7 +819,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         elif area_act == "ENCUADERNACIÓN":
                             n_area = "FINALIZADO"
 
-                    # -------- FORMAS BLANCAS --------
+# -------- FORMAS BLANCAS --------
                     elif tipo == "FORMAS BLANCAS":
                         if area_act == "IMPRESIÓN":
                             n_area = "COLECTORAS"
@@ -834,14 +828,14 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         elif area_act == "ENCUADERNACIÓN":
                             n_area = "FINALIZADO"
 
-                    # -------- ROLLOS IMPRESOS --------
+# -------- ROLLOS IMPRESOS --------
                     elif tipo == "ROLLOS IMPRESOS":
                         if area_act == "IMPRESIÓN":
                             n_area = "CORTE"
                         elif area_act == "CORTE":
                             n_area = "FINALIZADO"
 
-                    # -------- ROLLOS BLANCOS --------
+ # -------- ROLLOS BLANCOS --------
                     elif tipo == "ROLLOS BLANCOS":
                         if area_act == "CORTE":
                             n_area = "FINALIZADO"
