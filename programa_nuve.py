@@ -529,7 +529,7 @@ elif menu == "📅 Planificación":
  # -------- SOLO PARA FORMAS --------           
         if "FORMAS" in t:
 
-        t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
+         t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
 
         if t_barr == "SI":
             barr_d = p2.text_area("Detalle Barras", key="barr_det")
