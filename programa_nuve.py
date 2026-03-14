@@ -585,8 +585,6 @@ elif menu == "📅 Planificación":
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
-                t_trans_f = p4.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
-                dest_f = p4.text_area("ciudad de destino", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
                 # --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
                 lista_p = []
