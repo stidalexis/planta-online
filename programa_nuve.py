@@ -562,9 +562,18 @@ elif menu == "📅 Planificación":
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO", "SI"], index=1 if datos_rec.get('codigo_barras_detalle') != "NO" and datos_rec.get('codigo_barras_detalle') else 0)
                 barr_d = p2.text_area("Detalle Barras", value=datos_rec.get('codigo_barras_detalle', "")) if t_barr == "SI" else "NO"
                 
-                t_num = p3.selectbox("¿Tiene Numeracion?", ["NO", "SI"])
-                num_id = p3.text_input("Desde") if t_num == "SI" else "NO"
-                num_fd = p3.text_input("Hasta") if t_num == "SI" else "NO"
+                t_num = p3.selectbox(
+                    "¿Tiene Numeracion?",
+                    ["NO", "SI"],
+                    key="num_select"
+                )
+
+                if st.session_state.num_select == "SI":
+                    num_id = p3.text_input("Desde", key="num_desde")
+                    num_fd = p3.text_input("Hasta", key="num_hasta")
+                else:
+                    num_id = "NO"
+                    num_fd = "NO"
                 t_trans_f = p4.selectbox("¿Transportadora?", ["NO", "SI"], index=1 if datos_rec.get('transportadora_formas') == "SI" else 0)
                 dest_f = p4.text_area("ciudad de destino", value=datos_rec.get('destino_formas', "")) if t_trans_f == "SI" else "NO"
                 
