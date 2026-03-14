@@ -518,16 +518,16 @@ elif menu == "📅 Planificación":
     if st.session_state.sel_tipo:
         t = st.session_state.sel_tipo
         prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-"}.get(t, "")
-        # -------- OPCIONES DINAMICAS --------
         p1, p2, p3, p4 = st.columns(4)
-
+# -------- PERFORACIONES (TODOS) --------
         t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
 
         if t_perf == "SI":
             perf_d = p1.text_area("Detalle Perforación", key="perf_det")
         else:
             perf_d = "NO"
-
+ # -------- SOLO PARA FORMAS --------           
+        if "FORMAS" in t:
 
         t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
 
@@ -545,8 +545,11 @@ elif menu == "📅 Planificación":
         else:
             num_id = "NO"
             num_fd = "NO"
-
-
+     else:
+         barr_d = "NO"
+         num_id = "NO"
+         num_fd = "NO"
+# -------- TRANSPORTADORA (TODOS) --------
         t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
 
         if t_trans_f == "SI":
