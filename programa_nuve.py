@@ -640,7 +640,7 @@ elif menu == "📅 Planificación":
                    st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
                    st.stop()
 
-                op_final = f"{prefijo}{op_input.upper()}"
+                 op_final = f"{prefijo}{op_input.upper()}"
                 # DEFINIR AREA INICIAL SEGUN TIPO
                 if t == "FORMAS IMPRESAS":
                     ruta_inicial = "IMPRESIÓN"
