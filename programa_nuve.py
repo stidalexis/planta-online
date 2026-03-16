@@ -266,13 +266,19 @@ def generar_op_rollos(row):
 
     pdf.set_font("Arial","",10)
 
+    # FILA 1
+    pdf.cell(190,7,f"Nombre Trabajo: {row.get('nombre_trabajo','')}",1,1)
+
+    # FILA 2
     pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
-    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
-    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
+    # FILA 3
+    pdf.cell(95,7,f"Medida Comercial: {row.get('medida_comercial','')}",1)
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
 
-    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
+    # FILA 4
+    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
 # -----------------------
