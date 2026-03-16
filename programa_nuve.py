@@ -217,6 +217,80 @@ def generar_pdf_op(row):
     return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION ROLLOS
+def generar_op_rollos(row):
+
+    pdf = FPDF()
+    pdf.add_page()
+
+# --- ENCABEZADO ---
+    pdf.set_fill_color(13,71,161)
+    pdf.rect(0,0,210,35,'F')
+
+    pdf.image("logo_cb.png",8,6,55)
+
+    pdf.set_text_color(255,255,255)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,18,"ORDEN DE PRODUCCION",0,1,"C")
+
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+
+    pdf.set_text_color(0,0,0)
+    pdf.ln(6)
+
+# --- INFORMACION GENERAL ---
+    pdf.set_fill_color(230,230,230)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
+    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
+
+    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
+
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
+    pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
+
+# --- ESPECIFICACIONES ---
+    pdf.ln(4)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
+    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
+    pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
+
+    pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
+    pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
+
+    pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
+    pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+
+# --- OBSERVACIONES ---
+    pdf.ln(5)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"3. OBSERVACIONES",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+    pdf.multi_cell(0,7,row.get("observaciones_rollos",""))
+
+# --- PIE ---
+    pdf.ln(10)
+
+    pdf.set_font("Arial","I",7)
+    pdf.cell(0,10,f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+
+    return bytes(pdf.output())
+
+# PDF ORDEN PRODUCCION FORMAS
 def generar_op_formas(row):
 
     pdf = FPDF()
@@ -316,47 +390,6 @@ def generar_op_formas(row):
 
     pdf.set_font("Arial","I",7)
     pdf.cell(0,10,f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
-
-    return bytes(pdf.output())
-
-# PDF ORDEN PRODUCCION FORMAS
-def generar_op_formas(row):
-
-    pdf = FPDF()
-    pdf.add_page()
-
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,10,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
-
-    pdf.set_font("Arial","",10)
-
-    pdf.cell(90,8,f"OP: {row['op']}",1)
-    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
-
-    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
-    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
-
-    pdf.cell(90,8,f"Cantidad Formas: {row.get('cantidad_formas','')}",1)
-    pdf.cell(90,8,f"Partes: {row.get('num_partes','')}",1,1)
-
-    pdf.cell(180,8,"DATOS DE PAPEL",1,1,"C")
-
-    partes = row.get("detalles_partes_json",[])
-
-    for p in partes:
-
-        pdf.cell(30,8,f"Parte {p['p']}",1)
-        pdf.cell(30,8,p.get("anc",""),1)
-        pdf.cell(30,8,p.get("lar",""),1)
-        pdf.cell(30,8,p.get("papel",""),1)
-        pdf.cell(30,8,p.get("gramos",""),1)
-        pdf.cell(30,8,p.get("tf",""),1)
-        pdf.cell(30,8,p.get("tr",""),1,1)
-
-    pdf.ln(10)
-
-    pdf.cell(0,8,"Observaciones",0,1)
-    pdf.multi_cell(0,6,row.get("observaciones_formas",""))
 
     return bytes(pdf.output())
 
