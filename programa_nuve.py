@@ -274,7 +274,7 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
     # FILA 3
-    pdf.cell(95,7,f"Medida Comercial: {row.get('medida_comercial','')}",1)
+    pdf.cell(95,7,f"Medida Comercial: {row.get('ref_comercial','')}",1)
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
 
     # FILA 4
