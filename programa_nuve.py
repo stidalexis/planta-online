@@ -944,9 +944,9 @@ elif menu == "📅 Planificación":
                     })
                 else:
                     payload.update({
+                        "ref_comercial": ref_c,
                         "material": mat,
                         "gramaje_rollos": gram,
-                        "ref_comercial": ref_c,
                         "cantidad_rollos": int(cant_r),
                         "core": core,
                         "tintas_frente_rollos": tf_r,
