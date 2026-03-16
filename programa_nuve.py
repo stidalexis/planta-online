@@ -217,12 +217,18 @@ def generar_pdf_op(row):
     return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION ROLLOS
+from fpdf import FPDF
+from datetime import datetime
+
 def generar_op_rollos(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-# --- ENCABEZADO ---
+# -----------------------
+# ENCABEZADO
+# -----------------------
+
     pdf.set_fill_color(13,71,161)
     pdf.rect(0,0,210,35,'F')
 
@@ -236,9 +242,24 @@ def generar_op_rollos(row):
     pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
 
     pdf.set_text_color(0,0,0)
-    pdf.ln(6)
+    pdf.ln(4)
 
-# --- INFORMACION GENERAL ---
+# -----------------------
+# TIPO DE CREACION
+# -----------------------
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
+
+    pdf.set_font("Arial","",11)
+    pdf.cell(0,7,row.get("tipo_creacion","NUEVA"),0,1,"C")
+
+    pdf.ln(4)
+
+# -----------------------
+# 1 INFORMACION DE LA ORDEN
+# -----------------------
+
     pdf.set_fill_color(230,230,230)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
@@ -254,7 +275,10 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-# --- ESPECIFICACIONES ---
+# -----------------------
+# 2 ESPECIFICACIONES TECNICAS
+# -----------------------
+
     pdf.ln(4)
 
     pdf.set_font("Arial","B",11)
@@ -273,7 +297,10 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
     pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
 
-# --- OBSERVACIONES ---
+# -----------------------
+# 3 OBSERVACIONES
+# -----------------------
+
     pdf.ln(5)
 
     pdf.set_font("Arial","B",11)
@@ -282,7 +309,10 @@ def generar_op_rollos(row):
     pdf.set_font("Arial","",10)
     pdf.multi_cell(0,7,row.get("observaciones_rollos",""))
 
-# --- PIE ---
+# -----------------------
+# PIE
+# -----------------------
+
     pdf.ln(10)
 
     pdf.set_font("Arial","I",7)
@@ -291,12 +321,18 @@ def generar_op_rollos(row):
     return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION FORMAS
+from fpdf import FPDF
+from datetime import datetime
+
 def generar_op_formas(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-# --- ENCABEZADO ---
+# -----------------------
+# ENCABEZADO
+# -----------------------
+
     pdf.set_fill_color(13,71,161)
     pdf.rect(0,0,210,35,'F')
 
@@ -310,9 +346,24 @@ def generar_op_formas(row):
     pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
 
     pdf.set_text_color(0,0,0)
-    pdf.ln(6)
+    pdf.ln(4)
 
-# --- INFORMACION GENERAL ---
+# -----------------------
+# TIPO DE CREACION
+# -----------------------
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
+
+    pdf.set_font("Arial","",11)
+    pdf.cell(0,7,row.get("tipo_creacion","NUEVA"),0,1,"C")
+
+    pdf.ln(4)
+
+# -----------------------
+# 1 INFORMACION DE LA ORDEN
+# -----------------------
+
     pdf.set_fill_color(230,230,230)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
@@ -328,7 +379,10 @@ def generar_op_formas(row):
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-# --- ESPECIFICACIONES ---
+# -----------------------
+# 2 ESPECIFICACIONES GENERALES
+# -----------------------
+
     pdf.ln(4)
 
     pdf.set_font("Arial","B",11)
@@ -340,25 +394,40 @@ def generar_op_formas(row):
     pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
 
-    pdf.cell(63,7,f"Perforaciones: {row.get('perforaciones_detalle','')}",1)
-    pdf.cell(63,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
-    pdf.cell(64,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
+    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
     pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
 
-# --- TABLA DE PARTES ---
+# -----------------------
+# 3 PERFORACIONES
+# -----------------------
+
     pdf.ln(4)
 
     pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"3. DETALLE TECNICO POR PARTE",0,1,fill=True)
+    pdf.cell(0,8,"3. PERFORACIONES",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+    pdf.multi_cell(0,7,row.get("perforaciones_detalle","SIN PERFORACIONES"))
+
+# -----------------------
+# 4 DETALLE TECNICO POR PARTE
+# -----------------------
+
+    pdf.ln(4)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"4. DETALLE TECNICO POR PARTE",0,1,fill=True)
 
     pdf.set_font("Arial","B",9)
 
-    pdf.cell(15,7,"P",1)
-    pdf.cell(25,7,"Ancho",1)
-    pdf.cell(25,7,"Largo",1)
-    pdf.cell(35,7,"Papel",1)
-    pdf.cell(20,7,"Gramos",1)
+    pdf.cell(12,7,"P",1)
+    pdf.cell(18,7,"Ancho",1)
+    pdf.cell(18,7,"Largo",1)
+    pdf.cell(32,7,"Papel",1)
+    pdf.cell(15,7,"Gramos",1)
+    pdf.cell(20,7,"Trafico",1)
     pdf.cell(35,7,"Tintas F",1)
     pdf.cell(35,7,"Tintas R",1,1)
 
@@ -368,24 +437,31 @@ def generar_op_formas(row):
 
     for p in partes:
 
-        pdf.cell(15,7,str(p.get("p","")),1)
-        pdf.cell(25,7,str(p.get("anc","")),1)
-        pdf.cell(25,7,str(p.get("lar","")),1)
-        pdf.cell(35,7,str(p.get("papel","")),1)
-        pdf.cell(20,7,str(p.get("gramos","")),1)
+        pdf.cell(12,7,str(p.get("p","")),1)
+        pdf.cell(18,7,str(p.get("anc","")),1)
+        pdf.cell(18,7,str(p.get("lar","")),1)
+        pdf.cell(32,7,str(p.get("papel","")),1)
+        pdf.cell(15,7,str(p.get("gramos","")),1)
+        pdf.cell(20,7,str(p.get("trafico","")),1)
         pdf.cell(35,7,str(p.get("tf","")),1)
         pdf.cell(35,7,str(p.get("tr","")),1,1)
 
-# --- OBSERVACIONES ---
+# -----------------------
+# 5 OBSERVACIONES
+# -----------------------
+
     pdf.ln(5)
 
     pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"4. OBSERVACIONES",0,1,fill=True)
+    pdf.cell(0,8,"5. OBSERVACIONES",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
     pdf.multi_cell(0,7,row.get("observaciones_formas",""))
 
-# --- PIE ---
+# -----------------------
+# PIE
+# -----------------------
+
     pdf.ln(10)
 
     pdf.set_font("Arial","I",7)
