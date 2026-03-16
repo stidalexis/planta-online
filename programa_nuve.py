@@ -880,7 +880,7 @@ elif menu == "📅 Planificación":
  
             elif t == "REBOBINADO":
 
-                 r1, r2, r3 = st.columns(3)
+                r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base")
                 gram = r2.number_input("Gramaje", 0)
                 ancho = r3.number_input("Ancho Bobina", 0)
