@@ -324,14 +324,32 @@ def generar_op_rollos(row):
 from fpdf import FPDF
 from datetime import datetime
 
+# -----------------------------
+# FUNCION PARA AJUSTAR TEXTO
+# -----------------------------
+
+def cell_fit(pdf, w, h, text, border=1):
+
+    text = str(text)
+
+    while pdf.get_string_width(text) > (w - 2):
+        text = text[:-1]
+
+    pdf.cell(w, h, text, border)
+
+
+# -----------------------------
+# GENERAR PDF FORMAS
+# -----------------------------
+
 def generar_op_formas(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-# -----------------------
+# -----------------------------
 # ENCABEZADO
-# -----------------------
+# -----------------------------
 
     pdf.set_fill_color(13,71,161)
     pdf.rect(0,0,210,35,'F')
@@ -346,11 +364,12 @@ def generar_op_formas(row):
     pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
 
     pdf.set_text_color(0,0,0)
+
     pdf.ln(4)
 
-# -----------------------
+# -----------------------------
 # TIPO DE CREACION
-# -----------------------
+# -----------------------------
 
     pdf.set_font("Arial","B",11)
     pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
@@ -360,11 +379,12 @@ def generar_op_formas(row):
 
     pdf.ln(4)
 
-# -----------------------
+# -----------------------------
 # 1 INFORMACION DE LA ORDEN
-# -----------------------
+# -----------------------------
 
     pdf.set_fill_color(230,230,230)
+
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
 
@@ -379,9 +399,9 @@ def generar_op_formas(row):
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-# -----------------------
+# -----------------------------
 # 2 ESPECIFICACIONES GENERALES
-# -----------------------
+# -----------------------------
 
     pdf.ln(4)
 
@@ -399,9 +419,9 @@ def generar_op_formas(row):
 
     pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
 
-# -----------------------
+# -----------------------------
 # 3 PERFORACIONES
-# -----------------------
+# -----------------------------
 
     pdf.ln(4)
 
@@ -409,27 +429,39 @@ def generar_op_formas(row):
     pdf.cell(0,8,"3. PERFORACIONES",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
-    pdf.multi_cell(0,7,row.get("perforaciones_detalle","SIN PERFORACIONES"))
 
-# -----------------------
+    pdf.multi_cell(
+        0,
+        7,
+        row.get("perforaciones_detalle","SIN PERFORACIONES")
+    )
+
+# -----------------------------
 # 4 DETALLE TECNICO POR PARTE
-# -----------------------
+# -----------------------------
 
     pdf.ln(4)
 
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"4. DETALLE TECNICO POR PARTE",0,1,fill=True)
 
+# encabezado tabla
+
     pdf.set_font("Arial","B",9)
 
-    pdf.cell(12,7,"P",1)
-    pdf.cell(18,7,"Ancho",1)
-    pdf.cell(18,7,"Largo",1)
-    pdf.cell(32,7,"Papel",1)
-    pdf.cell(15,7,"Gramos",1)
-    pdf.cell(20,7,"Trafico",1)
-    pdf.cell(35,7,"Tintas F",1)
-    pdf.cell(35,7,"Tintas R",1,1)
+    pdf.set_fill_color(200,200,200)
+
+    pdf.cell(10,7,"P",1,0,"C",True)
+    pdf.cell(18,7,"ANCHO",1,0,"C",True)
+    pdf.cell(18,7,"LARGO",1,0,"C",True)
+    pdf.cell(28,7,"PAPEL",1,0,"C",True)
+    pdf.cell(28,7,"COLOR FONDO",1,0,"C",True)
+    pdf.cell(14,7,"GRAMOS",1,0,"C",True)
+    pdf.cell(26,7,"TINTA FRENTE",1,0,"C",True)
+    pdf.cell(26,7,"TINTA RESP",1,0,"C",True)
+    pdf.cell(22,7,"TRAFICO",1,1,"C",True)
+
+# filas tabla
 
     pdf.set_font("Arial","",9)
 
@@ -437,18 +469,21 @@ def generar_op_formas(row):
 
     for p in partes:
 
-        pdf.cell(12,7,str(p.get("p","")),1)
-        pdf.cell(18,7,str(p.get("anc","")),1)
-        pdf.cell(18,7,str(p.get("lar","")),1)
-        pdf.cell(32,7,str(p.get("papel","")),1)
-        pdf.cell(15,7,str(p.get("gramos","")),1)
-        pdf.cell(20,7,str(p.get("trafico","")),1)
-        pdf.cell(35,7,str(p.get("tf","")),1)
-        pdf.cell(35,7,str(p.get("tr","")),1,1)
+        cell_fit(pdf,10,7,p.get("p",""))
+        cell_fit(pdf,18,7,p.get("anc",""))
+        cell_fit(pdf,18,7,p.get("lar",""))
+        cell_fit(pdf,28,7,p.get("papel",""))
+        cell_fit(pdf,28,7,p.get("color_fondo",""))
+        cell_fit(pdf,14,7,p.get("gramos",""))
+        cell_fit(pdf,26,7,p.get("tf",""))
+        cell_fit(pdf,26,7,p.get("tr",""))
+        cell_fit(pdf,22,7,p.get("trafico",""))
 
-# -----------------------
+        pdf.ln()
+
+# -----------------------------
 # 5 OBSERVACIONES
-# -----------------------
+# -----------------------------
 
     pdf.ln(5)
 
@@ -456,16 +491,29 @@ def generar_op_formas(row):
     pdf.cell(0,8,"5. OBSERVACIONES",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
-    pdf.multi_cell(0,7,row.get("observaciones_formas",""))
 
-# -----------------------
+    pdf.multi_cell(
+        0,
+        7,
+        row.get("observaciones_formas","")
+    )
+
+# -----------------------------
 # PIE
-# -----------------------
+# -----------------------------
 
     pdf.ln(10)
 
     pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+
+    pdf.cell(
+        0,
+        10,
+        f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        0,
+        1,
+        "C"
+    )
 
     return bytes(pdf.output())
 
