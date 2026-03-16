@@ -762,11 +762,17 @@ elif menu == "📅 Planificación":
     if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
     if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
     if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
-    if c5.button("@ REBOBINADO"): st.session_state.sel_tipo = "REBOBINADO"
+    if c5.button("🌀 REBOBINADO"): st.session_state.sel_tipo = "REBOBINADO"
     
     if st.session_state.sel_tipo:
         t = st.session_state.sel_tipo
-        prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-"}.get(t, "")
+        prefijo = {
+            "FORMAS IMPRESAS": "FRI-",
+            "FORMAS BLANCAS": "FRB-",
+            "ROLLOS IMPRESOS": "RI-",
+            "ROLLOS BLANCOS": "RB-",
+            "REBOBINADO": "REB-"
+        }.get(t, "")
         p1, p2, p3, p4 = st.columns(4)
 # -------- PERFORACIONES (TODOS) --------
         t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
@@ -985,6 +991,18 @@ elif menu == "📅 Planificación":
                         "presentacion": pres,
                         "observaciones_formas": obs
                     })
+                elif t == "REBOBINADO":
+                    payload.update({
+                        "material": mat,
+                        "gramaje_rollos": gram,
+                        "ancho_bobina": ancho,
+                        "diametro_inicial": diam_ini,
+                        "diametro_final": diam_fin,
+                        "cantidad_rollos": int(cant_r),
+                        "core": core,
+                        "tipo_rebobinado": tipo_reb,
+                        "observaciones_rebobinado": obs
+                 })
                 else:
                     payload.update({
                         "ref_comercial": ref_c,
@@ -998,19 +1016,7 @@ elif menu == "📅 Planificación":
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs
                     })
-                elif t == "REBOBINADO":
-                    payload.update({
-                        "material": mat,
-                        "gramaje_rollos": gram,
-                        "ancho_bobina": ancho,
-                        "diametro_inicial": diam_ini,
-                        "diametro_final": diam_fin,
-                        "cantidad_rollos": int(cant_r),
-                        "core": core,
-                        "tipo_rebobinado": tipo_reb,
-                        "observaciones_rebobinado": obs
-                 })
-
+                
                 supabase.table("ordenes_planeadas").insert(payload).execute()
 
                 st.success(f"Orden {op_final} registrada.")
