@@ -879,7 +879,7 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
 
             else: 
-                elif t == "REBOBINADO":
+                 elif t == "REBOBINADO":
 
                     r1, r2, r3 = st.columns(3)
                     mat = r1.text_input("Material Base")
