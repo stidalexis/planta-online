@@ -277,8 +277,13 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
 # MEDIDA COMERCIAL - OP ANTERIOR
-    pdf.cell(95,7,f"Medida Comercial: {row.get('ref_comercial','')}",1)
+    # REFERENCIA COMERCIAL
+    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
+
+# PERFORACIONES
+    pdf.cell(95,7,f"Perforaciones: {row.get('perforaciones_detalle','')}",1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
 # TIPO ORDEN - FECHA
     pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1)
