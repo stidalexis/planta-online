@@ -879,23 +879,23 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
 
             else: 
-                elif t == "REBOBINADO":
+            elif t == "REBOBINADO":
 
-                    r1, r2, r3 = st.columns(3)
-                    mat = r1.text_input("Material Base")
-                    gram = r2.number_input("Gramaje", 0)
-                    ancho = r3.number_input("Ancho Bobina", 0)
+                 r1, r2, r3 = st.columns(3)
+                mat = r1.text_input("Material Base")
+                gram = r2.number_input("Gramaje", 0)
+                ancho = r3.number_input("Ancho Bobina", 0)
 
-                    r4, r5, r6 = st.columns(3)
-                    diam_ini = r4.number_input("Diámetro Inicial", 0)
-                    diam_fin = r5.number_input("Diámetro Final", 0)
-                    cant_r = r6.number_input("Cantidad Rollos", 0)
+                r4, r5, r6 = st.columns(3)
+                diam_ini = r4.number_input("Diámetro Inicial", 0)
+                diam_fin = r5.number_input("Diámetro Final", 0)
+                cant_r = r6.number_input("Cantidad Rollos", 0)
 
-                    r7, r8 = st.columns(2)
-                    core = r7.text_input("Tipo Core")
-                    tipo_reb = r8.text_input("Tipo Rebobinado")
+                r7, r8 = st.columns(2)
+                core = r7.text_input("Tipo Core")
+                tipo_reb = r8.text_input("Tipo Rebobinado")
 
-                    obs = st.text_area("Observaciones Rebobinado")
+                obs = st.text_area("Observaciones Rebobinado")
 ###### --- SECCIÓN: ROLLOS ---
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
