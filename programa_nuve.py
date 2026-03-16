@@ -825,13 +825,25 @@ elif menu == "📅 Planificación":
                     tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
                     
                     tf, tr = "N/A", "N/A"
+                    obe = ""
                     if t == "FORMAS IMPRESAS":
                         t1, t2, t3 = st.columns(3)
                         tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', ""))
                         tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', ""))
                         obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}", value=p_data.get('obs_parte',""))
                     
-                    lista_p.append({"p":i, "anc":anc, "lar":lar, "papel":pap, "color_fondo": fon, "gramos":gra, "tf":tf, "tr":tr, "trafico": tra, "obs_parte": obe})
+                    lista_p.append({
+                        "p": i,
+                        "anc": anc,
+                        "lar": lar,
+                        "papel": pap,
+                        "color_fondo": fon,
+                        "gramos": gra,
+                        "tf": tf,
+                        "tr": tr,
+                        "trafico": tra,
+                        "obs_parte": obe
+                    })
                 
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
 
@@ -930,6 +942,7 @@ elif menu == "📅 Planificación":
                         "cantidad_rollos": int(cant_r),
                         "core": core,
                         "tintas_frente_rollos": tf_r,
+                        "tintas_respaldo_rollos": tr_r,
                         "unidades_bolsa": int(ub),
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs
