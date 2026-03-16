@@ -887,20 +887,20 @@ elif menu == "📅 Planificación":
             elif t == "REBOBINADO":
 
                 r1, r2, r3 = st.columns(3)
-                mat = r1.text_input("Material Base")
-                gram = r2.number_input("Gramaje", 0)
-                ancho = r3.number_input("Ancho Bobina", 0)
+                mat = r1.text_input("Material Base", key="reb_mat")
+                gram = r2.number_input("Gramaje", 0, key="reb_gram")
+                ancho = r3.number_input("Ancho Bobina", 0, key="reb_ancho")
 
                 r4, r5, r6 = st.columns(3)
-                diam_ini = r4.number_input("Diámetro Inicial", 0)
-                diam_fin = r5.number_input("Diámetro Final", 0)
-                cant_r = r6.number_input("Cantidad Rollos", 0)
+                diam_ini = r4.number_input("Diámetro Inicial", 0, key="reb_dini")
+                diam_fin = r5.number_input("Diámetro Final", 0, key="reb_dfin")
+                cant_r = r6.number_input("Cantidad Rollos", 0, key="reb_cant")
 
                 r7, r8 = st.columns(2)
-                core = r7.text_input("Tipo Core")
-                tipo_reb = r8.text_input("Tipo Rebobinado")
+                core = r7.text_input("Tipo Core", key="reb_core")
+                tipo_reb = r8.text_input("Tipo Rebobinado", key="reb_tipo")
 
-                obs = st.text_area("Observaciones Rebobinado")
+                obs = st.text_area("Observaciones Rebobinado", key="reb_obs")
 ###### --- SECCIÓN: ROLLOS ---
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
@@ -929,6 +929,7 @@ elif menu == "📅 Planificación":
 
 # --- ERROR SI TIENE CAMPOS SIN LLENAR ---
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
+                        submit = st.form_submit_button("💾 GUARDAR ORDEN")
 
                 campos_faltantes = []
 
