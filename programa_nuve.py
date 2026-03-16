@@ -280,11 +280,8 @@ def generar_op_rollos(row):
     # FILA 4
     pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
-
-# -----------------------
-# 2 ESPECIFICACIONES TECNICAS
-# -----------------------
-
+    
+    # 2 ESPECIFICACIONES TECNICAs
     pdf.ln(4)
 
     pdf.set_font("Arial","B",11)
