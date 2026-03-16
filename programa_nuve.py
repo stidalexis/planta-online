@@ -931,7 +931,7 @@ elif menu == "📅 Planificación":
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
                         submit = st.form_submit_button("💾 GUARDAR ORDEN")
 
-                campos_faltantes = []
+                    campos_faltantes = []
 
                 if not op_input:
                     campos_faltantes.append("Número OP")
