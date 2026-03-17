@@ -425,7 +425,7 @@ def generar_op_formas(row):
     pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
 
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
-    pdf.cell(95,7,f"Fecha: {datetime.fromisoformat(row.get('created_at')).strftime('%d/%m/%Y')}",
+    pdf.cell(95, 7, f"Fecha: {datetime.fromisoformat(row.get('created_at')).strftime('%d/%m/%Y')}", 1, 1)
     # -----------------------------
     # NUMERACION
     # -----------------------------
