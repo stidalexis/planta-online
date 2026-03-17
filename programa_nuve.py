@@ -300,12 +300,25 @@ def generar_op_rollos(row):
     pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
-
 # MATERIAL - GRAMAJE
-    pdf.cell(95,7,f"Material: {row.get('material','')}",1)
-    pdf.cell(95,7,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
 
-# CANTIDAD ROLLOS - CORE
+    if row.get("tipo_orden") == "REBOBINADO":
+
+        pdf.cell(95,7,f"Ancho Bobina: {row.get('ancho_bobina','')}",1)
+        pdf.cell(95,7,f"Tipo Rebobinado: {row.get('tipo_rebobinado','')}",1,1)
+
+        pdf.cell(95,7,f"Diametro Inicial: {row.get('diametro_inicial','')}",1)
+        pdf.cell(95,7,f"Diametro Final: {row.get('diametro_final','')}",1,1)
+
+        pdf.cell(95,7,f"Material: {row.get('material','')}",1)
+        pdf.cell(95,7,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
+
+    else:
+
+        pdf.cell(95,7,f"Material: {row.get('material','')}",1)
+        pdf.cell(95,7,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
+
+# CANTIDAD ROLLOS
     pdf.cell(95,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
     pdf.cell(95,7,f"Core: {row.get('core','')}",1,1)
 
@@ -331,7 +344,7 @@ def generar_op_rollos(row):
     pdf.multi_cell(
         0,
         7,
-        row.get("observaciones_rollos","")
+        row.get("observaciones_rebobinado","")
     )
 
 # --------------------------------
@@ -412,7 +425,7 @@ def generar_op_formas(row):
     pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
 
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
-    pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
+    pdf.cell(95,7,f"Fecha: {datetime.fromisoformat(row.get('created_at')).strftime('%d/%m/%Y')}",
     # -----------------------------
     # NUMERACION
     # -----------------------------
@@ -736,6 +749,9 @@ elif menu == "📅 Planificación":
     
 # Variable para almacenar datos recuperados
     datos_rec = {}
+
+#  PROTECCIÓN
+    datos_rec = datos_rec or {}
     
     if "Repetición" in origen:
         col_busq1, col_busq2 = st.columns([3, 1])
@@ -887,20 +903,20 @@ elif menu == "📅 Planificación":
             elif t == "REBOBINADO":
 
                 r1, r2, r3 = st.columns(3)
-                mat = r1.text_input("Material Base", key="reb_mat")
-                gram = r2.number_input("Gramaje", 0, key="reb_gram")
-                ancho = r3.number_input("Ancho Bobina", 0, key="reb_ancho")
+                mat = r1.text_input("Material Base", value=datos_rec.get('material', ""), key="reb_mat")
+                gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)), key="reb_gram")
+                ancho = r3.number_input("Ancho Bobina", 0, value=int(datos_rec.get('ancho_bobina', 0)),key="reb_ancho")
 
                 r4, r5, r6 = st.columns(3)
-                diam_ini = r4.number_input("Diámetro Inicial", 0, key="reb_dini")
-                diam_fin = r5.number_input("Diámetro Final", 0, key="reb_dfin")
-                cant_r = r6.number_input("Cantidad Rollos", 0, key="reb_cant")
+                diam_ini = r4.number_input("Diámetro Inicial", 0, value=int(datos_rec.get('diametro_inicial', 0)),key="reb_dini")
+                diam_fin = r5.number_input("Diámetro Final", 0, value=int(datos_rec.get('diametro_final', 0)),key="reb_dfin")
+                cant_r = r6.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)),key="reb_cant")
 
                 r7, r8 = st.columns(2)
-                core = r7.text_input("Tipo Core", key="reb_core")
-                tipo_reb = r8.text_input("Tipo Rebobinado", key="reb_tipo")
+                core = r5.selectbox("Tipo Core", value=datos_rec.get('core', ""),key="reb_core")
+                tipo_reb = r8.text_input("Tipo Rebobinado", value=datos_rec.get('tipo_rebobinado', ""),key="reb_tipo")
 
-                obs = st.text_area("Observaciones Rebobinado", key="reb_obs")
+                obs = st.text_area("Observaciones Rebobinado", value=datos_rec.get('observaciones_rebobinado', ""),key="reb_obs")
             else:
    
                 
@@ -914,7 +930,7 @@ elif menu == "📅 Planificación":
                 cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
                 
                 cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"]
-                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0 if datos_rec.get('core') in cores else 0
+                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
                 
                 
@@ -954,6 +970,16 @@ elif menu == "📅 Planificación":
                     st.stop()
 
                 op_final = f"{prefijo}{op_input.upper()}"
+
+                # 🚨 VALIDACIÓN DE DUPLICADO (AQUÍ VA)
+                existe = supabase.table("ordenes_planeadas")\
+                    .select("op")\
+                    .eq("op", op_final)\
+                    .execute()
+
+                if existe.data:
+                     st.error(f"⚠️ La OP {op_final} ya existe")
+                     st.stop()
 
                 # DEFINIR AREA INICIAL SEGUN TIPO
                 if t == "FORMAS IMPRESAS":
@@ -1166,6 +1192,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             n_area = "REBOBINADORAS"
                         elif area_act == "REBOBINADORAS":
                             n_area = "FINALIZADO"
+ # -------- REBOBINADO --------
+                    elif tipo == "REBOBINADO":
+                        if area_act == "REBOBINADORAS":
+                            n_area = "FINALIZADO"   
                     
                     hist = d_op.get('historial_procesos') or []
                     hist.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod})
