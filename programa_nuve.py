@@ -1034,59 +1034,159 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                  
             obs_prod = st.text_area("Observaciones de producción / saldos ")
 
-            if st.form_submit_button("🏁 FINALIZAR Y MOVER"):
-                
-                if op_name:
-                    inicio_raw = r['hora_inicio']
+# 🔥 ENTREGA PARCIAL
+st.markdown("### 📦 ENTREGA PARCIAL (OPCIONAL)")
+cantidad_parcial = st.number_input("Cantidad parcial producida", 0)
+obs_parcial = st.text_input("Observación parcial")
 
-# Convertir correctamente venga como string o datetime
-                    if isinstance(inicio_raw, str):
-                        inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
-                    else:
-                        inicio = inicio_raw
+col_f1, col_f2 = st.columns(2)
 
-                    fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
+finalizar = col_f1.form_submit_button("🏁 FINALIZAR Y MOVER")
+parcial = col_f2.form_submit_button("📦 ENTREGA PARCIAL")
 
-                    duracion = str(fin - inicio).split('.')[0]
-# --- DEFINICION D ERUTAS PARA LAS OP ---                    
-                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                    tipo = d_op['tipo_orden']
-                    n_area = "FINALIZADO"
+# =========================================
+# 🏁 FINALIZAR (TU MISMA LOGICA)
+# =========================================
+if finalizar:
 
-# -------- FORMAS IMPRESAS --------
-                    if tipo == "FORMAS IMPRESAS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS":
-                            n_area = "ENCUADERNACIÓN"
-                        elif area_act == "ENCUADERNACIÓN":
-                            n_area = "FINALIZADO"
+    if op_name:
+        inicio_raw = r['hora_inicio']
 
-# -------- FORMAS BLANCAS --------
-                    elif tipo == "FORMAS BLANCAS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS":
-                            n_area = "ENCUADERNACIÓN"
-                        elif area_act == "ENCUADERNACIÓN":
-                            n_area = "FINALIZADO"
+        if isinstance(inicio_raw, str):
+            inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
+        else:
+            inicio = inicio_raw
 
-# -------- ROLLOS IMPRESOS --------
-                    elif tipo == "ROLLOS IMPRESOS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "CORTE"
-                        elif area_act == "CORTE":
-                            n_area = "FINALIZADO"
+        fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
 
- # -------- ROLLOS BLANCOS --------
-                    elif tipo == "ROLLOS BLANCOS":
-                        if area_act == "CORTE":
-                            n_area = "FINALIZADO"
-                    
-                    hist = d_op.get('historial_procesos') or []
-                    hist.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod})
-                    
-                    supabase.table("ordenes_planeadas").update({"proxima_area": n_area, "historial_procesos": hist}).eq("op", r['op']).execute()
-                    supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-                    st.session_state.rep = None
-                    st.rerun()
+        duracion = str(fin - inicio).split('.')[0]
+
+        # --- RUTAS ---
+        d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+        tipo = d_op['tipo_orden']
+        n_area = "FINALIZADO"
+
+        if tipo == "FORMAS IMPRESAS":
+            if area_act == "IMPRESIÓN":
+                n_area = "COLECTORAS"
+            elif area_act == "COLECTORAS":
+                n_area = "ENCUADERNACIÓN"
+            elif area_act == "ENCUADERNACIÓN":
+                n_area = "FINALIZADO"
+
+        elif tipo == "FORMAS BLANCAS":
+            if area_act == "IMPRESIÓN":
+                n_area = "COLECTORAS"
+            elif area_act == "COLECTORAS":
+                n_area = "ENCUADERNACIÓN"
+            elif area_act == "ENCUADERNACIÓN":
+                n_area = "FINALIZADO"
+
+        elif tipo == "ROLLOS IMPRESOS":
+            if area_act == "IMPRESIÓN":
+                n_area = "CORTE"
+            elif area_act == "CORTE":
+                n_area = "FINALIZADO"
+
+        elif tipo == "ROLLOS BLANCOS":
+            if area_act == "CORTE":
+                n_area = "FINALIZADO"
+
+        hist = d_op.get('historial_procesos') or []
+
+        hist.append({
+            "area": area_act,
+            "maquina": r['maquina'],
+            "operario": op_name,
+            "auxiliar": auxiliar,
+            "fecha": fin.strftime("%d/%m/%Y %H:%M"),
+            "duracion": duracion,
+            "tipo": "FINAL",
+            "datos_cierre": datos_c,
+            "observaciones": obs_prod
+        })
+
+        supabase.table("ordenes_planeadas").update({
+            "proxima_area": n_area,
+            "historial_procesos": hist
+        }).eq("op", r['op']).execute()
+
+        # 🔥 SOLO FINAL BORRA ACTIVO
+        supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+
+        st.session_state.rep = None
+        st.rerun()
+
+# =========================================
+# 📦 PARCIAL (NUEVO)
+# =========================================
+if parcial:
+
+    if not op_name:
+        st.error("Debes ingresar el operario")
+        st.stop()
+
+    if cantidad_parcial <= 0:
+        st.error("Debes ingresar cantidad parcial")
+        st.stop()
+
+    inicio_raw = r['hora_inicio']
+
+    if isinstance(inicio_raw, str):
+        inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
+    else:
+        inicio = inicio_raw
+
+    fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
+
+    duracion = str(fin - inicio).split('.')[0]
+
+    # --- RUTAS ---
+    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+    tipo = d_op['tipo_orden']
+    n_area = "FINALIZADO"
+
+    if tipo == "FORMAS IMPRESAS":
+        if area_act == "IMPRESIÓN":
+            n_area = "COLECTORAS"
+        elif area_act == "COLECTORAS":
+            n_area = "ENCUADERNACIÓN"
+
+    elif tipo == "FORMAS BLANCAS":
+        if area_act == "IMPRESIÓN":
+            n_area = "COLECTORAS"
+        elif area_act == "COLECTORAS":
+            n_area = "ENCUADERNACIÓN"
+
+    elif tipo == "ROLLOS IMPRESOS":
+        if area_act == "IMPRESIÓN":
+            n_area = "CORTE"
+
+    elif tipo == "ROLLOS BLANCOS":
+        if area_act == "CORTE":
+            n_area = "FINALIZADO"
+
+    hist = d_op.get('historial_procesos') or []
+
+    hist.append({
+        "area": area_act,
+        "maquina": r['maquina'],
+        "operario": op_name,
+        "auxiliar": auxiliar,
+        "fecha": fin.strftime("%d/%m/%Y %H:%M"),
+        "duracion": duracion,
+        "tipo": "PARCIAL",
+        "cantidad_parcial": cantidad_parcial,
+        "observaciones": obs_parcial
+    })
+
+    # 🔥 SOLO AVANZA, NO CIERRA
+    supabase.table("ordenes_planeadas").update({
+        "proxima_area": n_area,
+        "historial_procesos": hist
+    }).eq("op", r['op']).execute()
+
+    st.success("Entrega parcial registrada")
+
+    # 🔥 IMPORTANTE: NO BORRAR DE ACTIVOS
+    st.rerun()
