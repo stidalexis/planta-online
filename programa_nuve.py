@@ -65,8 +65,7 @@ MAQUINAS = {
     "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": [f"COR-{i:02d}" for i in range(1, 13)],
     "COLECTORAS": ["COL-01", "COL-02"],
-    "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)],
-    "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
+    "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)]
 }
 PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS"]
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
@@ -300,25 +299,12 @@ def generar_op_rollos(row):
     pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
+
 # MATERIAL - GRAMAJE
+    pdf.cell(95,7,f"Material: {row.get('material','')}",1)
+    pdf.cell(95,7,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
 
-    if row.get("tipo_orden") == "REBOBINADO":
-
-        pdf.cell(95,7,f"Ancho Bobina: {row.get('ancho_bobina','')}",1)
-        pdf.cell(95,7,f"Tipo Rebobinado: {row.get('tipo_rebobinado','')}",1,1)
-
-        pdf.cell(95,7,f"Diametro Inicial: {row.get('diametro_inicial','')}",1)
-        pdf.cell(95,7,f"Diametro Final: {row.get('diametro_final','')}",1,1)
-
-        pdf.cell(95,7,f"Material: {row.get('material','')}",1)
-        pdf.cell(95,7,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
-
-    else:
-
-        pdf.cell(95,7,f"Material: {row.get('material','')}",1)
-        pdf.cell(95,7,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
-
-# CANTIDAD ROLLOS
+# CANTIDAD ROLLOS - CORE
     pdf.cell(95,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
     pdf.cell(95,7,f"Core: {row.get('core','')}",1,1)
 
@@ -344,7 +330,7 @@ def generar_op_rollos(row):
     pdf.multi_cell(
         0,
         7,
-        row.get("observaciones_rebobinado","")
+        row.get("observaciones_rollos","")
     )
 
 # --------------------------------
@@ -425,7 +411,7 @@ def generar_op_formas(row):
     pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
 
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
-    pdf.cell(95, 7, f"Fecha: {datetime.fromisoformat(row.get('created_at')).strftime('%d/%m/%Y')}", 1, 1)
+    pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
     # -----------------------------
     # NUMERACION
     # -----------------------------
@@ -654,7 +640,7 @@ if 'rep' not in st.session_state: st.session_state.rep = None
 
 with st.sidebar:
     st.title("🏭 NUVE V31.0")
-    menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras",])
+    menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
     st.divider()
     st.caption("Conectado a Supabase Cloud")
 
@@ -749,9 +735,6 @@ elif menu == "📅 Planificación":
     
 # Variable para almacenar datos recuperados
     datos_rec = {}
-
-#  PROTECCIÓN
-    datos_rec = datos_rec or {}
     
     if "Repetición" in origen:
         col_busq1, col_busq2 = st.columns([3, 1])
@@ -773,22 +756,15 @@ elif menu == "📅 Planificación":
     st.divider()
 
 # . Selección de Tipo de Producto 
-    c1, c2, c3, c4, c5 = st.columns(5)
+    c1, c2, c3, c4 = st.columns(4)
     if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
     if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
     if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
     if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
-    if c5.button("🌀 REBOBINADO"): st.session_state.sel_tipo = "REBOBINADO"
-    
+
     if st.session_state.sel_tipo:
         t = st.session_state.sel_tipo
-        prefijo = {
-            "FORMAS IMPRESAS": "FRI-",
-            "FORMAS BLANCAS": "FRB-",
-            "ROLLOS IMPRESOS": "RI-",
-            "ROLLOS BLANCOS": "RB-",
-            "REBOBINADO": "REB-"
-        }.get(t, "")
+        prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-"}.get(t, "")
         p1, p2, p3, p4 = st.columns(4)
 # -------- PERFORACIONES (TODOS) --------
         t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
@@ -899,27 +875,8 @@ elif menu == "📅 Planificación":
                     })
                 
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
- 
-            elif t == "REBOBINADO":
 
-                r1, r2, r3 = st.columns(3)
-                mat = r1.text_input("Material Base", value=datos_rec.get('material', ""), key="reb_mat")
-                gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)), key="reb_gram")
-                ancho = r3.number_input("Ancho Bobina", 0, value=int(datos_rec.get('ancho_bobina', 0)),key="reb_ancho")
-
-                r4, r5, r6 = st.columns(3)
-                diam_ini = r4.number_input("Diámetro Inicial", 0, value=int(datos_rec.get('diametro_inicial', 0)),key="reb_dini")
-                diam_fin = r5.number_input("Diámetro Final", 0, value=int(datos_rec.get('diametro_final', 0)),key="reb_dfin")
-                cant_r = r6.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)),key="reb_cant")
-
-                r7, r8 = st.columns(2)
-                core = r5.selectbox("Tipo Core", value=datos_rec.get('core', ""),key="reb_core")
-                tipo_reb = r8.text_input("Tipo Rebobinado", value=datos_rec.get('tipo_rebobinado', ""),key="reb_tipo")
-
-                obs = st.text_area("Observaciones Rebobinado", value=datos_rec.get('observaciones_rebobinado', ""),key="reb_obs")
-            else:
-   
-                
+            else: 
 ###### --- SECCIÓN: ROLLOS ---
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
@@ -930,14 +887,11 @@ elif menu == "📅 Planificación":
                 cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
                 
                 cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"]
-                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
-                core = r7.selectbox(
-                    "Tipo Core",
-                    cores,
-                    index=idx_core,
-                    key="reb_core"
-                )
-                               
+                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0 if datos_rec.get('core') in cores else 0
+                core = r5.selectbox("Core / Centro", cores, index=idx_core)
+                
+                
+                                
                 tf_r, tr_r = "N/A", "N/A"
                 if t == "ROLLOS IMPRESOS":
                     ct1, ct2 = st.columns(2)
@@ -950,9 +904,7 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
 
 # --- ERROR SI TIENE CAMPOS SIN LLENAR ---
-            submit = st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN")
-
-            if submit:
+            if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
 
                 campos_faltantes = []
 
@@ -974,22 +926,9 @@ elif menu == "📅 Planificación":
 
                 op_final = f"{prefijo}{op_input.upper()}"
 
-                # 🚨 VALIDACIÓN DE DUPLICADO (AQUÍ VA)
-                existe = supabase.table("ordenes_planeadas")\
-                    .select("op")\
-                    .eq("op", op_final)\
-                    .execute()
-
-                if existe.data:
-                     st.error(f"⚠️ La OP {op_final} ya existe")
-                     st.stop()
-
                 # DEFINIR AREA INICIAL SEGUN TIPO
                 if t == "FORMAS IMPRESAS":
                     ruta_inicial = "IMPRESIÓN"
-                    
-                elif t == "REBOBINADO":
-                    ruta_inicial = "REBOBINADORAS"
 
                 elif t == "FORMAS BLANCAS":
                     ruta_inicial = "IMPRESIÓN"
@@ -1025,18 +964,6 @@ elif menu == "📅 Planificación":
                         "presentacion": pres,
                         "observaciones_formas": obs
                     })
-                elif t == "REBOBINADO":
-                    payload.update({
-                        "material": mat,
-                        "gramaje_rollos": gram,
-                        "ancho_bobina": ancho,
-                        "diametro_inicial": diam_ini,
-                        "diametro_final": diam_fin,
-                        "cantidad_rollos": int(cant_r),
-                        "core": core,
-                        "tipo_rebobinado": tipo_reb,
-                        "observaciones_rebobinado": obs
-                 })
                 else:
                     payload.update({
                         "ref_comercial": ref_c,
@@ -1050,7 +977,7 @@ elif menu == "📅 Planificación":
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs
                     })
-                
+
                 supabase.table("ordenes_planeadas").insert(payload).execute()
 
                 st.success(f"Orden {op_final} registrada.")
@@ -1060,8 +987,8 @@ elif menu == "📅 Planificación":
                 st.rerun()
 
 # --- MÓDULO 4: PRODUCCIÓN ---
-elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]:
-    area_act = "REBOBINADORAS" if "Rebobinadoras" in menu else menu.split(" ")[1].upper()
+elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
+    area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL DE PRODUCCIÓN: {area_act}</div>", unsafe_allow_html=True)
     
     activos_data = supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data
@@ -1131,15 +1058,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
                 datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
                 datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
-
-            elif area_act == "REBOBINADORAS":
-                c1, c2, c3 = st.columns(3)
-                datos_c['ancho_salida'] = c1.number_input("Ancho salida", 0)
-                datos_c['diametro_salida'] = c2.number_input("Diámetro salida", 0)
-                datos_c['metros_procesados'] = c3.number_input("Metros procesados", 0)
-                datos_c['rollos_finales'] = c1.number_input("Rollos finales", 0)
-                datos_c['desperdicio'] = c2.number_input("Desperdicio", 0)
-                datos_c['observacion_tecnica'] = c3.text_input("Observación técnica")
                  
             obs_prod = st.text_area("Observaciones de producción / saldos ")
 
@@ -1183,8 +1101,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 # -------- ROLLOS IMPRESOS --------
                     elif tipo == "ROLLOS IMPRESOS":
                         if area_act == "IMPRESIÓN":
-                            n_area = "REBOBINADORAS"
-                        elif area_act == "REBOBINADORAS":
                             n_area = "CORTE"
                         elif area_act == "CORTE":
                             n_area = "FINALIZADO"
@@ -1192,13 +1108,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
  # -------- ROLLOS BLANCOS --------
                     elif tipo == "ROLLOS BLANCOS":
                         if area_act == "CORTE":
-                            n_area = "REBOBINADORAS"
-                        elif area_act == "REBOBINADORAS":
                             n_area = "FINALIZADO"
- # -------- REBOBINADO --------
-                    elif tipo == "REBOBINADO":
-                        if area_act == "REBOBINADORAS":
-                            n_area = "FINALIZADO"   
                     
                     hist = d_op.get('historial_procesos') or []
                     hist.append({"area": area_act, "maquina": r['maquina'], "operario": op_name, "auxiliar": auxiliar, "fecha": fin.strftime("%d/%m/%Y %H:%M"), "duracion": duracion, "datos_cierre": datos_c, "observaciones": obs_prod})
@@ -1207,4 +1117,3 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
-
