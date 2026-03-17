@@ -949,7 +949,7 @@ elif menu == "📅 Planificación":
                         "observaciones_rollos": obs,
                          "ref_comercial": ref_c,
                          "transportadora_rollos": t_trans_f,
-                         "destino_rollos": dest_f,
+                         "ciudad_destino": dest_f,
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
@@ -1091,3 +1091,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
