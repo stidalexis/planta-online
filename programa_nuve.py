@@ -293,6 +293,10 @@ def generar_op_rollos(row):
     pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
     pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
     pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
+    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_rollos','')}",1,1)
+
+    pdf.cell(190,7,f"Destino: {row.get('destino_rollos','')}",1,1)
 
     pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
     pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
@@ -945,7 +949,10 @@ elif menu == "📅 Planificación":
                         "tintas_respaldo_rollos": tr_r,
                         "unidades_bolsa": int(ub),
                         "unidades_caja": int(uc),
-                        "observaciones_rollos": obs
+                        "observaciones_rollos": obs,
+                        "ref_comercial": ref_c,
+                        "transportadora_rollos": tra,
+                        "destino_rollos": c_tra
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
