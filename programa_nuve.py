@@ -225,9 +225,9 @@ def generar_op_rollos(row):
     pdf = FPDF()
     pdf.add_page()
 
-# --------------------------------
+# -----------------------
 # ENCABEZADO
-# --------------------------------
+# -----------------------
 
     pdf.set_fill_color(13,71,161)
     pdf.rect(0,0,210,35,'F')
@@ -235,20 +235,18 @@ def generar_op_rollos(row):
     pdf.image("logo_cb.png",8,6,55)
 
     pdf.set_text_color(255,255,255)
-
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION",0,1,"C")
 
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,5,f"OP: {row.get('op','')}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
 
     pdf.set_text_color(0,0,0)
-
     pdf.ln(4)
 
-# --------------------------------
+# -----------------------
 # TIPO DE CREACION
-# --------------------------------
+# -----------------------
 
     pdf.set_font("Arial","B",11)
     pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
@@ -258,35 +256,28 @@ def generar_op_rollos(row):
 
     pdf.ln(4)
 
-# --------------------------------
+# -----------------------
 # 1 INFORMACION DE LA ORDEN
-# --------------------------------
+# -----------------------
 
     pdf.set_fill_color(230,230,230)
-
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
 
-# NOMBRE TRABAJO
-    pdf.cell(190,7,f"Nombre Trabajo: {row.get('nombre_trabajo','')}",1,1)
-
-# CLIENTE - VENDEDOR
     pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
-# MEDIDA COMERCIAL - OP ANTERIOR
-    pdf.cell(95,7,f"Medida Comercial: {row.get('ref_comercial','')}",1)
-    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
+    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
 
-# TIPO ORDEN - FECHA
-    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1)
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-# --------------------------------
+# -----------------------
 # 2 ESPECIFICACIONES TECNICAS
-# --------------------------------
+# -----------------------
 
     pdf.ln(4)
 
@@ -295,57 +286,57 @@ def generar_op_rollos(row):
 
     pdf.set_font("Arial","",10)
 
-# MATERIAL - GRAMAJE
-    pdf.cell(95,7,f"Material: {row.get('material','')}",1)
-    pdf.cell(95,7,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
+    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
+    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
+    pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
 
-# CANTIDAD ROLLOS - CORE
-    pdf.cell(95,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(95,7,f"Core: {row.get('core','')}",1,1)
+    pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
+    pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
 
-# TINTAS
     pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
     pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
 
-# UNIDADES
-    pdf.cell(95,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
-    pdf.cell(95,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
-
-# --------------------------------
+# -----------------------
 # 3 OBSERVACIONES
-# --------------------------------
+# -----------------------
 
-    pdf.ln(4)
+    pdf.ln(5)
 
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"3. OBSERVACIONES",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
+    pdf.multi_cell(0,7,row.get("observaciones_rollos",""))
 
-    pdf.multi_cell(
-        0,
-        7,
-        row.get("observaciones_rollos","")
-    )
-
-# --------------------------------
+# -----------------------
 # PIE
-# --------------------------------
+# -----------------------
 
     pdf.ln(10)
 
     pdf.set_font("Arial","I",7)
-
-    pdf.cell(
-        0,
-        10,
-        f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",
-        0,
-        1,
-        "C"
-    )
+    pdf.cell(0,10,f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
     return bytes(pdf.output())
+
+# PDF ORDEN PRODUCCION FORMAS
+from fpdf import FPDF
+from datetime import datetime
+
+# -----------------------------
+# FUNCION PARA AJUSTAR TEXTO
+# -----------------------------
+
+def cell_fit(pdf, w, h, text, border=1):
+
+    text = str(text)
+
+    while pdf.get_string_width(text) > (w - 2):
+        text = text[:-1]
+
+    pdf.cell(w, h, text, border)
+
 
 # -----------------------------
 # GENERAR PDF FORMAS
@@ -829,30 +820,18 @@ elif menu == "📅 Planificación":
                     anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}", value=p_data.get('anc', ""))
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', ""))
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', ""))
-                    fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) 
+                    fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) # Campo nuevo detectado en tu código
                     gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', ""))
                     tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
                     
                     tf, tr = "N/A", "N/A"
-                    obe = ""
                     if t == "FORMAS IMPRESAS":
                         t1, t2, t3 = st.columns(3)
                         tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', ""))
                         tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', ""))
-                        obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}", value=p_data.get('obs_parte',""))
+                        obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}")
                     
-                    lista_p.append({
-                        "p": i,
-                        "anc": anc,
-                        "lar": lar,
-                        "papel": pap,
-                        "color_fondo": fon,
-                        "gramos": gra,
-                        "tf": tf,
-                        "tr": tr,
-                        "trafico": tra,
-                        "obs_parte": obe
-                    })
+                    lista_p.append({"p":i, "anc":anc, "lar":lar, "papel":pap, "gramos":gra, "tf":tf, "tr":tr})
                 
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
 
@@ -870,7 +849,9 @@ elif menu == "📅 Planificación":
                 idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0 if datos_rec.get('core') in cores else 0
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
                 
-                
+                tra_opt = ["NO", "SI"]
+                tra = r6.selectbox("¿Requiere Transportadora?", tra_opt, index=1 if datos_rec.get('ciudad de destino') != "NO" and datos_rec.get('ciudad de destino') else 0)
+                c_tra = st.text_input("Especifique Ciudad de Destino", value=datos_rec.get('ciudad de destino', "")) if tra == "SI" else "NO"
                                 
                 tf_r, tr_r = "N/A", "N/A"
                 if t == "ROLLOS IMPRESOS":
@@ -944,13 +925,11 @@ elif menu == "📅 Planificación":
                     })
                 else:
                     payload.update({
-                        "ref_comercial": ref_c,
                         "material": mat,
                         "gramaje_rollos": gram,
                         "cantidad_rollos": int(cant_r),
                         "core": core,
                         "tintas_frente_rollos": tf_r,
-                        "tintas_respaldo_rollos": tr_r,
                         "unidades_bolsa": int(ub),
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs
@@ -1095,4 +1074,5 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
 
