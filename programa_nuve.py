@@ -946,10 +946,10 @@ elif menu == "📅 Planificación":
                         "tintas_respaldo_rollos": tr_r,
                         "unidades_bolsa": int(ub),
                         "unidades_caja": int(uc),
-                        "observaciones_rollos": obs
-                        "ref_comercial": ref_c,
-                        "transportadora_rollos": tra,
-                        "destino_rollos": c_tra,
+                        "observaciones_rollos": obs,
+                         "ref_comercial": ref_c,
+                         "transportadora_rollos": tra,
+                         "destino_rollos": c_tra,
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
@@ -1091,4 +1091,3 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
-
