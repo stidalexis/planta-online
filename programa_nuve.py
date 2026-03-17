@@ -277,13 +277,8 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
 # MEDIDA COMERCIAL - OP ANTERIOR
-    # REFERENCIA COMERCIAL
-    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
+    pdf.cell(95,7,f"Medida Comercial: {row.get('ref_comercial','')}",1)
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
-
-# PERFORACIONES
-    pdf.cell(95,7,f"Perforaciones: {row.get('perforaciones_detalle','')}",1)
-    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
 # TIPO ORDEN - FECHA
     pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1)
@@ -412,19 +407,6 @@ def generar_op_formas(row):
 
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
-    # -----------------------------
-    # NUMERACION
-    # -----------------------------
-
-    pdf.ln(3)
-
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"NUMERACION",0,1,fill=True)
-
-    pdf.set_font("Arial","",10)
-
-    pdf.cell(95,7,f"Desde: {row.get('numeracion_desde','NO')}",1)
-    pdf.cell(95,7,f"Hasta: {row.get('numeracion_hasta','NO')}",1,1)
 
 # -----------------------------
 # 2 ESPECIFICACIONES GENERALES
@@ -441,12 +423,10 @@ def generar_op_formas(row):
     pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
 
-    pdf.cell(63,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
-    pdf.cell(63,7,f"Perforaciones: {row.get('perforaciones_detalle','')}",1)
-    pdf.cell(64,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
+    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
-    pdf.cell(95,7,f"Destino: {row.get('destino_formas','')}",1)
-    pdf.cell(95,7,f"Tipo Creacion: {row.get('tipo_creacion','NUEVA')}",1,1)
+    pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
 
 # -----------------------------
 # 3 PERFORACIONES
@@ -956,8 +936,6 @@ elif menu == "📅 Planificación":
                         "num_partes": partes,
                         "perforaciones_detalle": perf_d,
                         "codigo_barras_detalle": barr_d,
-                        "numeracion_desde": num_id,
-                        "numeracion_hasta": num_fd,
                         "transportadora_formas": t_trans_f,
                         "destino_formas": dest_f,
                         "detalles_partes_json": lista_p,
