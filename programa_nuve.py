@@ -901,6 +901,9 @@ elif menu == "📅 Planificación":
                 tipo_reb = r8.text_input("Tipo Rebobinado", key="reb_tipo")
 
                 obs = st.text_area("Observaciones Rebobinado", key="reb_obs")
+            else:
+   
+                
 ###### --- SECCIÓN: ROLLOS ---
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
@@ -928,10 +931,11 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
 
 # --- ERROR SI TIENE CAMPOS SIN LLENAR ---
-            if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
-                        submit = st.form_submit_button("💾 GUARDAR ORDEN")
+            submit = st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN")
 
-                    campos_faltantes = []
+            if submit:
+
+                campos_faltantes = []
 
                 if not op_input:
                     campos_faltantes.append("Número OP")
