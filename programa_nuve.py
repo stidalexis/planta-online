@@ -217,76 +217,303 @@ def generar_pdf_op(row):
     return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION ROLLOS
+from fpdf import FPDF
+from datetime import datetime
+
 def generar_op_rollos(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,10,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
+# -----------------------
+# ENCABEZADO
+# -----------------------
+
+    pdf.set_fill_color(13,71,161)
+    pdf.rect(0,0,210,35,'F')
+
+    pdf.image("logo_cb.png",8,6,55)
+
+    pdf.set_text_color(255,255,255)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,18,"ORDEN DE PRODUCCION",0,1,"C")
+
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+
+    pdf.set_text_color(0,0,0)
+    pdf.ln(4)
+
+# -----------------------
+# TIPO DE CREACION
+# -----------------------
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
+
+    pdf.set_font("Arial","",11)
+    pdf.cell(0,7,row.get("tipo_creacion","NUEVA"),0,1,"C")
+
+    pdf.ln(4)
+
+# -----------------------
+# 1 INFORMACION DE LA ORDEN
+# -----------------------
+
+    pdf.set_fill_color(230,230,230)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
 
-    pdf.cell(90,8,f"OP: {row['op']}",1)
-    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
+    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
+    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
-    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
-    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
+    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
 
-    pdf.cell(90,8,f"Material: {row.get('material','')}",1)
-    pdf.cell(90,8,f"Gramaje: {row.get('gramaje_rollos','')}",1,1)
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
+    pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-    pdf.cell(90,8,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(90,8,f"Core: {row.get('core','')}",1,1)
+# -----------------------
+# 2 ESPECIFICACIONES TECNICAS
+# -----------------------
 
-    pdf.cell(90,8,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
-    pdf.cell(90,8,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+    pdf.ln(4)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
+    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
+    pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
+
+    pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
+    pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
+
+    pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
+    pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+
+# -----------------------
+# 3 OBSERVACIONES
+# -----------------------
+
+    pdf.ln(5)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"3. OBSERVACIONES",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+    pdf.multi_cell(0,7,row.get("observaciones_rollos",""))
+
+# -----------------------
+# PIE
+# -----------------------
 
     pdf.ln(10)
 
-    pdf.cell(0,8,"Observaciones",0,1)
-    pdf.multi_cell(0,6,row.get("observaciones_rollos",""))
+    pdf.set_font("Arial","I",7)
+    pdf.cell(0,10,f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
     return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION FORMAS
+from fpdf import FPDF
+from datetime import datetime
+
+# -----------------------------
+# FUNCION PARA AJUSTAR TEXTO
+# -----------------------------
+
+def cell_fit(pdf, w, h, text, border=1):
+
+    text = str(text)
+
+    while pdf.get_string_width(text) > (w - 2):
+        text = text[:-1]
+
+    pdf.cell(w, h, text, border)
+
+
+# -----------------------------
+# GENERAR PDF FORMAS
+# -----------------------------
+
 def generar_op_formas(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-    pdf.set_font("Arial","B",14)
-    pdf.cell(0,10,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
+# -----------------------------
+# ENCABEZADO
+# -----------------------------
+
+    pdf.set_fill_color(13,71,161)
+    pdf.rect(0,0,210,35,'F')
+
+    pdf.image("logo_cb.png",8,6,55)
+
+    pdf.set_text_color(255,255,255)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,18,"ORDEN DE PRODUCCION",0,1,"C")
+
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+
+    pdf.set_text_color(0,0,0)
+
+    pdf.ln(4)
+
+# -----------------------------
+# TIPO DE CREACION
+# -----------------------------
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
+
+    pdf.set_font("Arial","",11)
+    pdf.cell(0,7,row.get("tipo_creacion","NUEVA"),0,1,"C")
+
+    pdf.ln(4)
+
+# -----------------------------
+# 1 INFORMACION DE LA ORDEN
+# -----------------------------
+
+    pdf.set_fill_color(230,230,230)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
 
-    pdf.cell(90,8,f"OP: {row['op']}",1)
-    pdf.cell(90,8,f"Fecha: {row['created_at'][:10]}",1,1)
+    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
+    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
-    pdf.cell(90,8,f"Cliente: {row['cliente']}",1)
-    pdf.cell(90,8,f"Vendedor: {row['vendedor']}",1,1)
+    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
 
-    pdf.cell(90,8,f"Cantidad Formas: {row.get('cantidad_formas','')}",1)
-    pdf.cell(90,8,f"Partes: {row.get('num_partes','')}",1,1)
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
+    pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-    pdf.cell(180,8,"DATOS DE PAPEL",1,1,"C")
+# -----------------------------
+# 2 ESPECIFICACIONES GENERALES
+# -----------------------------
+
+    pdf.ln(4)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"2. ESPECIFICACIONES GENERALES",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(63,7,f"Cantidad: {row.get('cantidad_formas','')}",1)
+    pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
+    pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
+
+    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
+
+    pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
+
+# -----------------------------
+# 3 PERFORACIONES
+# -----------------------------
+
+    pdf.ln(4)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"3. PERFORACIONES",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.multi_cell(
+        0,
+        7,
+        row.get("perforaciones_detalle","SIN PERFORACIONES")
+    )
+
+# -----------------------------
+# 4 DETALLE TECNICO POR PARTE
+# -----------------------------
+
+    pdf.ln(4)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"4. DETALLE TECNICO POR PARTE",0,1,fill=True)
+
+# encabezado tabla
+
+    pdf.set_font("Arial","B",9)
+
+    pdf.set_fill_color(200,200,200)
+
+    pdf.cell(10,7,"P",1,0,"C",True)
+    pdf.cell(18,7,"ANCHO",1,0,"C",True)
+    pdf.cell(18,7,"LARGO",1,0,"C",True)
+    pdf.cell(28,7,"PAPEL",1,0,"C",True)
+    pdf.cell(28,7,"COLOR FONDO",1,0,"C",True)
+    pdf.cell(14,7,"GRAMOS",1,0,"C",True)
+    pdf.cell(26,7,"TINTA FRENTE",1,0,"C",True)
+    pdf.cell(26,7,"TINTA RESP",1,0,"C",True)
+    pdf.cell(22,7,"TRAFICO",1,1,"C",True)
+
+# filas tabla
+
+    pdf.set_font("Arial","",9)
 
     partes = row.get("detalles_partes_json",[])
 
     for p in partes:
 
-        pdf.cell(30,8,f"Parte {p['p']}",1)
-        pdf.cell(30,8,p.get("anc",""),1)
-        pdf.cell(30,8,p.get("lar",""),1)
-        pdf.cell(30,8,p.get("papel",""),1)
-        pdf.cell(30,8,p.get("gramos",""),1)
-        pdf.cell(30,8,p.get("tf",""),1)
-        pdf.cell(30,8,p.get("tr",""),1,1)
+        cell_fit(pdf,10,7,p.get("p",""))
+        cell_fit(pdf,18,7,p.get("anc",""))
+        cell_fit(pdf,18,7,p.get("lar",""))
+        cell_fit(pdf,28,7,p.get("papel",""))
+        cell_fit(pdf,28,7,p.get("color_fondo",""))
+        cell_fit(pdf,14,7,p.get("gramos",""))
+        cell_fit(pdf,26,7,p.get("tf",""))
+        cell_fit(pdf,26,7,p.get("tr",""))
+        cell_fit(pdf,22,7,p.get("trafico",""))
+
+        pdf.ln()
+
+# -----------------------------
+# 5 OBSERVACIONES
+# -----------------------------
+
+    pdf.ln(5)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"5. OBSERVACIONES",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.multi_cell(
+        0,
+        7,
+        row.get("observaciones_formas","")
+    )
+
+# -----------------------------
+# PIE
+# -----------------------------
 
     pdf.ln(10)
 
-    pdf.cell(0,8,"Observaciones",0,1)
-    pdf.multi_cell(0,6,row.get("observaciones_formas",""))
+    pdf.set_font("Arial","I",7)
+
+    pdf.cell(
+        0,
+        10,
+        f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        0,
+        1,
+        "C"
+    )
 
     return bytes(pdf.output())
 
@@ -593,18 +820,30 @@ elif menu == "📅 Planificación":
                     anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}", value=p_data.get('anc', ""))
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', ""))
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', ""))
-                    fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) # Campo nuevo detectado en tu código
+                    fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) 
                     gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', ""))
                     tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
                     
                     tf, tr = "N/A", "N/A"
+                    obe = ""
                     if t == "FORMAS IMPRESAS":
                         t1, t2, t3 = st.columns(3)
                         tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', ""))
                         tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', ""))
-                        obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}")
+                        obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}", value=p_data.get('obs_parte',""))
                     
-                    lista_p.append({"p":i, "anc":anc, "lar":lar, "papel":pap, "gramos":gra, "tf":tf, "tr":tr})
+                    lista_p.append({
+                        "p": i,
+                        "anc": anc,
+                        "lar": lar,
+                        "papel": pap,
+                        "color_fondo": fon,
+                        "gramos": gra,
+                        "tf": tf,
+                        "tr": tr,
+                        "trafico": tra,
+                        "obs_parte": obe
+                    })
                 
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
 
@@ -703,6 +942,7 @@ elif menu == "📅 Planificación":
                         "cantidad_rollos": int(cant_r),
                         "core": core,
                         "tintas_frente_rollos": tf_r,
+                        "tintas_respaldo_rollos": tr_r,
                         "unidades_bolsa": int(ub),
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs
