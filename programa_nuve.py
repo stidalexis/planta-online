@@ -70,7 +70,7 @@ MAQUINAS = {
 PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS"]
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
-# --- FUNCIONES AUXILIARES ---
+# --- FUNCIONES AUXILIARES ---( no esta funcionando bien)
 def to_excel_limpio(df_input, tipo=None):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -85,16 +85,16 @@ def to_excel_limpio(df_input, tipo=None):
             df_unit.to_excel(writer, index=False, sheet_name='DETALLE_OP')
     return output.getvalue()
     
-# --- PDF DE CERTIFICADO ---
+# --- PDF DE CERTIFICADO PRODUCCION---
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
     
-# --- ENCABEZADO INDUSTRIAL PDF CERTIFICADO ---
+# --- ENCABEZADO  ---
     pdf.set_fill_color(13, 71, 161)
     pdf.rect(0, 0, 210, 40, 'F')
 
-# LOGO CYB PAPELES
+# LOGO CYB PAPELES Y UBICACION XYZ
     pdf.image("logo_cb.png", 7, 5, 60)
 
     pdf.set_text_color(255, 255, 255)
@@ -289,6 +289,10 @@ def generar_op_rollos(row):
     pdf.cell(63,7,f"Material: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
     pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
+    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_rollso','')}",1,1)
+
+    pdf.cell(190,7,f"Ciudad Destino: {row.get('destino_rollos','')}",1,1)
 
     pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
     pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
@@ -854,16 +858,13 @@ elif menu == "📅 Planificación":
                 gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
                 ref_c = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
                 
-                r4, r5, r6 = st.columns(3)
+                r4, r5, = st.columns(2)
                 cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
                 
                 cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"]
                 idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0 if datos_rec.get('core') in cores else 0
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
-                
-                tra_opt = ["NO", "SI"]
-                tra = r6.selectbox("¿Requiere Transportadora?", tra_opt, index=1 if datos_rec.get('ciudad de destino') != "NO" and datos_rec.get('ciudad de destino') else 0)
-                c_tra = st.text_input("Especifique Ciudad de Destino", value=datos_rec.get('ciudad de destino', "")) if tra == "SI" else "NO"
+            
                                 
                 tf_r, tr_r = "N/A", "N/A"
                 if t == "ROLLOS IMPRESOS":
@@ -899,7 +900,7 @@ elif menu == "📅 Planificación":
 
                 op_final = f"{prefijo}{op_input.upper()}"
 
-                # DEFINIR AREA INICIAL SEGUN TIPO
+# DEFINIR AREA INICIAL SEGUN TIPO
                 if t == "FORMAS IMPRESAS":
                     ruta_inicial = "IMPRESIÓN"
 
@@ -946,6 +947,9 @@ elif menu == "📅 Planificación":
                         "unidades_bolsa": int(ub),
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs
+                        "ref_comercial": ref_c,
+                        "transportadora_rollos": tra,
+                        "destino_rollos": c_tra,
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
