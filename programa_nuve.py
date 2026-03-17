@@ -480,15 +480,14 @@ def generar_op_formas(row):
 
     pdf.set_fill_color(200,200,200)
 
-    pdf.cell(10,7,"P",1,0,"C",True)
-    pdf.cell(18,7,"ANCHO",1,0,"C",True)
-    pdf.cell(18,7,"LARGO",1,0,"C",True)
-    pdf.cell(28,7,"PAPEL",1,0,"C",True)
-    pdf.cell(28,7,"COLOR FONDO",1,0,"C",True)
-    pdf.cell(14,7,"GRAMOS",1,0,"C",True)
-    pdf.cell(26,7,"TINTA FRENTE",1,0,"C",True)
-    pdf.cell(26,7,"TINTA RESP",1,0,"C",True)
-    pdf.cell(22,7,"TRAFICO",1,1,"C",True)
+    pdf.cell(18,7,str(p.get("anc","")),1)
+    pdf.cell(18,7,str(p.get("lar","")),1)
+    pdf.cell(28,7,str(p.get("papel","")),1)
+    pdf.cell(28,7,str(p.get("color_fondo","")),1)
+    pdf.cell(14,7,str(p.get("gramos","")),1)
+    pdf.cell(26,7,str(p.get("tf","")),1)
+    pdf.cell(26,7,str(p.get("tr","")),1)
+    pdf.cell(22,7,str(p.get("trafico","")),1)
 
 # filas tabla
 
@@ -498,16 +497,15 @@ def generar_op_formas(row):
 
     for p in partes:
 
-        cell_fit(pdf,10,7,p.get("p",""))
-        cell_fit(pdf,18,7,p.get("anc",""))
-        cell_fit(pdf,18,7,p.get("lar",""))
-        cell_fit(pdf,28,7,p.get("papel",""))
-        cell_fit(pdf,28,7,p.get("color_fondo",""))
-        cell_fit(pdf,14,7,p.get("gramos",""))
-        cell_fit(pdf,26,7,p.get("tf",""))
-        cell_fit(pdf,26,7,p.get("tr",""))
-        cell_fit(pdf,22,7,p.get("trafico",""))
-
+        pdf.cell(10,7,str(p.get("p","")),1)
+        pdf.cell(18,7,str(p.get("anc","")),1)
+        pdf.cell(18,7,str(p.get("lar","")),1)
+        pdf.cell(28,7,str(p.get("papel","")),1)
+        pdf.cell(28,7,str(p.get("color_fondo","")),1)
+        pdf.cell(14,7,str(p.get("gramos","")),1)
+        pdf.cell(26,7,str(p.get("tf","")),1)
+        pdf.cell(26,7,str(p.get("tr","")),1)
+        pdf.cell(22,7,str(p.get("trafico","")),1)
         pdf.ln()
 
 # -----------------------------
