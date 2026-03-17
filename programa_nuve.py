@@ -1191,5 +1191,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 st.success("Entrega parcial registrada")
 
+                # 🔥 LIBERAR MAQUINA (CLAVE)
+                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+
 # 🔥 IMPORTANTE: NO BORRAR DE ACTIVOS
                 st.rerun()
