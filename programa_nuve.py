@@ -165,7 +165,7 @@ def generar_pdf_op(row):
 
 # Datos Técnicos de Salida (JSON formateado)
             pdf.set_font("Arial", '', 8)
-            datos_c = h.get('datos_cierre', {})
+            datos_c = h.get('datos_cierre') or {}
 
 # Datos Técnicos de Salida (tabla de 4 columnas)
             datos_c = h.get('datos_cierre', {})
@@ -183,7 +183,7 @@ def generar_pdf_op(row):
 
                 pdf.set_font("Arial",'',8)
 
-                items = list(datos_c.items())
+                items = list(datos_c = h.get('datos_cierre') or {})
 
                 for i in range(0,len(items),2):
 
