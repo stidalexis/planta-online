@@ -165,7 +165,7 @@ def generar_pdf_op(row):
 
 # Datos Técnicos de Salida (JSON formateado)
             pdf.set_font("Arial", '', 8)
-            datos_c = h.get('datos_cierre') or {}
+            datos_c = h.get('datos_cierre', {})
 
 # Datos Técnicos de Salida (tabla de 4 columnas)
             datos_c = h.get('datos_cierre', {})
@@ -183,7 +183,7 @@ def generar_pdf_op(row):
 
                 pdf.set_font("Arial",'',8)
 
-                items = list(datos_c = h.get('datos_cierre') or {})
+                items = list(datos_c.items())
 
                 for i in range(0,len(items),2):
 
@@ -277,13 +277,8 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
 
 # MEDIDA COMERCIAL - OP ANTERIOR
-    # REFERENCIA COMERCIAL
-    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
+    pdf.cell(95,7,f"Medida Comercial: {row.get('ref_comercial','')}",1)
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
-
-# PERFORACIONES
-    pdf.cell(95,7,f"Perforaciones: {row.get('perforaciones_detalle','')}",1)
-    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
 # TIPO ORDEN - FECHA
     pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1)
@@ -412,19 +407,6 @@ def generar_op_formas(row):
 
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
-    # -----------------------------
-    # NUMERACION
-    # -----------------------------
-
-    pdf.ln(3)
-
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"NUMERACION",0,1,fill=True)
-
-    pdf.set_font("Arial","",10)
-
-    pdf.cell(95,7,f"Desde: {row.get('numeracion_desde','NO')}",1)
-    pdf.cell(95,7,f"Hasta: {row.get('numeracion_hasta','NO')}",1,1)
 
 # -----------------------------
 # 2 ESPECIFICACIONES GENERALES
@@ -441,12 +423,10 @@ def generar_op_formas(row):
     pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
 
-    pdf.cell(63,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
-    pdf.cell(63,7,f"Perforaciones: {row.get('perforaciones_detalle','')}",1)
-    pdf.cell(64,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
+    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
-    pdf.cell(95,7,f"Destino: {row.get('destino_formas','')}",1)
-    pdf.cell(95,7,f"Tipo Creacion: {row.get('tipo_creacion','NUEVA')}",1,1)
+    pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
 
 # -----------------------------
 # 3 PERFORACIONES
@@ -480,14 +460,15 @@ def generar_op_formas(row):
 
     pdf.set_fill_color(200,200,200)
 
-    pdf.cell(18,7,str(p.get("anc","")),1)
-    pdf.cell(18,7,str(p.get("lar","")),1)
-    pdf.cell(28,7,str(p.get("papel","")),1)
-    pdf.cell(28,7,str(p.get("color_fondo","")),1)
-    pdf.cell(14,7,str(p.get("gramos","")),1)
-    pdf.cell(26,7,str(p.get("tf","")),1)
-    pdf.cell(26,7,str(p.get("tr","")),1)
-    pdf.cell(22,7,str(p.get("trafico","")),1)
+    pdf.cell(10,7,"P",1,0,"C",True)
+    pdf.cell(18,7,"ANCHO",1,0,"C",True)
+    pdf.cell(18,7,"LARGO",1,0,"C",True)
+    pdf.cell(28,7,"PAPEL",1,0,"C",True)
+    pdf.cell(28,7,"COLOR FONDO",1,0,"C",True)
+    pdf.cell(14,7,"GRAMOS",1,0,"C",True)
+    pdf.cell(26,7,"TINTA FRENTE",1,0,"C",True)
+    pdf.cell(26,7,"TINTA RESP",1,0,"C",True)
+    pdf.cell(22,7,"TRAFICO",1,1,"C",True)
 
 # filas tabla
 
@@ -497,15 +478,16 @@ def generar_op_formas(row):
 
     for p in partes:
 
-        pdf.cell(10,7,str(p.get("p","")),1)
-        pdf.cell(18,7,str(p.get("anc","")),1)
-        pdf.cell(18,7,str(p.get("lar","")),1)
-        pdf.cell(28,7,str(p.get("papel","")),1)
-        pdf.cell(28,7,str(p.get("color_fondo","")),1)
-        pdf.cell(14,7,str(p.get("gramos","")),1)
-        pdf.cell(26,7,str(p.get("tf","")),1)
-        pdf.cell(26,7,str(p.get("tr","")),1)
-        pdf.cell(22,7,str(p.get("trafico","")),1)
+        cell_fit(pdf,10,7,p.get("p",""))
+        cell_fit(pdf,18,7,p.get("anc",""))
+        cell_fit(pdf,18,7,p.get("lar",""))
+        cell_fit(pdf,28,7,p.get("papel",""))
+        cell_fit(pdf,28,7,p.get("color_fondo",""))
+        cell_fit(pdf,14,7,p.get("gramos",""))
+        cell_fit(pdf,26,7,p.get("tf",""))
+        cell_fit(pdf,26,7,p.get("tr",""))
+        cell_fit(pdf,22,7,p.get("trafico",""))
+
         pdf.ln()
 
 # -----------------------------
@@ -954,8 +936,6 @@ elif menu == "📅 Planificación":
                         "num_partes": partes,
                         "perforaciones_detalle": perf_d,
                         "codigo_barras_detalle": barr_d,
-                        "numeracion_desde": num_id,
-                        "numeracion_hasta": num_fd,
                         "transportadora_formas": t_trans_f,
                         "destino_formas": dest_f,
                         "detalles_partes_json": lista_p,
@@ -1115,3 +1095,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
+
