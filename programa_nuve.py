@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from datetime import datetime
+from datetime import datetime, time, timedelta
 import time
 import io
 from fpdf import FPDF
@@ -71,6 +71,34 @@ PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES"
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
 # --- FUNCIONES AUXILIARES ---
+def calcular_tiempo_productivo(inicio, fin, horarios):
+    total = timedelta()
+    actual = inicio
+
+    while actual < fin:
+        dia_semana = actual.weekday()
+
+        h_dia = [h for h in horarios if h["dia_semana"] == dia_semana and h["activo"]]
+
+        for h in h_dia:
+            h_inicio = datetime.combine(
+                actual.date(),
+                datetime.strptime(str(h["hora_inicio"]), "%H:%M:%S").time()
+            )
+            h_fin = datetime.combine(
+                actual.date(),
+                datetime.strptime(str(h["hora_fin"]), "%H:%M:%S").time()
+            )
+
+            inicio_real = max(actual, h_inicio)
+            fin_real = min(fin, h_fin)
+
+            if inicio_real < fin_real:
+                total += (fin_real - inicio_real)
+
+        actual = datetime.combine(actual.date(), time(23, 59, 59)) + timedelta(seconds=1)
+
+    return total
 def to_excel_limpio(df_input, tipo=None):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -1062,7 +1090,18 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                     fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
 
-                    duracion = str(fin - inicio).split('.')[0]
+# 🔥 CALCULO INTELIGENTE DE DEFINICION DE TURNOS
+                    horarios = supabase.table("horarios_maquinas")\
+                        .select("*")\
+                        .eq("maquina", r['maquina'])\
+                        .execute().data
+
+                    if horarios:
+                        duracion_real = calcular_tiempo_productivo(inicio, fin, horarios)
+                    else:
+                        duracion_real = fin - inicio
+
+                    duracion = str(duracion_real).split('.')[0]
 
 # --- RUTAS ---
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
@@ -1142,7 +1181,18 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
 
-                duracion = str(fin - inicio).split('.')[0]
+# 🔥 NUEVO CALCULO INTELIGENTE DE PARCIAL
+                horarios = supabase.table("horarios_maquinas")\
+                    .select("*")\
+                    .eq("maquina", r['maquina'])\
+                    .execute().data
+
+                if horarios:
+                    duracion_real = calcular_tiempo_productivo(inicio, fin, horarios)
+                else:
+                    duracion_real = fin - inicio
+
+                duracion = str(duracion_real).split('.')[0]
 
 # --- RUTAS ---
                 d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
