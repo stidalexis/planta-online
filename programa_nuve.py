@@ -643,9 +643,96 @@ if 'rep' not in st.session_state: st.session_state.rep = None
 
 with st.sidebar:
     st.title("🏭 NUVE V31.0")
-    menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
+    menu = st.radio(
+        "SELECCIONE MÓDULO:",
+        ["🕒 Horarios", "🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]
+    )
     st.divider()
     st.caption("Conectado a Supabase Cloud")
+
+# =========================================
+# 🕒 MÓDULO HORARIOS (ADMIN)
+# =========================================
+if menu == "🕒 Horarios":
+
+    st.markdown("## 🕒 Configuración de Horarios por Máquina")
+
+    data = supabase.table("horarios_maquinas").select("*").order("maquina").execute().data
+
+    # 📋 VER HORARIOS
+    if data:
+        st.subheader("📋 Horarios actuales")
+        st.dataframe(data)
+
+    st.divider()
+
+    # ➕ CREAR HORARIO
+    with st.form("form_horarios"):
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            area = st.selectbox("Área", list(MAQUINAS.keys()))
+            maquina = st.selectbox("Máquina", MAQUINAS[area])
+
+        with col2:
+            dia = st.selectbox(
+                "Día de la semana",
+                [
+                    ("Lunes", 0),
+                    ("Martes", 1),
+                    ("Miércoles", 2),
+                    ("Jueves", 3),
+                    ("Viernes", 4),
+                    ("Sábado", 5),
+                    ("Domingo", 6),
+                ],
+                format_func=lambda x: x[0]
+            )
+
+        c1, c2 = st.columns(2)
+
+        with c1:
+            hora_inicio = st.time_input("Hora inicio")
+
+        with c2:
+            hora_fin = st.time_input("Hora fin")
+
+        activo = st.checkbox("Activo", value=True)
+
+        guardar = st.form_submit_button("💾 Guardar horario")
+
+        if guardar:
+            supabase.table("horarios_maquinas").insert({
+                "area": area,
+                "maquina": maquina,
+                "dia_semana": dia[1],
+                "hora_inicio": hora_inicio.strftime("%H:%M:%S"),
+                "hora_fin": hora_fin.strftime("%H:%M:%S"),
+                "activo": activo
+            }).execute()
+
+            st.success("Horario guardado correctamente")
+            st.rerun()
+
+    st.divider()
+
+    # 🗑️ ELIMINAR HORARIO
+    st.subheader("🗑️ Eliminar horario")
+
+    if data:
+        opciones = {
+            f"{d['maquina']} - Día {d['dia_semana']} ({d['hora_inicio']} - {d['hora_fin']})": d["id"]
+            for d in data
+        }
+
+        sel = st.selectbox("Seleccionar horario a eliminar", list(opciones.keys()))
+
+        if st.button("❌ Eliminar horario"):
+            supabase.table("horarios_maquinas").delete().eq("id", opciones[sel]).execute()
+            st.success("Horario eliminado")
+            st.rerun()   
+
 
 # --- MÓDULO 1: MONITOR ---
 if menu == "🖥️ Monitor":
