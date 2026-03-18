@@ -665,95 +665,78 @@ with st.sidebar:
 # =========================================
 if menu == "🕒 Horarios":
 
-    st.markdown("## 🕒 Configuración de Horarios")
+    st.markdown("## ⏰ CONFIGURACIÓN DE HORARIOS")
 
-    area_sel = st.selectbox("Área", list(MAQUINAS.keys()))
-
-# 🔥 Cargar horarios actuales
-    data = supabase.table("horarios_maquinas").select("*").eq("area", area_sel).execute().data
-
-    horarios_dict = {(d["maquina"], d["dia_semana"]): d for d in data}
-
-    dias = [
-        ("Lunes", 0),
-        ("Martes", 1),
-        ("Miércoles", 2),
-        ("Jueves", 3),
-        ("Viernes", 4),
-        ("Sábado", 5),
-        ("Domingo", 6),
-    ]
-
-    dia_sel = st.selectbox("Día", dias, format_func=lambda x: x[0])
+    area_sel = st.selectbox("Selecciona Área", list(MAQUINAS.keys()))
 
     st.divider()
 
     cols = st.columns(3)
 
-    for idx, maq in enumerate(MAQUINAS[area_sel]):
-         with cols[idx % 3]:
+    for idx, m in enumerate(MAQUINAS[area_sel]):
 
-            clave = (maq, dia_sel[1])
-            h = horarios_dict.get(clave)
+        with cols[idx % 3]:
 
-            estado = "🟢" if h else "⚪"
+            st.markdown(f"### 🏭 {m}")
 
-            st.markdown(f"{estado} **{maq}**")
+            horarios = supabase.table("horarios_maquinas")\
+                .select("*")\
+                .eq("maquina", m)\
+                .order("dia_semana")\
+                .execute().data
 
-            if st.button(f"Configurar", key=f"cfg_{maq}"):
+            if horarios:
+                for h in horarios:
+                    st.caption(f"📅 Día {h['dia_semana']} | {h['hora_inicio']} - {h['hora_fin']}")
+            else:
+                st.caption("Sin horarios configurados")
 
-                st.session_state.maquina_edit = maq
-                st.session_state.dia_edit = dia_sel[1]
-
-# =========================
-# PANEL EDICIÓN
-# =========================
-    if "maquina_edit" in st.session_state:
-
-        st.divider()
-        st.info(f"Editando: {st.session_state.maquina_edit}")
-
-        with st.form("form_edit"):
-
-            c1, c2 = st.columns(2)
-
-            h_inicio = c1.time_input("Hora inicio")
-            h_fin = c2.time_input("Hora fin")
-
-            activo = st.checkbox("Activo", True)
-
-            guardar = st.form_submit_button("Guardar")
-
-            if guardar:
-
-                existente = supabase.table("horarios_maquinas") \
-                    .select("*") \
-                    .eq("maquina", st.session_state.maquina_edit) \
-                    .eq("dia_semana", st.session_state.dia_edit) \
-                    .execute().data
-
-                data_insert = {
-                    "area": area_sel,
-                    "maquina": st.session_state.maquina_edit,
-                    "dia_semana": st.session_state.dia_edit,
-                    "hora_inicio": h_inicio.strftime("%H:%M:%S"),
-                    "hora_fin": h_fin.strftime("%H:%M:%S"),
-                    "activo": activo
-                }
-
-                if existente:
-                    supabase.table("horarios_maquinas") \
-                        .update(data_insert) \
-                        .eq("id", existente[0]["id"]) \
-                        .execute()
-                else:
-                    supabase.table("horarios_maquinas") \
-                        .insert(data_insert) \
-                        .execute()
-
-                st.success("Guardado")
-                st.session_state.pop("maquina_edit")
+            if st.button(f"⚙️ Configurar", key=f"cfg_{m}"):
+                st.session_state.maquina_edit = m
+                st.session_state.area_edit = area_sel
+                st.session_state.show_form = True
                 st.rerun()   
+                if st.session_state.get("show_form"):
+
+                    st.divider()
+    st.markdown(f"### ⚙️ Configurar: {st.session_state.maquina_edit}")
+
+    dias = {
+        "Lunes": 0, "Martes": 1, "Miércoles": 2,
+        "Jueves": 3, "Viernes": 4,
+        "Sábado": 5, "Domingo": 6
+    }
+
+    dia_txt = st.selectbox("Día", list(dias.keys()))
+    dia = dias[dia_txt]
+
+    c1, c2 = st.columns(2)
+    h_inicio = c1.time_input("Hora inicio")
+    h_fin = c2.time_input("Hora fin")
+
+    activo = st.toggle("Activo", True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("💾 Guardar"):
+            supabase.table("horarios_maquinas").insert({
+                "area": st.session_state.area_edit,
+                "maquina": st.session_state.maquina_edit,
+                "dia_semana": dia,
+                "hora_inicio": h_inicio.strftime("%H:%M:%S"),
+                "hora_fin": h_fin.strftime("%H:%M:%S"),
+                "activo": activo
+            }).execute()
+
+            st.success("Guardado")
+            st.session_state.show_form = False
+            st.rerun()
+
+    with col2:
+        if st.button("❌ Cancelar"):
+            st.session_state.show_form = False
+            st.rerun()
 
 
 # --- MÓDULO 1: MONITOR ---
@@ -1098,235 +1081,197 @@ elif menu == "📅 Planificación":
 
 # --- MÓDULO 4: PRODUCCIÓN ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"]:
+
     area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL DE PRODUCCIÓN: {area_act}</div>", unsafe_allow_html=True)
-    
+
     activos_data = supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data
     activos = {a['maquina']: a for a in activos_data}
-    
+
     cols = st.columns(3)
+
     for idx, m in enumerate(MAQUINAS[area_act]):
+
         with cols[idx % 3]:
+
+            ahora = ahora_col()
+            dia = ahora.weekday()
+
+            horarios = supabase.table("horarios_maquinas")\
+                .select("*")\
+                .eq("maquina", m)\
+                .eq("dia_semana", dia)\
+                .eq("activo", True)\
+                .execute().data
+
+            horario_txt = "Sin turno"
+            permitido = False
+
+            for h in horarios:
+                h_inicio = datetime.combine(
+                    ahora.date(),
+                    datetime.strptime(str(h["hora_inicio"]), "%H:%M:%S").time(),
+                    TZ_CO
+                )
+
+                h_fin = datetime.combine(
+                    ahora.date(),
+                    datetime.strptime(str(h["hora_fin"]), "%H:%M:%S").time(),
+                    TZ_CO
+                )
+
+                if h_fin < h_inicio:
+                    h_fin += timedelta(days=1)
+
+                if h_inicio <= ahora <= h_fin:
+                    permitido = True
+
+                horario_txt = f"{h['hora_inicio'][:5]} - {h['hora_fin'][:5]}"
+
+            # ===============================
+            # 🟡 EN PROCESO
+            # ===============================
             if m in activos:
+
                 tr = activos[m]
-                st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
+
+                st.markdown(
+                    f"<div class='card-produccion'>"
+                    f"🟡 EN PROCESO<br>{m}<br>"
+                    f"OP: {tr['op']}<br>"
+                    f"⏰ {horario_txt}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
                     st.rerun()
+
+            # ===============================
+            # ⚪ DISPONIBLE
+            # ===============================
             else:
-                st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
-                ops_p = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
+
+                st.markdown(
+                    f"<div class='card-vacia'>"
+                    f"⚪ DISPONIBLE<br>{m}<br>"
+                    f"⏰ {horario_txt}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+
+                ops_p = supabase.table("ordenes_planeadas")\
+                    .select("*")\
+                    .eq("proxima_area", area_act)\
+                    .execute().data
+
                 if ops_p:
                     sel_op = st.selectbox("Seleccionar OP", [o['op'] for o in ops_p], key=f"s_{m}")
+
                     if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
-                        supabase.table("trabajos_activos").insert({"maquina": m, "area": area_act, "op": sel_op, "hora_inicio": ahora_col().isoformat()}).execute()
+
+                        if not permitido:
+                            st.error("⛔ Máquina fuera de horario")
+                            st.stop()
+
+                        supabase.table("trabajos_activos").insert({
+                            "maquina": m,
+                            "area": area_act,
+                            "op": sel_op,
+                            "hora_inicio": ahora.isoformat()
+                        }).execute()
+
                         st.rerun()
 
-    if st.session_state.rep and st.session_state.rep["area"] == area_act:
+    # =========================================================
+    # 🔧 FORMULARIO DE CIERRE
+    # =========================================================
+
+    if st.session_state.get("rep") and st.session_state.rep["area"] == area_act:
+
         r = st.session_state.rep
+
         st.divider()
+
         with st.form("cierre_tecnico_completo"):
+
             st.warning(f"### REGISTRO DE CIERRE: OP {r['op']}")
+
             op_name = st.text_input("Nombre del Operario *")
             auxiliar = st.text_input("Auxiliar")
+
             datos_c = {}
-            
+
+            # ===============================
+            # CAMPOS POR ÁREA
+            # ===============================
+
             if area_act == "IMPRESIÓN":
                 c1, c2, c3 = st.columns(3)
-                datos_c['marca_papel_i'] = c1.text_input("marca de papel",)
-                datos_c['medida_papel'] = c2.number_input("medida de papel", 0)
+                datos_c['marca_papel_i'] = c1.text_input("Marca papel")
+                datos_c['medida_papel'] = c2.number_input("Medida", 0)
                 datos_c['metros_impresos'] = c3.number_input("Metros", 0)
-                datos_c['imagenes_impresas'] = c1.number_input("n° imagenes ", 0)
+                datos_c['imagenes_impresas'] = c1.number_input("Imágenes", 0)
                 datos_c['desperdicio_kg'] = c2.number_input("Desperdicio Kg", 0)
-                datos_c['planchas'] = c3.number_input("planchas gastadas", 0)
+                datos_c['planchas'] = c3.number_input("Planchas", 0)
+
             elif area_act == "CORTE":
                 c1, c2, c3 = st.columns(3)
-                datos_c['tipo_papel'] = c1.text_input("tipo de papel",)
-                datos_c['marca_papel_c'] = c2.text_input("marca de papel",)
-                datos_c['ancho_bobina'] = c3.number_input("ancho de bobina", 0)
-                datos_c['imagenes_corte'] = c1.number_input("imagenes/bobina", 0)
-                datos_c['gramos_bobinas'] = c2.number_input("gramaje de bobina", 0)
-                datos_c['rollos_finales'] = c3.number_input("total Rollos cortados", 0)
-                datos_c['varillas_finales'] = c1.number_input("total varillas", 0)
-                datos_c['cajas_totales'] = c2.number_input("Cajas empacadas", 0)
-                datos_c['desperdicio'] = c3.number_input("total desperdicio", 0)
-                
+                datos_c['tipo_papel'] = c1.text_input("Tipo papel")
+                datos_c['marca_papel_c'] = c2.text_input("Marca papel")
+                datos_c['ancho_bobina'] = c3.number_input("Ancho", 0)
+                datos_c['imagenes_corte'] = c1.number_input("Imágenes", 0)
+                datos_c['gramos_bobinas'] = c2.number_input("Gramaje", 0)
+                datos_c['rollos_finales'] = c3.number_input("Rollos", 0)
+                datos_c['varillas_finales'] = c1.number_input("Varillas", 0)
+                datos_c['cajas_totales'] = c2.number_input("Cajas", 0)
+                datos_c['desperdicio'] = c3.number_input("Desperdicio", 0)
+
             elif area_act == "COLECTORAS":
-                c1, c2, c3 = st.columns(3) 
-                datos_c['tipo_papel'] = c1.text_input("tipo de papel",)
-                datos_c['formas_colectadas'] = c2.number_input("total formas colectadas", 0)
-                datos_c['partes'] = c3.number_input("total partes colecatdas", 0)
-                datos_c['cajas_empacadas'] = c1.number_input("total cajas empacadas", 0)
-                datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
-                datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva",)
+                c1, c2, c3 = st.columns(3)
+                datos_c['tipo_papel'] = c1.text_input("Tipo papel")
+                datos_c['formas_colectadas'] = c2.number_input("Formas", 0)
+                datos_c['partes'] = c3.number_input("Partes", 0)
+                datos_c['cajas_empacadas'] = c1.number_input("Cajas", 0)
+                datos_c['formas_dañadas'] = c2.number_input("Dañadas", 0)
+                datos_c['tipo_pegado'] = c3.text_input("Pegado")
 
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
-                datos_c['tipo_presentacion'] = c1.text_input("precetacion final",)
-                datos_c['unidades_caja'] = c2.number_input("cantidad por caja", 0)
-                datos_c['total_cajas'] = c3.number_input("total cajas empacadas", 0)
-                datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
-                datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
-                datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
-                 
-            obs_prod = st.text_area("Observaciones de producción / saldos ")
+                datos_c['tipo_presentacion'] = c1.text_input("Presentación")
+                datos_c['unidades_caja'] = c2.number_input("Unidades/caja", 0)
+                datos_c['total_cajas'] = c3.number_input("Total cajas", 0)
+                datos_c['tipo_pegado'] = c1.text_input("Pegado")
+                datos_c['desperdicio'] = c2.number_input("Desperdicio", 0)
+                datos_c['total_formas'] = c3.number_input("Formas", 0)
 
-            # 🔥 ENTREGA PARCIAL
-            st.markdown("### 📦 ENTREGA PARCIAL (OPCIONAL)")
-            cantidad_parcial = st.number_input("Cantidad parcial producida", 0)
-            obs_parcial = st.text_input("Observación parcial")
+            obs_prod = st.text_area("Observaciones")
 
-            col_f1, col_f2 = st.columns(2)
+            # ===============================
+            # 📦 PARCIAL
+            # ===============================
+            st.markdown("### 📦 ENTREGA PARCIAL")
+            cantidad_parcial = st.number_input("Cantidad parcial", 0)
+            obs_parcial = st.text_input("Obs parcial")
 
-            with col_f1:
-                finalizar = st.form_submit_button("🏁 FINALIZAR Y MOVER")
+            col1, col2 = st.columns(2)
 
-            with col_f2:
-                parcial = st.form_submit_button("📦 ENTREGA PARCIAL")
+            finalizar = col1.form_submit_button("🏁 FINALIZAR")
+            parcial = col2.form_submit_button("📦 PARCIAL")
 
-# =========================================
-# 🏁 FINALIZAR ( MISMA LOGICA)
-# =========================================
+            # ===============================
+            # FINALIZAR
+            # ===============================
             if finalizar:
- 
-                if op_name:
-                    inicio_raw = r['hora_inicio']
-
-                    if isinstance(inicio_raw, str):
-                        inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
-                    else:
-                        inicio = inicio_raw
-
-                    fin = ahora_col()
-
-# 🔥 CALCULO INTELIGENTE DE DEFINICION DE TURNOS
-                    horarios = supabase.table("horarios_maquinas")\
-                        .select("*")\
-                        .eq("maquina", r['maquina'])\
-                        .execute().data
-
-                    if horarios:
-                        duracion_real = calcular_tiempo_productivo(inicio, fin, horarios)
-                    else:
-                        duracion_real = fin - inicio
-
-                    duracion = str(duracion_real).split('.')[0]
-
-# --- RUTAS ---
-                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                    tipo = d_op['tipo_orden']
-                    n_area = "FINALIZADO"
-
-                    if tipo == "FORMAS IMPRESAS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS":
-                            n_area = "ENCUADERNACIÓN"
-                        elif area_act == "ENCUADERNACIÓN":
-                             n_area = "FINALIZADO"
-
-                    elif tipo == "FORMAS BLANCAS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS":
-                            n_area = "ENCUADERNACIÓN"
-                        elif area_act == "ENCUADERNACIÓN":
-                            n_area = "FINALIZADO"
-
-                    elif tipo == "ROLLOS IMPRESOS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "CORTE"
-                        elif area_act == "CORTE":
-                            n_area = "FINALIZADO"
-
-                    elif tipo == "ROLLOS BLANCOS":
-                        if area_act == "CORTE":
-                            n_area = "FINALIZADO"
-
-                    hist = d_op.get('historial_procesos') or []
-
-                    hist.append({
-                        "area": area_act,
-                        "maquina": r['maquina'],
-                        "operario": op_name,
-                        "auxiliar": auxiliar,
-                        "fecha": fin.strftime("%d/%m/%Y %H:%M"),
-                        "duracion": duracion,
-                        "tipo": "FINAL",
-                        "datos_cierre": datos_c,
-                        "observaciones": obs_prod
-                    })
-
-                    supabase.table("ordenes_planeadas").update({
-                        "proxima_area": n_area,
-                        "historial_procesos": hist
-                   }).eq("op", r['op']).execute()
-
-# 🔥 SOLO FINAL BORRA ACTIVO
-                    supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-
-                    st.session_state.rep = None
-                    st.rerun()
-
-# =========================================
-# 📦 PARCIAL (NUEVO)
-# =========================================
-            if parcial:
 
                 if not op_name:
-                    st.error("Debes ingresar el operario")
+                    st.error("Operario requerido")
                     st.stop()
-
-                if cantidad_parcial <= 0:
-                    st.error("Debes ingresar cantidad parcial")
-                    st.stop()
-
-                inicio_raw = r['hora_inicio']
-
-                if isinstance(inicio_raw, str):
-                    inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
-                else:
-                    inicio = inicio_raw
 
                 fin = ahora_col()
 
-# 🔥 NUEVO CALCULO INTELIGENTE DE PARCIAL
-                horarios = supabase.table("horarios_maquinas")\
-                    .select("*")\
-                    .eq("maquina", r['maquina'])\
-                    .execute().data
-
-                if horarios:
-                    duracion_real = calcular_tiempo_productivo(inicio, fin, horarios)
-                else:
-                    duracion_real = fin - inicio
-
-                duracion = str(duracion_real).split('.')[0]
-
-# --- RUTAS ---
                 d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                tipo = d_op['tipo_orden']
-                n_area = "FINALIZADO"
-
-                if tipo == "FORMAS IMPRESAS":
-                    if area_act == "IMPRESIÓN":
-                        n_area = "COLECTORAS"
-                    elif area_act == "COLECTORAS":
-                        n_area = "ENCUADERNACIÓN"
-
-                elif tipo == "FORMAS BLANCAS":
-                    if area_act == "IMPRESIÓN":
-                        n_area = "COLECTORAS"
-                    elif area_act == "COLECTORAS":
-                        n_area = "ENCUADERNACIÓN"
-
-                elif tipo == "ROLLOS IMPRESOS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "CORTE"
-
-                elif tipo == "ROLLOS BLANCOS":
-                        if area_act == "CORTE":
-                            n_area = "FINALIZADO"
 
                 hist = d_op.get('historial_procesos') or []
 
@@ -1336,22 +1281,48 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     "operario": op_name,
                     "auxiliar": auxiliar,
                     "fecha": fin.strftime("%d/%m/%Y %H:%M"),
-                    "duracion": duracion,
+                    "tipo": "FINAL",
+                    "datos_cierre": datos_c,
+                    "observaciones": obs_prod
+                })
+
+                supabase.table("ordenes_planeadas").update({
+                    "historial_procesos": hist,
+                    "proxima_area": "FINALIZADO"
+                }).eq("op", r['op']).execute()
+
+                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+
+                st.session_state.rep = None
+                st.rerun()
+
+            # ===============================
+            # PARCIAL
+            # ===============================
+            if parcial:
+
+                if cantidad_parcial <= 0:
+                    st.error("Cantidad inválida")
+                    st.stop()
+
+                fin = ahora_col()
+
+                d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+                hist = d_op.get('historial_procesos') or []
+
+                hist.append({
+                    "area": area_act,
+                    "maquina": r['maquina'],
+                    "operario": op_name,
+                    "fecha": fin.strftime("%d/%m/%Y %H:%M"),
                     "tipo": "PARCIAL",
                     "cantidad_parcial": cantidad_parcial,
                     "observaciones": obs_parcial
                 })
 
-# 🔥 SOLO AVANZA, NO CIERRA
                 supabase.table("ordenes_planeadas").update({
-                    "proxima_area": n_area,
                     "historial_procesos": hist
                 }).eq("op", r['op']).execute()
 
-                st.success("Entrega parcial registrada")
-
-                # 🔥 LIBERAR MAQUINA (CLAVE)
-                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-
-# 🔥 IMPORTANTE: NO BORRAR DE ACTIVOS
+                st.success("Parcial registrado")
                 st.rerun()
