@@ -5,6 +5,13 @@ from datetime import datetime, time, timedelta
 import time
 import io
 from fpdf import FPDF
+from zoneinfo import ZoneInfo
+
+TZ_CO = ZoneInfo("America/Bogota")
+
+def ahora_col():
+    return datetime.now(TZ_CO)
+
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
 # --- CONEXIÓN A SUPABASE ---
@@ -83,12 +90,15 @@ def calcular_tiempo_productivo(inicio, fin, horarios):
         for h in h_dia:
             h_inicio = datetime.combine(
                 actual.date(),
-                datetime.strptime(str(h["hora_inicio"]), "%H:%M:%S").time()
+                datetime.strptime(str(h["hora_inicio"]), "%H:%M:%S").time(),
+                TZ_CO
             )
+
             h_fin = datetime.combine(
                 actual.date(),
-                datetime.strptime(str(h["hora_fin"]), "%H:%M:%S").time()
-            )
+                datetime.strptime(str(h["hora_fin"]), "%H:%M:%S").time(),
+                TZ_CO
+           )
 
             inicio_real = max(actual, h_inicio)
             fin_real = min(fin, h_fin)
@@ -655,83 +665,95 @@ with st.sidebar:
 # =========================================
 if menu == "🕒 Horarios":
 
-    st.markdown("## 🕒 Configuración de Horarios por Máquina")
+    st.markdown("## 🕒 Configuración de Horarios")
 
-    data = supabase.table("horarios_maquinas").select("*").order("maquina").execute().data
+    area_sel = st.selectbox("Área", list(MAQUINAS.keys()))
 
-    # 📋 VER HORARIOS
-    if data:
-        st.subheader("📋 Horarios actuales")
-        st.dataframe(data)
+# 🔥 Cargar horarios actuales
+    data = supabase.table("horarios_maquinas").select("*").eq("area", area_sel).execute().data
 
-    st.divider()
+    horarios_dict = {(d["maquina"], d["dia_semana"]): d for d in data}
 
-    # ➕ CREAR HORARIO
-    with st.form("form_horarios"):
+    dias = [
+        ("Lunes", 0),
+        ("Martes", 1),
+        ("Miércoles", 2),
+        ("Jueves", 3),
+        ("Viernes", 4),
+        ("Sábado", 5),
+        ("Domingo", 6),
+    ]
 
-        col1, col2 = st.columns(2)
-
-        with col1:
-            area = st.selectbox("Área", list(MAQUINAS.keys()))
-            maquina = st.selectbox("Máquina", MAQUINAS[area])
-
-        with col2:
-            dia = st.selectbox(
-                "Día de la semana",
-                [
-                    ("Lunes", 0),
-                    ("Martes", 1),
-                    ("Miércoles", 2),
-                    ("Jueves", 3),
-                    ("Viernes", 4),
-                    ("Sábado", 5),
-                    ("Domingo", 6),
-                ],
-                format_func=lambda x: x[0]
-            )
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            hora_inicio = st.time_input("Hora inicio")
-
-        with c2:
-            hora_fin = st.time_input("Hora fin")
-
-        activo = st.checkbox("Activo", value=True)
-
-        guardar = st.form_submit_button("💾 Guardar horario")
-
-        if guardar:
-            supabase.table("horarios_maquinas").insert({
-                "area": area,
-                "maquina": maquina,
-                "dia_semana": dia[1],
-                "hora_inicio": hora_inicio.strftime("%H:%M:%S"),
-                "hora_fin": hora_fin.strftime("%H:%M:%S"),
-                "activo": activo
-            }).execute()
-
-            st.success("Horario guardado correctamente")
-            st.rerun()
+    dia_sel = st.selectbox("Día", dias, format_func=lambda x: x[0])
 
     st.divider()
 
-    # 🗑️ ELIMINAR HORARIO
-    st.subheader("🗑️ Eliminar horario")
+    cols = st.columns(3)
 
-    if data:
-        opciones = {
-            f"{d['maquina']} - Día {d['dia_semana']} ({d['hora_inicio']} - {d['hora_fin']})": d["id"]
-            for d in data
-        }
+    for idx, maq in enumerate(MAQUINAS[area_sel]):
+         with cols[idx % 3]:
 
-        sel = st.selectbox("Seleccionar horario a eliminar", list(opciones.keys()))
+            clave = (maq, dia_sel[1])
+            h = horarios_dict.get(clave)
 
-        if st.button("❌ Eliminar horario"):
-            supabase.table("horarios_maquinas").delete().eq("id", opciones[sel]).execute()
-            st.success("Horario eliminado")
-            st.rerun()   
+            estado = "🟢" if h else "⚪"
+
+            st.markdown(f"{estado} **{maq}**")
+
+            if st.button(f"Configurar", key=f"cfg_{maq}"):
+
+                st.session_state.maquina_edit = maq
+                st.session_state.dia_edit = dia_sel[1]
+
+# =========================
+# PANEL EDICIÓN
+# =========================
+    if "maquina_edit" in st.session_state:
+
+        st.divider()
+        st.info(f"Editando: {st.session_state.maquina_edit}")
+
+        with st.form("form_edit"):
+
+            c1, c2 = st.columns(2)
+
+            h_inicio = c1.time_input("Hora inicio")
+            h_fin = c2.time_input("Hora fin")
+
+            activo = st.checkbox("Activo", True)
+
+            guardar = st.form_submit_button("Guardar")
+
+            if guardar:
+
+                existente = supabase.table("horarios_maquinas") \
+                    .select("*") \
+                    .eq("maquina", st.session_state.maquina_edit) \
+                    .eq("dia_semana", st.session_state.dia_edit) \
+                    .execute().data
+
+                data_insert = {
+                    "area": area_sel,
+                    "maquina": st.session_state.maquina_edit,
+                    "dia_semana": st.session_state.dia_edit,
+                    "hora_inicio": h_inicio.strftime("%H:%M:%S"),
+                    "hora_fin": h_fin.strftime("%H:%M:%S"),
+                    "activo": activo
+                }
+
+                if existente:
+                    supabase.table("horarios_maquinas") \
+                        .update(data_insert) \
+                        .eq("id", existente[0]["id"]) \
+                        .execute()
+                else:
+                    supabase.table("horarios_maquinas") \
+                        .insert(data_insert) \
+                        .execute()
+
+                st.success("Guardado")
+                st.session_state.pop("maquina_edit")
+                st.rerun()   
 
 
 # --- MÓDULO 1: MONITOR ---
@@ -1097,7 +1119,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if ops_p:
                     sel_op = st.selectbox("Seleccionar OP", [o['op'] for o in ops_p], key=f"s_{m}")
                     if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
-                        supabase.table("trabajos_activos").insert({"maquina": m, "area": area_act, "op": sel_op, "hora_inicio": datetime.now().isoformat()}).execute()
+                        supabase.table("trabajos_activos").insert({"maquina": m, "area": area_act, "op": sel_op, "hora_inicio": ahora_col().isoformat()}).execute()
                         st.rerun()
 
     if st.session_state.rep and st.session_state.rep["area"] == area_act:
@@ -1175,7 +1197,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     else:
                         inicio = inicio_raw
 
-                    fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
+                    fin = ahora_col()
 
 # 🔥 CALCULO INTELIGENTE DE DEFINICION DE TURNOS
                     horarios = supabase.table("horarios_maquinas")\
@@ -1266,7 +1288,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 else:
                     inicio = inicio_raw
 
-                fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
+                fin = ahora_col()
 
 # 🔥 NUEVO CALCULO INTELIGENTE DE PARCIAL
                 horarios = supabase.table("horarios_maquinas")\
