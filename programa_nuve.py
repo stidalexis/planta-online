@@ -95,7 +95,7 @@ def to_excel_limpio(df_input, tipo=None):
             if dia_inicio < dia_fin:
                 total += (dia_fin - dia_inicio)
 
-             actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0)
+            actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0)
 
         return str(total).split('.')[0]
     
