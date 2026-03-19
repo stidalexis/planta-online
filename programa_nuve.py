@@ -81,23 +81,23 @@ def to_excel_limpio(df_input, tipo=None):
         actual = inicio
         total = timedelta()
 
-    while actual.date() <= fin.date():
+        while actual.date() <= fin.date():
 
-        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0)
-        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0)
+            dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0)
+            dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0)
 
-        if actual.date() == inicio.date():
-            dia_inicio = max(inicio, dia_inicio)
+            if actual.date() == inicio.date():
+                dia_inicio = max(inicio, dia_inicio)
 
-        if actual.date() == fin.date():
-            dia_fin = min(fin, dia_fin)
+            if actual.date() == fin.date():
+                dia_fin = min(fin, dia_fin)
 
-        if dia_inicio < dia_fin:
-            total += (dia_fin - dia_inicio)
+            if dia_inicio < dia_fin:
+                total += (dia_fin - dia_inicio)
 
-        actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0)
+             actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0)
 
-    return str(total).split('.')[0]
+        return str(total).split('.')[0]
     
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
