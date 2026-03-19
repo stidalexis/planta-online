@@ -1019,7 +1019,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             "tiempo_pausa": nuevo_tiempo,
                             "inicio_pausa": None
                         }).eq("maquina", m).execute()
-                        st.rerun()
+                st.rerun()
                         
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
