@@ -73,13 +73,13 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 # --- FUNCIONES AUXILIARES ---
 def to_excel_limpio(df_input, tipo=None):
     def calcular_duracion_laboral(inicio, fin):
-     from datetime import timedelta
+        from datetime import timedelta
 
-    jornada_inicio = 6
-    jornada_fin = 22
+        jornada_inicio = 6
+        jornada_fin = 22
 
-    actual = inicio
-    total = timedelta()
+        actual = inicio
+        total = timedelta()
 
     while actual.date() <= fin.date():
 
