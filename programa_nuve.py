@@ -72,6 +72,33 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
 # --- FUNCIONES AUXILIARES ---
 def to_excel_limpio(df_input, tipo=None):
+    def calcular_duracion_laboral(inicio, fin):
+    from datetime import timedelta
+
+    jornada_inicio = 6
+    jornada_fin = 22
+
+    actual = inicio
+    total = timedelta()
+
+    while actual.date() <= fin.date():
+
+        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0)
+        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0)
+
+        if actual.date() == inicio.date():
+            dia_inicio = max(inicio, dia_inicio)
+
+        if actual.date() == fin.date():
+            dia_fin = min(fin, dia_fin)
+
+        if dia_inicio < dia_fin:
+            total += (dia_fin - dia_inicio)
+
+        actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0)
+
+    return str(total).split('.')[0]
+    
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
         if tipo == "GENERAL":
@@ -973,6 +1000,27 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if m in activos:
                 tr = activos[m]
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
+                if not tr.get("pausado"):
+                    if st.button(f"⏸️ PAUSAR", key=f"p_{m}"):
+                        supabase.table("trabajos_activos").update({
+                            "pausado": True,
+                            "inicio_pausa": datetime.now().isoformat()
+                         }).eq("maquina", m).execute()
+                         t.rerun()
+                else:
+                    if st.button(f"▶️ REANUDAR", key=f"r_{m}"):
+                        inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"])
+                        pausa = (datetime.now() - inicio_pausa).total_seconds()
+
+                        nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
+
+                        supabase.table("trabajos_activos").update({
+                            "pausado": False,
+                            "tiempo_pausa": nuevo_tiempo,
+                            "inicio_pausa": None
+                        }).eq("maquina", m).execute()
+                        st.rerun()
+                        
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
                     st.rerun()
@@ -982,7 +1030,15 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 if ops_p:
                     sel_op = st.selectbox("Seleccionar OP", [o['op'] for o in ops_p], key=f"s_{m}")
                     if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
-                        supabase.table("trabajos_activos").insert({"maquina": m, "area": area_act, "op": sel_op, "hora_inicio": datetime.now().isoformat()}).execute()
+                        supabase.table("trabajos_activos").insert({
+                            "maquina": m,
+                            "area": area_act,
+                            "op": sel_op,
+                            "hora_inicio": datetime.now().isoformat(),
+                            "pausado": False,
+                            "tiempo_pausa": 0,
+                            "inicio_pausa": None
+                        }).execute()
                         st.rerun()
 
     if st.session_state.rep and st.session_state.rep["area"] == area_act:
@@ -1062,7 +1118,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                     fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
 
-                    duracion = str(fin - inicio).split('.')[0]
+                    duracion = calcular_duracion_laboral(inicio, fin)
 
 # --- RUTAS ---
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
@@ -1142,7 +1198,14 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
 
-                duracion = str(fin - inicio).split('.')[0]
+                tiempo_pausa = r.get("tiempo_pausa", 0)
+
+                fin_ajustado = fin
+
+                from datetime import timedelta
+                fin_ajustado = fin - timedelta(seconds=tiempo_pausa)
+
+                duracion = calcular_duracion_laboral(inicio, fin_ajustado)
 
 # --- RUTAS ---
                 d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
