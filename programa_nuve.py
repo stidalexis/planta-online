@@ -1005,8 +1005,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         supabase.table("trabajos_activos").update({
                             "pausado": True,
                             "inicio_pausa": datetime.now().isoformat()
-                         }).eq("maquina", m).execute()
-                         st.rerun()
+                        }).eq("maquina", m).execute()
+                        st.rerun()
                 else:
                     if st.button(f"▶️ REANUDAR", key=f"r_{m}"):
                         inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"])
