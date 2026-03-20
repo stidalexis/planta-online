@@ -673,7 +673,10 @@ with st.sidebar:
     menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación"])
     st.divider()
     st.caption("Conectado a Supabase Cloud")
-
+for a in act_data:
+    op = a['op']
+    a['nombre_trabajo'] = map_ops.get(op, "SIN NOMBRE")
+    act[a['maquina']] = a
 # --- MÓDULO 1: MONITOR ---
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
@@ -686,9 +689,7 @@ if menu == "🖥️ Monitor":
 # 🔥 Unir datos
     act = {}
     for a in act_data:
-        {m}<br>
-        OP: {act[m]['op']}<br>
-        🧾 {act[m]['nombre_trabajo']}
+        op = a['op']
         a['nombre_trabajo'] = map_ops.get(op, "SIN NOMBRE")
         act[a['maquina']] = a
         
@@ -698,7 +699,7 @@ if menu == "🖥️ Monitor":
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}
                 else:
                     st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(30); st.rerun()
