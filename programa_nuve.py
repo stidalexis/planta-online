@@ -5,9 +5,13 @@ from datetime import datetime
 import time
 import io
 from fpdf import FPDF
+from datetime import datetime
+import pytz
 # --- CONFIGURACIÓN DE PÁGINA ---
 st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
+
 # --- CONEXIÓN A SUPABASE ---
+
 try:
     URL = st.secrets["SUPABASE_URL"]
     KEY = st.secrets["SUPABASE_KEY"]
@@ -15,6 +19,7 @@ try:
 except Exception as e:
     st.error("Error de conexión a Base de Datos. Revisa los Secrets.")
     st.stop()
+    
 # --- ESTILOS CSS (DISEÑO INDUSTRIAL Y TÁCTIL) ---
 
 st.markdown("""
@@ -75,6 +80,10 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 from datetime import timedelta
 import io
 import pandas as pd
+
+def hora_colombia():
+    tz = pytz.timezone("America/Bogota")
+    return datetime.now(tz)
 
 # ✅ FUNCIÓN GLOBAL (YA NO DENTRO DE OTRA)
 def calcular_duracion_laboral(inicio, fin):
@@ -258,7 +267,7 @@ def generar_pdf_op(row):
 
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 7)
-    pdf.cell(0, 10, f"DOCUMENTO OFICIAL NUVE - GENERADO AUTOMATICAMENTE - {datetime.now().strftime('%d/%m/%Y %H:%M')}", align='C')
+    pdf.cell(0, 10, f"DOCUMENTO OFICIAL NUVE - GENERADO AUTOMATICAMENTE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", align='C')
     
     return bytes(pdf.output())
 
@@ -366,7 +375,7 @@ def generar_op_rollos(row):
     pdf.ln(10)
 
     pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
     return bytes(pdf.output())
 
@@ -559,7 +568,7 @@ def generar_op_formas(row):
     pdf.cell(
         0,
         10,
-        f"SISTEMA NUVE - {datetime.now().strftime('%d/%m/%Y %H:%M')}",
+        f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",
         0,
         1,
         "C"
@@ -1027,7 +1036,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         try:
                             supabase.table("trabajos_activos").update({
                                 "pausado": True,
-                                "inicio_pausa": datetime.now().isoformat()
+                                "inicio_pausa": hora_colombia().isoformat()
                             }).eq("maquina", m).execute()
 
                             st.rerun()
@@ -1041,7 +1050,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                         try:
                             inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"])
-                            pausa = (datetime.now() - inicio_pausa).total_seconds()
+                            pausa = (hora_colombia() - inicio_pausa).total_seconds()
 
                             nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
 
@@ -1070,7 +1079,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             "maquina": m,
                             "area": area_act,
                             "op": sel_op,
-                            "hora_inicio": datetime.now().isoformat(),
+                            "hora_inicio": hora_colombia().isoformat(),
                             "pausado": False,
                             "tiempo_pausa": 0,
                             "inicio_pausa": None
@@ -1152,7 +1161,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     else:
                         inicio = inicio_raw
 
-                    fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
+                    fin = hora_colombia(inicio.tzinfo) if inicio.tzinfo else hora_colombia()
 
                     duracion = calcular_duracion_laboral(inicio, fin)
 
@@ -1232,7 +1241,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 else:
                     inicio = inicio_raw
 
-                fin = datetime.now(inicio.tzinfo) if inicio.tzinfo else datetime.now()
+                fin = hora_colombia(inicio.tzinfo) if inicio.tzinfo else hora_colombia()
 
                 tiempo_pausa = r.get("tiempo_pausa", 0)
 
