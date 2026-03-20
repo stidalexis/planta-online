@@ -699,7 +699,7 @@ if menu == "🖥️ Monitor":
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
+                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>"),
                 else:
                     st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(30); st.rerun()
