@@ -626,6 +626,7 @@ def modal_detalle_op(row):
             st.markdown(f"""
             <div class='metric-box'>
             🎨 <b>Tintas F:</b> {row.get('tintas_frente_rollos')}<br>
+            🎨 <b>Tintas R:</b> {row.get('tintas_respaldo_rollos')}<br>
             🌀 <b>Core:</b> {row.get('core')}
             </div>
             """, unsafe_allow_html=True)
@@ -857,11 +858,11 @@ elif menu == "📅 Planificación":
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             
-            # --- SECCIÓN: DATOS GENERALES ---
+# --- SECCIÓN: DATOS GENERALES ---
             f1, f2, f3 = st.columns(3)
             op_input = f1.text_input("Número de Nueva OP (Solo número) *")
             
-            # Si es repetición, sugerimos la OP anterior buscada
+# Si es repetición, sugerimos la OP anterior buscada
             val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
             op_a = f2.text_input("OP Anterior", value=val_op_ant)
             
@@ -872,11 +873,11 @@ elif menu == "📅 Planificación":
             trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
 
             if "FORMAS" in t:
-                # --- SECCIÓN: ESPECIFICACIONES FORMAS ---
+# --- SECCIÓN: ESPECIFICACIONES FORMAS ---
                 g1, g2, g3, g4 = st.columns(4)
                 cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
                 
-                # Manejo de índices para Selectbox (evita errores si el valor no existe)
+# Manejo de índices para Selectbox (evita errores si el valor no existe)
                 val_partes = int(datos_rec.get('num_partes', 1))
                 idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
                 partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
