@@ -1152,24 +1152,36 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 # 🏁 FINALIZAR ( MISMA LOGICA)
 # =========================================
             if finalizar:
- 
+
                 if op_name:
+
                     inicio_raw = r['hora_inicio']
 
+#  Convertir a datetime
                     if isinstance(inicio_raw, str):
                         inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
                     else:
                         inicio = inicio_raw
 
-                    fin = hora_colombia(inicio.tzinfo) if inicio.tzinfo else hora_colombia()
+# 🔥 NORMALIZAR A ZONA HORARIA COLOMBIA
+                    tz = pytz.timezone("America/Bogota")
 
+                    if inicio.tzinfo is None:
+                        inicio = tz.localize(inicio)
+                    else:
+                        inicio = inicio.astimezone(tz)
+
+#  Hora actual consistente
+                    fin = hora_colombia()
+
+#  Calcular duración (ya seguro)
                     duracion = calcular_duracion_laboral(inicio, fin)
 
-# --- RUTAS ---
+# --- obtener op ---
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                     tipo = d_op['tipo_orden']
                     n_area = "FINALIZADO"
-
+# --- RUTAS ---
                     if tipo == "FORMAS IMPRESAS":
                         if area_act == "IMPRESIÓN":
                             n_area = "COLECTORAS"
