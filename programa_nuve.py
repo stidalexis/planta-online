@@ -71,45 +71,64 @@ PRESENTACIONES = ["BLOCK TAPADURA", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES"
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
 # --- FUNCIONES AUXILIARES ---
+
+from datetime import timedelta
+import io
+import pandas as pd
+
+# ✅ FUNCIÓN GLOBAL (YA NO DENTRO DE OTRA)
+def calcular_duracion_laboral(inicio, fin):
+
+    jornada_inicio = 6
+    jornada_fin = 22
+
+    actual = inicio
+    total = timedelta()
+
+    while actual.date() <= fin.date():
+
+        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0)
+        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0)
+
+        if actual.date() == inicio.date():
+            dia_inicio = max(inicio, dia_inicio)
+
+        if actual.date() == fin.date():
+            dia_fin = min(fin, dia_fin)
+
+        if dia_inicio < dia_fin:
+            total += (dia_fin - dia_inicio)
+
+        actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0)
+
+    return str(total).split('.')[0]
+
+
+# ✅ TU FUNCIÓN EXCEL (SIN CAMBIOS IMPORTANTES)
 def to_excel_limpio(df_input, tipo=None):
-    def calcular_duracion_laboral(inicio, fin):
-        from datetime import timedelta
 
-        jornada_inicio = 6
-        jornada_fin = 22
-
-        actual = inicio
-        total = timedelta()
-
-        while actual.date() <= fin.date():
-
-            dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0)
-            dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0)
-
-            if actual.date() == inicio.date():
-                dia_inicio = max(inicio, dia_inicio)
-
-            if actual.date() == fin.date():
-                dia_fin = min(fin, dia_fin)
-
-            if dia_inicio < dia_fin:
-                total += (dia_fin - dia_inicio)
-
-            actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0)
-
-        return str(total).split('.')[0]
-    
     output = io.BytesIO()
+
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+
         if tipo == "GENERAL":
             df_f = df_input[df_input['tipo_orden'].str.contains("FORMAS", na=False)].dropna(axis=1, how='all')
             df_r = df_input[df_input['tipo_orden'].str.contains("ROLLOS", na=False)].dropna(axis=1, how='all')
-            if not df_f.empty: df_f.to_excel(writer, index=False, sheet_name='FORMAS')
-            if not df_r.empty: df_r.to_excel(writer, index=False, sheet_name='ROLLOS')
+
+            if not df_f.empty:
+                df_f.to_excel(writer, index=False, sheet_name='FORMAS')
+
+            if not df_r.empty:
+                df_r.to_excel(writer, index=False, sheet_name='ROLLOS')
+
         else:
             df_unit = df_input.dropna(axis=1, how='all')
-            if 'id' in df_unit.columns: df_unit = df_unit.drop(columns=['id'])
+
+            if 'id' in df_unit.columns:
+                df_unit = df_unit.drop(columns=['id'])
+
             df_unit.to_excel(writer, index=False, sheet_name='DETALLE_OP')
+
     return output.getvalue()
     
 # --- PDF DE CERTIFICADO ---
