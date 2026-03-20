@@ -999,28 +999,45 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         with cols[idx % 3]:
             if m in activos:
                 tr = activos[m]
+
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
+
+    # --- BOTÓN PAUSAR ---
                 if not tr.get("pausado"):
                     if st.button(f"⏸️ PAUSAR", key=f"p_{m}"):
-                        supabase.table("trabajos_activos").update({
-                            "pausado": True,
-                            "inicio_pausa": datetime.now().isoformat()
-                        }).eq("maquina", m).execute()
-                        st.rerun()
+                        try:
+                            supabase.table("trabajos_activos").update({
+                                "pausado": True,
+                                "inicio_pausa": datetime.now().isoformat()
+                            }).eq("maquina", m).execute()
+
+                            st.rerun()
+
+                        except Exception as e:
+                            st.error(f"Error al pausar: {e}")
+
+    # --- BOTÓN REANUDAR ---
                 else:
                     if st.button(f"▶️ REANUDAR", key=f"r_{m}"):
-                        inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"])
-                        pausa = (datetime.now() - inicio_pausa).total_seconds()
 
-                        nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
+                        try:
+                            inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"])
+                            pausa = (datetime.now() - inicio_pausa).total_seconds()
 
-                        supabase.table("trabajos_activos").update({
-                            "pausado": False,
-                            "tiempo_pausa": nuevo_tiempo,
-                            "inicio_pausa": None
-                        }).eq("maquina", m).execute()
-                st.rerun()
-                        
+                            nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
+
+                            supabase.table("trabajos_activos").update({
+                                "pausado": False,
+                                "tiempo_pausa": nuevo_tiempo,
+                                "inicio_pausa": None
+                            }).eq("maquina", m).execute()
+
+                            st.rerun()
+
+                except Exception as e:
+                            st.error(f"Error al reanudar: {e}")
+
+    # --- BOTÓN FINALIZAR (SIEMPRE visible) ---
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
                     st.rerun()
