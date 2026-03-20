@@ -1034,7 +1034,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                             st.rerun()
 
-                except Exception as e:
+                        except Exception as e:
                             st.error(f"Error al reanudar: {e}")
 
     # --- BOTÓN FINALIZAR (SIEMPRE visible) ---
