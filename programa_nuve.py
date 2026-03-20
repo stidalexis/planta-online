@@ -682,6 +682,7 @@ for a in act_data:
 
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
+    
     act_data = supabase.table("trabajos_activos").select("*").execute().data
 
 # 🔥 Traer nombres de las OP
@@ -698,12 +699,19 @@ if menu == "🖥️ Monitor":
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
+        
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>")
+                    st.markdown(
+                        f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
+                        unsafe_allow_html=True
+                    )
                 else:
-                    st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
+                    st.markdown(
+                        f"<div class='card-vacia'>{m}<br>LIBRE</div>",
+                        unsafe_allow_html=True
+                    )
     time.sleep(30); st.rerun()
 
 # --- MÓDULO 2: SEGUIMIENTO ---
