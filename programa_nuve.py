@@ -1078,7 +1078,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             else:
                                 inicio_pausa = inicio_pausa.astimezone(tz)
 
-                            pausa = (hora_colombia() - inicio_pausa).total_seconds()total_seconds()
+                            pausa = (hora_colombia() - inicio_pausa).total_seconds()
 
                             nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
 
