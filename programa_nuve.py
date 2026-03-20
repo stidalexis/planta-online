@@ -96,8 +96,8 @@ def calcular_duracion_laboral(inicio, fin):
 
     while actual.date() <= fin.date():
 
-        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0)
-        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0)
+        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0, tzinfo=actual.tzinfo)
+        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0, tzinfo=actual.tzinfo)
 
         if actual.date() == inicio.date():
             dia_inicio = max(inicio, dia_inicio)
