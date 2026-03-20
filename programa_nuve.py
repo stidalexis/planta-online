@@ -678,7 +678,20 @@ with st.sidebar:
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
     act_data = supabase.table("trabajos_activos").select("*").execute().data
-    act = {a['maquina']: a for a in act_data}
+
+# 🔥 Traer nombres de las OP
+    ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
+    map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
+
+# 🔥 Unir datos
+    act = {}
+    for a in act_data:
+        {m}<br>
+        OP: {act[m]['op']}<br>
+        🧾 {act[m]['nombre_trabajo']}
+        a['nombre_trabajo'] = map_ops.get(op, "SIN NOMBRE")
+        act[a['maquina']] = a
+        
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
@@ -1073,7 +1086,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
                 ops_p = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
                 if ops_p:
-                    sel_op = st.selectbox("Seleccionar OP", [o['op'] for o in ops_p], key=f"s_{m}")
+                    op_dict = {f"{o['op']} - {o['nombre_trabajo']}": o['op'] for o in ops_p}
+
+                    sel_op_label = st.selectbox("Seleccionar OP", list(op_dict.keys()), key=f"s_{m}")
+                    sel_op = op_dict[sel_op_label]
+                    
                     if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
                         supabase.table("trabajos_activos").insert({
                             "maquina": m,
