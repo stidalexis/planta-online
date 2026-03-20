@@ -1069,8 +1069,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     if st.button(f"▶️ REANUDAR", key=f"r_{m}"):
 
                         try:
-                            inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"])
-                            pausa = (hora_colombia() - inicio_pausa).total_seconds()
+                            inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"].replace("Z", "+00:00"))
+
+                            tz = pytz.timezone("America/Bogota")
+
+                            if inicio_pausa.tzinfo is None:
+                                inicio_pausa = tz.localize(inicio_pausa)
+                            else:
+                                inicio_pausa = inicio_pausa.astimezone(tz)
+
+                            pausa = (hora_colombia() - inicio_pausa).total_seconds()total_seconds()
 
                             nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
 
