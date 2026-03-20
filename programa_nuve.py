@@ -677,7 +677,9 @@ for a in act_data:
     op = a['op']
     a['nombre_trabajo'] = map_ops.get(op, "SIN NOMBRE")
     act[a['maquina']] = a
+    
 # --- MÓDULO 1: MONITOR ---
+
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
     act_data = supabase.table("trabajos_activos").select("*").execute().data
@@ -699,7 +701,7 @@ if menu == "🖥️ Monitor":
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
                 if m in act:
-                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>"),
+                    st.markdown(f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>")
                 else:
                     st.markdown(f"<div class='card-vacia'>{m}<br>LIBRE</div>", unsafe_allow_html=True)
     time.sleep(30); st.rerun()
