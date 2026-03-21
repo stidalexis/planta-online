@@ -349,7 +349,7 @@ def generar_op_rollos(row):
     pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
     pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
     pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
-if row.get('transportadora_formas'):
+    if row.get('transportadora_formas'):
     pdf.cell(95,7,f"Transportadora: {row.get('transportadora_rollos','')}",1,1)
 
     pdf.cell(190,7,f"Destino: {row.get('destino_rollos','')}",1,1)
