@@ -24,7 +24,7 @@ except Exception as e:
 
 st.markdown("""
     <style>
-    .stButton > button { height: 60px !important; border-radius: 12px; font-weight: bold; font-size: 18px !important; width: 100%; }
+    .stButton > button { height: 70px !important; border-radius: 15px; font-weight: bold; font-size: 20px !important; width: 100%; }
     .title-area { background-color: #0D47A1; color: white; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; }
     
     /* MONITOR: Cartas con fondo vibrante y texto en NEGRO absoluto */
@@ -686,6 +686,26 @@ if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
     
     act_data = supabase.table("trabajos_activos").select("*").execute().data
+    # 🧠 ALERTAS DE OP ESTANCADAS
+    alertas = []
+
+    for a in act_data:
+        try:
+            inicio = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
+            ahora = hora_colombia()
+
+            horas = (ahora - inicio).total_seconds() / 3600
+
+            if horas > 4:  # 🔥 puedes cambiar a 6 u 8 horas
+                alertas.append(f"⚠️ OP {a['op']} en {a['maquina']} lleva {round(horas,1)}h")
+
+        except:
+            pass
+
+    if alertas:
+        st.error("🚨 ALERTAS DE PRODUCCIÓN:")
+        for al in alertas:
+            st.write(al)
 
 # 🔥 Traer nombres de las OP
     ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
@@ -980,6 +1000,15 @@ elif menu == "📅 Planificación":
                     st.stop()
 
                 op_final = f"{prefijo}{op_input.upper()}"
+# 🔒 VALIDAR OP DUPLICADA
+                existe_op = supabase.table("ordenes_planeadas") \
+                   .select("op") \
+                   .eq("op", op_final) \
+                   .execute()
+
+                if existe_op.data:
+                    st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
+                    st.stop()
 
                 # DEFINIR AREA INICIAL SEGUN TIPO
                 if t == "FORMAS IMPRESAS":
