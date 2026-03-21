@@ -151,7 +151,7 @@ def generar_pdf_op(row):
 
 # LOGO CYB PAPELES
     pdf.image("logo_cb.png", 7, 5, 60)
-
+    
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 18)
     pdf.cell(0, 20, f" CERTIFICADO DE PRODUCCION - OP: {row['op']}", ln=True, align='C')
@@ -349,8 +349,12 @@ def generar_op_rollos(row):
     pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
     pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
     pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
-    if row.get('transportadora_formas'):
-    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_rollos','')}",1,1)
+
+    if row.get('transportadora_rollos'):
+        pdf.cell(95,7,f"Transportadora: SI",1,1)
+    else:
+        pdf.cell(95,7,"Transportadora: NO",1,1)
+    
 
     pdf.cell(190,7,f"Destino: {row.get('destino_rollos','')}",1,1)
 
@@ -710,7 +714,8 @@ if menu == "🖥️ Monitor":
                         f"<div class='card-vacia'>{m}<br>LIBRE</div>",
                         unsafe_allow_html=True
                     )
-    time.sleep(30); st.rerun()
+    time.sleep(30); 
+    st.rerun()
 
 # --- MÓDULO 2: SEGUIMIENTO ---
 elif menu == "🔍 Seguimiento":
@@ -727,10 +732,10 @@ elif menu == "🔍 Seguimiento":
         if buscar:
             buscar = buscar.upper()
             df = df[
-                df["op"].str.upper().str.contains(buscar, na=False) |
-                df["nombre_trabajo"].str.upper().str.contains(buscar, na=False) |
-                df["cliente"].str.upper().str.contains(buscar, na=False)
-             ]
+                df["op"].fillna("").str.upper().str.contains(buscar, na=False) |
+                df["nombre_trabajo"].fillna("").str.upper().str.contains(buscar, na=False) |
+                df["cliente"].fillna("").str.upper().str.contains(buscar, na=False)
+            ]
         excel_file = to_excel_limpio(df, "GENERAL")
 
         if excel_file:
@@ -939,7 +944,7 @@ elif menu == "📅 Planificación":
                 cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
                 
                 cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"]
-                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0 if datos_rec.get('core') in cores else 0
+                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
                                 
                 tf_r, tr_r = "N/A", "N/A"
@@ -1024,8 +1029,8 @@ elif menu == "📅 Planificación":
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs,
                         "ref_comercial": ref_c,
-                        "transportadora_formas": True if t_trans_f == "SI" else None,
-                        "destino_formas": dest_f if t_trans_f == "SI" else None,
+                        "transportadora_rollos": True if t_trans_f == "SI" else None,
+                        "destino_rollos": dest_f if t_trans_f == "SI" else None,
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
@@ -1287,7 +1292,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 else:
                     inicio = inicio_raw
 
-                fin = hora_colombia(inicio.tzinfo) if inicio.tzinfo else hora_colombia()
+                fin = hora_colombia()
 
                 tiempo_pausa = r.get("tiempo_pausa", 0)
 
