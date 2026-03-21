@@ -378,7 +378,7 @@ if row.get('transportadora_formas'):
     pdf.set_font("Arial","I",7)
     pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
-     return bytes(pdf.output())
+    return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION FORMAS
 from fpdf import FPDF
