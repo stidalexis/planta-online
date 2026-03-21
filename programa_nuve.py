@@ -821,7 +821,7 @@ elif menu == "📅 Planificación":
         t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
 
         if t_perf == "SI":
-            perf_d = p1.text_area("Detalle Perforación", key="perforaciones_detalle")
+            perf_d = p1.text_area("Detalle Perforación", key="perf_det")
         else:
             perf_d = "NO"
  # -------- SOLO PARA FORMAS --------           
@@ -851,7 +851,7 @@ elif menu == "📅 Planificación":
         t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
 
         if t_trans_f == "SI":
-            dest_f = p4.text_area("Ciudad destino", key="destino_formas")
+            dest_f = p4.text_area("Ciudad destino", key="dest_trans")
         else:
             dest_f = "NO"
 
