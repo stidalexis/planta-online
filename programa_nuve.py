@@ -1023,8 +1023,8 @@ elif menu == "📅 Planificación":
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs,
                         "ref_comercial": ref_c,
-                         "transportadora_rollos": t_trans_f,
-                        "destino_rollos": dest_f,
+                        "transportadora_rollos": t_trans_f,
+                        "destino_rollos": dest_f
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
