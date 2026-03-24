@@ -1093,7 +1093,7 @@ elif menu == "📅 Planificación":
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs,
                         "ref_comercial": ref_c,
-                        "transportadora_rollos": True if t_trans_f == "SI" else None,
+                        "transportadora_formas": True if t_trans_f == "SI" else None,
                         "destino_rollos": dest_f if t_trans_f == "SI" else None,
                     })
 
