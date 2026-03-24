@@ -14,7 +14,7 @@ st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_
 
 try:
     URL = st.secrets["SUPABASE_URL"]
-    KEY = st.secrets["SUPABASE_KEY"]
+    KEY = st.secrets["SUPABASE_KEY"]F
     supabase = create_client(URL, KEY)
 except Exception as e:
     st.error("Error de conexión a Base de Datos. Revisa los Secrets.")
@@ -1053,7 +1053,7 @@ elif menu == "📅 Planificación":
                     "nombre_trabajo": trab,
                     "tipo_orden": t,
                     "proxima_area": ruta_inicial,
-                    "historial_procesos": []
+                    "historial_procesos": "[]"
                 }
 
                 if "FORMAS" in t:
