@@ -1073,7 +1073,7 @@ elif menu == "📅 Planificación":
                     payload.update({
                         "material": mat,
                         "referencia_rollosr": ref_reb,
-                        "cantidad_rollos": int(cant_r),
+                        "cantidad_rollos": int(cant_r) if cant_r else 0,
                         "gramaje_rollos": gram,
                         "core": core_r,
                         "ancho_re": ancho_re,
