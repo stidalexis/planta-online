@@ -956,18 +956,21 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
             elif t == "REBOBINADO":
 
-                r1, r2, r3 = st.columns(3)
+                r1, r2, r3, r4, r5 = st.columns(5)
 
-                mat = r1.text_input("Material / Papel")
-                gram = r2.number_input("Gramaje", 0)
-                ancho = r3.number_input("Ancho Bobina", 0)
+                mat = r1.text_input("Material / Papel,")
+                ref_reb = r2.text_input("referencia rollos", )
+                cant_r = r3.number_input("cantidad solicitada", )
+                gram = r4.trxt_input("Gramaje", )
+                core_r = r5.trxt_input("core", )
+               
 
-                r4, r5 = st.columns(2)
-
-                cant_r = r4.number_input("Cantidad Rollos Entrada", 0)
-                objetivo = r5.text_input("Objetivo del Rebobinado")
-
-                obs = st.text_area("Observaciones Rebobinado")
+                r6, r7, r8 = st.columns(3)
+                
+                ancho_re = r6.number_input("Ancho Bobina",)
+                objetivo = r8.text_input("Objetivo del Rebobinado,")
+                
+                obs = st.text_area("Observaciones Rebobinado,")
                 
             else: 
 ###### --- SECCIÓN: ROLLOS ---
@@ -1069,9 +1072,11 @@ elif menu == "📅 Planificación":
                 elif t == "REBOBINADO":
                     payload.update({
                         "material": mat,
-                        "gramaje_rollos": gram,
-                        "ancho_base": ancho,
+                        "re3ferencia_rollosr": ref_reb,
                         "cantidad_rollos": int(cant_r),
+                        "gramaje_rollos": gram,
+                        "core": core:r,
+                        "ancho_re": ancho,
                         "objetivo_rebobinado": objetivo,
                         "observaciones_rollos": obs
                 })
@@ -1235,7 +1240,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 c1, c2, c3 = st.columns(3)
                 datos_c['tipo_papel'] = c1.text_input("Tipo de papel")
                 datos_c['ancho_entrada'] = c2.number_input("Ancho entrada", 0)
-                datos_c['ancho_salida'] = c3.number_input("Ancho salida", 0)
+                datos_c['ancho_salida'] = c3.text_input("Ancho salida", 0)
                 datos_c['metros_procesados'] = c1.number_input("Metros procesados", 0)
                 datos_c['rollos_finales'] = c2.number_input("Rollos finales", 0)
                 datos_c['empalmes'] = c3.number_input("Empalmes", 0)
