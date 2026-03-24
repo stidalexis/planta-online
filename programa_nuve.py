@@ -965,10 +965,10 @@ elif menu == "📅 Planificación":
                 core_r = r5.trxt_input("core", )
                
 
-                r6, r7, r8 = st.columns(3)
+                r6, r7, = st.columns(2)
                 
                 ancho_re = r6.number_input("Ancho Bobina",)
-                objetivo = r8.text_input("Objetivo del Rebobinado,")
+                objetivo = r7.text_input("Objetivo del Rebobinado,")
                 
                 obs = st.text_area("Observaciones Rebobinado,")
                 
