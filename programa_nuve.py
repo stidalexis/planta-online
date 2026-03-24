@@ -7,10 +7,12 @@ import io
 from fpdf import FPDF
 from datetime import datetime
 import pytz
-# --- CONFIGURACIÓN DE PÁGINA ---
+
+#  CONFIGURACION DE PAGINA 
+
 st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
 
-# --- CONEXIÓN A SUPABASE ---
+#  CONEXION A SUPABASE 
 
 try:
     URL = st.secrets["SUPABASE_URL"]
@@ -20,7 +22,7 @@ except Exception as e:
     st.error("Error de conexión a Base de Datos. Revisa los Secrets.")
     st.stop()
     
-# --- ESTILOS CSS (DISEÑO INDUSTRIAL Y TÁCTIL) ---
+#  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL) 
 
 st.markdown("""
     <style>
@@ -65,7 +67,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- CONSTANTES ---
+#  CONSTANTES 
+
 MAQUINAS = {
     "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": [f"COR-{i:02d}" for i in range(1, 13)],
@@ -76,7 +79,7 @@ MAQUINAS = {
 PRESENTACIONES = ["BLOCK", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS", "FORMA CONTINUA"]
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 
-# --- FUNCIONES AUXILIARES ---
+#  FUNCIONES AUXILIARES 
 
 from datetime import timedelta
 import io
@@ -86,7 +89,8 @@ def hora_colombia():
     tz = pytz.timezone("America/Bogota")
     return datetime.now(tz)
 
-# ✅ FUNCIÓN GLOBAL (YA NO DENTRO DE OTRA)
+# FUNCION DE HORARIOS
+
 def calcular_duracion_laboral(inicio, fin):
 
     jornada_inicio = 6
@@ -114,7 +118,8 @@ def calcular_duracion_laboral(inicio, fin):
     return str(total).split('.')[0]
 
 
-# ✅ TU FUNCIÓN EXCEL (SIN CAMBIOS IMPORTANTES)
+# descarga excel de  historial
+
 def to_excel_limpio(df_input, tipo=None):
 
     output = io.BytesIO()
@@ -141,7 +146,8 @@ def to_excel_limpio(df_input, tipo=None):
 
     return output.getvalue()
     
-# --- PDF DE CERTIFICADO ---
+#  PDF DE CERTIFICADO 
+
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
@@ -151,6 +157,7 @@ def generar_pdf_op(row):
     pdf.rect(0, 0, 210, 40, 'F')
 
 # LOGO CYB PAPELES
+
     pdf.image("logo_cb.png", 7, 5, 60)
     
     pdf.set_text_color(255, 255, 255)
@@ -162,7 +169,8 @@ def generar_pdf_op(row):
     pdf.set_text_color(0, 0, 0)
     pdf.ln(0.5)
     
-# --- SECCIÓN 1: DATOS DE VENTA PDF---
+#  SECCION 1: DATOS DE VENTA PDF
+
     pdf.set_font("Arial", 'B', 10)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, " 1. INFORMACION GENERAL Y ORIGEN", ln=True, fill=True)
@@ -175,7 +183,8 @@ def generar_pdf_op(row):
     pdf.cell(0, 7, f"Fecha Creacion: {row.get('created_at', '')[:10]}", border='B', ln=True)
     pdf.ln(5)
 
-# --- SECCIÓN 2: ESPECIFICACIONES PDF---
+#  SECCION 2: ESPECIFICACIONES PDF
+
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, " 2. ESPECIFICACIONES TECNICAS", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
@@ -193,7 +202,8 @@ def generar_pdf_op(row):
 
     pdf.ln(5)
 
-# --- SECCIÓN 3: BITÁCORA TÉCNICA  ---
+#  SECCION 3: BITACORA TECNICA  
+
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, " 3. TRAZABILIDAD Y REGISTROS DE PLANTA", ln=True, fill=True)
     
@@ -204,26 +214,30 @@ def generar_pdf_op(row):
     else:
         for h in historial:
             pdf.ln(2)
-# Fila de Título de Área
+
+# FILA DE TITULO DE AREA
+
             pdf.set_font("Arial", 'B', 10)
             pdf.set_fill_color(240, 245, 255)
             pdf.cell(0, 7, f" AREA: {h['area']} | MAQUINA: {h['maquina']}", ln=True, fill=True, border=1)
             
-# Fila de Responsables
+# FILA DE RESPONSABLES POR OP
+
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(65, 6, f"Operador: {h['operario']}", border='LR')
             pdf.cell(65, 6, f"Auxiliar: {h.get('auxiliar', 'N/A')}", border='R')
             pdf.cell(0, 6, f"Fecha: {h['fecha']}", border='R', ln=True)
             
-# Fila de Tiempos
+# FILA DE TIEMPOS TOMADOS POR OP
+
             pdf.cell(130, 6, f"Duracion del Proceso: {h['duracion']}", border='LRB')
             pdf.cell(0, 6, "", border='RB', ln=True)
 
-# Datos Técnicos de Salida (JSON formateado)
+# DATOS TECNICOS SALIDA JHSON
+
             pdf.set_font("Arial", '', 8)
             datos_c = h.get('datos_cierre', {})
 
-# Datos Técnicos de Salida (tabla de 4 columnas)
             datos_c = h.get('datos_cierre', {})
 
             if datos_c:
@@ -231,7 +245,8 @@ def generar_pdf_op(row):
                 pdf.set_font("Arial", 'B', 7)
                 pdf.set_fill_color(230,230,230)
 
-# Encabezado tabla
+# ENCABEZADOS TABLA
+
                 pdf.cell(45,6,"OBJETO",1,0,'C',True)
                 pdf.cell(45,6,"DATO",1,0,'C',True)
                 pdf.cell(45,6,"OBJETO",1,0,'C',True)
@@ -258,7 +273,8 @@ def generar_pdf_op(row):
                     pdf.cell(45,6,key2,1)
                     pdf.cell(45,6,str(v2),1,1)
             
-# Observaciones
+# BLOQUE OBSERVACIONES
+
             if h.get('observaciones'):
                 pdf.set_font("Arial", 'I', 8)
                 pdf.multi_cell(0, 5, f"OBSERVACIONES: {h['observaciones']}", border=1)
@@ -273,6 +289,7 @@ def generar_pdf_op(row):
     return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION ROLLOS
+
 from fpdf import FPDF
 from datetime import datetime
 
@@ -281,9 +298,7 @@ def generar_op_rollos(row):
     pdf = FPDF()
     pdf.add_page()
 
-# -----------------------
-# ENCABEZADO
-# -----------------------
+# ENCABEZADO DE OP POR MODIFICAR
 
     pdf.set_fill_color(13,71,161)
     pdf.rect(0,0,210,35,'F')
@@ -300,9 +315,7 @@ def generar_op_rollos(row):
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
-# -----------------------
-# TIPO DE CREACION
-# -----------------------
+# TIPO DE CREACION DE OP
 
     pdf.set_font("Arial","B",11)
     pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
@@ -312,9 +325,7 @@ def generar_op_rollos(row):
 
     pdf.ln(4)
 
-# -----------------------
 # 1 INFORMACION DE LA ORDEN
-# -----------------------
 
     pdf.set_fill_color(230,230,230)
     pdf.set_font("Arial","B",11)
@@ -331,9 +342,7 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-# -----------------------
-# 2 ESPECIFICACIONES TECNICAS
-# -----------------------
+# 2 ESPECIFICACIONES TECNICAS OP 
 
     pdf.ln(4)
 
@@ -362,9 +371,7 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
     pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
 
-# -----------------------
-# 3 OBSERVACIONES
-# -----------------------
+# 3 OBSERVACIONES PDF
 
     pdf.ln(5)
 
@@ -374,9 +381,7 @@ def generar_op_rollos(row):
     pdf.set_font("Arial","",10)
     pdf.multi_cell(0,7,row.get("observaciones_rollos",""))
 
-# -----------------------
-# PIE
-# -----------------------
+# PIE DE PDF ROLLOS 
 
     pdf.ln(10)
 
@@ -386,12 +391,11 @@ def generar_op_rollos(row):
     return bytes(pdf.output())
 
 # PDF ORDEN PRODUCCION FORMAS
+
 from fpdf import FPDF
 from datetime import datetime
 
-# -----------------------------
 # FUNCION PARA AJUSTAR TEXTO
-# -----------------------------
 
 def cell_fit(pdf, w, h, text, border=1):
 
@@ -402,19 +406,14 @@ def cell_fit(pdf, w, h, text, border=1):
 
     pdf.cell(w, h, text, border)
 
-
-# -----------------------------
-# GENERAR PDF FORMAS
-# -----------------------------
+# GENERAR PDF FORMAS-
 
 def generar_op_formas(row):
 
     pdf = FPDF()
     pdf.add_page()
 
-# -----------------------------
 # ENCABEZADO
-# -----------------------------
 
     pdf.set_fill_color(13,71,161)
     pdf.rect(0,0,210,35,'F')
@@ -432,9 +431,7 @@ def generar_op_formas(row):
 
     pdf.ln(4)
 
-# -----------------------------
-# TIPO DE CREACION
-# -----------------------------
+# TIPO DE CREACION OP
 
     pdf.set_font("Arial","B",11)
     pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
@@ -444,9 +441,7 @@ def generar_op_formas(row):
 
     pdf.ln(4)
 
-# -----------------------------
 # 1 INFORMACION DE LA ORDEN
-# -----------------------------
 
     pdf.set_fill_color(230,230,230)
 
@@ -464,9 +459,7 @@ def generar_op_formas(row):
     pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
-# -----------------------------
 # 2 ESPECIFICACIONES GENERALES
-# -----------------------------
 
     pdf.ln(4)
 
@@ -484,9 +477,7 @@ def generar_op_formas(row):
 
     pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
 
-# -----------------------------
 # 3 PERFORACIONES
-# -----------------------------
 
     pdf.ln(4)
 
@@ -501,16 +492,14 @@ def generar_op_formas(row):
         row.get("perforaciones_detalle","SIN PERFORACIONES")
     )
 
-# -----------------------------
 # 4 DETALLE TECNICO POR PARTE
-# -----------------------------
 
     pdf.ln(4)
 
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"4. DETALLE TECNICO POR PARTE",0,1,fill=True)
 
-# encabezado tabla
+# ENCABEZADO POR TABLA
 
     pdf.set_font("Arial","B",9)
 
@@ -526,7 +515,7 @@ def generar_op_formas(row):
     pdf.cell(26,7,"TINTA RESP",1,0,"C",True)
     pdf.cell(22,7,"TRAFICO",1,1,"C",True)
 
-# filas tabla
+# FILAS TABLA
 
     pdf.set_font("Arial","",9)
 
@@ -546,9 +535,7 @@ def generar_op_formas(row):
 
         pdf.ln()
 
-# -----------------------------
 # 5 OBSERVACIONES
-# -----------------------------
 
     pdf.ln(5)
 
@@ -563,9 +550,7 @@ def generar_op_formas(row):
         row.get("observaciones_formas","")
     )
 
-# -----------------------------
-# PIE
-# -----------------------------
+# PIE PDF OP
 
     pdf.ln(10)
 
@@ -582,7 +567,8 @@ def generar_op_formas(row):
 
     return bytes(pdf.output())
 
-# --- DIALOG RADIOGRAFÍA ---
+# RADIOGRAFÍA TECNICA
+
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
     st.markdown(f"### OP: {row['op']} — {row['nombre_trabajo']}")
@@ -643,7 +629,8 @@ def modal_detalle_op(row):
         st.info("No hay registros de producción todavía.")
     else:
         for h in hist:
-# Diseño de tarjeta profesional para cada entrada del historial
+# DISEÑO DE TARGETAS DE DENTRADA
+
             with st.container():
                 st.markdown(f"""
                 <div class='historial-card'>
@@ -660,7 +647,8 @@ def modal_detalle_op(row):
                 </div>
                 """, unsafe_allow_html=True)
                 
-# Mostrar datos de cierre en una tabla limpia en lugar de JSON
+# VER DATOS DE CIERRE EN TABLA LIMPOA Y NO JHSON
+
                 if h.get('datos_cierre'):
                     with st.expander("📊 Ver Datos Técnicos de Salida"):
                         df_datos = pd.DataFrame(list(h['datos_cierre'].items()), columns=['Parámetro', 'Valor'])
@@ -671,7 +659,8 @@ def modal_detalle_op(row):
     pdf_bytes = generar_pdf_op(row)
     st.download_button(label="🖨️ Descargar Certificado de Producción (PDF)", data=pdf_bytes, file_name=f"CERTIFICADO_{row['op']}.pdf", mime="application/pdf", use_container_width=True)
 
-# --- ESTRUCTURA DE MENÚ ---
+# ESTRUCTURA DE MENÚ  GENERAL 
+
 if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
@@ -681,13 +670,15 @@ with st.sidebar:
     st.divider()
     st.caption("Conectado a Supabase Cloud")
     
-# --- MÓDULO 1: MONITOR ---
+#  MÓDULO 1: MONITOR 
 
 if menu == "🖥️ Monitor":
     st.title("Monitor de Planta")
     
     act_data = supabase.table("trabajos_activos").select("*").execute().data
-    # 🧠 ALERTAS DE OP ESTANCADAS
+
+#  ALERTAS DE OP ESTANCADAS
+
     alertas = []
 
     for a in act_data:
@@ -697,7 +688,7 @@ if menu == "🖥️ Monitor":
 
             horas = (ahora - inicio).total_seconds() / 3600
 
-            if horas > 4:  # 🔥 puedes cambiar a 6 u 8 horas
+            if horas > 4:  # ⚠️ SE PUIEDE CAMBIA A 6 U 8 HORAS
                 alertas.append(f"⚠️ OP {a['op']} en {a['maquina']} lleva {round(horas,1)}h")
 
         except:
@@ -708,11 +699,13 @@ if menu == "🖥️ Monitor":
         for al in alertas:
             st.write(al)
 
-# 🔥 Traer nombres de las OP
+#  TRAER NOMBRES DE  LA OP
+
     ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
     map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
 
-# 🔥 Unir datos
+# UNIR TODOS LOS DATOS 
+
     act = {}
     for a in act_data:
         op = a['op']
@@ -738,18 +731,21 @@ if menu == "🖥️ Monitor":
     time.sleep(30); 
     st.rerun()
 
-# --- MÓDULO 2: SEGUIMIENTO ---
+#  MÓDULO 2: SEGUIMIENTO 
+
 elif menu == "🔍 Seguimiento":
     st.title("Seguimiento de Producción")
     res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
     
-# --- BUSCADOR ---
+#  BUSCADOR 
+
     buscar = st.text_input("🔎 Buscar por OP, Cliente o Nombre del Trabajo")
     
     if res:
         df = pd.DataFrame(res)
 
 # FILTRO DE BUSQUEDA
+
         if buscar:
             buscar = buscar.upper()
             df = df[
@@ -782,10 +778,12 @@ elif menu == "🔍 Seguimiento":
             r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
 
 # BOTON VER DETALLE
+
             if r6.button("👁️", key=f"v_{row['op']}"):
                 modal_detalle_op(row.to_dict())
 
 # BOTON ORDEN PDF
+
             if r7.button("📄", key=f"pdf_{row['op']}"):
 
                 if "FORMAS" in row["tipo_orden"]:
@@ -801,17 +799,19 @@ elif menu == "🔍 Seguimiento":
                     key=f"down_{row['op']}"
                 )    
 
-# --- MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) ---
+#  MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) 
+
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
     
-# 1. Selector de Origen de la Orden
+#  SELECTOR OTIGEN DE OP
+
     st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
     origen = st.radio("¿Cómo desea ingresar la orden?", 
                       ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                       horizontal=True)
     
-# Variable para almacenar datos recuperados
+# VARIABLE PARA ALMACENAR DATOS RECUPERADOS
     datos_rec = {}
     
     if "Repetición" in origen:
@@ -833,7 +833,8 @@ elif menu == "📅 Planificación":
 
     st.divider()
 
-# . Selección de Tipo de Producto 
+# SELECTOR DE TIPO DE PRODUCTO
+
     c1, c2, c3, c4, c5 = st.columns(5)
     if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
     if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
@@ -845,14 +846,18 @@ elif menu == "📅 Planificación":
         t = st.session_state.sel_tipo
         prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-"}.get(t, "")
         p1, p2, p3, p4 = st.columns(4)
-# -------- PERFORACIONES (TODOS) --------
+
+#  PERFORACIONES TODOS
+
         t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
 
         if t_perf == "SI":
             perf_d = p1.text_area("Detalle Perforación", key="perf_det")
         else:
             perf_d = "NO"
- # -------- SOLO PARA FORMAS --------           
+
+ #  SOLO PARA FORMAS   
+
         if "FORMAS" in t:
 
             t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
@@ -875,7 +880,10 @@ elif menu == "📅 Planificación":
             barr_d = "NO"
             num_id = "NO"
             num_fd = "NO"
-# -------- TRANSPORTADORA (TODOS) --------
+
+#  TRANSPORTADORA (TODOS) 
+
+
         t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
 
         if t_trans_f == "SI":
@@ -886,11 +894,13 @@ elif menu == "📅 Planificación":
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             
-# --- SECCIÓN: DATOS GENERALES ---
+# SECCIÓN: DATOS GENERALES 
+
             f1, f2, f3 = st.columns(3)
             op_input = f1.text_input("Número de Nueva OP (Solo número) *")
             
-# Si es repetición, sugerimos la OP anterior buscada
+# SI ES REPETICION SUGERIR LA OP ANTERIOR BUSCADA
+
             val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
             op_a = f2.text_input("OP Anterior", value=val_op_ant)
             
@@ -901,11 +911,14 @@ elif menu == "📅 Planificación":
             trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
 
             if "FORMAS" in t:
-# --- SECCIÓN: ESPECIFICACIONES FORMAS ---
+
+# SECCIÓN: ESPECIFICACIONES FORMAS 
+
                 g1, g2, g3, g4 = st.columns(4)
                 cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
                 
-# Manejo de índices para Selectbox (evita errores si el valor no existe)
+# MANEJO DE SELECTBOX EVITA ERRORES SI EL VALOR NO EXISTE 
+
                 val_partes = int(datos_rec.get('num_partes', 1))
                 idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
                 partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
@@ -915,12 +928,15 @@ elif menu == "📅 Planificación":
                 pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
                 
                 
-# --- SECCIÓN: DETALLES DE PARTES (PAPELES) ---
+#  SECCIÓN: DETALLES DE PARTES (PAPELES) 
+
                 lista_p = []
                 rec_partes = datos_rec.get('detalles_partes_json', [])
                 
                 for i in range(1, partes + 1):
-                    # Intentar extraer datos de la parte específica si existe en la repetición
+
+# INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION ( NO TODOS )
+
                     p_data = rec_partes[i-1] if i <= len(rec_partes) else {}
                     
                     st.markdown(f"**PARTE {i}**")
@@ -970,7 +986,9 @@ elif menu == "📅 Planificación":
                 obs = st.text_area("Observaciones Rebobinado")
                 
             else: 
-###### --- SECCIÓN: ROLLOS ---
+
+######  SECCION: ROLLOS 
+
                 r1, r2, r3 = st.columns(3)
                 mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
                 gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
@@ -994,7 +1012,8 @@ elif menu == "📅 Planificación":
                 uc = r8.number_input("Unidades x Caja", 0, value=int(datos_rec.get('unidades_caja', 0)))
                 obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
 
-# --- ERROR SI TIENE CAMPOS SIN LLENAR ---
+#  ERROR SI TIENE CAMPOS SIN LLENAR 
+
             if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
 
                 campos_faltantes = []
@@ -1016,7 +1035,9 @@ elif menu == "📅 Planificación":
                     st.stop()
 
                 op_final = f"{prefijo}{op_input.upper()}"
-# 🔒 VALIDAR OP DUPLICADA
+
+#  VALIDAR OP DUPLICADA
+
                 existe_op = supabase.table("ordenes_planeadas") \
                    .select("op") \
                    .eq("op", op_final) \
@@ -1026,7 +1047,9 @@ elif menu == "📅 Planificación":
                     st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
                     st.stop()
 
-                # DEFINIR AREA INICIAL SEGUN TIPO
+                
+# DEFINIR AREA INICIAL SEGUN TIPO
+
                 if t == "FORMAS IMPRESAS":
                     ruta_inicial = "IMPRESIÓN"
 
@@ -1100,7 +1123,8 @@ elif menu == "📅 Planificación":
                 time.sleep(1.5)
                 st.rerun()
 
-# --- MÓDULO 4: PRODUCCIÓN ---
+#  MODULO 4: PRODUCCION 
+
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]:
     area_act = menu.split(" ")[1].upper()
     st.markdown(f"<div class='title-area'>PANEL DE PRODUCCIÓN: {area_act}</div>", unsafe_allow_html=True)
@@ -1116,7 +1140,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
-    # --- BOTÓN PAUSAR ---
+#  BOTON PAUSAR 
+
                 if not tr.get("pausado"):
                     if st.button(f"⏸️ PAUSAR", key=f"p_{m}"):
                         try:
@@ -1130,7 +1155,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         except Exception as e:
                             st.error(f"Error al pausar: {e}")
 
-    # --- BOTÓN REANUDAR ---
+#  BOTON REANUDAR 
+
                 else:
                     if st.button(f"▶️ REANUDAR", key=f"r_{m}"):
 
@@ -1159,7 +1185,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         except Exception as e:
                             st.error(f"Error al reanudar: {e}")
 
-    # --- BOTÓN FINALIZAR (SIEMPRE visible) ---
+#  BOTON FINALIZAR SIEMPRE VERLO
+
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
                     st.rerun()
@@ -1243,7 +1270,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                  
             obs_prod = st.text_area("Observaciones de producción / saldos ")
 
-            # 🔥 ENTREGA PARCIAL
+#  ENTREGA PARCIAL
+
             st.markdown("### 📦 ENTREGA PARCIAL (OPCIONAL)")
             cantidad_parcial = st.number_input("Cantidad parcial producida", 0)
             obs_parcial = st.text_input("Observación parcial")
@@ -1256,22 +1284,23 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             with col_f2:
                 parcial = st.form_submit_button("📦 ENTREGA PARCIAL")
 
-# =========================================
-# 🏁 FINALIZAR ( MISMA LOGICA)
-# =========================================
+#  FINALIZAR TRABAJO ( LOGICA)
+
             if finalizar:
 
                 if op_name:
 
                     inicio_raw = r['hora_inicio']
 
-#  Convertir a datetime
+#  CONVERTIR A DATATIME (TODOS LOS MISMOS DATOS )
+
                     if isinstance(inicio_raw, str):
                         inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
                     else:
                         inicio = inicio_raw
 
-# 🔥 NORMALIZAR A ZONA HORARIA COLOMBIA
+#  NORMALIZAR A ZONA HORARIA COLOMBIA
+
                     tz = pytz.timezone("America/Bogota")
 
                     if inicio.tzinfo is None:
@@ -1279,17 +1308,22 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     else:
                         inicio = inicio.astimezone(tz)
 
-#  Hora actual consistente
+#  HORA ACTUAL CONSISTENTE
+
                     fin = hora_colombia()
 
-#  Calcular duración (ya seguro)
+#  CALCULAR DURACION
+
                     duracion = calcular_duracion_laboral(inicio, fin)
 
-# --- obtener op ---
+# DETENER OP  NO CUENTA TIEMPO
+
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                     tipo = d_op['tipo_orden']
                     n_area = "FINALIZADO"
-# --- RUTAS ---
+
+#  RUTAS 
+
                     if tipo == "FORMAS IMPRESAS":
                         if area_act == "IMPRESIÓN":
                             n_area = "COLECTORAS"
@@ -1339,15 +1373,15 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         "historial_procesos": hist
                    }).eq("op", r['op']).execute()
 
-# 🔥 SOLO FINAL BORRA ACTIVO
+#  SOLO FINAL BORRA ACTIVO
+
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
 
                     st.session_state.rep = None
                     st.rerun()
 
-# =========================================
-# 📦 PARCIAL (NUEVO)
-# =========================================
+#  ENTREGAS PARCIALES 
+
             if parcial:
 
                 if not op_name:
@@ -1376,7 +1410,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 duracion = calcular_duracion_laboral(inicio, fin_ajustado)
 
-# --- RUTAS ---
+#  RUTAS 2
                 d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                 tipo = d_op['tipo_orden']
                 n_area = "FINALIZADO"
@@ -1415,7 +1449,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     "observaciones": obs_parcial
                 })
 
-# 🔥 SOLO AVANZA, NO CIERRA
+#  SOLO AVANZA, NO CIERRA
+
                 supabase.table("ordenes_planeadas").update({
                     "proxima_area": n_area,
                     "historial_procesos": hist
@@ -1423,8 +1458,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 st.success("Entrega parcial registrada")
 
-                # 🔥 LIBERAR MAQUINA (CLAVE)
+#  LIBERAR MAQUINA 
+
                 supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
 
-# 🔥 IMPORTANTE: NO BORRAR DE ACTIVOS
+#  IMPORTANTE: NO BORRAR DE ACTIVOS
+
                 st.rerun()
+
