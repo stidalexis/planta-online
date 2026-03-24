@@ -1076,7 +1076,7 @@ elif menu == "📅 Planificación":
                         "cantidad_rollos": int(cant_r),
                         "gramaje_rollos": gram,
                         "core": core_r,
-                        "ancho_re": ancho,
+                        "ancho_re": ancho_re,
                         "objetivo_rebobinado": objetivo,
                         "observaciones_rollos": obs
                 })
