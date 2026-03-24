@@ -954,24 +954,20 @@ elif menu == "📅 Planificación":
                     })
                 
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
-### REBOBINADORAS -----------
             elif t == "REBOBINADO":
 
-                r1, r2, r3, r4, r5 = st.columns(5)
+                r1, r2, r3 = st.columns(3)
 
-                mat = r1.text_input("Material / Papel,")
-                ref_reb = r2.text_input("referencia rollos", )
-                cant_r = r3.number_input("cantidad solicitada", )
-                gram = r4.trxt_input("Gramaje", )
-                core_r = r5.trxt_input("core", )
-               
+                mat = r1.text_input("Material / Papel")
+                gram = r2.number_input("Gramaje", 0)
+                ancho = r3.number_input("Ancho Bobina", 0)
 
-                r6, r7, r8 = st.columns(3)
-                
-                ancho_br = r6.number_input("Ancho Bobina",)
-                objetivo = r8.text_input("Objetivo del Rebobinado,")
-                
-                obs = st.text_area("Observaciones Rebobinado,")
+                r4, r5 = st.columns(2)
+
+                cant_r = r4.number_input("Cantidad Rollos Entrada", 0)
+                objetivo = r5.text_input("Objetivo del Rebobinado")
+
+                obs = st.text_area("Observaciones Rebobinado")
                 
             else: 
 ###### --- SECCIÓN: ROLLOS ---
