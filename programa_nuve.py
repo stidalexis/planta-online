@@ -954,6 +954,7 @@ elif menu == "📅 Planificación":
                     })
                 
                 obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
+### REBOBINADORAS -----------
             elif t == "REBOBINADO":
 
                 r1, r2, r3, r4, r5 = st.columns(5)
@@ -961,14 +962,14 @@ elif menu == "📅 Planificación":
                 mat = r1.text_input("Material / Papel,")
                 ref_reb = r2.text_input("referencia rollos", )
                 cant_r = r3.number_input("cantidad solicitada", )
-                gram = r4.text_input("Gramaje", )
-                core_r = r5.text_input("core", )
+                gram = r4.trxt_input("Gramaje", )
+                core_r = r5.trxt_input("core", )
                
 
-                r6, r7, = st.columns(2)
+                r6, r7, r8 = st.columns(3)
                 
-                ancho_re = r6.number_input("Ancho Bobina",)
-                objetivo = r7.text_input("Objetivo del Rebobinado,")
+                ancho_br = r6.number_input("Ancho Bobina",)
+                objetivo = r8.text_input("Objetivo del Rebobinado,")
                 
                 obs = st.text_area("Observaciones Rebobinado,")
                 
@@ -1053,7 +1054,7 @@ elif menu == "📅 Planificación":
                     "nombre_trabajo": trab,
                     "tipo_orden": t,
                     "proxima_area": ruta_inicial,
-                    "historial_procesos": "[]"
+                    "historial_procesos": []
                 }
 
                 if "FORMAS" in t:
@@ -1062,8 +1063,8 @@ elif menu == "📅 Planificación":
                         "num_partes": partes,
                         "perforaciones_detalle": perf_d,
                         "codigo_barras_detalle": barr_d,
-                        "transportadora_formas": True if t_trans_f == "SI" else False,
-                        "destino_formas": dest_f if t_trans_f == "SI" else "",
+                        "transportadora_formas": True if t_trans_f == "SI" else None,
+                        "destino_formas": dest_f if t_trans_f == "SI" else None,
                         "detalles_partes_json": lista_p,
                         "presentacion": pres,
                         "observaciones_formas": obs
@@ -1072,11 +1073,9 @@ elif menu == "📅 Planificación":
                 elif t == "REBOBINADO":
                     payload.update({
                         "material": mat,
-                        "referencia_rollosr": ref_reb,
-                        "cantidad_rollos": int(cant_r) if cant_r else 0,
                         "gramaje_rollos": gram,
-                        "core": core_r,
-                        "ancho_re": ancho_re,
+                        "ancho_base": ancho,
+                        "cantidad_rollos": int(cant_r),
                         "objetivo_rebobinado": objetivo,
                         "observaciones_rollos": obs
                 })
@@ -1093,8 +1092,8 @@ elif menu == "📅 Planificación":
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs,
                         "ref_comercial": ref_c,
-                        "transportadora_rollos": True if t_trans_f == "SI" else False,
-                        "destino_rollos": dest_f if t_trans_f == "SI" else "",
+                        "transportadora_rollos": True if t_trans_f == "SI" else None,
+                        "destino_rollos": dest_f if t_trans_f == "SI" else None,
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
@@ -1240,7 +1239,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 c1, c2, c3 = st.columns(3)
                 datos_c['tipo_papel'] = c1.text_input("Tipo de papel")
                 datos_c['ancho_entrada'] = c2.number_input("Ancho entrada", 0)
-                datos_c['ancho_salida'] = c3.text_input("Ancho salida", 0)
+                datos_c['ancho_salida'] = c3.number_input("Ancho salida", 0)
                 datos_c['metros_procesados'] = c1.number_input("Metros procesados", 0)
                 datos_c['rollos_finales'] = c2.number_input("Rollos finales", 0)
                 datos_c['empalmes'] = c3.number_input("Empalmes", 0)
