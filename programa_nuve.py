@@ -961,8 +961,8 @@ elif menu == "📅 Planificación":
                 mat = r1.text_input("Material / Papel,")
                 ref_reb = r2.text_input("referencia rollos", )
                 cant_r = r3.number_input("cantidad solicitada", )
-                gram = r4.trxt_input("Gramaje", )
-                core_r = r5.trxt_input("core", )
+                gram = r4.text_input("Gramaje", )
+                core_r = r5.text_input("core", )
                
 
                 r6, r7, = st.columns(2)
