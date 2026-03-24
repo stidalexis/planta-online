@@ -1072,7 +1072,7 @@ elif menu == "📅 Planificación":
                 elif t == "REBOBINADO":
                     payload.update({
                         "material": mat,
-                        "re3ferencia_rollosr": ref_reb,
+                        "referencia_rollosr": ref_reb,
                         "cantidad_rollos": int(cant_r),
                         "gramaje_rollos": gram,
                         "core": core_r,
