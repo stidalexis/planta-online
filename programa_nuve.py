@@ -43,7 +43,7 @@ st.markdown("""
     /* Logo fijo en la esquina superior derecha (PC) */
     .custom-logo {
         position: fixed;
-        top: 10px;
+        top: 20px;
         right: 10px;
         z-index: 1000;
         width: 120px;
