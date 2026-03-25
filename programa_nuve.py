@@ -879,23 +879,7 @@ elif menu == "📅 Planificación":
             barr_d = "NO"
             num_id = "NO"
             num_fd = "NO"
-
-#  TRANSPORTADORA (TODOS) 
-
-
-        t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
-
-        if t_trans_f == "SI":
-            dest_f = p4.text_area("Ciudad destino", key="dest_trans")
-        else:
-            dest_f = "NO"
-            # CONTROL DE PARTES DINÁMICO (FUERA DEL FORM)
-
-        if "partes_sel" not in st.session_state:
-            val_partes = int(datos_rec.get('num_partes', 1))
-            st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
-
-        g1, g2, g3, g4 = st.columns(4)
+            g1, g2, g3, g4 = st.columns(4)
 
         cant_f = g1.number_input(
             "Cantidad Formas",
@@ -915,6 +899,21 @@ elif menu == "📅 Planificación":
         pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
 
         pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
+
+#  TRANSPORTADORA (TODOS) 
+
+
+        t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
+
+        if t_trans_f == "SI":
+            dest_f = p4.text_area("Ciudad destino", key="dest_trans")
+        else:
+            dest_f = "NO"
+            # CONTROL DE PARTES DINÁMICO (FUERA DEL FORM)
+
+        if "partes_sel" not in st.session_state:
+            val_partes = int(datos_rec.get('num_partes', 1))
+            st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
 
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
