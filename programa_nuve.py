@@ -10,7 +10,7 @@ import pytz
 
 #  CONFIGURACION DE PAGINA 
 
-st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon=.image("logo_cb.png", 7, 5, 60)"🏭")
+st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
 
 #  CONEXION A SUPABASE 
 
