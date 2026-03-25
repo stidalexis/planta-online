@@ -939,13 +939,6 @@ elif menu == "📅 Planificación":
             trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
 
             if "FORMAS" in t:
-
-# SECCIÓN: ESPECIFICACIONES FORMAS 
-                
-                idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
-                pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
-                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
-                
                 
 #  SECCIÓN: DETALLES DE PARTES (PAPELES) 
 
