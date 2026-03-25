@@ -937,22 +937,6 @@ elif menu == "📅 Planificación":
 
             if "FORMAS" in t:
 
-# SECCIÓN: ESPECIFICACIONES FORMAS 
-
-                g1, g2, g3, g4 = st.columns(4)
-                cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
-                
-# MANEJO DE SELECTBOX EVITA ERRORES SI EL VALOR NO EXISTE 
-
-                val_partes = int(datos_rec.get('num_partes', 1))
-                idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
-                partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
-                
-                idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
-                pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
-                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
-                
-                
 #  SECCIÓN: DETALLES DE PARTES (PAPELES) 
 
                 lista_p = []
