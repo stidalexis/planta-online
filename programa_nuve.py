@@ -860,6 +860,34 @@ elif menu == "📅 Planificación":
 
         if "FORMAS" in t:
 
+
+            if "partes_sel" not in st.session_state:
+                val_partes = int(datos_rec.get('num_partes', 1))
+                st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
+
+            g1, g2, g3, g4 = st.columns(4)
+
+            cant_f = g1.number_input(
+                "Cantidad Formas",
+                0,
+                value=int(datos_rec.get('cantidad_formas', 0))
+            )
+
+            st.session_state.partes_sel = g2.selectbox(
+                "Número de Partes",
+                [1,2,3,4,5,6],
+                index=st.session_state.partes_sel - 1
+            )
+
+            partes = st.session_state.partes_sel
+
+            idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+            pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
+
+            pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
+        
+###
+
             t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
 
             if t_barr == "SI":
@@ -913,15 +941,6 @@ elif menu == "📅 Planificación":
             if "FORMAS" in t:
 
 # SECCIÓN: ESPECIFICACIONES FORMAS 
-
-                g1, g2, g3, g4 = st.columns(4)
-                cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
-                
-# MANEJO DE SELECTBOX EVITA ERRORES SI EL VALOR NO EXISTE 
-
-                val_partes = int(datos_rec.get('num_partes', 1))
-                idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
-                partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
                 
                 idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
@@ -1465,3 +1484,4 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  IMPORTANTE: NO BORRAR DE ACTIVOS
 
                 st.rerun()
+
