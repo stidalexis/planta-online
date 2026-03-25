@@ -1042,6 +1042,19 @@ elif menu == "📅 Planificación":
                 if campos_faltantes:
                     st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
                     st.stop()
+                    
+                if "FORMAS" in t:
+
+                    errores_partes = []
+
+                    for i, p in enumerate(lista_p, start=1):
+
+                        if not p["anc"] or not p["lar"] or not p["papel"] or not p["gramos"]:
+                            errores_partes.append(f"Parte {i} incompleta")
+
+                    if errores_partes:
+                        st.error("❌ Error en Partes: " + " | ".join(errores_partes))
+                        st.stop()
 
                 op_final = f"{prefijo}{op_input.upper()}"
 
