@@ -1113,8 +1113,8 @@ elif menu == "📅 Planificación":
                         "num_partes": partes,
                         "perforaciones_detalle": perf_d,
                         "codigo_barras_detalle": barr_d,
-                        "transportadora_formas": SI if t_trans_f == "SI" else NO,
-                        "destino_formas": dest_f if t_trans_f == "SI" else NO,
+                        "transportadora_formas": True if t_trans_f == "SI" else None,
+                        "destino_formas": dest_f if t_trans_f == "SI" else None,
                         "detalles_partes_json": lista_p,
                         "presentacion": pres,
                         "observaciones_formas": obs
@@ -1142,8 +1142,8 @@ elif menu == "📅 Planificación":
                         "unidades_caja": int(uc),
                         "observaciones_rollos": obs,
                         "ref_comercial": ref_c,
-                        "transportadora_rollos": True if t_trans_f == "SI" else NO,
-                        "destino_rollos": dest_f if t_trans_f == "SI" else NO,
+                        "transportadora_rollos": True if t_trans_f == "SI" else None,
+                        "destino_rollos": dest_f if t_trans_f == "SI" else None,
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
