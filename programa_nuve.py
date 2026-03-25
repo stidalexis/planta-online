@@ -5,7 +5,6 @@ from datetime import datetime
 import time
 import io
 from fpdf import FPDF
-from datetime import datetime
 import pytz
 
 #  CONFIGURACION DE PAGINA 
