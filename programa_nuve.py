@@ -879,7 +879,12 @@ elif menu == "📅 Planificación":
             barr_d = "NO"
             num_id = "NO"
             num_fd = "NO"
-            g1, g2, g3, g4 = st.columns(4)
+
+        if "partes_sel" not in st.session_state:
+            val_partes = int(datos_rec.get('num_partes', 1))
+            st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
+
+        g1, g2, g3, g4 = st.columns(4)
 
         cant_f = g1.number_input(
             "Cantidad Formas",
@@ -893,13 +898,13 @@ elif menu == "📅 Planificación":
             index=st.session_state.partes_sel - 1
         )
 
-        partes = st.session_state.partes_sel
+         partes = st.session_state.partes_sel
 
-        idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+         idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
         pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
 
         pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
-
+        
 #  TRANSPORTADORA (TODOS) 
 
 
