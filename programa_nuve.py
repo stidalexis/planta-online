@@ -889,6 +889,32 @@ elif menu == "📅 Planificación":
             dest_f = p4.text_area("Ciudad destino", key="dest_trans")
         else:
             dest_f = "NO"
+            # CONTROL DE PARTES DINÁMICO (FUERA DEL FORM)
+
+        if "partes_sel" not in st.session_state:
+            val_partes = int(datos_rec.get('num_partes', 1))
+            st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
+
+        g1, g2, g3, g4 = st.columns(4)
+
+        cant_f = g1.number_input(
+            "Cantidad Formas",
+            0,
+            value=int(datos_rec.get('cantidad_formas', 0))
+        )
+
+        st.session_state.partes_sel = g2.selectbox(
+            "Número de Partes",
+            [1,2,3,4,5,6],
+            index=st.session_state.partes_sel - 1
+        )
+
+        partes = st.session_state.partes_sel
+
+        idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+        pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
+
+        pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
 
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
