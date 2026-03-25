@@ -26,46 +26,88 @@ except Exception as e:
 
 st.markdown("""
     <style>
-    # Modifica tu bloque de st.markdown(f""" <style> ... """) añadiendo esto:
+    #  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL CON PERSONALIZACIÓN) 
 
 st.markdown("""
     <style>
-    /* Fondo con marca de agua sutil */
+    /* 1. ESTILO GENERAL Y MARCA DE AGUA */
     .stApp {
-        background-image: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), 
-                          url("https://image("logo_cb.png"");
+        background-image: linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)), 
+                          url("https://www.transparenttextures.com/patterns/cubes.png"); /* Puedes cambiar este link por tu logo opaco */
         background-attachment: fixed;
-        background-size: 50%;
-        background-position: center;
-        background-repeat: no-repeat;
+        background-size: cover;
     }
 
-    /* Logo fijo en la esquina superior derecha (PC) */
-    .custom-logo {
+    /* 2. LOGO FLOTANTE PERSONALIZADO */
+    .brand-logo {
         position: fixed;
-        top: 20px;
-        right: 10px;
-        z-index: 1000;
+        top: 50px;
+        right: 20px;
         width: 120px;
+        z-index: 999999;
+        filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.2));
     }
 
-    /* Ajustes para Móvil */
+    /* 3. BOTONES INDUSTRIALES (OPTIMIZADOS MÓVIL) */
+    .stButton > button { 
+        height: 75px !important; 
+        border-radius: 12px; 
+        font-weight: bold; 
+        font-size: 18px !important; 
+        width: 100%;
+        border: 2px solid rgba(0,0,0,0.1);
+        transition: 0.3s;
+    }
+    
+    .stButton > button:active {
+        transform: scale(0.95);
+        background-color: #f0f2f6;
+    }
+
+    /* 4. CABECERAS DE ÁREA */
+    .title-area { 
+        background: linear-gradient(90deg, #0D47A1 0%, #1976D2 100%);
+        color: white; 
+        padding: 20px; 
+        border-radius: 15px; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 24px; 
+        margin-bottom: 25px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    /* 5. CARTAS DEL MONITOR (CON DEGRADADO) */
+    .card-produccion { 
+        background: linear-gradient(145deg, #00E676, #00C853); 
+        padding: 20px; 
+        border-radius: 15px; 
+        text-align: center; 
+        color: #000000 !important; 
+        font-weight: bold; 
+        font-size: 22px;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    /* 6. AJUSTES ESPECÍFICOS PARA MÓVIL */
     @media (max-width: 640px) {
-        .custom-logo {
-            width: 80px;
-            top: 5px;
-        }
-        .stButton > button {
-            font-size: 16px !important; /* Texto más pequeño en botones para que no se corten */
-            height: 60px !important;
+        .brand-logo {
+            width: 70px; /* Más pequeño en celular */
+            top: 10px;
+            right: 10px;
         }
         .title-area {
-            font-size: 18px !important;
+            font-size: 18px;
+            padding: 10px;
+        }
+        .stButton > button {
+            height: 60px !important;
+            font-size: 16px !important;
         }
     }
     </style>
     
-    <img src="https://tu-enlace-de-imagen.com/logo_color.png" class="custom-logo">
+    <img src="https://cdn-icons-png.flaticon.com/512/4953/4953015.png" class="brand-logo">
     """, unsafe_allow_html=True)
     .stButton > button { height: 70px !important; border-radius: 15px; font-weight: bold; font-size: 20px !important; width: 100%; }
     .title-area { background-color: #0D47A1; color: white; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; }
