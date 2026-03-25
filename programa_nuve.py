@@ -28,8 +28,6 @@ st.markdown("""
     <style>
     #  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL CON PERSONALIZACIÓN) 
 
-st.markdown("""
-    <style>
     /* 1. ESTILO GENERAL Y MARCA DE AGUA */
     .stApp {
         background-image: linear-gradient(rgba(255,255,255,0.94), rgba(255,255,255,0.94)), 
