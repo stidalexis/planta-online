@@ -898,9 +898,9 @@ elif menu == "📅 Planificación":
             index=st.session_state.partes_sel - 1
         )
 
-         partes = st.session_state.partes_sel
+        partes = st.session_state.partes_sel
 
-         idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+        idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
         pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
 
         pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
