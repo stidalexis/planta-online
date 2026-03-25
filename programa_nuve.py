@@ -26,6 +26,47 @@ except Exception as e:
 
 st.markdown("""
     <style>
+    # Modifica tu bloque de st.markdown(f""" <style> ... """) añadiendo esto:
+
+st.markdown("""
+    <style>
+    /* Fondo con marca de agua sutil */
+    .stApp {
+        background-image: linear-gradient(rgba(255,255,255,0.92), rgba(255,255,255,0.92)), 
+                          url("https://image("logo_cb.png"");
+        background-attachment: fixed;
+        background-size: 50%;
+        background-position: center;
+        background-repeat: no-repeat;
+    }
+
+    /* Logo fijo en la esquina superior derecha (PC) */
+    .custom-logo {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        width: 120px;
+    }
+
+    /* Ajustes para Móvil */
+    @media (max-width: 640px) {
+        .custom-logo {
+            width: 80px;
+            top: 5px;
+        }
+        .stButton > button {
+            font-size: 16px !important; /* Texto más pequeño en botones para que no se corten */
+            height: 60px !important;
+        }
+        .title-area {
+            font-size: 18px !important;
+        }
+    }
+    </style>
+    
+    <img src="https://tu-enlace-de-imagen.com/logo_color.png" class="custom-logo">
+    """, unsafe_allow_html=True)
     .stButton > button { height: 70px !important; border-radius: 15px; font-weight: bold; font-size: 20px !important; width: 100%; }
     .title-area { background-color: #0D47A1; color: white; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; }
     
