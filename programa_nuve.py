@@ -919,6 +919,28 @@ elif menu == "📅 Planificación":
         else:
             dest_f = "NO"
 
+        # BOTÓN COPIAR PARTE 1 A TODAS
+
+        if partes > 1:
+            if st.button("📋 Copiar Parte 1 a todas las partes"):
+
+                for i in range(2, partes + 1):
+
+                    st.session_state[f"a_{i}"] = st.session_state.get("a_1", "")
+                    st.session_state[f"l_{i}"] = st.session_state.get("l_1", "")
+                    st.session_state[f"p_{i}"] = st.session_state.get("p_1", "")
+                    st.session_state[f"f_{i}"] = st.session_state.get("f_1", "")
+                    st.session_state[f"g_{i}"] = st.session_state.get("g_1", "")
+                    st.session_state[f"t_{i}"] = st.session_state.get("t_1", "")
+
+                    st.session_state[f"tf_{i}"] = st.session_state.get("tf_1", "")
+                    st.session_state[f"tr_{i}"] = st.session_state.get("tr_1", "")
+                    st.session_state[f"obe_{i}"] = st.session_state.get("obe_1", "")
+
+                st.success("Partes copiadas correctamente")
+                st.rerun()
+                
+
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             
@@ -939,12 +961,9 @@ elif menu == "📅 Planificación":
             trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
 
             if "FORMAS" in t:
-                
-#  SECCIÓN: DETALLES DE PARTES (PAPELES) 
-
                 lista_p = []
                 rec_partes = datos_rec.get('detalles_partes_json', [])
-                
+
                 for i in range(1, partes + 1):
 
 # INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION ( NO TODOS )
@@ -1477,4 +1496,3 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  IMPORTANTE: NO BORRAR DE ACTIVOS
 
                 st.rerun()
-
