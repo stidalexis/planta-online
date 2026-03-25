@@ -918,10 +918,10 @@ elif menu == "📅 Planificación":
             dest_f = p4.text_area("Ciudad destino", key="dest_trans")
         else:
             dest_f = "NO"
+        partes = st.session_state.get("partes_sel", 1)
+# BOTÓN COPIAR PARTE 1 A TODAS
 
-        # BOTÓN COPIAR PARTE 1 A TODAS
-
-        if partes > 1:
+        if "FORMAS" in t and partes > 1:
             if st.button("📋 Copiar Parte 1 a todas las partes"):
 
                 for i in range(2, partes + 1):
