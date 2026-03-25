@@ -916,10 +916,6 @@ elif menu == "📅 Planificación":
             dest_f = "NO"
             # CONTROL DE PARTES DINÁMICO (FUERA DEL FORM)
 
-        if "partes_sel" not in st.session_state:
-            val_partes = int(datos_rec.get('num_partes', 1))
-            st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
-
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
             
