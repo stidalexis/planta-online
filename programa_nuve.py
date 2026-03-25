@@ -5,6 +5,7 @@ from datetime import datetime
 import time
 import io
 from fpdf import FPDF
+from datetime import datetime
 import pytz
 
 #  CONFIGURACION DE PAGINA 
@@ -880,31 +881,6 @@ elif menu == "📅 Planificación":
             num_id = "NO"
             num_fd = "NO"
 
-        if "partes_sel" not in st.session_state:
-            val_partes = int(datos_rec.get('num_partes', 1))
-            st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
-
-        g1, g2, g3, g4 = st.columns(4)
-
-        cant_f = g1.number_input(
-            "Cantidad Formas",
-            0,
-            value=int(datos_rec.get('cantidad_formas', 0))
-        )
-
-        st.session_state.partes_sel = g2.selectbox(
-            "Número de Partes",
-            [1,2,3,4,5,6],
-            index=st.session_state.partes_sel - 1
-        )
-
-        partes = st.session_state.partes_sel
-
-        idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
-        pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
-
-        pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
-        
 #  TRANSPORTADORA (TODOS) 
 
 
@@ -914,7 +890,6 @@ elif menu == "📅 Planificación":
             dest_f = p4.text_area("Ciudad destino", key="dest_trans")
         else:
             dest_f = "NO"
-            # CONTROL DE PARTES DINÁMICO (FUERA DEL FORM)
 
         with st.form("form_plan", clear_on_submit=True):
             st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
@@ -937,6 +912,22 @@ elif menu == "📅 Planificación":
 
             if "FORMAS" in t:
 
+# SECCIÓN: ESPECIFICACIONES FORMAS 
+
+                g1, g2, g3, g4 = st.columns(4)
+                cant_f = g1.number_input("Cantidad Formas", 0, value=int(datos_rec.get('cantidad_formas', 0)))
+                
+# MANEJO DE SELECTBOX EVITA ERRORES SI EL VALOR NO EXISTE 
+
+                val_partes = int(datos_rec.get('num_partes', 1))
+                idx_partes = val_partes - 1 if 1 <= val_partes <= 6 else 0
+                partes = g2.selectbox("Número de Partes", [1,2,3,4,5,6], index=idx_partes)
+                
+                idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+                pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
+                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
+                
+                
 #  SECCIÓN: DETALLES DE PARTES (PAPELES) 
 
                 lista_p = []
@@ -1042,19 +1033,6 @@ elif menu == "📅 Planificación":
                 if campos_faltantes:
                     st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
                     st.stop()
-                    
-                if "FORMAS" in t:
-
-                    errores_partes = []
-
-                    for i, p in enumerate(lista_p, start=1):
-
-                        if not p["anc"] or not p["lar"] or not p["papel"] or not p["gramos"]:
-                            errores_partes.append(f"Parte {i} incompleta")
-
-                    if errores_partes:
-                        st.error("❌ Error en Partes: " + " | ".join(errores_partes))
-                        st.stop()
 
                 op_final = f"{prefijo}{op_input.upper()}"
 
@@ -1487,4 +1465,3 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  IMPORTANTE: NO BORRAR DE ACTIVOS
 
                 st.rerun()
-
