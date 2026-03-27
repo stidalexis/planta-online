@@ -1113,7 +1113,7 @@ elif menu == "📅 Planificación":
                         "num_partes": partes,
                         "perforaciones_detalle": perf_d,
                         "codigo_barras_detalle": barr_d,
-                        "transportadora_formas": True if t_trans_f == "SI" else NOne,
+                        "transportadora_formas": True if t_trans_f == "SI" else None,
                         "destino_formas": dest_f if t_trans_f == "SI" else None,
                         "detalles_partes_json": lista_p,
                         "presentacion": pres,
