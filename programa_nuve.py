@@ -1006,7 +1006,7 @@ elif menu == "📅 Planificación":
 
                 mat = r1.text_input("Material / Papel")
                 gram = r2.number_input("Gramaje", 0)
-                ref_c = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
+                ref_reb = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
 
                 r4, r5 = st.columns(2)
 
@@ -1123,7 +1123,7 @@ elif menu == "📅 Planificación":
                     payload.update({
                         "material": mat,
                         "gramaje_rollos": gram,
-                        "ref_comercial": ref_c,
+                        "ref_comercial": ref_reb,
                         "cantidad_rollos": int(cant_r),
                         "objetivo_rebobinado": objetivo,
                         "observaciones_rollos": obs
