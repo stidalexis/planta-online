@@ -1011,7 +1011,7 @@ elif menu == "📅 Planificación":
                 r4, r5 = st.columns(2)
 
                 cant_r = r4.number_input("Cantidad Rollos Solictada", 0)
-                objetivo = r5.text_input("Objetivo del Rebobinado")
+                objetivo = r5.text_input("Objetivo del Rebobinado (corte interno")
 
                 obs = st.text_area("Observaciones Rebobinado")
                 
