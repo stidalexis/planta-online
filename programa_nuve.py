@@ -1005,8 +1005,8 @@ elif menu == "📅 Planificación":
                 r1, r2, r3 = st.columns(3)
 
                 mat = r1.text_input("Material / Papel")
-                gram = r2.number_input("Gramaje", 0)
-                ref_reb = r3.number_input("Referencia comercial", 0)
+                gram = r2.number_input("Gramaje",)
+                ref_reb = r3.text_input("Referencia comercial",)
 
                 r4, r5 = st.columns(2)
 
