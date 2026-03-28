@@ -881,6 +881,8 @@ elif menu == "🔍 Seguimiento":
 
             if r7.button("📄", key=f"pdf_{row['op']}"):
 
+                tipo = row["tipo_orden"]
+
                 if "FORMAS" in row["tipo_orden"]:
                     pdf_bytes = generar_op_formas(row.to_dict())
                 elif tipo == "REBOBINADO":
