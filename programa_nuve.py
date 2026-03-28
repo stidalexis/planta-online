@@ -567,6 +567,101 @@ def generar_op_formas(row):
 
     return bytes(pdf.output())
 
+def generar_op_rebobinado(row):
+
+    pdf = FPDF()
+    pdf.add_page()
+
+# ENCABEZADO
+
+    pdf.set_fill_color(13,71,161)
+    pdf.rect(0,0,210,35,'F')
+
+    pdf.image("logo_cb.png",8,6,55)
+
+    pdf.set_text_color(255,255,255)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,18,"ORDEN DE PRODUCCION - REBOBINADO",0,1,"C")
+
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+
+    pdf.set_text_color(0,0,0)
+    pdf.ln(4)
+
+# TIPO CREACION
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,7,"TIPO DE CREACION DE LA ORDEN",0,1,"C")
+
+    pdf.set_font("Arial","",11)
+    pdf.cell(0,7,row.get("tipo_creacion","NUEVA"),0,1,"C")
+
+    pdf.ln(4)
+
+# 1. INFORMACION GENERAL
+
+    pdf.set_fill_color(230,230,230)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"1. INFORMACION GENERAL",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
+    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
+
+    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
+
+    pdf.cell(190,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
+
+# 2. DATOS DE REBOBINADO
+
+    pdf.ln(4)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"2. DATOS TECNICOS DE REBOBINADO",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
+    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
+    pdf.cell(64,7,f"Ancho Base: {row.get('ancho_base','')}",1,1)
+
+    pdf.cell(95,7,f"Cantidad Rollos Entrada: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(95,7,f"Objetivo: {row.get('objetivo_rebobinado','')}",1,1)
+
+# 3. OBSERVACIONES
+
+    pdf.ln(5)
+
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"3. OBSERVACIONES",0,1,fill=True)
+
+    pdf.set_font("Arial","",10)
+
+    pdf.multi_cell(
+        0,
+        7,
+        row.get("observaciones_rollos","")
+    )
+
+# PIE
+
+    pdf.ln(10)
+
+    pdf.set_font("Arial","I",7)
+    pdf.cell(
+        0,
+        10,
+        f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",
+        0,
+        1,
+        "C"
+    )
+
+    return bytes(pdf.output())
+
 # RADIOGRAFÍA TECNICA
 
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
@@ -788,6 +883,8 @@ elif menu == "🔍 Seguimiento":
 
                 if "FORMAS" in row["tipo_orden"]:
                     pdf_bytes = generar_op_formas(row.to_dict())
+                elif tipo == "REBOBINADO":
+                    pdf_bytes = generar_op_rebobinado(row.to_dict())
                 else:
                     pdf_bytes = generar_op_rollos(row.to_dict())
 
