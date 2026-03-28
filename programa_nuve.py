@@ -5,6 +5,7 @@ from datetime import datetime
 import time
 import io
 from fpdf import FPDF
+from datetime import datetime
 import pytz
 
 #  CONFIGURACION DE PAGINA 
@@ -1006,12 +1007,12 @@ elif menu == "📅 Planificación":
 
                 mat = r1.text_input("Material / Papel")
                 gram = r2.number_input("Gramaje", 0)
-                ref_reb = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
+                ancho = r3.number_input("Ancho Bobina", 0)
 
                 r4, r5 = st.columns(2)
 
-                cant_r = r4.number_input("Cantidad Rollos Solictada", 0)
-                objetivo = r5.text_input("Objetivo del Rebobinado (corte interno")
+                cant_r = r4.number_input("Cantidad Rollos Entrada", 0)
+                objetivo = r5.text_input("Objetivo del Rebobinado")
 
                 obs = st.text_area("Observaciones Rebobinado")
                 
@@ -1123,7 +1124,7 @@ elif menu == "📅 Planificación":
                     payload.update({
                         "material": mat,
                         "gramaje_rollos": gram,
-                        "ref_comercial": ref_reb,
+                        "ancho_base": ancho,
                         "cantidad_rollos": int(cant_r),
                         "objetivo_rebobinado": objetivo,
                         "observaciones_rollos": obs
