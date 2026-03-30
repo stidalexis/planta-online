@@ -1271,50 +1271,52 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
 #  BOTON PAUSAR 
+                causa = st.selectbox(
+                    f"Motivo parada {m}",
+                    ["DAÑO MECANICO", "FALTA DE PAPEL", "FALTA DE OP", "FALTA DE PERSONAL", "REVISION DE MATERIAL"],
+                    key=f"causa_{m}"
+                )
 
-                if not tr.get("pausado"):
-                    if st.button(f"⏸️ PAUSAR", key=f"p_{m}"):
-                        try:
-                            supabase.table("trabajos_activos").update({
-                                "pausado": True,
-                                "inicio_pausa": hora_colombia().isoformat()
-                            }).eq("maquina", m).execute()
+                if st.button(f"🛑 Parar {m}", key=f"parar_{m}"):
 
-                            st.rerun()
+                    inicio = hora_colombia().isoformat()
 
-                        except Exception as e:
-                            st.error(f"Error al pausar: {e}")
+                    supabase.table("eventos_maquina").insert({
+                        "maquina": m,
+                        "op": tr["op"],
+                        "tipo": "PARADA",
+                        "causa": causa,
+                        "inicio": inicio
+                    }).execute()
 
+                    st.success(f"{m} en parada")
+                
 #  BOTON REANUDAR 
 
                 else:
-                    if st.button(f"▶️ REANUDAR", key=f"r_{m}"):
+                    if st.button(f"▶️ Reanudar {m}", key=f"reanudar_{m}"):
 
-                        try:
-                            inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"].replace("Z", "+00:00"))
+                        fin = hora_colombia()
 
-                            tz = pytz.timezone("America/Bogota")
+                        evento = supabase.table("eventos_maquina") \
+                            .select("*") \
+                            .eq("maquina", m) \
+                            .is_("fin", None) \
+                            .order("inicio", desc=True) \
+                            .limit(1) \
+                            .execute().data
 
-                            if inicio_pausa.tzinfo is None:
-                                inicio_pausa = tz.localize(inicio_pausa)
-                            else:
-                                inicio_pausa = inicio_pausa.astimezone(tz)
+                        if evento:
+                            inicio = datetime.fromisoformat(evento[0]["inicio"])
+                            duracion = (fin - inicio).total_seconds() / 60
 
-                            pausa = (hora_colombia() - inicio_pausa).total_seconds()
+                            supabase.table("eventos_maquina").update({
+                                "fin": fin.isoformat(),
+                                "duracion_min": duracion
+                            }).eq("id", evento[0]["id"]).execute()
 
-                            nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
-
-                            supabase.table("trabajos_activos").update({
-                                "pausado": False,
-                                "tiempo_pausa": nuevo_tiempo,
-                                "inicio_pausa": None
-                            }).eq("maquina", m).execute()
-
-                            st.rerun()
-
-                        except Exception as e:
-                            st.error(f"Error al reanudar: {e}")
-
+                            st.success(f"{m} reanudada - parada: {round(duracion,1)} min")
+                            
 #  BOTON FINALIZAR SIEMPRE VERLO
 
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
