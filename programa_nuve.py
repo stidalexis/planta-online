@@ -473,8 +473,7 @@ def generar_op_formas(row):
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
 
     pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
-    val_trans = "SI" if row.get('transportadora_formas') else "NO"
-    pdf.cell(95,7,f"Transportadora: {val_trans}",1,1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
     pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
 
