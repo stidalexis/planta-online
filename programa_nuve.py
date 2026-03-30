@@ -1281,15 +1281,15 @@ evento_activo = supabase.table("eventos_maquina") \
     .execute().data
 
 # 🟥 SI ESTA EN PARADA → SOLO REANUDAR
-        if evento_activo:
+    if evento_activo:
 
-            causa_actual = evento_activo[0].get("causa", "SIN CAUSA")
+        causa_actual = evento_activo[0].get("causa", "SIN CAUSA")
 
-            st.error(f"🔴 PARADA: {causa_actual}")
+        st.error(f"🔴 PARADA: {causa_actual}")
 
-            if st.button(f"▶️ Reanudar {m}", key=f"reanudar_{m}"):
+        if st.button(f"▶️ Reanudar {m}", key=f"reanudar_{m}"):
 
-                inicio_str = evento_activo[0]["inicio"]
+            inicio_str = evento_activo[0]["inicio"]
                 inicio = datetime.fromisoformat(inicio_str.replace("Z", ""))
 
                 fin = hora_colombia()
