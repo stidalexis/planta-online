@@ -1307,7 +1307,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             .execute().data
 
                         if evento:
-                            inicio = datetime.fromisoformat(evento[0]["inicio"])
+                            inicio_str = evento[0]["inicio"]
+                            inicio = datetime.fromisoformat(inicio_str.replace("Z", ""))
+
+                            fin = hora_colombia()
+
                             duracion = (fin - inicio).total_seconds() / 60
 
                             supabase.table("eventos_maquina").update({
