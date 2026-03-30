@@ -1271,30 +1271,59 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
 #  BOTON PAUSAR 
-                causa = st.selectbox(
-                    f"Motivo parada {m}",
-                    ["DAÑO MECANICO", "FALTA DE PAPEL", "FALTA DE OP", "FALTA DE PERSONAL", "REVISION DE MATERIAL"],
-                    key=f"causa_{m}"
-                )
+                # 🔍 VERIFICAR SI LA MAQUINA ESTA EN PARADA
+evento_activo = supabase.table("eventos_maquina") \
+    .select("*") \
+    .eq("maquina", m) \
+    .is_("fin", None) \
+    .order("inicio", desc=True) \
+    .limit(1) \
+    .execute().data
 
-                if st.button(f"🛑 Parar {m}", key=f"parar_{m}"):
+# 🟥 SI ESTA EN PARADA → SOLO REANUDAR
+        if evento_activo:
 
-                    inicio = hora_colombia().isoformat()
+            causa_actual = evento_activo[0].get("causa", "SIN CAUSA")
 
-                    supabase.table("eventos_maquina").insert({
-                        "maquina": m,
-                        "op": tr["op"],
-                        "tipo": "PARADA",
-                        "causa": causa,
-                        "inicio": inicio
-                    }).execute()
+            st.error(f"🔴 PARADA: {causa_actual}")
 
-                    st.success(f"{m} en parada")
-                
-#  BOTON REANUDAR 
+            if st.button(f"▶️ Reanudar {m}", key=f"reanudar_{m}"):
 
-                else:
-                    if st.button(f"▶️ Reanudar {m}", key=f"reanudar_{m}"):
+                inicio_str = evento_activo[0]["inicio"]
+                inicio = datetime.fromisoformat(inicio_str.replace("Z", ""))
+
+                fin = hora_colombia()
+                duracion = (fin - inicio).total_seconds() / 60
+
+                supabase.table("eventos_maquina").update({
+                    "fin": fin.isoformat(),
+                    "duracion_min": duracion
+                }).eq("id", evento_activo[0]["id"]).execute()
+
+                st.success(f"{m} reanudada - parada: {round(duracion,1)} min")
+
+# 🟢 SI NO ESTA EN PARADA → SOLO PARAR
+        else:
+
+            causa = st.selectbox(
+                f"Motivo parada {m}",
+                ["DAÑO MECANICO", "FALTA DE PAPEL", "FALTA DE OP", "FALTA DE PERSONAL", "REVISION DE MATERIAL"],
+                key=f"causa_{m}"
+            )
+
+            if st.button(f"🛑 Parar {m}", key=f"parar_{m}"):
+
+                inicio = hora_colombia().isoformat()
+
+                supabase.table("eventos_maquina").insert({
+                    "maquina": m,
+                    "op": tr["op"],
+                    "tipo": "PARADA",
+                    "causa": causa,
+                    "inicio": inicio
+                }).execute()
+
+                st.success(f"{m} en parada")
 
                         fin = hora_colombia()
 
