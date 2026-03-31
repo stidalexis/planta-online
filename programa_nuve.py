@@ -13,7 +13,7 @@ def get_base64(file):
     with open(file, "rb") as f:
         return base64.b64encode(f.read()).decode()
 
-img_logo = get_base64("logo.png")
+img_logo = get_base64("logo_cb.png")
 #  CONFIGURACION DE PAGINA 
 
 st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
