@@ -782,10 +782,15 @@ def modal_detalle_op(row):
 
 if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
+# 🔐 LOGIN PRINCIPAL (pantalla completa)
 
-with st.sidebar:
-        st.title("Login")
+if "rol" not in st.session_state:
 
+    st.markdown("## 🔐 INICIO DE SESIÓN")
+
+    col1, col2, col3 = st.columns([1,2,1])
+
+    with col2:
         usuario = st.text_input("Usuario")
         clave = st.text_input("Clave", type="password")
 
@@ -797,23 +802,19 @@ with st.sidebar:
                     st.session_state["rol"] = rol
                     st.session_state["usuario"] = usuario
                     acceso = True
+                    st.rerun()
                     break
 
-            if acceso:
-                st.success(f"Bienvenido {usuario}")
-            else:
+            if not acceso:
                 st.error("Usuario o clave incorrectos")
 
-        st.title("🏭 NUVE V31.0")
-        menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"])
-        st.divider()
-        st.caption("Conectado a Supabase Cloud")
-
- # 🔐 BLOQUEO (AQUÍ EXACTAMENTE)
-if "rol" not in st.session_state:
-    st.warning("🔐 Debes iniciar sesión en el panel izquierdo")
     st.stop()
-       
+with st.sidebar:
+    st.title("🏭 NUVE V31.0")
+    menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"])
+    st.divider()
+    st.caption("Conectado a Supabase Cloud")
+
 #  MÓDULO 1: MONITOR 
 
 if menu == "🖥️ Monitor":
