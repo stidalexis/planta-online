@@ -783,19 +783,26 @@ def modal_detalle_op(row):
 if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 # 🔐 LOGIN PRINCIPAL (pantalla completa)
-
 if "rol" not in st.session_state:
+
+    import base64
+
+    def get_base64(file):
+        with open(file, "rb") as f:
+            return base64.b64encode(f.read()).decode()
+
+    img = get_base64("logo.png")
+
     st.markdown(f"""
-    <style>
-    .stApp {{
-        background-image: url("logo.png");
-        background-size: 300px;
-        background-repeat: no-repeat;
-        background-position: center;
-        background-attachment: fixed;
-    }}
-    </style>
-""", unsafe_allow_html=True)
+        <style>
+        .stApp {{
+            background-image: url("data:image/png;base64,{img}");
+            background-size: 250px;
+            background-repeat: no-repeat;
+            background-position: center;
+        }}
+        </style>
+    """, unsafe_allow_html=True)
 
     st.markdown("## 🔐 INICIO DE SESIÓN")
 
