@@ -785,6 +785,17 @@ if 'rep' not in st.session_state: st.session_state.rep = None
 # 🔐 LOGIN PRINCIPAL (pantalla completa)
 
 if "rol" not in st.session_state:
+    st.markdown(f"""
+    <style>
+    .stApp {{
+        background-image: url("logo.png");
+        background-size: 300px;
+        background-repeat: no-repeat;
+        background-position: center;
+        background-attachment: fixed;
+    }}
+    </style>
+""", unsafe_allow_html=True)
 
     st.markdown("## 🔐 INICIO DE SESIÓN")
 
