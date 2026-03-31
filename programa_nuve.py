@@ -78,6 +78,7 @@ MAQUINAS = {
 }
 PRESENTACIONES = ["BLOCK", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS", "FORMA CONTINUA"]
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
+MOTIVOS_PARADA = ["Mantenimiento Mecánico", "Falta de Material", "Cambio de Referencia", "Limpieza", "Falla Eléctrica", "Almuerzo/Cena","Ajuste de Registro"]
 
 #  FUNCIONES AUXILIARES 
 
@@ -1272,48 +1273,47 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 #  BOTON PAUSAR 
 
+ # --- NUEVA LÓGICA DE PARADAS TÉCNICAS ---
                 if not tr.get("pausado"):
-                    if st.button(f"⏸️ PAUSAR", key=f"p_{m}"):
-                        try:
+# Botón de Parada de Emergencia / Técnica
+                    with st.popover("🚨 REGISTRAR PARADA"):
+                        motivo_p = st.selectbox("Motivo de parada:", MOTIVOS_PARADA, key=f"mot_{m}")
+                        if st.button("Confirmar Parada", key=f"btn_p_{m}", type="primary"):
                             supabase.table("trabajos_activos").update({
                                 "pausado": True,
-                                "inicio_pausa": hora_colombia().isoformat()
+                                "inicio_pausa": hora_colombia().isoformat(),
+                                "motivo_pausa": motivo_p # Asegúrate de tener esta columna en trabajos_activos o se guardará en metadata
                             }).eq("maquina", m).execute()
-
                             st.rerun()
-
-                        except Exception as e:
-                            st.error(f"Error al pausar: {e}")
-
-#  BOTON REANUDAR 
-
                 else:
-                    if st.button(f"▶️ REANUDAR", key=f"r_{m}"):
-
+    # Mostrar por qué está detenida
+                    st.error(f"DETENIDA POR: {tr.get('motivo_pausa', 'Sin motivo')}")
+                    if st.button(f"▶️ REANUDAR TRABAJO", key=f"r_{m}", type="secondary"):
                         try:
-                            inicio_pausa = datetime.fromisoformat(tr["inicio_pausa"].replace("Z", "+00:00"))
+                            inicio_p = datetime.fromisoformat(tr["inicio_pausa"].replace("Z", "+00:00"))
+                            ahora = hora_colombia()
+                            pausa_segundos = (ahora - inicio_p).total_seconds()
+            
+# Guardar en la tabla histórica de tiempos muertos
+                            supabase.table("tiempos_muertos").insert({
+                                "maquina": m,
+                                "motivo": tr.get('motivo_pausa'),
+                                "inicio": tr["inicio_pausa"],
+                                "fin": ahora.isoformat(),
+                                "duracion_segundos": pausa_segundos
+                            }).execute()
 
-                            tz = pytz.timezone("America/Bogota")
-
-                            if inicio_pausa.tzinfo is None:
-                                inicio_pausa = tz.localize(inicio_pausa)
-                            else:
-                                inicio_pausa = inicio_pausa.astimezone(tz)
-
-                            pausa = (hora_colombia() - inicio_pausa).total_seconds()
-
-                            nuevo_tiempo = tr.get("tiempo_pausa", 0) + pausa
-
+# Actualizar el registro activo para seguir trabajando
+                            nuevo_tiempo_acumulado = tr.get("tiempo_pausa", 0) + pausa_segundos
                             supabase.table("trabajos_activos").update({
                                 "pausado": False,
-                                "tiempo_pausa": nuevo_tiempo,
-                                "inicio_pausa": None
+                                "tiempo_pausa": nuevo_tiempo_acumulado,
+                                "inicio_pausa": None,
+                                "motivo_pausa": None
                             }).eq("maquina", m).execute()
-
                             st.rerun()
-
                         except Exception as e:
-                            st.error(f"Error al reanudar: {e}")
+                            st.error(f"Error: {e}")
 
 #  BOTON FINALIZAR SIEMPRE VERLO
 
@@ -1330,11 +1330,31 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     sel_op = op_dict[sel_op_label]
                     
                     if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
+                        ahora_iso = hora_colombia().isoformat()
+    
+# 1. Intentar buscar cuándo terminó el último trabajo en esta máquina
+                        ultimo_registro = supabase.table("tiempos_muertos").select("fin").eq("maquina", m).order("fin", desc=True).limit(1).execute()
+    
+                        if ultimo_registro.data:
+                            fin_ultimo = datetime.fromisoformat(ultimo_registro.data[0]["fin"].replace("Z", "+00:00"))
+                            ocio_segundos = (hora_colombia() - fin_ultimo).total_seconds()
+        
+# Guardar el tiempo que estuvo libre como "Tiempo Libre / Espera"
+                            if ocio_segundos > 60: # Solo si fue más de 1 minuto
+                                supabase.table("tiempos_muertos").insert({
+                                    "maquina": m,
+                                    "motivo": "TIEMPO LIBRE (ENTRE OPs)",
+                                    "inicio": ultimo_registro.data[0]["fin"],
+                                    "fin": ahora_iso,
+                                    "duracion_segundos": ocio_segundos
+                                }).execute()
+
+# 2. Iniciar el trabajo normal
                         supabase.table("trabajos_activos").insert({
                             "maquina": m,
                             "area": area_act,
                             "op": sel_op,
-                            "hora_inicio": hora_colombia().isoformat(),
+                            "hora_inicio": ahora_iso,
                             "pausado": False,
                             "tiempo_pausa": 0,
                             "inicio_pausa": None
