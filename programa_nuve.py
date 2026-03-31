@@ -7,7 +7,13 @@ import io
 from fpdf import FPDF
 from datetime import datetime
 import pytz
+import base64
 
+def get_base64(file):
+    with open(file, "rb") as f:
+        return base64.b64encode(f.read()).decode()
+
+img_logo = get_base64("logo.png")
 #  CONFIGURACION DE PAGINA 
 
 st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
@@ -785,18 +791,10 @@ if 'rep' not in st.session_state: st.session_state.rep = None
 # 🔐 LOGIN PRINCIPAL (pantalla completa)
 if "rol" not in st.session_state:
 
-    import base64
-
-    def get_base64(file):
-        with open(file, "rb") as f:
-            return base64.b64encode(f.read()).decode()
-
-    img = get_base64("logo.png")
-
     st.markdown(f"""
         <style>
         .stApp {{
-            background-image: url("data:image/png;base64,{img}");
+            background-image: url("data:image/png;base64,{img_logo}");
             background-size: 250px;
             background-repeat: no-repeat;
             background-position: center;
