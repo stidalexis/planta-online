@@ -784,9 +784,7 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
 with st.sidebar:
-        if "rol" not in st.session_state:
-            st.warning("🔐 Debes iniciar sesión")
-            st.stop()
+        st.title("Login")
 
         usuario = st.text_input("Usuario")
         clave = st.text_input("Clave", type="password")
@@ -810,7 +808,12 @@ with st.sidebar:
         menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"])
         st.divider()
         st.caption("Conectado a Supabase Cloud")
-    
+
+ # 🔐 BLOQUEO (AQUÍ EXACTAMENTE)
+if "rol" not in st.session_state:
+    st.warning("🔐 Debes iniciar sesión en el panel izquierdo")
+    st.stop()
+       
 #  MÓDULO 1: MONITOR 
 
 if menu == "🖥️ Monitor":
