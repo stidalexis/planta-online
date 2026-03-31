@@ -81,6 +81,27 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 MOTIVOS_PARADA = ["Mantenimiento Mecánico", "Falta de Material", "Cambio de Referencia", "Limpieza", "Falla Eléctrica", "Almuerzo/Cena","Ajuste de Registro"]
 # --- ROLES DE USUARIO ---
 ROLES = ["VENDEDOR","JEFE_VENTAS","SUP_IMPRESION","SUP_CORTE","SUP_REBOBINADORAS","SUP_ENCUADERNACION","ADMIN"]
+# --- USUARIOS ORGANIZADOS POR ROL ---
+USUARIOS = {
+    "VENDEDOR": {
+        "juan": "1234",
+        "pedro": "1234"
+    },
+    "JEFE_VENTAS": {
+        "maria": "1234"
+    },
+    "SUP_IMPRESION": {
+        "carlos": "1234"
+    },
+    "SUP_CORTE": {
+        "luis": "1234"
+    },
+    "SUP_REBOBINADORAS": {},
+    "SUP_ENCUADERNACION": {},
+    "ADMIN": {
+        "admin": "1234"
+    }
+}
 
 #  FUNCIONES AUXILIARES 
 
@@ -763,13 +784,28 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
 with st.sidebar:
-        st.divider()
-        st.subheader("🔐 Usuario")
+        if "rol" not in st.session_state:
+            st.warning("🔐 Debes iniciar sesión")
+            st.stop()
 
         usuario = st.text_input("Usuario")
-        rol_usuario = st.selectbox("Rol", ROLES)
+        clave = st.text_input("Clave", type="password")
 
-        st.session_state["rol"] = rol_usuario
+        if st.button("Ingresar"):
+            acceso = False
+
+            for rol, usuarios in USUARIOS.items():
+                if usuario in usuarios and usuarios[usuario] == clave:
+                    st.session_state["rol"] = rol
+                    st.session_state["usuario"] = usuario
+                    acceso = True
+                    break
+
+            if acceso:
+                st.success(f"Bienvenido {usuario}")
+            else:
+                st.error("Usuario o clave incorrectos")
+
         st.title("🏭 NUVE V31.0")
         menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"])
         st.divider()
