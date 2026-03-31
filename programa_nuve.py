@@ -1322,7 +1322,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.rerun()
             else:
                 st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
-                ops_p = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", area_act).execute().data
+                ops_p = supabase.table("ordenes_planeadas").select("*").or_(f"proxima_area.eq.{area_act},estado_parcial.eq.ACTIVO EN {area_act}").execute().data
                 if ops_p:
                     op_dict = {f"{o['op']} - {o['nombre_trabajo']}": o['op'] for o in ops_p}
 
@@ -1601,12 +1601,61 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 #  SOLO AVANZA, NO CIERRA
 
+                # --- LÓGICA DE ENTREGA PARCIAL CORREGIDA ---
+
+                # Definimos el flujo lógico
+                n_area = area_act # Por defecto se queda en la misma para que otro (o el mismo) pueda seguir
+                if tipo == "RESMA":
+                    if area_act == "IMPRESIÓN":
+                        n_area_siguiente = "COLECTORAS"
+                    elif area_act == "COLECTORAS":
+                        n_area_siguiente = "ENCUADERNACIÓN"
+                    else:
+                        n_area_siguiente = "FINALIZADO"
+
+                elif tipo == "ROLLOS IMPRESOS":
+                    if area_act == "IMPRESIÓN":
+                        n_area_siguiente = "CORTE"
+                    else:
+                        n_area_siguiente = "FINALIZADO"
+                else:
+                    n_area_siguiente = "FINALIZADO"
+
+                hist = d_op.get('historial_processes') or []
+
+                hist.append({
+                    "area": area_act,
+                    "maquina": r['maquina'],
+                    "operario": op_name,
+                    "auxiliar": auxiliar,
+                    "fecha": fin.strftime("%d/%m/%Y %H:%M"),
+                    "duracion": duracion,
+                    "tipo": "PARCIAL",
+                    "cantidad_parcial": cantidad_parcial,
+                    "observaciones": f"ENTREGA PARCIAL: {obs_parcial}"
+                })
+                
                 supabase.table("ordenes_planeadas").update({
-                    "proxima_area": n_area,
-                    "historial_procesos": hist
+                    "proxima_area": n_area_siguiente, # Esto la manda a la siguiente fila del monitor
+                    "historial_procesos": hist,
+                    "estado_parcial": "ACTIVO EN ORIGEN" # Marca especial para saber que no ha terminado en el área anterior
                 }).eq("op", r['op']).execute()
 
-                st.success("Entrega parcial registrada")
+                st.success(f"Entrega parcial registrada. La OP ahora aparece en {n_area_siguiente} y sigue disponible aquí.")
+
+# LIBERAR MAQUINA (Esto es vital para que la máquina quede lista para otra cosa o para seguir con la misma OP)
+                supabase.table("trabajos_activos").delete().eq("id", r['id']).execute()
+                
+# Opcional: Registrar el fin de este tramo en tiempos muertos para medir el "Tiempo Libre"
+                supabase.table("tiempos_muertos").insert({
+                    "maquina": r['maquina'],
+                    "motivo": "FIN TRAMO PARCIAL",
+                    "inicio": fin.isoformat(),
+                    "fin": fin.isoformat(),
+                    "duracion_segundos": 0
+                }).execute()
+                
+                st.rerun()
 
 #  LIBERAR MAQUINA 
 
