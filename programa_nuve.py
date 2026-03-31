@@ -795,7 +795,7 @@ if "rol" not in st.session_state:
         <style>
         .stApp {{
             background-image: url("data:image/png;base64,{img_logo}");
-            background-size: 250px;
+            background-size: 2500px;
             background-repeat: no-repeat;
             background-position: center;
         }}
