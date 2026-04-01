@@ -809,34 +809,35 @@ if not st.session_state.get('autenticado'):
                 st.error("Usuario o contraseña incorrectos")
     st.stop() 
 
-# Detiene la ejecución si no está autenticado
-
-# --- ESTRUCTURA DE MENÚ CON PERMISOS POR ROL ---
 # --- ESTRUCTURA DE MENÚ CON PERMISOS POR ROL ---
 with st.sidebar:
     st.title("🏭 NUVE V31.0")
     
     rol = st.session_state.get('rol', 'operario')
     
-    # 1. Definimos TODAS las opciones posibles del sistema
-    todos_los_modulos = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
-    
-    # 2. Filtramos según el rol
+    # 1. Definimos la lógica de filtrado correctamente con IF / ELIF / ELSE
     if rol == 'admin':
+        # El admin ve TODO
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
+    
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
-    elif 'supervisor_imp' in rol:
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión", "✂️ Corte"] 
-
-        # Operario por defecto
+    
+    elif rol == 'supervisor_imp':
+        # El supervisor de impresión ve su área y seguimiento
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión"]
+    
+    else:
+        # El operario o cualquier otro rol no definido solo ve el Monitor
         opciones_menu = ["🖥️ Monitor"]
 
-    # 3. Creamos el radio button con las opciones permitidas
+    # 3. Creamos el radio button con la lista que quedó seleccionada arriba
     menu = st.radio("SELECCIONE MÓDULO:", opciones_menu)
     
     st.divider()
-    # Botón de Cerrar Sesión para probar otros roles fácilmente
+    st.caption(f"Usuario: {st.session_state.get('usuario_actual')} | Rol: {rol}")
+    
+    # Botón de Cerrar Sesión
     if st.button("🚪 Cerrar Sesión"):
         st.session_state.clear()
         st.rerun()
