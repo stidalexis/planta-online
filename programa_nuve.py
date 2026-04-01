@@ -86,7 +86,7 @@ PRESENTACIONES = ["BLOCK", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS"
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
 MOTIVOS_PARADA = ["Mantenimiento Mecánico", "Falta de Material", "Cambio de Referencia", "Limpieza", "Falla Eléctrica", "Almuerzo/Cena","Ajuste de Registro"]
 # --- ROLES DE USUARIO ---
-ROLES = ["VENDEDOR","JEFE_VENTAS","SUP_IMPRESION","SUP_CORTE","SUP_REBOBINADORAS","SUP_ENCUADERNACION","ADMIN"]
+
 # --- USUARIOS ORGANIZADOS POR ROL ---
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     try:
@@ -811,10 +811,37 @@ if not st.session_state.get('autenticado'):
 
 # Detiene la ejecución si no está autenticado
 
+# --- ESTRUCTURA DE MENÚ CON PERMISOS POR ROL ---
 with st.sidebar:
-    st.title("🏭 NUVE V31.0")
-    menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"])
+    st.title("🏭 PLANTA C&B V.1.0")
+    
+    # 1. Obtenemos el rol del usuario (si no hay, por defecto es operario)
+    rol = st.session_state.get('rol', 'operario')
+    
+    # 2. Definimos qué opciones ve cada rol
+    opciones_menu = ["🖥️ Monitor"] # Todos ven el Monitor
+    
+    if rol == 'admin':
+        # El admin ve absolutamente todo
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
+    
+    elif rol == 'ventas':
+        # Ventas solo ve Monitor, Seguimiento y Planificación
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
+        
+    elif rol == 'supervisor_imp':
+        # Ejemplo: Supervisor de Impresión ve Monitor, Seguimiento e Impresión
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión"]
+        
+    elif rol == 'operario':
+        # El operario solo ve el Monitor (puedes añadir más si quieres)
+        opciones_menu = ["🖥️ Monitor"]
+
+    # 3. Dibujamos el menú con las opciones filtradas
+    menu = st.radio("SELECCIONE MÓDULO:", opciones_menu)
+    
     st.divider()
+    st.info(f"Usuario: {st.session_state.get('nombre_usuario')}\n\nRol: {rol.upper()}")
     st.caption("Conectado a Supabase Cloud")
 
 #  MÓDULO 1: MONITOR 
@@ -1727,7 +1754,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 if st.session_state.get('rol') == 'admin':
     st.divider()
     with st.expander("➕ Panel de Administración de Usuarios"):
-        st.info("Desde aquí puedes dar de alta nuevos operarios en la base de datos de Supabase.")
+        st.info("Desde aquí se puede dar de alta nuevos operarios en la base de datos de Supabase.")
         
         # Usamos columnas para que se vea más ordenado
         c1, c2 = st.columns(2)
