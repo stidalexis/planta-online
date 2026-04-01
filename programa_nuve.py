@@ -1736,7 +1736,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "operario", "supervisor"], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb"], key="admin_r")
         
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
