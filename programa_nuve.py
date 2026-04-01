@@ -813,32 +813,30 @@ if not st.session_state.get('autenticado'):
 with st.sidebar:
     st.title("🏭 NUVE V31.0")
     
-    rol = st.session_state.get('rol', 'operario')
+    # Obtenemos el rol (aseguramos minúsculas para evitar errores)
+    rol = st.session_state.get('rol', 'operario').lower()
     
-    # 1. Definimos la lógica de filtrado correctamente con IF / ELIF / ELSE
+    # 1. Definimos las opciones según el rol
     if rol == 'admin':
-        # El admin ve TODO
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
-    
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
-    
     elif rol == 'supervisor_imp':
-        # El supervisor de impresión ve su área y seguimiento
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión"]
-    
+    elif rol == 'supervisor_cor':
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "✂️ Corte"]
     else:
-        # El operario o cualquier otro rol no definido solo ve el Monitor
+        # Operarios y otros roles
         opciones_menu = ["🖥️ Monitor"]
 
-    # 3. Creamos el radio button con la lista que quedó seleccionada arriba
+    # 2. Creamos el radio button (Menú)
     menu = st.radio("SELECCIONE MÓDULO:", opciones_menu)
     
     st.divider()
     st.caption(f"Usuario: {st.session_state.get('usuario_actual')} | Rol: {rol}")
     
-    # Botón de Cerrar Sesión
-    if st.button("🚪 Cerrar Sesión"):
+    # 3. Botón de Cerrar Sesión (Indispensable para probar roles)
+    if st.button("🚪 Cerrar Sesión", use_container_width=True):
         st.session_state.clear()
         st.rerun()
     
@@ -1336,22 +1334,27 @@ elif menu == "📅 Planificación":
 
 #  MODULO 4: PRODUCCION 
 
+# --- VALIDACIÓN DE ACCESO A ÁREAS DE PRODUCCIÓN ---
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]:
-    rol = st.session_state.get("rol", "ADMIN")
+    rol_actual = st.session_state.get("rol", "operario").lower()
 
-# --- PERMISOS (DE MOMENTO TODOS PUEDEN VER TODO) ---
+    # Diccionario de permisos unificado (Nombres de roles en minúsculas)
     PERMISOS = {
-        "VENDEDOR": ["TODOS"],
-        "JEFE_VENTAS": ["TODOS"],
-        "SUP_IMPRESION": ["TODOS"],
-        "SUP_CORTE": ["TODOS"],
-        "SUP_REBOBINADORAS": ["TODOS"],
-        "SUP_ENCUADERNACION": ["TODOS"],
-        "ADMIN": ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
+        "admin": ["TODOS"],
+        "ventas": ["TODOS"],
+        "supervisor_imp": ["IMPRESIÓN", "COLECTORAS"],
+        "supervisor_cor": ["CORTE"],
+        "supervisor_reb": ["REBOBINADORAS"],
+        "supervisor_enc": ["ENCUADERNACIÓN"]
     }
+
+    # Extraemos el nombre del área del texto del menú (ej: "IMPRESIÓN")
     area_act = menu.split(" ")[1].upper()
-    if "TODOS" not in PERMISOS.get(rol, []) and area_act not in PERMISOS.get(rol, []):
-        st.error("⛔ No tienes acceso a esta área")
+    
+    permisos_del_usuario = PERMISOS.get(rol_actual, [])
+
+    if "TODOS" not in permisos_del_usuario and area_act not in permisos_del_usuario:
+        st.error(f"⛔ El rol '{rol_actual}' no tiene permiso para el área {area_act}")
         st.stop()
 
     st.markdown(f"<div class='title-area'>PANEL DE PRODUCCIÓN: {area_act}</div>", unsafe_allow_html=True)
