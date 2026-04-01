@@ -822,13 +822,13 @@ with st.sidebar:
     todos_los_modulos = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
     
     # 2. Filtramos según el rol
-    if rol == 'ADMIN':
+    if rol == 'admin':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif 'supervisor' in rol:
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión", "✂️ Corte"] # Ajusta según necesites
-    else:
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión", "✂️ Corte"] 
+
         # Operario por defecto
         opciones_menu = ["🖥️ Monitor"]
 
