@@ -822,9 +822,13 @@ with st.sidebar:
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'supervisor_imp':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión"]
+        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📕 Encuadernación"]
     elif rol == 'supervisor_cor':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "✂️ Corte"]
+        opciones_menu = ["🖥️ Monitor", "✂️ Corte"]
+    elif rol == 'supervisor_enc':
+        opciones_menu = ["🖥️ Monitor", "📕 Encuadernación"]
+    elif rol == 'supervisor_reb':
+        opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
     else:
         # Operarios y otros roles
         opciones_menu = ["🖥️ Monitor"]
@@ -1768,7 +1772,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb"], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc"], key="admin_r")
         
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
@@ -1786,3 +1790,4 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
+
