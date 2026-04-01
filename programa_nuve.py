@@ -1724,10 +1724,33 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 
                 st.rerun()
 
-#  LIBERAR MAQUINA 
-
-                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-
-#  IMPORTANTE: NO BORRAR DE ACTIVOS
-
-                st.rerun()
+if st.session_state.get('rol') == 'admin':
+    st.divider()
+    with st.expander("➕ Panel de Administración de Usuarios"):
+        st.info("Desde aquí puedes dar de alta nuevos operarios en la base de datos de Supabase.")
+        
+        # Usamos columnas para que se vea más ordenado
+        c1, c2 = st.columns(2)
+        with c1:
+            nuevo_u = st.text_input("Usuario (Login)", key="admin_u")
+            nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
+        with c2:
+            nuevo_n = st.text_input("Nombre Completo", key="admin_n")
+            nuevo_r = st.selectbox("Rol", ["admin", "operario", "supervisor"], key="admin_r")
+        
+        if st.button("🚀 Crear Usuario en Sistema"):
+            if nuevo_u and nuevo_p and nuevo_n:
+                try:
+                    supabase.table("usuarios").insert({
+                        "usuario": nuevo_u, 
+                        "clave": nuevo_p, 
+                        "nombre": nuevo_n, 
+                        "rol": nuevo_r
+                    }).execute()
+                    st.success(f"Usuario {nuevo_u} creado exitosamente.")
+                    time.sleep(1.5)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al insertar: {e}")
+            else:
+                st.warning("Por favor, completa todos los campos.")
