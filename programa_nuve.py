@@ -1347,7 +1347,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         "SUP_CORTE": ["TODOS"],
         "SUP_REBOBINADORAS": ["TODOS"],
         "SUP_ENCUADERNACION": ["TODOS"],
-        "ADMIN": ["TODOS"]
+        "ADMIN": ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
     }
     area_act = menu.split(" ")[1].upper()
     if "TODOS" not in PERMISOS.get(rol, []) and area_act not in PERMISOS.get(rol, []):
