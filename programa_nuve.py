@@ -826,7 +826,7 @@ with st.sidebar:
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
-    elif 'supervisor' in rol:
+    elif 'supervisor_imp' in rol:
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión", "✂️ Corte"] 
 
         # Operario por defecto
