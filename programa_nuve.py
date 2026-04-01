@@ -88,26 +88,23 @@ MOTIVOS_PARADA = ["Mantenimiento Mecánico", "Falta de Material", "Cambio de Ref
 # --- ROLES DE USUARIO ---
 ROLES = ["VENDEDOR","JEFE_VENTAS","SUP_IMPRESION","SUP_CORTE","SUP_REBOBINADORAS","SUP_ENCUADERNACION","ADMIN"]
 # --- USUARIOS ORGANIZADOS POR ROL ---
-USUARIOS = {
-    "VENDEDOR": {
-        "juan": "1234",
-        "pedro": "1234"
-    },
-    "JEFE_VENTAS": {
-        "maria": "1234"
-    },
-    "SUP_IMPRESION": {
-        "carlos": "1234"
-    },
-    "SUP_CORTE": {
-        "luis": "1234"
-    },
-    "SUP_REBOBINADORAS": {},
-    "SUP_ENCUADERNACION": {},
-    "ADMIN": {
-        "admin": "1234"
-    }
-}
+def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
+    try:
+        # Consultamos la tabla usuarios filtrando por el nombre de usuario
+        respuesta = supabase.table("usuarios")\
+            .select("*")\
+            .eq("usuario", usuario_ingresado)\
+            .eq("clave", clave_ingresada)\
+            .execute()
+        
+        # Si la lista de datos no está vacía, el usuario existe y la clave coincide
+        if len(respuesta.data) > 0:
+            return respuesta.data[0]  # Retornamos toda la info del usuario
+        else:
+            return None
+    except Exception as e:
+        st.error(f"Error al conectar con la tabla de usuarios: {e}")
+        return None
 
 #  FUNCIONES AUXILIARES 
 
@@ -789,42 +786,31 @@ def modal_detalle_op(row):
 if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 # 🔐 LOGIN PRINCIPAL (pantalla completa)
-if "rol" not in st.session_state:
+if not st.session_state.get('autenticado'):
+    st.title("🔐 Acceso al Sistema NUVE")
+    
+    with st.form("login_form"):
+        user = st.text_input("Usuario")
+        pw = st.text_input("Contraseña", type="password")
+        boton_login = st.form_submit_button("Ingresar")
+        
+        if boton_login:
+            datos_usuario = validar_usuario_supabase(user, pw)
+            
+            if datos_usuario:
+                st.session_state['autenticado'] = True
+                st.session_state['usuario_actual'] = datos_usuario['usuario']
+                st.session_state['nombre_usuario'] = datos_usuario['nombre']
+                st.session_state['rol'] = datos_usuario['rol']
+                st.success(f"Bienvenido {datos_usuario['nombre']}")
+                time.sleep(1)
+                st.rerun()
+            else:
+                st.error("Usuario o contraseña incorrectos")
+    st.stop() 
 
-    st.markdown(f"""
-        <style>
-        .stApp {{
-            background-image: url("data:image/png;base64,{img_logo}");
-            background-size: 1800px;
-            background-repeat: no-repeat;
-            background-position: center;
-        }}
-        </style>
-    """, unsafe_allow_html=True)
+# Detiene la ejecución si no está autenticado
 
-    st.markdown("## 🔐 INICIO DE SESIÓN")
-
-    col1, col2, col3 = st.columns([1,2,1])
-
-    with col2:
-        usuario = st.text_input("Usuario")
-        clave = st.text_input("Clave", type="password")
-
-        if st.button("Ingresar"):
-            acceso = False
-
-            for rol, usuarios in USUARIOS.items():
-                if usuario in usuarios and usuarios[usuario] == clave:
-                    st.session_state["rol"] = rol
-                    st.session_state["usuario"] = usuario
-                    acceso = True
-                    st.rerun()
-                    break
-
-            if not acceso:
-                st.error("Usuario o clave incorrectos")
-
-    st.stop()
 with st.sidebar:
     st.title("🏭 NUVE V31.0")
     menu = st.radio("SELECCIONE MÓDULO:", ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"])
