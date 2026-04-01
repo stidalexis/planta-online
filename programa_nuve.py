@@ -812,33 +812,34 @@ if not st.session_state.get('autenticado'):
 # Detiene la ejecución si no está autenticado
 
 # --- ESTRUCTURA DE MENÚ CON PERMISOS POR ROL ---
+# --- ESTRUCTURA DE MENÚ CON PERMISOS POR ROL ---
 with st.sidebar:
-    st.title("🏭 PLANTA C&B V.1.0")
+    st.title("🏭 NUVE V31.0")
     
-    # 1. Obtenemos el rol del usuario (si no hay, por defecto es operario)
     rol = st.session_state.get('rol', 'operario')
     
-    # 2. Definimos qué opciones ve cada rol
-    opciones_menu = ["🖥️ Monitor"] # Todos ven el Monitor
+    # 1. Definimos TODAS las opciones posibles del sistema
+    todos_los_modulos = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
     
+    # 2. Filtramos según el rol
     if rol == 'admin':
-        # El admin ve absolutamente todo
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
-    
+        opciones_menu = todos_los_modulos
     elif rol == 'ventas':
-        # Ventas solo ve Monitor, Seguimiento y Planificación
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
-        
-    elif rol == 'supervisor_imp':
-        # Ejemplo: Supervisor de Impresión ve Monitor, Seguimiento e Impresión
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión"]
-        
-    elif rol == 'operario':
-        # El operario solo ve el Monitor (puedes añadir más si quieres)
+    elif 'supervisor' in rol:
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "🖨️ Impresión", "✂️ Corte"] # Ajusta según necesites
+    else:
+        # Operario por defecto
         opciones_menu = ["🖥️ Monitor"]
 
-    # 3. Dibujamos el menú con las opciones filtradas
+    # 3. Creamos el radio button con las opciones permitidas
     menu = st.radio("SELECCIONE MÓDULO:", opciones_menu)
+    
+    st.divider()
+    # Botón de Cerrar Sesión para probar otros roles fácilmente
+    if st.button("🚪 Cerrar Sesión"):
+        st.session_state.clear()
+        st.rerun()
     
     st.divider()
     st.info(f"Usuario: {st.session_state.get('nombre_usuario')}\n\nRol: {rol.upper()}")
