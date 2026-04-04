@@ -1333,49 +1333,26 @@ elif menu == "📅 Planificación":
 # --- NUEVO MÓDULO: GESTIÓN DE INVENTARIO ---
 
 elif menu == "📦 Inventario":
-    st.title("📦 Gestión de Suministros")
+    st.title("Gestión de Suministros")
+    t1, t2, t3 = st.tabs(["📥 Entrada Cores", "📦 Entrada Cajas", "📊 Stock Actual"])
     
-    # Creamos las 3 pestañas una sola vez
-    tab1, tab2, tab3 = st.tabs(["📥 Ingresar Cores", "📦 Ingresar Cajas", "📊 Ver Existencias Totales"])
-    
-    # --- PESTAÑA 1: CORES ---
-    with tab1:
-        st.subheader("Registrar Entrada de Cores / Tubos")
-        cores_db = supabase.table("inventario_cores").select("*").execute().data
-        if cores_db:
-            opciones_c = {c['nombre_core']: c['id'] for c in cores_db}
-            with st.form("entrada_cores"):
-                sel_c = st.selectbox("Seleccione el Core", list(opciones_c.keys()))
-                cant_n = st.number_input("Cantidad que ingresa (unidades)", min_value=1, step=1)
-                
-                if st.form_submit_button("Actualizar Stock Cores"):
-                    id_sel = opciones_c[sel_c]
-                    actual = next(item for item in cores_db if item["id"] == id_sel)["stock_actual"]
-                    supabase.table("inventario_cores").update({"stock_actual": actual + cant_n}).eq("id", id_sel).execute()
-                    st.success(f"Stock de {sel_c} actualizado a {actual + cant_n}")
-                    time.sleep(1)
-                    st.rerun()
+    with t1:
+        cores = supabase.table("inventario_cores").select("*").execute().data
+        if cores:
+            with st.form("in_cores"):
+                c_sel = st.selectbox("Core", [c['nombre_core'] for c in cores])
+                cant = st.number_input("Cantidad", min_value=1)
+                if st.form_submit_button("Registrar Ingreso"):
+                    id_c = next(x['id'] for x in cores if x['nombre_core'] == c_sel)
+                    stk = next(x['stock_actual'] for x in cores if x['nombre_core'] == c_sel)
+                    supabase.table("inventario_cores").update({"stock_actual": stk + cant}).eq("id", id_c).execute()
+                    st.success("Inventario actualizado"); time.sleep(1); st.rerun()
 
-    # --- PESTAÑA 2: CAJAS ---
-    with tab2:
-        st.subheader("Registrar Entrada de Cajas / Embalaje")
-        cajas_db = supabase.table("inventario_cajas").select("*").execute().data
-        if cajas_db:
-            # Mostramos tipo y dimensiones para que el operario no se equivoque
-            opciones_cj = {f"{c['tipo_caja']} ({c.get('dimensiones', 'N/A')})": c['id'] for c in cajas_db}
-            with st.form("entrada_cajas"):
-                sel_cj = st.selectbox("Seleccione tipo de Caja", list(opciones_cj.keys()))
-                cant_cj = st.number_input("Cantidad de cajas que ingresan", min_value=1, step=1)
-                
-                if st.form_submit_button("Actualizar Stock Cajas"):
-                    id_sel_cj = opciones_cj[sel_cj]
-                    actual_cj = next(item for item in cajas_db if item["id"] == id_sel_cj)["stock_actual"]
-                    supabase.table("inventario_cajas").update({"stock_actual": actual_cj + cant_cj}).eq("id", id_sel_cj).execute()
-                    st.success(f"Stock de cajas actualizado.")
-                    time.sleep(1)
-                    st.rerun()
-        else:
-            st.warning("No hay tipos de cajas registrados en la base de datos.")
+    with t3:
+        st.subheader("Existencias Totales")
+        c1, c2 = st.columns(2)
+        c1.table(pd.DataFrame(supabase.table("inventario_cores").select("nombre_core, stock_actual").execute().data))
+        c2.table(pd.DataFrame(supabase.table("inventario_cajas").select("tipo_caja, stock_actual").execute().data))
 
     # --- PESTAÑA 3: RESUMEN TOTAL ---
     with tab3:
