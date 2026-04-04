@@ -1512,6 +1512,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['imagenes_corte'] = c1.number_input("imagenes/bobina", 0)
                 datos_c['gramos_bobinas'] = c2.number_input("gramaje de bobina", 0)
                 datos_c['rollos_finales'] = c3.number_input("total Rollos cortados", 0)
+                st.markdown("---")
+                st.subheader("📦 EMPAQUE Y CAJAS")
+# Traer cajas de la DB
+                cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
+                dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
+
+                sel_caja = st.selectbox("¿Qué CAJA utilizó?", ["N/A"] + list(dict_cajas.keys()), key="caja_corte")
+                if sel_caja != "N/A":
+                    datos_c['id_caja_inventario'] = dict_cajas[sel_caja]
+                    datos_c['nombre_caja'] = sel_caja
                 
                 st.markdown("---")
                 st.subheader("📦 CONSUMO DE CORES")
@@ -1538,6 +1548,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['cajas_empacadas'] = c1.number_input("total cajas empacadas", 0)
                 datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
                 datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva",)
+                st.markdown("---")
+                st.subheader("📦 EMPAQUE Y CAJAS")
+# Traer cajas de la DB
+                cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
+                dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
+
+                sel_caja = st.selectbox("¿Qué CAJA utilizó?", ["N/A"] + list(dict_cajas.keys()), key="caja_corte")
+                if sel_caja != "N/A":
+                    datos_c['id_caja_inventario'] = dict_cajas[sel_caja]
+                    datos_c['nombre_caja'] = sel_caja
 
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
@@ -1547,6 +1567,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
                 datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
                 datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
+                st.markdown("---")
+                st.subheader("📦 EMPAQUE Y CAJAS")
+# Traer cajas de la DB
+                cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
+                dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
+
+                sel_caja = st.selectbox("¿Qué CAJA utilizó?", ["N/A"] + list(dict_cajas.keys()), key="caja_corte")
+                if sel_caja != "N/A":
+                    datos_c['id_caja_inventario'] = dict_cajas[sel_caja]
+                    datos_c['nombre_caja'] = sel_caja
 
             elif area_act == "REBOBINADORAS":
                 c1, c2, c3 = st.columns(3)
@@ -1605,7 +1635,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  CALCULAR DURACION
 
                     duracion = calcular_duracion_laboral(inicio, fin)
+
                     # --- LÓGICA DE DESCUENTO DE INVENTARIO ---
+
                     if area_act == "CORTE" and 'id_tubo_inventario' in datos_c:
                         id_t = datos_c['id_tubo_inventario']
                         cant_gastar = datos_c.get('rollos_finales', 0)
@@ -1619,6 +1651,30 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 supabase.table("inventario_cores").update({"stock_actual": nuevo_stk}).eq("id", id_t).execute()
                                 # Guardamos en los datos de cierre para el certificado
                                 datos_c['info_inventario'] = f"Descontados {cant_gastar} de {datos_c['nombre_tubo']}"
+
+# --- LÓGICA DE DESCUENTO DE CAJAS ---
+                    if 'id_caja_inventario' in datos_c:
+                        id_caja = datos_c['id_caja_inventario']
+
+# Usa la cantidad de cajas que el operario anotó en el formulario
+
+                        cant_cajas_gastar = datos_c.get('cajas_totales', 0) or datos_c.get('total_cajas', 0)
+    
+                        if cant_cajas_gastar > 0:
+                            try:
+
+# Consultar stock actual de cajas
+
+                                stk_c = supabase.table("inventario_cajas").select("stock_actual").eq("id", id_caja).single().execute()
+                                if stk_c.data:
+                                    nuevo_stk_c = stk_c.data['stock_actual'] - cant_cajas_gastar
+
+# Actualizar
+
+                                    supabase.table("inventario_cajas").update({"stock_actual": nuevo_stk_c}).eq("id", id_caja).execute()
+                                    datos_c['info_cajas'] = f"Descontadas {cant_cajas_gastar} cajas de {datos_c['nombre_caja']}"
+                            except Exception as e:
+                                st.error(f"Error descontando cajas: {e}")
 
 # DETENER OP  NO CUENTA TIEMPO
 
