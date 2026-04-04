@@ -1358,6 +1358,18 @@ elif menu == "📦 Inventario":
                 time.sleep(1)
                 st.rerun()
 
+         with st.form("entrada_suministros2"):
+            sel_item = st.selectbox(f"Seleccione {tipo_insumo[:-1]}", list(opciones.keys()))
+            cant_n = st.number_input("Cantidad que ingresa (unidades)", min_value=1, step=1)
+            
+            if st.form_submit_button("Actualizar Stock2"):
+                id_sel = opciones[sel_item]
+                actual = next(i for i in items_db if i["id"] == id_sel)["stock_actual"]
+                supabase.table(tabla_db).update({"stock_actual": actual - cant_n}).eq("id", id_sel).execute()
+                st.success(f"Stock de {sel_item} actualizado a {actual - cant_n}")
+                time.sleep(1)
+                st.rerun()
+
     with tab2:
         c1, c2 = st.columns(2)
         with c1:
