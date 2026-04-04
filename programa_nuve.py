@@ -1358,7 +1358,7 @@ elif menu == "📦 Inventario":
                 time.sleep(1)
                 st.rerun()
 
-         with st.form("entrada_suministros2"):
+        with st.form("entrada_suministros2"):
             sel_item = st.selectbox(f"Seleccione {tipo_insumo[:-1]}", list(opciones.keys()))
             cant_n = st.number_input("Cantidad que ingresa (unidades)", min_value=1, step=1)
             
