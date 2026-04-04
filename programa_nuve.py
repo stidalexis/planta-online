@@ -812,7 +812,7 @@ with st.sidebar:
     
     # 1. Definimos las opciones según el rol
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario"]
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'supervisor_imp':
@@ -1330,6 +1330,35 @@ elif menu == "📅 Planificación":
                 time.sleep(1.5)
                 st.rerun()
 
+# --- NUEVO MÓDULO: GESTIÓN DE INVENTARIO ---
+
+elif menu == "📦 Inventario":
+    st.title("Gestión de Cores / Tubos")
+    
+    tab1, tab2 = st.tabs(["📥 Ingresar Stock", "📊 Ver Existencias"])
+    
+    with tab1:
+        st.subheader("Registrar Entrada de Mercancía")
+        # Traer cores de la DB
+        cores_db = supabase.table("inventario_cores").select("*").execute().data
+        opciones_c = {c['nombre_core']: c['id'] for c in cores_db}
+        
+        with st.form("entrada_cores"):
+            sel_c = st.selectbox("Seleccione el Core", list(opciones_c.keys()))
+            cant_n = st.number_input("Cantidad que ingresa (unidades)", min_value=1, step=1)
+            
+            if st.form_submit_button("Actualizar Stock"):
+                id_sel = opciones_c[sel_c]
+                # Obtener valor actual para sumar
+                actual = next(item for item in cores_db if item["id"] == id_sel)["stock_actual"]
+                supabase.table("inventario_cores").update({"stock_actual": actual + cant_n}).eq("id", id_sel).execute()
+                st.success(f"Stock de {sel_c} actualizado a {actual + cant_n}")
+                time.sleep(1)
+                st.rerun()
+
+    with tab2:
+        cores_df = pd.DataFrame(supabase.table("inventario_cores").select("*").execute().data)
+        st.dataframe(cores_df, use_container_width=True)
 #  MODULO 4: PRODUCCION 
 
 # --- VALIDACIÓN DE ACCESO A ÁREAS DE PRODUCCIÓN ---
@@ -1483,6 +1512,20 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['imagenes_corte'] = c1.number_input("imagenes/bobina", 0)
                 datos_c['gramos_bobinas'] = c2.number_input("gramaje de bobina", 0)
                 datos_c['rollos_finales'] = c3.number_input("total Rollos cortados", 0)
+                
+                st.markdown("---")
+                st.subheader("📦 CONSUMO DE CORES")
+                # Traer nombres de cores para el selector
+                cores_res = supabase.table("inventario_cores").select("id, nombre_core").execute().data
+                dict_cores = {c['nombre_core']: c['id'] for c in cores_res}
+                
+                # El maquinista selecciona el tubo que usó REALMENTE
+                tubo_usado = st.selectbox("¿Qué TUBO/CORE utilizó?", ["Seleccione..."] + list(dict_cores.keys()))
+                if tubo_usado != "Seleccione...":
+                    datos_c['id_tubo_inventario'] = dict_cores[tubo_usado]
+                    datos_c['nombre_tubo'] = tubo_usado
+                
+                st.markdown("---")
                 datos_c['varillas_finales'] = c1.number_input("total varillas", 0)
                 datos_c['cajas_totales'] = c2.number_input("Cajas empacadas", 0)
                 datos_c['desperdicio'] = c3.number_input("total desperdicio", 0)
@@ -1562,6 +1605,20 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  CALCULAR DURACION
 
                     duracion = calcular_duracion_laboral(inicio, fin)
+                    # --- LÓGICA DE DESCUENTO DE INVENTARIO ---
+                    if area_act == "CORTE" and 'id_tubo_inventario' in datos_c:
+                        id_t = datos_c['id_tubo_inventario']
+                        cant_gastar = datos_c.get('rollos_finales', 0)
+                        
+                        if cant_gastar > 0:
+                            # 1. Consultar stock actual
+                            stk = supabase.table("inventario_cores").select("stock_actual").eq("id", id_t).single().execute().data
+                            if stk:
+                                nuevo_stk = stk['stock_actual'] - cant_gastar
+                                # 2. Restar en la DB
+                                supabase.table("inventario_cores").update({"stock_actual": nuevo_stk}).eq("id", id_t).execute()
+                                # Guardamos en los datos de cierre para el certificado
+                                datos_c['info_inventario'] = f"Descontados {cant_gastar} de {datos_c['nombre_tubo']}"
 
 # DETENER OP  NO CUENTA TIEMPO
 
