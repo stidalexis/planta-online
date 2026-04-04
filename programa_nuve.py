@@ -1350,7 +1350,7 @@ elif menu == "📦 Inventario":
             sel_item = st.selectbox(f"Seleccione {tipo_insumo[:-1]}", list(opciones.keys()))
             cant_n = st.number_input("Cantidad que ingresa (unidades)", min_value=1, step=1)
             
-            if st.form_submit_button("Actualizar Stock"):
+            if st.form_submit_button("Actualizar Stock Dentrada"):
                 id_sel = opciones[sel_item]
                 actual = next(i for i in items_db if i["id"] == id_sel)["stock_actual"]
                 supabase.table(tabla_db).update({"stock_actual": actual + cant_n}).eq("id", id_sel).execute()
@@ -1358,11 +1358,11 @@ elif menu == "📦 Inventario":
                 time.sleep(1)
                 st.rerun()
 
-        with st.form("entrada_suministros2"):
+        with st.form("salida_suministros"):
             sel_item = st.selectbox(f"Seleccione {tipo_insumo[:-1]}", list(opciones.keys()))
             cant_n = st.number_input("Cantidad que ingresa (unidades)", min_value=1, step=1)
             
-            if st.form_submit_button("Actualizar Stock2"):
+            if st.form_submit_button("Actualizar Stock Salida"):
                 id_sel = opciones[sel_item]
                 actual = next(i for i in items_db if i["id"] == id_sel)["stock_actual"]
                 supabase.table(tabla_db).update({"stock_actual": actual - cant_n}).eq("id", id_sel).execute()
@@ -1522,7 +1522,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['imagenes_impresas'] = c1.number_input("n° imagenes ", 0)
                 datos_c['desperdicio_kg'] = c2.number_input("Desperdicio Kg", 0)
                 datos_c['planchas'] = c3.number_input("planchas gastadas", 0)
-                
+
             elif area_act == "CORTE":
                 c1, c2, c3 = st.columns(3)
                 datos_c['tipo_papel'] = c1.text_input("Tipo de papel")
