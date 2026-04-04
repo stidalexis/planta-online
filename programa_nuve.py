@@ -1333,43 +1333,32 @@ elif menu == "📅 Planificación":
 # --- NUEVO MÓDULO: GESTIÓN DE INVENTARIO ---
 
 elif menu == "📦 Inventario":
-    st.title("Gestión de Suministros")
-    t1, t2, t3 = st.tabs(["📥 Entrada Cores", "📦 Entrada Cajas", "📊 Stock Actual"])
+    st.title("Gestión de Cores / Tubos")
     
-    with t1:
-        cores = supabase.table("inventario_cores").select("*").execute().data
-        if cores:
-            with st.form("in_cores"):
-                c_sel = st.selectbox("Core", [c['nombre_core'] for c in cores])
-                cant = st.number_input("Cantidad", min_value=1)
-                if st.form_submit_button("Registrar Ingreso"):
-                    id_c = next(x['id'] for x in cores if x['nombre_core'] == c_sel)
-                    stk = next(x['stock_actual'] for x in cores if x['nombre_core'] == c_sel)
-                    supabase.table("inventario_cores").update({"stock_actual": stk + cant}).eq("id", id_c).execute()
-                    st.success("Inventario actualizado"); time.sleep(1); st.rerun()
-
-    with t3:
-        st.subheader("Existencias Totales")
-        c1, c2 = st.columns(2)
-        c1.table(pd.DataFrame(supabase.table("inventario_cores").select("nombre_core, stock_actual").execute().data))
-        c2.table(pd.DataFrame(supabase.table("inventario_cajas").select("tipo_caja, stock_actual").execute().data))
-
-    # --- PESTAÑA 3: RESUMEN TOTAL ---
-    with tab3:
-        st.subheader("Estado Actual del Almacén")
-        col1, col2 = st.columns(2)
+    tab1, tab2 = st.tabs(["📥 Ingresar Stock", "📊 Ver Existencias"])
+    
+    with tab1:
+        st.subheader("Registrar Entrada de Mercancía")
+        # Traer cores de la DB
+        cores_db = supabase.table("inventario_cores").select("*").execute().data
+        opciones_c = {c['nombre_core']: c['id'] for c in cores_db}
         
-        with col1:
-            st.info("**Stock de Cores**")
-            cores_resumen = supabase.table("inventario_cores").select("nombre_core, stock_actual").execute().data
-            if cores_resumen:
-                st.table(pd.DataFrame(cores_resumen))
+        with st.form("entrada_cores"):
+            sel_c = st.selectbox("Seleccione el Core", list(opciones_c.keys()))
+            cant_n = st.number_input("Cantidad que ingresa (unidades)", min_value=1, step=1)
             
-        with col2:
-            st.info("**Stock de Cajas**")
-            cajas_resumen = supabase.table("inventario_cajas").select("tipo_caja, stock_actual").execute().data
-            if cajas_resumen:
-                st.table(pd.DataFrame(cajas_resumen))
+            if st.form_submit_button("Actualizar Stock"):
+                id_sel = opciones_c[sel_c]
+                # Obtener valor actual para sumar
+                actual = next(item for item in cores_db if item["id"] == id_sel)["stock_actual"]
+                supabase.table("inventario_cores").update({"stock_actual": actual + cant_n}).eq("id", id_sel).execute()
+                st.success(f"Stock de {sel_c} actualizado a {actual + cant_n}")
+                time.sleep(1)
+                st.rerun()
+
+    with tab2:
+        cores_df = pd.DataFrame(supabase.table("inventario_cores").select("*").execute().data)
+        st.dataframe(cores_df, use_container_width=True)
 #  MODULO 4: PRODUCCION 
 
 # --- VALIDACIÓN DE ACCESO A ÁREAS DE PRODUCCIÓN ---
@@ -1523,16 +1512,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['imagenes_corte'] = c1.number_input("imagenes/bobina", 0)
                 datos_c['gramos_bobinas'] = c2.number_input("gramaje de bobina", 0)
                 datos_c['rollos_finales'] = c3.number_input("total Rollos cortados", 0)
-                st.markdown("---")
-                st.subheader("📦 EMPAQUE Y CAJAS")
-# Traer cajas de la DB
-                cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
-                dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
-
-                sel_caja = st.selectbox("¿Qué CAJA utilizó?", ["N/A"] + list(dict_cajas.keys()), key="caja_corte")
-                if sel_caja != "N/A":
-                    datos_c['id_caja_inventario'] = dict_cajas[sel_caja]
-                    datos_c['nombre_caja'] = sel_caja
                 
                 st.markdown("---")
                 st.subheader("📦 CONSUMO DE CORES")
@@ -1559,16 +1538,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['cajas_empacadas'] = c1.number_input("total cajas empacadas", 0)
                 datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
                 datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva",)
-                st.markdown("---")
-                st.subheader("📦 EMPAQUE Y CAJAS")
-# Traer cajas de la DB
-                cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
-                dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
-
-                sel_caja = st.selectbox("¿Qué CAJA utilizó?", ["N/A"] + list(dict_cajas.keys()), key="caja_corte")
-                if sel_caja != "N/A":
-                    datos_c['id_caja_inventario'] = dict_cajas[sel_caja]
-                    datos_c['nombre_caja'] = sel_caja
 
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
@@ -1578,16 +1547,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
                 datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
                 datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
-                st.markdown("---")
-                st.subheader("📦 EMPAQUE Y CAJAS")
-# Traer cajas de la DB
-                cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
-                dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
-
-                sel_caja = st.selectbox("¿Qué CAJA utilizó?", ["N/A"] + list(dict_cajas.keys()), key="caja_corte")
-                if sel_caja != "N/A":
-                    datos_c['id_caja_inventario'] = dict_cajas[sel_caja]
-                    datos_c['nombre_caja'] = sel_caja
 
             elif area_act == "REBOBINADORAS":
                 c1, c2, c3 = st.columns(3)
@@ -1646,9 +1605,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  CALCULAR DURACION
 
                     duracion = calcular_duracion_laboral(inicio, fin)
-
                     # --- LÓGICA DE DESCUENTO DE INVENTARIO ---
-
                     if area_act == "CORTE" and 'id_tubo_inventario' in datos_c:
                         id_t = datos_c['id_tubo_inventario']
                         cant_gastar = datos_c.get('rollos_finales', 0)
@@ -1662,30 +1619,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 supabase.table("inventario_cores").update({"stock_actual": nuevo_stk}).eq("id", id_t).execute()
                                 # Guardamos en los datos de cierre para el certificado
                                 datos_c['info_inventario'] = f"Descontados {cant_gastar} de {datos_c['nombre_tubo']}"
-
-# --- LÓGICA DE DESCUENTO DE CAJAS ---
-                    if 'id_caja_inventario' in datos_c:
-                        id_caja = datos_c['id_caja_inventario']
-
-# Usa la cantidad de cajas que el operario anotó en el formulario
-
-                        cant_cajas_gastar = datos_c.get('cajas_totales', 0) or datos_c.get('total_cajas', 0)
-    
-                        if cant_cajas_gastar > 0:
-                            try:
-
-# Consultar stock actual de cajas
-
-                                stk_c = supabase.table("inventario_cajas").select("stock_actual").eq("id", id_caja).single().execute()
-                                if stk_c.data:
-                                    nuevo_stk_c = stk_c.data['stock_actual'] - cant_cajas_gastar
-
-# Actualizar
-
-                                    supabase.table("inventario_cajas").update({"stock_actual": nuevo_stk_c}).eq("id", id_caja).execute()
-                                    datos_c['info_cajas'] = f"Descontadas {cant_cajas_gastar} cajas de {datos_c['nombre_caja']}"
-                            except Exception as e:
-                                st.error(f"Error descontando cajas: {e}")
 
 # DETENER OP  NO CUENTA TIEMPO
 
