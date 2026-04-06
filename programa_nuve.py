@@ -381,6 +381,20 @@ def generar_op_rollos(row):
     pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
     pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
 
+    pdf.cell(95,7,f"Tipo Creacion: {row.get('tipo_creacion','NUEVA')}",1)
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1,1)
+
+    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
+    pdf.cell(95,7,f"Core: {row.get('core','')}",1,1)
+
+    pdf.cell(95,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
+    pdf.cell(95,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
+
+    pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
+    pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+
+    pdf.cell(190,7,f"Destino: {row.get('destino_rollos','')}",1,1)
+
     if row.get('transportadora_rollos'):
         pdf.cell(95,7,f"Transportadora: SI",1,1)
     else:
@@ -426,6 +440,15 @@ def cell_fit(pdf, w, h, text, border=1):
         text = text[:-1]
 
     pdf.cell(w, h, text, border)
+    pdf.ln(5)
+
+    pdf.set_font("Arial","B",10)
+    pdf.cell(0,8,"RESUMEN COMPLETO (DEBUG TOTAL)",0,1)
+
+    pdf.set_font("Arial","",7)
+
+for k, v in row.items():
+    pdf.multi_cell(0,4,f"{k}: {v}",1)
 
 # GENERAR PDF FORMAS-
 
@@ -482,21 +505,26 @@ def generar_op_formas(row):
 
 # 2 ESPECIFICACIONES GENERALES
 
-    pdf.ln(4)
+    pdf.ln(5)
 
     pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"2. ESPECIFICACIONES GENERALES",0,1,fill=True)
+    pdf.cell(0,8,"DATOS COMPLETOS PLANIFICACION",0,1)
 
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","",9)
 
-    pdf.cell(63,7,f"Cantidad: {row.get('cantidad_formas','')}",1)
-    pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
-    pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
+    pdf.cell(95,6,f"Presentacion: {row.get('presentacion','')}",1)
+    pdf.cell(95,6,f"Tipo Presentacion: {row.get('tipo_presentacion','')}",1,1)
 
-    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
-    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
+    pdf.cell(95,6,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    pdf.cell(95,6,f"Numeracion Desde: {row.get('numeracion_desde','')}",1,1)
 
-    pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
+    pdf.cell(95,6,f"Numeracion Hasta: {row.get('numeracion_hasta','')}",1)
+    pdf.cell(95,6,f"Perforaciones: {row.get('perforaciones_detalle','')}",1,1)
+
+    pdf.cell(95,6,f"Transportadora: {row.get('transportadora_formas','NO')}",1)
+    pdf.cell(95,6,f"Destino: {row.get('destino_formas','')}",1,1)
+
+    pdf.cell(190,6,f"Observaciones: {row.get('observaciones_formas','')}",1,1)
 
 # 3 PERFORACIONES
 
@@ -553,6 +581,9 @@ def generar_op_formas(row):
         cell_fit(pdf,26,7,p.get("tf",""))
         cell_fit(pdf,26,7,p.get("tr",""))
         cell_fit(pdf,22,7,p.get("trafico",""))
+    if p.get("obs_parte"):
+        pdf.set_font("Arial","I",8)
+        pdf.multi_cell(0,5,f"Obs Parte {p.get('p')}: {p.get('obs_parte')}",1)
 
         pdf.ln()
 
@@ -1285,15 +1316,21 @@ elif menu == "📅 Planificación":
 
                 if "FORMAS" in t:
                     payload.update({
-                        "cantidad_formas": int(cant_f),
-                        "num_partes": partes,
-                        "perforaciones_detalle": perf_d,
-                        "codigo_barras_detalle": barr_d,
-                        "transportadora_formas": True if t_trans_f == "SI" else None,
-                        "destino_formas": dest_f if t_trans_f == "SI" else None,
-                        "detalles_partes_json": lista_p,
-                        "presentacion": pres,
-                        "observaciones_formas": obs
+                        payload.update({
+                    "cantidad_formas": int(cant_f),
+                    "num_partes": partes,
+                    "perforaciones_detalle": perf_d,
+                    "codigo_barras_detalle": barr_d,
+                    "transportadora_formas": t_trans_f,
+                    "destino_formas": dest_f,
+                    "detalles_partes_json": lista_p,
+                    "presentacion": pres,
+                    "tipo_presentacion": pres_peg,
+                    "numeracion_desde": num_id,
+                    "numeracion_hasta": num_fd,
+
+                    "observaciones_formas": obs
+                })
                     })
 
                 elif t == "REBOBINADO":
@@ -1306,21 +1343,22 @@ elif menu == "📅 Planificación":
                         "observaciones_rollos": obs
                 })
 
-                else:
-                    payload.update({
-                        "material": mat,
-                        "gramaje_rollos": gram,
-                        "cantidad_rollos": int(cant_r),
-                        "core": core,
-                        "tintas_frente_rollos": tf_r,
-                        "tintas_respaldo_rollos": tr_r,
-                        "unidades_bolsa": int(ub),
-                        "unidades_caja": int(uc),
-                        "observaciones_rollos": obs,
-                        "ref_comercial": ref_c,
-                        "transportadora_rollos": True if t_trans_f == "SI" else None,
-                        "destino_rollos": dest_f if t_trans_f == "SI" else None,
-                    })
+                payload.update({
+                    "material": mat,
+                    "gramaje_rollos": gram,
+                    "cantidad_rollos": int(cant_r),
+                    "core": core,
+                    "tintas_frente_rollos": tf_r,
+                    "tintas_respaldo_rollos": tr_r,
+                    "unidades_bolsa": int(ub),
+                    "unidades_caja": int(uc),
+                    "observaciones_rollos": obs,
+                    "ref_comercial": ref_c,
+
+                    # 🔥 ARREGLO TRANSPORTADORA
+                    "transportadora_rollos": t_trans_f,
+                    "destino_rollos": dest_f
+                })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
 
@@ -1887,5 +1925,4 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
-
 
