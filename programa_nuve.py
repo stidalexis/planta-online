@@ -655,7 +655,7 @@ def generar_op_rebobinado(row):
 
     pdf.cell(63,7,f"Material: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
-    pdf.cell(64,7,f"Ancho Base: {row.get('ancho_base','')}",1,1)
+    pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
 
     pdf.cell(95,7,f"Cantidad Rollos Entrada: {row.get('cantidad_rollos','')}",1)
     pdf.cell(95,7,f"Objetivo: {row.get('objetivo_rebobinado','')}",1,1)
@@ -1191,7 +1191,7 @@ elif menu == "📅 Planificación":
 
                 mat = r1.text_input("Material / Papel")
                 gram = r2.number_input("Gramaje", 0)
-                ancho = r3.number_input("Ancho Bobina", 0)
+                ancho = r3.number_input("Referencia Comercial", 0)
 
                 r4, r5 = st.columns(2)
 
@@ -1895,3 +1895,4 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
+
