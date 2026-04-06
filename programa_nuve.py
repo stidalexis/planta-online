@@ -512,10 +512,10 @@ def generar_op_rebobinado(row):
     # Fila 1: Material y Dimensiones
     pdf.cell(63,7,f"Material Base: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}g",1)
-    pdf.cell(64,7,f"Ancho Base (mm): {row.get('ancho_base','')}",1,1)
+    pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
 
     # Fila 2: Cantidades
-    pdf.cell(95,7,f"Cantidad Rollos Entrada: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
     pdf.cell(95,7,f"Tipo de Creacion: {row.get('tipo_creacion','NUEVA')}",1,1)
 
     # Fila 3: Objetivo (Campo muy importante en rebobinado)
@@ -1043,11 +1043,11 @@ elif menu == "📅 Planificación":
 
                 mat = r1.text_input("Material / Papel")
                 gram = r2.number_input("Gramaje", 0)
-                ancho = r3.number_input("Ancho Bobina", 0)
+                ancho = r3.number_input("Referencia Comercial", 0)
 
                 r4, r5 = st.columns(2)
 
-                cant_r = r4.number_input("Cantidad Rollos Entrada", 0)
+                cant_r = r4.number_input("Cantidad Rollos Solicitada", 0)
                 objetivo = r5.text_input("Objetivo del Rebobinado")
 
                 obs = st.text_area("Observaciones Rebobinado")
