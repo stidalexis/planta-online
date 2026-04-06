@@ -493,10 +493,18 @@ def generar_op_formas(row):
     pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
 
-    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
-    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
+    # FORMATEAR TRANSPORTADORA
+    if row.get('transportadora_formas'):
+        texto_trans = "SI"
+        texto_dest = row.get('destino_formas', 'NO')
+    else:
+        texto_trans = "NO"
+        texto_dest = "NO"
 
-    pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
+    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    pdf.cell(95,7,f"Transportadora: {texto_trans}",1,1)
+
+    pdf.cell(190,7,f"Destino: {texto_dest}",1,1)
 
 # 3 PERFORACIONES
 
@@ -1887,4 +1895,3 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
-
