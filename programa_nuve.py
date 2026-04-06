@@ -1043,7 +1043,7 @@ elif menu == "📅 Planificación":
 
                 mat = r1.text_input("Material / Papel")
                 gram = r2.number_input("Gramaje", 0)
-                ancho = r3.text_input("Referencia Comercial", 0)
+                ancho = r3.text_input("Referencia Comercial",)
 
                 r4, r5 = st.columns(2)
 
