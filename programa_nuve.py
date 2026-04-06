@@ -493,18 +493,10 @@ def generar_op_formas(row):
     pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
 
-    # FORMATEAR TRANSPORTADORA
-    if row.get('transportadora_formas'):
-        texto_trans = "SI"
-        texto_dest = row.get('destino_formas', 'NO')
-    else:
-        texto_trans = "NO"
-        texto_dest = "NO"
-
     pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
-    pdf.cell(95,7,f"Transportadora: {texto_trans}",1,1)
+    pdf.cell(95,7,f"Transportadora: {row.get('transportadora_formas','')}",1,1)
 
-    pdf.cell(190,7,f"Destino: {texto_dest}",1,1)
+    pdf.cell(190,7,f"Destino: {row.get('destino_formas','')}",1,1)
 
 # 3 PERFORACIONES
 
@@ -655,9 +647,9 @@ def generar_op_rebobinado(row):
 
     pdf.cell(63,7,f"Material: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
-    pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
+    pdf.cell(64,7,f"Ancho Base: {row.get('ancho_base','')}",1,1)
 
-    pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(95,7,f"Cantidad Rollos Entrada: {row.get('cantidad_rollos','')}",1)
     pdf.cell(95,7,f"Objetivo: {row.get('objetivo_rebobinado','')}",1,1)
 
 # 3. OBSERVACIONES
@@ -1160,7 +1152,7 @@ elif menu == "📅 Planificación":
                     lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', ""))
                     pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', ""))
                     fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) 
-                    gra = d5.number_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos',  ""))
+                    gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', ""))
                     tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
                     
                     tf, tr = "N/A", "N/A"
@@ -1191,12 +1183,12 @@ elif menu == "📅 Planificación":
 
                 mat = r1.text_input("Material / Papel")
                 gram = r2.number_input("Gramaje", 0)
-                ancho = r3.text_input("Referencia Comercial",)
+                ancho = r3.number_input("Ancho Bobina", 0)
 
                 r4, r5 = st.columns(2)
 
-                cant_r = r4.number_input("Cantidad Rollos Solicitada", 0)
-                objetivo = r5.text_input("Objetivo del Rebobinado( Interno , Cliente Final u Otros )")
+                cant_r = r4.number_input("Cantidad Rollos Entrada", 0)
+                objetivo = r5.text_input("Objetivo del Rebobinado")
 
                 obs = st.text_area("Observaciones Rebobinado")
                 
@@ -1895,4 +1887,5 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
+
 
