@@ -1436,6 +1436,21 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
                 datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva",)
 
+                st.markdown("---")
+                
+                # Usamos dos columnas nuevas para que los selectores de inventario queden alineados
+                col_inv1, col_inv2 = st.columns(2)
+                
+                with col_inv2:
+                    st.subheader("📦 CONSUMO DE CAJAS")
+                    cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
+                    dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
+                    caja_usada = st.selectbox("¿Qué CAJA utilizó?", ["Seleccione..."] + list(dict_cajas.keys()))
+                    if caja_usada != "Seleccione...":
+                        datos_c['id_caja_inventario'] = dict_cajas[caja_usada]
+                        datos_c['nombre_caja'] = caja_usada
+
+
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
                 datos_c['tipo_presentacion'] = c1.text_input("precetacion final",)
@@ -1444,6 +1459,21 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
                 datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
                 datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
+
+                st.markdown("---")
+                
+                # Usamos dos columnas nuevas para que los selectores de inventario queden alineados
+                col_inv1, col_inv2 = st.columns(2)
+            
+                with col_inv2:
+                    st.subheader("📦 CONSUMO DE CAJAS")
+                    cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
+                    dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
+                    caja_usada = st.selectbox("¿Qué CAJA utilizó?", ["Seleccione..."] + list(dict_cajas.keys()))
+                    if caja_usada != "Seleccione...":
+                        datos_c['id_caja_inventario'] = dict_cajas[caja_usada]
+                        datos_c['nombre_caja'] = caja_usada
+
 
             elif area_act == "REBOBINADORAS":
                 c1, c2, c3 = st.columns(3)
