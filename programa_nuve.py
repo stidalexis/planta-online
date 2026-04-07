@@ -1435,6 +1435,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['cajas_empacadas'] = c1.number_input("total cajas empacadas", 0)
                 datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
                 datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva",)
+
+                st.markdown("---")
+                
+                # Usamos dos columnas nuevas para que los selectores de inventario queden alineados
                 col_inv1, col_inv2 = st.columns(2)
                 
                 with col_inv2:
@@ -1446,12 +1450,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         datos_c['id_caja_inventario'] = dict_cajas[caja_usada]
                         datos_c['nombre_caja'] = caja_usada
 
-                st.markdown("---")
-                # Última fila de datos técnicos
-                f1, f2, f3 = st.columns(3)
-                # Este campo es el que usaremos para descontar del inventario de cajas
-                datos_c['cajas_totales'] = f2.number_input("Total Cajas Empacadas", 0, help="Esta cantidad se restará del inventario de la caja seleccionada arriba.")
-                datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
 
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
@@ -1460,7 +1458,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['total_cajas'] = c3.number_input("total cajas empacadas", 0)
                 datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
                 datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
-                datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)col_inv1, col_inv2 = st.columns(2)
+                datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
+
+                st.markdown("---")
+                
+                # Usamos dos columnas nuevas para que los selectores de inventario queden alineados
+                col_inv1, col_inv2 = st.columns(2)
             
                 with col_inv2:
                     st.subheader("📦 CONSUMO DE CAJAS")
@@ -1471,12 +1474,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         datos_c['id_caja_inventario'] = dict_cajas[caja_usada]
                         datos_c['nombre_caja'] = caja_usada
 
-                st.markdown("---")
-                # Última fila de datos técnicos
-                f1, f2, f3 = st.columns(3)
-                # Este campo es el que usaremos para descontar del inventario de cajas
-                datos_c['cajas_totales'] = f2.number_input("Total Cajas Empacadas", 0, help="Esta cantidad se restará del inventario de la caja seleccionada arriba.")
-                datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
 
             elif area_act == "REBOBINADORAS":
                 c1, c2, c3 = st.columns(3)
