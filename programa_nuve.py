@@ -1285,8 +1285,7 @@ elif menu == "📦 Bodega Terminado":
                                 "tipo_producto": tipo_prod,
                                 "stock_cajas": c_cajas,
                                 "stock_rollos": c_rollos,
-                                "ultima_actualizacion": ahora_col,
-                                "observaciones_inv": notas
+                                "ultima_actualizacion": ahora_col
                             }).execute()
                         
                         st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
@@ -1302,7 +1301,7 @@ elif menu == "📦 Bodega Terminado":
             df_bodega = pd.DataFrame(res_bodega)
             
 # Limpiar columnas para mostrar
-            df_show = df_bodega[['nombre_trabajo', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'observaciones_inv', 'ultima_actualizacion']]
+            df_show = df_bodega[['nombre_trabajo', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion']]
             df_show.columns = ['TRABAJO', 'TIPO', 'CAJAS', 'ROLLOS', 'ÚLT. MOVIMIENTO']
             
 # Buscador rápido dentro del inventario
@@ -1915,4 +1914,3 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
-
