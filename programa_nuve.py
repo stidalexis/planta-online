@@ -1398,7 +1398,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 
                 st.markdown("---")
                 
-                # Usamos dos columnas nuevas para que los selectores de inventario queden alineados
+# Usamos dos columnas nuevas para que los selectores de inventario queden alineados
                 col_inv1, col_inv2 = st.columns(2)
                 
                 with col_inv1:
@@ -1420,28 +1420,60 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         datos_c['nombre_caja'] = caja_usada
 
                 st.markdown("---")
-                # Última fila de datos técnicos
+# Última fila de datos técnicos
                 f1, f2, f3 = st.columns(3)
                 datos_c['varillas_finales'] = f1.number_input("Total varillas", 0)
-                # Este campo es el que usaremos para descontar del inventario de cajas
+# Este campo es el que usara para descontar del inventario de cajas
                 datos_c['cajas_totales'] = f2.number_input("Total Cajas Empacadas", 0, help="Esta cantidad se restará del inventario de la caja seleccionada arriba.")
                 datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
 
             elif area_act == "COLECTORAS":
                 c1, c2, c3 = st.columns(3) 
-                datos_c['tipo_papel'] = c1.text_input("tipo de papel",)
+                datos_c['tipo_papel'] = c1.text_input("tipo de papel")
                 datos_c['formas_colectadas'] = c2.number_input("total formas colectadas", 0)
-                datos_c['partes'] = c3.number_input("total partes colecatdas", 0)
-                datos_c['cajas_empacadas'] = c1.number_input("total cajas empacadas", 0)
+                datos_c['partes'] = c3.number_input("total partes colectadas", 0)
+                
+# --- CONSUMO DE CAJAS EN COLECTORAS ---
+                st.markdown("---")
+                col_inv_col = st.columns(2)
+                with col_inv_col[0]:
+                    st.subheader("📦 CONSUMO DE CAJAS")
+                    cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
+                    dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
+                    caja_usada = st.selectbox("¿Qué CAJA utilizó?", ["Seleccione..."] + list(dict_cajas.keys()), key="inv_col")
+                    if caja_usada != "Seleccione...":
+                        datos_c['id_caja_inventario'] = dict_cajas[caja_usada]
+                        datos_c['nombre_caja'] = caja_usada
+                
+                with col_inv_col[1]:
+                    datos_c['cajas_totales'] = st.number_input("Total Cajas Empacadas", 0, key="cant_col")
+                st.markdown("---")
+                
                 datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
-                datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva",)
+                datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva")
 
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
-                datos_c['tipo_presentacion'] = c1.text_input("precetacion final",)
+                datos_c['tipo_presentacion'] = c1.text_input("presentacion final")
                 datos_c['unidades_caja'] = c2.number_input("cantidad por caja", 0)
-                datos_c['total_cajas'] = c3.number_input("total cajas empacadas", 0)
-                datos_c['tipo_pegado'] = c1.text_input("lugar de pegado",)
+                
+# --- CONSUMO DE CAJAS EN ENCUADERNACIÓN ---
+                st.markdown("---")
+                col_inv_enc = st.columns(2)
+                with col_inv_enc[0]:
+                    st.subheader("📦 CONSUMO DE CAJAS")
+                    cajas_res = supabase.table("inventario_cajas").select("id, nombre_caja").execute().data
+                    dict_cajas = {c['nombre_caja']: c['id'] for c in cajas_res}
+                    caja_usada = st.selectbox("¿Qué CAJA utilizó?", ["Seleccione..."] + list(dict_cajas.keys()), key="inv_enc")
+                    if caja_usada != "Seleccione...":
+                        datos_c['id_caja_inventario'] = dict_cajas[caja_usada]
+                        datos_c['nombre_caja'] = caja_usada
+                
+                with col_inv_enc[1]:
+                    datos_c['cajas_totales'] = st.number_input("Total Cajas Empacadas", 0, key="cant_enc")
+                st.markdown("---")
+
+                datos_c['tipo_pegado'] = c1.text_input("lugar de pegado")
                 datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
                 datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
 
@@ -1508,16 +1540,22 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     if area_act == "CORTE" and 'id_tubo_inventario' in datos_c:
                         id_t = datos_c['id_tubo_inventario']
                         cant_gastar = datos_c.get('rollos_finales', 0)
-                        
                         if cant_gastar > 0:
-                            # 1. Consultar stock actual
                             stk = supabase.table("inventario_cores").select("stock_actual").eq("id", id_t).single().execute().data
                             if stk:
-                                nuevo_stk = stk['stock_actual'] - cant_gastar
-                                # 2. Restar en la DB
-                                supabase.table("inventario_cores").update({"stock_actual": nuevo_stk}).eq("id", id_t).execute()
-                                # Guardamos en los datos de cierre para el certificado
-                                datos_c['info_inventario'] = f"Descontados {cant_gastar} de {datos_c['nombre_tubo']}"
+                                supabase.table("inventario_cores").update({"stock_actual": stk['stock_actual'] - cant_gastar}).eq("id", id_t).execute()
+                                datos_c['info_inventario_tubo'] = f"Descontados {cant_gastar} tubos"
+
+                    # 2. Descuento de Cajas (Aplica para CORTE, COLECTORAS y ENCUADERNACIÓN)
+                    if 'id_caja_inventario' in datos_c:
+                        id_cj = datos_c['id_caja_inventario']
+                        cant_cj = datos_c.get('cajas_totales', 0)
+                        if cant_cj > 0:
+                            stk_cj = supabase.table("inventario_cajas").select("stock_actual").eq("id", id_cj).single().execute().data
+                            if stk_cj:
+                                nuevo_stock_caja = stk_cj['stock_actual'] - cant_cj
+                                supabase.table("inventario_cajas").update({"stock_actual": nuevo_stock_caja}).eq("id", id_cj).execute()
+                                datos_c['info_inventario_caja'] = f"Descontadas {cant_cj} de {datos_c.get('nombre_caja')}"
 
 # Descuento de Cajas 
                         if 'id_caja_inventario' in datos_c:
