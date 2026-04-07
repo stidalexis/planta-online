@@ -1193,18 +1193,17 @@ elif menu == "📅 Planificación":
                 time.sleep(1.5)
                 st.rerun()
 
-# --- NUEVO MÓDULO: BODEGA PRODUCTO TERMINADO ---
+# --- MÓDULO: BODEGA PRODUCTO TERMINADO ---
 
 elif menu == "📦 Bodega Terminado":
     st.title("📦 Inventario de Producto Terminado")
     
-    # PESTAÑAS PARA ORGANIZAR EL MÓDULO
     tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
     
     with tab_mov:
         st.subheader("Registrar Movimiento de Mercancía")
         
-        # Consultar productos existentes para el selector
+# Consultar productos existentes para el selector
         productos_db = supabase.table("bodega_producto_terminado").select("*").execute().data
         nombres_existentes = [p['nombre_trabajo'] for p in productos_db]
         
@@ -1233,13 +1232,14 @@ elif menu == "📦 Bodega Terminado":
                 if not nom_trabajo:
                     st.error("Debe ingresar o seleccionar un nombre de trabajo.")
                 else:
-                    # Buscar si el producto ya existe en la tabla
-                    producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
+# Obtenemos la hora actual con función personalizada
+                    ahora_col = hora_colombia().strftime("%d/%m/%Y %H:%M")
                     
+                    producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
                     factor = 1 if "ENTRADA" in tipo_accion else -1
                     
                     if producto_actual:
-                        # ACTUALIZAR EXISTENTE
+# ACTUALIZAR EXISTENTE
                         nuevo_stk_cajas = producto_actual['stock_cajas'] + (c_cajas * factor)
                         nuevo_stk_rollos = producto_actual['stock_rollos'] + (c_rollos * factor)
                         
@@ -1247,47 +1247,47 @@ elif menu == "📦 Bodega Terminado":
                             "stock_cajas": nuevo_stk_cajas,
                             "stock_rollos": nuevo_stk_rollos,
                             "tipo_producto": tipo_prod,
-                            "ultima_actualizacion": hora_colombia().isoformat()
+                            "ultima_actualizacion": ahora_col # <--- HORA COLOMBIA
                         }).eq("id", producto_actual['id']).execute()
                     else:
-                        # INSERTAR NUEVO (Solo si es entrada)
+# INSERTAR NUEVO
                         if factor == 1:
                             supabase.table("bodega_producto_terminado").insert({
                                 "nombre_trabajo": nom_trabajo,
                                 "tipo_producto": tipo_prod,
                                 "stock_cajas": c_cajas,
-                                "stock_rollos": c_rollos
+                                "stock_rollos": c_rollos,
+                                "ultima_actualizacion": ahora_col # <--- HORA COLOMBIA
                             }).execute()
                         else:
-                            st.error("No se puede dar salida a un producto que no existe en inventario.")
+                            st.error("No se puede dar salida a un producto inexistente.")
                             st.stop()
                     
-                    st.success(f"Movimiento de {nom_trabajo} registrado correctamente.")
+                    st.success(f"Movimiento de {nom_trabajo} registrado a las {ahora_col}")
                     time.sleep(1)
                     st.rerun()
-
     with tab_inv:
         st.subheader("Existencias en Bodega")
         
-        # Traer datos actualizados
+# Traer datos actualizados
         res_bodega = supabase.table("bodega_producto_terminado").select("*").order("nombre_trabajo").execute().data
         
         if res_bodega:
             df_bodega = pd.DataFrame(res_bodega)
             
-            # Limpiar columnas para mostrar
+# Limpiar columnas para mostrar
             df_show = df_bodega[['nombre_trabajo', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion']]
             df_show.columns = ['TRABAJO', 'TIPO', 'CAJAS', 'ROLLOS', 'ÚLT. MOVIMIENTO']
             
-            # Buscador rápido dentro del inventario
+# Buscador rápido dentro del inventario
             busqueda_b = st.text_input("🔍 Filtrar inventario por nombre...")
             if busqueda_b:
                 df_show = df_show[df_show['TRABAJO'].str.contains(busqueda_b.upper())]
             
-            # Mostrar tabla con estilo
+# Mostrar tabla con estilo
             st.dataframe(df_show, use_container_width=True, hide_index=True)
             
-            # Alertas de stock bajo (opcional)
+# Alertas de stock bajo 
             bajo_stock = df_show[df_show['CAJAS'] <= 2]
             if not bajo_stock.empty:
                 st.warning(f"⚠️ Hay {len(bajo_stock)} productos con 2 o menos cajas en existencia.")
@@ -1306,7 +1306,7 @@ elif menu == "📦 Inventario":
         tabla_db = "inventario_cores" if tipo_insumo == "CORES" else "inventario_cajas"
         col_nombre = "nombre_core" if tipo_insumo == "CORES" else "nombre_caja"
         
-        # Traer datos de la DB según elección
+# Traer datos de la DB según elección
         items_db = supabase.table(tabla_db).select("*").execute().data
         opciones = {item[col_nombre]: item['id'] for item in items_db}
         
