@@ -419,7 +419,7 @@ def generar_op_formas(row):
     
     # NUEVOS CAMPOS: Pegado y Numeración
     pdf.cell(95,7,f"Tipo Pegue: {row.get('presentacion2', 'N/A')}",1) # Asegúrate que este campo se llame igual en el payload
-    pdf.cell(95, 7, f"Numeracion: (Desde {row.get('num_id','NO')} Hasta {row.get('num_fd','')})", 1, 1)
+    pdf.cell(95,7,f"Numeracion: {row.get('num_id','NO')} - {row.get('num_fd','')}",1,1)
     
     pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
     trans = "SI" if row.get('transportadora_formas') else "NO"
@@ -1448,11 +1448,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             elif area_act == "REBOBINADORAS":
                 c1, c2, c3 = st.columns(3)
                 datos_c['tipo_papel'] = c1.text_input("Tipo de papel")
-                datos_c['ancho_entrada'] = c2.number_input("Ancho entrada", 0)
-                datos_c['ancho_salida'] = c3.number_input("Ancho salida", 0)
+                datos_c['ancho_entrada'] = c2.number_input("Gramaje", 0)
+                datos_c['ancho_salida'] = c3.number_input("Ancho salida (si es un corte ponga las medidas)", 0)
                 datos_c['metros_procesados'] = c1.number_input("Metros procesados", 0)
                 datos_c['rollos_finales'] = c2.number_input("Rollos finales", 0)
-                datos_c['empalmes'] = c3.number_input("Empalmes", 0)
+                datos_c['empalmes'] = c3.number_input("Empalmes(defina un total o promedio)", 0)
                 datos_c['desperdicio_kg'] = c1.number_input("Desperdicio Kg", 0)
                  
             obs_prod = st.text_area("Observaciones de producción / saldos ")
