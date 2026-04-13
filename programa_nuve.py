@@ -316,53 +316,47 @@ from datetime import datetime
 
 def generar_op_rollos(row):
     pdf = FPDF()
-    pdf.set_auto_page_break(auto=False)  # 🔥 IMPORTANTE
     pdf.add_page()
+    # (Encabezado igual...)
+    pdf.set_fill_color(13,71,161); pdf.rect(0,0,210,35,'F'); pdf.image("logo_cb.png",8,6,55)
+    pdf.set_text_color(255,255,255); pdf.set_font("Arial","B",16); pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
+    pdf.set_font("Arial","B",12); pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+    pdf.set_text_color(0,0,0); pdf.ln(4)
 
-    # -------------------------
-    # ENCABEZADO (compacto)
-    # -------------------------
-    pdf.set_fill_color(13,71,161)
-    pdf.rect(0,0,210,25,'F')
-    pdf.image("logo_cb.png",8,5,45)
+    # 1. INFORMACION GENERAL
+    pdf.set_fill_color(230,230,230); pdf.set_font("Arial","B",11); pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
+    pdf.set_font("Arial","",10)
+    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
+    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
+    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
 
-    pdf.set_text_color(255,255,255)
-    pdf.set_font("Arial","B",12)
-    pdf.cell(0,12,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
+    # 2. ESPECIFICACIONES TÉCNICAS
+    pdf.ln(4); pdf.set_font("Arial","B",11); pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
+    pdf.set_font("Arial","",10)
+    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
+    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
+    pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
 
-    pdf.set_font("Arial","B",10)
-    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+    pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
+    pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
+    
+    # Referencia y Transporte
+    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
+    trans = "SI" if row.get('transportadora_rollos') else "NO"
+    pdf.cell(95,7,f"Transportadora: {trans}",1,1)
+    pdf.cell(190,7,f"Destino: {row.get('destino_rollos','PLANTA')}",1,1)
 
-    pdf.set_text_color(0,0,0)
-    pdf.ln(2)
+    # Tintas (Solo si es impreso)
+    if "IMPRESOS" in row.get('tipo_orden', ''):
+        pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
+        pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
 
-    # -------------------------
-    # INFO GENERAL
-    # -------------------------
-    pdf.set_fill_color(230,230,230)
-    pdf.set_font("Arial","B",9)
-    pdf.cell(0,6,"INFORMACION GENERAL",0,1,fill=True)
-
-    pdf.set_font("Arial","",8)
-    pdf.cell(95,5,f"Cliente: {row.get('cliente','')}",1)
-    pdf.cell(95,5,f"Vendedor: {row.get('vendedor','')}",1,1)
-    pdf.cell(95,5,f"Trabajo: {row.get('nombre_trabajo','')}",1)
-    pdf.cell(95,5,f"Tipo: {row.get('tipo_orden','')}",1,1)
-
-    # -------------------------
-    # ESPECIFICACIONES
-    # -------------------------
-    pdf.set_font("Arial","B",9)
-    pdf.cell(0,6,"ESPECIFICACIONES",0,1,fill=True)
-
-    pdf.set_font("Arial","",8)
-    pdf.cell(63,5,f"Material: {row.get('material','')}",1)
-    pdf.cell(63,5,f"Gramaje: {row.get('gramaje_rollos','')}",1)
-    pdf.cell(64,5,f"Core: {row.get('core','')}",1,1)
-
-    pdf.cell(63,5,f"Rollos: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(63,5,f"Und/Bolsa: {row.get('unidades_bolsa','')}",1)
-    pdf.cell(64,5,f"Und/Caja: {row.get('unidades_caja','')}",1,1)
+    # Observaciones y Perforaciones
+    pdf.ln(4); pdf.set_font("Arial","B",11); pdf.cell(0,8,"3. ADICIONALES Y OBSERVACIONES",0,1,fill=True)
+    pdf.cell(0,7,f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}",1,1)
+    pdf.multi_cell(0,7,f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)
 
     # -------------------------
     # FIRMAS
@@ -441,13 +435,123 @@ def generar_op_rollos(row):
         pdf.cell(130,6,"",1,0)
         pdf.cell(60,6,"",1,1)
 
-    # -------------------------
-    # PIE
-    # -------------------------
-    pdf.set_font("Arial","I",6)
-    pdf.cell(0,5,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
-
+    pdf.ln(10); pdf.set_font("Arial","I",7); pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
     return bytes(pdf.output())
+
+# PDF ORDEN PRODUCCION FORMAS
+
+from fpdf import FPDF
+from datetime import datetime
+
+# FUNCION PARA AJUSTAR TEXTO
+
+def cell_fit(pdf, w, h, text, border=1):
+
+    text = str(text)
+
+    while pdf.get_string_width(text) > (w - 2):
+        text = text[:-1]
+
+    pdf.cell(w, h, text, border)
+
+# GENERAR PDF FORMAS-
+
+def generar_op_formas(row):
+    pdf = FPDF()
+    pdf.add_page()
+
+    # --- ENCABEZADO (Mantenemos tu estilo actual) ---
+    pdf.set_fill_color(13,71,161)
+    pdf.rect(0,0,210,35,'F')
+    pdf.image("logo_cb.png",8,6,55)
+    pdf.set_text_color(255,255,255)
+    pdf.set_font("Arial","B",16)
+    pdf.cell(0,18,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+    pdf.set_text_color(0,0,0)
+    pdf.ln(4)
+
+    # 1. INFORMACIÓN DE LA ORDEN
+    pdf.set_fill_color(230,230,230)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
+    pdf.set_font("Arial","",10)
+    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
+    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
+    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
+    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','')}",1)
+    pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
+
+    # 2. ESPECIFICACIONES GENERALES (Aquí agregamos los campos faltantes)
+    pdf.ln(4)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"2. ESPECIFICACIONES GENERALES Y ACABADOS",0,1,fill=True)
+    pdf.set_font("Arial","",10)
+    
+    pdf.cell(63,7,f"Cantidad: {row.get('cantidad_formas','')}",1)
+    pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
+    pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
+    
+    # NUEVOS CAMPOS: Pegado y Numeración
+    pdf.cell(95,7,f"Tipo Pegue: {row.get('presentacion2', 'N/A')}",1) # Asegúrate que este campo se llame igual en el payload
+    pdf.cell(95,7,f"Numeracion: {row.get('num_id','NO')} - {row.get('num_fd','')}",1,1)
+    
+    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    trans = "SI" if row.get('transportadora_formas') else "NO"
+    pdf.cell(95,7,f"Transportadora: {trans}",1,1)
+    pdf.cell(190,7,f"Destino: {row.get('destino_formas','NO APLICA')}",1,1)
+
+    # 3. PERFORACIONES
+    pdf.ln(4)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"3. PERFORACIONES",0,1,fill=True)
+    pdf.set_font("Arial","",10)
+    pdf.multi_cell(0,7,row.get("perforaciones_detalle","SIN PERFORACIONES"), 1)
+
+    # 4. DETALLE TECNICO POR PARTE (Mantenemos tu tabla actual)
+    pdf.ln(4)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"4. DETALLE TECNICO POR PARTE",0,1,fill=True)
+    pdf.set_font("Arial","B",8)
+    pdf.set_fill_color(200,200,200)
+    pdf.cell(8,7,"P",1,0,"C",True)
+    pdf.cell(15,7,"ANCHO",1,0,"C",True)
+    pdf.cell(15,7,"LARGO",1,0,"C",True)
+    pdf.cell(32,7,"PAPEL",1,0,"C",True)
+    pdf.cell(25,7,"COLOR",1,0,"C",True)
+    pdf.cell(12,7,"GR",1,0,"C",True)
+    pdf.cell(23,7,"T. FRENTE",1,0,"C",True)
+    pdf.cell(23,7,"T. RESP",1,0,"C",True)
+    pdf.cell(37,7,"OBS. PARTE",1,1,"C",True)
+
+    pdf.set_font("Arial","",8)
+    partes = row.get("detalles_partes_json",[])
+    for p in partes:
+        cell_fit(pdf,8,7,p.get("p",""))
+        cell_fit(pdf,15,7,p.get("anc",""))
+        cell_fit(pdf,15,7,p.get("lar",""))
+        cell_fit(pdf,32,7,p.get("papel",""))
+        cell_fit(pdf,25,7,p.get("color_fondo",""))
+        cell_fit(pdf,12,7,p.get("gramos",""))
+        cell_fit(pdf,23,7,p.get("tf",""))
+        cell_fit(pdf,23,7,p.get("tr",""))
+        cell_fit(pdf,37,7,p.get("obs_parte","")) # Agregamos la observación específica de la parte
+        pdf.ln()
+
+    # 5. OBSERVACIONES GENERALES
+    pdf.ln(5)
+    pdf.set_font("Arial","B",11)
+    pdf.cell(0,8,"5. OBSERVACIONES GENERALES",0,1,fill=True)
+    pdf.set_font("Arial","",10)
+    pdf.multi_cell(0,7,row.get("observaciones_formas",""), 1)
+
+    pdf.ln(10)
+    pdf.set_font("Arial","I",7)
+    pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    return bytes(pdf.output())
+
 def generar_op_rebobinado(row):
     pdf = FPDF()
     pdf.add_page()
