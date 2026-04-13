@@ -316,226 +316,136 @@ from datetime import datetime
 
 def generar_op_rollos(row):
     pdf = FPDF()
-    pdf.add_page()
-    # (Encabezado igual...)
-    pdf.set_fill_color(13,71,161); pdf.rect(0,0,210,35,'F'); pdf.image("logo_cb.png",8,6,55)
-    pdf.set_text_color(255,255,255); pdf.set_font("Arial","B",16); pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
-    pdf.set_font("Arial","B",12); pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
-    pdf.set_text_color(0,0,0); pdf.ln(4)
-
-    # 1. INFORMACION GENERAL
-    pdf.set_fill_color(230,230,230); pdf.set_font("Arial","B",11); pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
-    pdf.set_font("Arial","",10)
-    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
-    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
-    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
-    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
-
-    # 2. ESPECIFICACIONES TÉCNICAS
-    pdf.ln(4); pdf.set_font("Arial","B",11); pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
-    pdf.set_font("Arial","",10)
-    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
-    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
-    pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
-
-    pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
-    pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
-    
-    # Referencia y Transporte
-    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
-    trans = "SI" if row.get('transportadora_rollos') else "NO"
-    pdf.cell(95,7,f"Transportadora: {trans}",1,1)
-    pdf.cell(190,7,f"Destino: {row.get('destino_rollos','PLANTA')}",1,1)
-
-    # Tintas (Solo si es impreso)
-    if "IMPRESOS" in row.get('tipo_orden', ''):
-        pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
-        pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
-
-    # Observaciones y Perforaciones
-    pdf.ln(4); pdf.set_font("Arial","B",11); pdf.cell(0,8,"3. ADICIONALES Y OBSERVACIONES",0,1,fill=True)
-    pdf.cell(0,7,f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}",1,1)
-    pdf.multi_cell(0,7,f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)
-
-    pdf.ln(10); pdf.set_font("Arial","I",7); pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
-    return bytes(pdf.output())
-
-# PDF ORDEN PRODUCCION FORMAS
-
-from fpdf import FPDF
-from datetime import datetime
-
-# FUNCION PARA AJUSTAR TEXTO
-
-def cell_fit(pdf, w, h, text, border=1):
-
-    text = str(text)
-
-    while pdf.get_string_width(text) > (w - 2):
-        text = text[:-1]
-
-    pdf.cell(w, h, text, border)
-
-# GENERAR PDF FORMAS-
-
-def generar_op_rollos(row):
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=10)
+    pdf.set_auto_page_break(auto=False)  # 🔥 IMPORTANTE
     pdf.add_page()
 
     # -------------------------
-    # 🏢 ENCABEZADO
+    # ENCABEZADO (compacto)
     # -------------------------
     pdf.set_fill_color(13,71,161)
-    pdf.rect(0,0,210,35,'F')
-    pdf.image("logo_cb.png",8,6,55)
+    pdf.rect(0,0,210,25,'F')
+    pdf.image("logo_cb.png",8,5,45)
 
     pdf.set_text_color(255,255,255)
-    pdf.set_font("Arial","B",16)
-    pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
-
     pdf.set_font("Arial","B",12)
+    pdf.cell(0,12,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
+
+    pdf.set_font("Arial","B",10)
     pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
 
     pdf.set_text_color(0,0,0)
-    pdf.ln(4)
+    pdf.ln(2)
 
     # -------------------------
-    # 1. INFORMACION GENERAL
+    # INFO GENERAL
     # -------------------------
     pdf.set_fill_color(230,230,230)
-    pdf.set_font("Arial","B",10)
-    pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
+    pdf.set_font("Arial","B",9)
+    pdf.cell(0,6,"INFORMACION GENERAL",0,1,fill=True)
 
-    pdf.set_font("Arial","",10)
-    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
-    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
-    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
-    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
-
-    # -------------------------
-    # 2. ESPECIFICACIONES
-    # -------------------------
-    pdf.ln(4)
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
-
-    pdf.set_font("Arial","",10)
-    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
-    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
-    pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
-
-    pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
-    pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
-
-    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
-    trans = "SI" if row.get('transportadora_rollos') else "NO"
-    pdf.cell(95,7,f"Transportadora: {trans}",1,1)
-    pdf.cell(190,7,f"Destino: {row.get('destino_rollos','PLANTA')}",1,1)
-
-    if "IMPRESOS" in row.get('tipo_orden', ''):
-        pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
-        pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+    pdf.set_font("Arial","",8)
+    pdf.cell(95,5,f"Cliente: {row.get('cliente','')}",1)
+    pdf.cell(95,5,f"Vendedor: {row.get('vendedor','')}",1,1)
+    pdf.cell(95,5,f"Trabajo: {row.get('nombre_trabajo','')}",1)
+    pdf.cell(95,5,f"Tipo: {row.get('tipo_orden','')}",1,1)
 
     # -------------------------
-    # 3. OBSERVACIONES
+    # ESPECIFICACIONES
     # -------------------------
-    pdf.ln(4)
-    pdf.set_font("Arial","B",8)
-    pdf.cell(0,8,"3. ADICIONALES Y OBSERVACIONES",0,1,fill=True)
+    pdf.set_font("Arial","B",9)
+    pdf.cell(0,6,"ESPECIFICACIONES",0,1,fill=True)
 
-    pdf.cell(0,7,f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}",1,1)
-    pdf.multi_cell(0,7,f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)
+    pdf.set_font("Arial","",8)
+    pdf.cell(63,5,f"Material: {row.get('material','')}",1)
+    pdf.cell(63,5,f"Gramaje: {row.get('gramaje_rollos','')}",1)
+    pdf.cell(64,5,f"Core: {row.get('core','')}",1,1)
 
-    # -------------------------
-    # ✍️ FIRMAS
-    # -------------------------
-    pdf.ln(6)
-    pdf.set_font("Arial","B",6)
-
-    pdf.cell(63,8,"FIRMA COORDINADORA COMERCIAL",1,0,"C")
-    pdf.cell(63,8,"FIRMA ASESOR",1,0,"C")
-    pdf.cell(64,8,"FIRMA SUPERVISOR PRODUCCIÓN",1,1,"C")
-
-    pdf.cell(63,12,"",1,0)
-    pdf.cell(63,12,"",1,0)
-    pdf.cell(64,12,"",1,1)
+    pdf.cell(63,5,f"Rollos: {row.get('cantidad_rollos','')}",1)
+    pdf.cell(63,5,f"Und/Bolsa: {row.get('unidades_bolsa','')}",1)
+    pdf.cell(64,5,f"Und/Caja: {row.get('unidades_caja','')}",1,1)
 
     # -------------------------
-    # 🖨️ IMPRESIÓN
+    # FIRMAS
     # -------------------------
-    pdf.ln(4)
-    pdf.set_font("Arial","B",6)
-    pdf.cell(190,8,"INFORMACION PRODUCCION - IMPRESION",1,1,"C")
-
-    pdf.set_font("Arial","B",6)
-    pdf.cell(47,8,"TIROS / METRAJE",1,0,"C")
-    pdf.cell(47,8,"N° BOBINAS",1,0,"C")
-    pdf.cell(47,8,"FECHA",1,0,"C")
-    pdf.cell(49,8,"FIRMA OPERARIO",1,1,"C")
-
-    pdf.cell(47,10,"",1,0)
-    pdf.cell(47,10,"",1,0)
-    pdf.cell(47,10,"D   M   A",1,0,"C")
-    pdf.cell(49,10,"",1,1)
-
-    # -------------------------
-    # ✂️ CORTE
-    # -------------------------
-    pdf.ln(4)
-    pdf.set_font("Arial","B",6)
-    pdf.cell(190,8,"CORTE Y EMPAQUE",1,1,"C")
-
-    pdf.set_font("Arial","B",6)
-    pdf.cell(47,8,"FECHA",1,0,"C")
-    pdf.cell(47,8,"FIRMA OPERARIO",1,0,"C")
-    pdf.cell(47,8,"FIRMA AUXILIAR",1,0,"C")
-    pdf.cell(49,8,"FIRMA SUPERVISOR",1,1,"C")
-
-    pdf.cell(47,10,"D   M   A",1,0,"C")
-    pdf.cell(47,10,"",1,0)
-    pdf.cell(47,10,"",1,0)
-    pdf.cell(49,10,"",1,1)
-
-    # -------------------------
-    # 📦 ESTIBAS
-    # -------------------------
-    pdf.ln(4)
-    pdf.set_font("Arial","B",6)
-    pdf.cell(190,8,"REPORTE DE CAJAS POR ESTIBAS",1,1,"C")
-
-    pdf.set_font("Arial","",6)
-
-    for i in range(1,5):
-        pdf.cell(10,8,str(i),1,0,"C")
-        pdf.cell(30,8,"CANT.",1,0)
-        pdf.cell(20,8,"D",1,0,"C")
-        pdf.cell(20,8,"M",1,0,"C")
-        pdf.cell(20,8,"A",1,0,"C")
-        pdf.cell(30,8,"HORA",1,1,"C")
-
-    # -------------------------
-    # 📝 OBSERVACIONES FINALES
-    # -------------------------
-    pdf.ln(4)
+    pdf.ln(1)
     pdf.set_font("Arial","B",7)
-    pdf.cell(130,8,"OBSERVACIONES DE PRODUCCION",1,0,"C")
-    pdf.cell(60,8,"QUIEN RECIBE MERCANCIA",1,1,"C")
+
+    pdf.cell(63,5,"COORDINADORA",1,0,"C")
+    pdf.cell(63,5,"ASESOR",1,0,"C")
+    pdf.cell(64,5,"SUPERVISOR",1,1,"C")
+
+    pdf.cell(63,7,"",1,0)
+    pdf.cell(63,7,"",1,0)
+    pdf.cell(64,7,"",1,1)
+
+    # -------------------------
+    # IMPRESION
+    # -------------------------
+    pdf.set_font("Arial","B",8)
+    pdf.cell(0,6,"IMPRESION",0,1,fill=True)
+
+    pdf.set_font("Arial","",7)
+    pdf.cell(47,5,"METRAJE",1,0,"C")
+    pdf.cell(47,5,"BOBINAS",1,0,"C")
+    pdf.cell(47,5,"FECHA",1,0,"C")
+    pdf.cell(49,5,"OPERARIO",1,1,"C")
+
+    pdf.cell(47,6,"",1,0)
+    pdf.cell(47,6,"",1,0)
+    pdf.cell(47,6,"D M A",1,0,"C")
+    pdf.cell(49,6,"",1,1)
+
+    # -------------------------
+    # CORTE
+    # -------------------------
+    pdf.set_font("Arial","B",8)
+    pdf.cell(0,6,"CORTE",0,1,fill=True)
+
+    pdf.set_font("Arial","",7)
+    pdf.cell(47,5,"FECHA",1,0,"C")
+    pdf.cell(47,5,"OPERARIO",1,0,"C")
+    pdf.cell(47,5,"AUX",1,0,"C")
+    pdf.cell(49,5,"SUPERV",1,1,"C")
+
+    pdf.cell(47,6,"D M A",1,0,"C")
+    pdf.cell(47,6,"",1,0)
+    pdf.cell(47,6,"",1,0)
+    pdf.cell(49,6,"",1,1)
+
+    # -------------------------
+    # ESTIBAS (ULTRA COMPACTO)
+    # -------------------------
+    pdf.set_font("Arial","B",8)
+    pdf.cell(0,6,"ESTIBAS",0,1,fill=True)
 
     pdf.set_font("Arial","",6)
 
-    for _ in range(3):
-        pdf.cell(130,8,"",1,0)
-        pdf.cell(60,8,"",1,1)
+    for i in range(1,13):
+        pdf.cell(8,5,str(i),1,0,"C")
+        pdf.cell(22,5,"CANT",1,0)
+        pdf.cell(12,5,"D",1,0,"C")
+        pdf.cell(12,5,"M",1,0,"C")
+        pdf.cell(12,5,"A",1,0,"C")
+        pdf.cell(20,5,"HORA",1,1,"C")
 
     # -------------------------
-    # 🕒 PIE
+    # OBSERVACIONES
     # -------------------------
-    pdf.ln(6)
-    pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.set_font("Arial","B",8)
+    pdf.cell(130,6,"OBSERVACIONES",1,0,"C")
+    pdf.cell(60,6,"RECIBE",1,1,"C")
+
+    pdf.set_font("Arial","",7)
+
+    for _ in range(2):
+        pdf.cell(130,6,"",1,0)
+        pdf.cell(60,6,"",1,1)
+
+    # -------------------------
+    # PIE
+    # -------------------------
+    pdf.set_font("Arial","I",6)
+    pdf.cell(0,5,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
     return bytes(pdf.output())
 def generar_op_rebobinado(row):
