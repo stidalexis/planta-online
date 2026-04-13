@@ -683,6 +683,8 @@ with st.sidebar:
         opciones_menu = ["🖥️ Monitor", "📕 Encuadernación"]
     elif rol == 'supervisor_reb':
         opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
+    elif rol == 'patinador_roll':
+        opciones_menu = ["📦 Bodega Terminado"]
     else:
         # Operarios y otros roles
         opciones_menu = ["🖥️ Monitor"]
@@ -1672,7 +1674,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 supabase.table("inventario_cores").update({"stock_actual": stk['stock_actual'] - cant_gastar}).eq("id", id_t).execute()
                                 datos_c['info_inventario_tubo'] = f"Descontados {cant_gastar} tubos"
 
-                    # 2. Descuento de Cajas (Aplica para CORTE, COLECTORAS y ENCUADERNACIÓN)
+# 2. Descuento de Cajas (Aplica para CORTE, COLECTORAS y ENCUADERNACIÓN)
                     if 'id_caja_inventario' in datos_c:
                         id_cj = datos_c['id_caja_inventario']
                         cant_cj = datos_c.get('cajas_totales', 0)
@@ -1682,16 +1684,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 nuevo_stock_caja = stk_cj['stock_actual'] - cant_cj
                                 supabase.table("inventario_cajas").update({"stock_actual": nuevo_stock_caja}).eq("id", id_cj).execute()
                                 datos_c['info_inventario_caja'] = f"Descontadas {cant_cj} de {datos_c.get('nombre_caja')}"
-
-# Descuento de Cajas 
-                        if 'id_caja_inventario' in datos_c:
-                            id_cj = datos_c['id_caja_inventario']
-                            cant_cj = datos_c.get('cajas_totales', 0)
-                            if cant_cj > 0:
-                                stk_cj = supabase.table("inventario_cajas").select("stock_actual").eq("id", id_cj).single().execute().data
-                                if stk_cj:
-                                    supabase.table("inventario_cajas").update({"stock_actual": stk_cj['stock_actual'] - cant_cj}).eq("id", id_cj).execute()
-                                    datos_c['info_inventario_caja'] = f"Descontadas {cant_cj} de {datos_c['nombre_caja']}"
 
 # DETENER OP  NO CUENTA TIEMPO
 
@@ -1896,7 +1888,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc"], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "patinador_roll" ], key="admin_r")
         
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
