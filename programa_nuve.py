@@ -366,9 +366,9 @@ def generar_op_rollos(row):
     pdf.cell(63,6,"ASESOR",1,0,"C")
     pdf.cell(64,6,"SUPERVISOR",1,1,"C")
 
-    pdf.cell(63,12,"",1,0)
-    pdf.cell(63,12,"",1,0)
-    pdf.cell(64,12,"",1,1)
+    pdf.cell(63,20,"",1,0)
+    pdf.cell(63,20,"",1,0)
+    pdf.cell(64,20,"",1,1)
 
     # -------------------------
     # ESTIBAS 
@@ -380,20 +380,20 @@ def generar_op_rollos(row):
 
     for i in range(6):
         # IZQUIERDA (1–6)
-        pdf.cell(6,5,str(i+1),1,0,"C")
-        pdf.cell(18,5,"CANT",1,0)
-        pdf.cell(18,5,"D",1,0,"C")
-        pdf.cell(18,5,"M",1,0,"C")
-        pdf.cell(18,5,"A",1,0,"C")
-        pdf.cell(18,5,"HORA",1,0,"C")
+        pdf.cell(4,8,str(i+1),1,0,"C")
+        pdf.cell(18,8,"CANT",1,0)
+        pdf.cell(18,8,"D",1,0,"C")
+        pdf.cell(18,8,"M",1,0,"C")
+        pdf.cell(18,8,"A",1,0,"C")
+        pdf.cell(18,8,"HORA",1,0,"C")
 
         # DERECHA (7–12)
-        pdf.cell(6,5,str(i+7),1,0,"C")
-        pdf.cell(18,5,"CANT",1,0)
-        pdf.cell(18,5,"D",1,0,"C")
-        pdf.cell(18,5,"M",1,0,"C")
-        pdf.cell(18,5,"A",1,0,"C")
-        pdf.cell(18,5,"HORA",1,1,"C")
+        pdf.cell(4,8,str(i+7),1,0,"C")
+        pdf.cell(18,8,"CANT",1,0)
+        pdf.cell(18,8,"D",1,0,"C")
+        pdf.cell(18,8,"M",1,0,"C")
+        pdf.cell(18,8,"A",1,0,"C")
+        pdf.cell(18,8,"HORA",1,1,"C")
     # -------------------------
     # OBSERVACIONES
     # -------------------------
