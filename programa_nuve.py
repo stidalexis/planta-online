@@ -320,7 +320,7 @@ def generar_op_rollos(row):
     # (Encabezado igual...)
     pdf.set_fill_color(13,71,161); pdf.rect(0,0,210,35,'F'); pdf.image("logo_cb.png",8,6,55)
     pdf.set_text_color(255,255,255); pdf.set_font("Arial","B",16); pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
-    pdf.set_font("Arial","B",12); pdf.cell(0,5,f"OP: {row['op']}   |   {tipo}",0,1,"C")
+    pdf.set_font("Arial","B",12); pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
     pdf.set_text_color(0,0,0); pdf.ln(4)
 
     # 1. INFORMACION GENERAL
@@ -446,7 +446,7 @@ def generar_op_formas(row):
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,5,f"OP: {row['op']}   |   {tipo}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
@@ -566,7 +566,7 @@ def generar_op_rebobinado(row):
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION - REBOBINADO",0,1,"C")
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,5,f"OP: {row['op']}   |   {tipo}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
@@ -927,12 +927,6 @@ elif menu == "📅 Planificación":
     origen = st.radio("¿Cómo desea ingresar la orden?", 
                       ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                       horizontal=True)
-    if origen == "Nueva (Desde cero)":
-        tipo_trabajo = "NUEVO"
-    elif origen == "Repetición Exacta":
-        tipo_trabajo = "REPETICION"
-    else:
-         tipo_trabajo = "REPETICION CON CAMBIOS"
     
 # VARIABLE PARA ALMACENAR DATOS RECUPERADOS
     datos_rec = {}
@@ -1221,7 +1215,6 @@ elif menu == "📅 Planificación":
 
                 payload = {
                     "op": op_final,
-                    "tipo_trabajo": tipo_trabajo,
                     "op_anterior": op_a,
                     "cliente": cli,
                     "vendedor": vend,
