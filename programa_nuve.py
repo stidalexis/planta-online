@@ -508,7 +508,7 @@ def generar_op_rollos(row):
 
     pdf.set_font("Arial","",6)
 
-    for i in range(1,13):
+    for i in range(1,5):
         pdf.cell(10,8,str(i),1,0,"C")
         pdf.cell(30,8,"CANT.",1,0)
         pdf.cell(20,8,"D",1,0,"C")
