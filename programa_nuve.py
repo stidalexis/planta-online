@@ -473,7 +473,7 @@ def generar_op_formas(row):
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
     
     # NUEVOS CAMPOS: Pegado y Numeración
-    pdf.cell(95,7,f"Tipo Pegue: {row.get('presentacion2', 'N/A')}",1) # Asegúrate que este campo se llame igual en el payload
+    pdf.cell(65,7,f"Tipo Pegue: {row.get('presentacion2', 'N/A')}",1) # Asegúrate que este campo se llame igual en el payload
     pdf.cell(95,7,f"Numeracion: DESDE-{row.get('num_id','NO')} HASTA- {row.get('num_fd','')}",1,1)
     
     pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
