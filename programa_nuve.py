@@ -927,6 +927,12 @@ elif menu == "📅 Planificación":
     origen = st.radio("¿Cómo desea ingresar la orden?", 
                       ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                       horizontal=True)
+    if origen == "Nueva (Desde cero)":
+        tipo_trabajo = "NUEVO"
+    elif origen == "Repetición Exacta":
+        tipo_trabajo = "REPETICION"
+    else:
+         tipo_trabajo = "REPETICION CON CAMBIOS"
     
 # VARIABLE PARA ALMACENAR DATOS RECUPERADOS
     datos_rec = {}
@@ -1215,6 +1221,7 @@ elif menu == "📅 Planificación":
 
                 payload = {
                     "op": op_final,
+                    "tipo_trabajo": tipo_trabajo,
                     "op_anterior": op_a,
                     "cliente": cli,
                     "vendedor": vend,
