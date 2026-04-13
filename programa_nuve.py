@@ -362,53 +362,19 @@ def generar_op_rollos(row):
     pdf.ln(1)
     pdf.set_font("Arial","B",7)
 
-    pdf.cell(63,5,"COORDINADORA",1,0,"C")
-    pdf.cell(63,5,"ASESOR",1,0,"C")
-    pdf.cell(64,5,"SUPERVISOR",1,1,"C")
+    pdf.cell(63,6,"COORDINADORA",1,0,"C")
+    pdf.cell(63,6,"ASESOR",1,0,"C")
+    pdf.cell(64,6,"SUPERVISOR",1,1,"C")
 
-    pdf.cell(63,7,"",1,0)
-    pdf.cell(63,7,"",1,0)
-    pdf.cell(64,7,"",1,1)
-
-    # -------------------------
-    # IMPRESION
-    # -------------------------
-    pdf.set_font("Arial","B",8)
-    pdf.cell(0,6,"IMPRESION",0,1,fill=True)
-
-    pdf.set_font("Arial","",7)
-    pdf.cell(47,5,"METRAJE",1,0,"C")
-    pdf.cell(47,5,"BOBINAS",1,0,"C")
-    pdf.cell(47,5,"FECHA",1,0,"C")
-    pdf.cell(49,5,"OPERARIO",1,1,"C")
-
-    pdf.cell(47,6,"",1,0)
-    pdf.cell(47,6,"",1,0)
-    pdf.cell(47,6,"D M A",1,0,"C")
-    pdf.cell(49,6,"",1,1)
+    pdf.cell(63,12,"",1,0)
+    pdf.cell(63,12,"",1,0)
+    pdf.cell(64,12,"",1,1)
 
     # -------------------------
-    # CORTE
+    # ESTIBAS 
     # -------------------------
     pdf.set_font("Arial","B",8)
-    pdf.cell(0,6,"CORTE",0,1,fill=True)
-
-    pdf.set_font("Arial","",7)
-    pdf.cell(47,5,"FECHA",1,0,"C")
-    pdf.cell(47,5,"OPERARIO",1,0,"C")
-    pdf.cell(47,5,"AUX",1,0,"C")
-    pdf.cell(49,5,"SUPERV",1,1,"C")
-
-    pdf.cell(47,6,"D M A",1,0,"C")
-    pdf.cell(47,6,"",1,0)
-    pdf.cell(47,6,"",1,0)
-    pdf.cell(49,6,"",1,1)
-
-    # -------------------------
-    # ESTIBAS (ULTRA COMPACTO)
-    # -------------------------
-    pdf.set_font("Arial","B",8)
-    pdf.cell(0,6,"ESTIBAS",0,1,fill=True)
+    pdf.cell(0,8,"ESTIBAS",0,1,fill=True)
 
     pdf.set_font("Arial","",6)
 
