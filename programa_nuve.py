@@ -405,7 +405,7 @@ def generar_op_rollos(row):
     # 1. INFORMACION GENERAL
     # -------------------------
     pdf.set_fill_color(230,230,230)
-    pdf.set_font("Arial","B",11)
+    pdf.set_font("Arial","B",10)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
 
     pdf.set_font("Arial","",10)
@@ -443,7 +443,7 @@ def generar_op_rollos(row):
     # 3. OBSERVACIONES
     # -------------------------
     pdf.ln(4)
-    pdf.set_font("Arial","B",11)
+    pdf.set_font("Arial","B",8)
     pdf.cell(0,8,"3. ADICIONALES Y OBSERVACIONES",0,1,fill=True)
 
     pdf.cell(0,7,f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}",1,1)
@@ -453,7 +453,7 @@ def generar_op_rollos(row):
     # ✍️ FIRMAS
     # -------------------------
     pdf.ln(6)
-    pdf.set_font("Arial","B",8)
+    pdf.set_font("Arial","B",6)
 
     pdf.cell(63,8,"FIRMA COORDINADORA COMERCIAL",1,0,"C")
     pdf.cell(63,8,"FIRMA ASESOR",1,0,"C")
@@ -467,10 +467,10 @@ def generar_op_rollos(row):
     # 🖨️ IMPRESIÓN
     # -------------------------
     pdf.ln(4)
-    pdf.set_font("Arial","B",10)
+    pdf.set_font("Arial","B",6)
     pdf.cell(190,8,"INFORMACION PRODUCCION - IMPRESION",1,1,"C")
 
-    pdf.set_font("Arial","B",8)
+    pdf.set_font("Arial","B",6)
     pdf.cell(47,8,"TIROS / METRAJE",1,0,"C")
     pdf.cell(47,8,"N° BOBINAS",1,0,"C")
     pdf.cell(47,8,"FECHA",1,0,"C")
@@ -485,10 +485,10 @@ def generar_op_rollos(row):
     # ✂️ CORTE
     # -------------------------
     pdf.ln(4)
-    pdf.set_font("Arial","B",10)
+    pdf.set_font("Arial","B",6)
     pdf.cell(190,8,"CORTE Y EMPAQUE",1,1,"C")
 
-    pdf.set_font("Arial","B",8)
+    pdf.set_font("Arial","B",6)
     pdf.cell(47,8,"FECHA",1,0,"C")
     pdf.cell(47,8,"FIRMA OPERARIO",1,0,"C")
     pdf.cell(47,8,"FIRMA AUXILIAR",1,0,"C")
@@ -503,10 +503,10 @@ def generar_op_rollos(row):
     # 📦 ESTIBAS
     # -------------------------
     pdf.ln(4)
-    pdf.set_font("Arial","B",10)
+    pdf.set_font("Arial","B",6)
     pdf.cell(190,8,"REPORTE DE CAJAS POR ESTIBAS",1,1,"C")
 
-    pdf.set_font("Arial","",8)
+    pdf.set_font("Arial","",6)
 
     for i in range(1,13):
         pdf.cell(10,8,str(i),1,0,"C")
@@ -520,11 +520,11 @@ def generar_op_rollos(row):
     # 📝 OBSERVACIONES FINALES
     # -------------------------
     pdf.ln(4)
-    pdf.set_font("Arial","B",9)
+    pdf.set_font("Arial","B",7)
     pdf.cell(130,8,"OBSERVACIONES DE PRODUCCION",1,0,"C")
     pdf.cell(60,8,"QUIEN RECIBE MERCANCIA",1,1,"C")
 
-    pdf.set_font("Arial","",8)
+    pdf.set_font("Arial","",6)
 
     for _ in range(3):
         pdf.cell(130,8,"",1,0)
