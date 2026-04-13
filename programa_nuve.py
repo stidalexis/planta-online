@@ -445,19 +445,12 @@ def generar_op_formas(row):
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
-
     pdf.set_font("Arial","B",12)
-
-    origen_op = row.get("origen_op", "NUEVO")
-    op = row.get("op", "")
-
-    pdf.cell(0, 10, f"OP: {op} -|- {origen_op.upper()}", 0, 1)
-
+    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
     # 1. INFORMACIÓN DE LA ORDEN
-
     pdf.set_fill_color(230,230,230)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
@@ -1226,8 +1219,7 @@ elif menu == "📅 Planificación":
                     "nombre_trabajo": trab,
                     "tipo_orden": t,
                     "proxima_area": ruta_inicial,
-                    "historial_procesos": [],
-                    "origen_op": origen
+                    "historial_procesos": []
                 }
 
                 if "FORMAS" in t:
