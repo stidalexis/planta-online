@@ -466,15 +466,14 @@ def generar_op_formas(row):
     pdf.ln(4)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"2. ESPECIFICACIONES GENERALES Y ACABADOS",0,1,fill=True)
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","B",10)
     
     pdf.cell(63,7,f"Cantidad: {row.get('cantidad_formas','')}",1)
     pdf.cell(63,7,f"Partes: {row.get('num_partes','')}",1)
     pdf.cell(64,7,f"Presentacion: {row.get('presentacion','')}",1,1)
     
-    # NUEVOS CAMPOS: Pegado y Numeración
-    pdf.cell(65,7,f"Tipo Pegue: {row.get('presentacion2', 'N/A')}",1) # Asegúrate que este campo se llame igual en el payload
-    pdf.cell(125,7,f"Numeracion: DESDE-{row.get('num_id','NO')} HASTA- {row.get('num_fd','')}",1,1)
+    pdf.cell(65,7,f"Tipo Pegue: {row.get('presentacion2', 'N/A')}",1) 
+    pdf.cell(125,7,f"Numeracion: DEL-  {row.get('num_id','NO')} AL-  {row.get('num_fd','')}",1,1)
     
     pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
     trans = "SI" if row.get('transportadora_formas') else "NO"
@@ -524,6 +523,31 @@ def generar_op_formas(row):
     pdf.cell(0,8,"5. OBSERVACIONES GENERALES",0,1,fill=True)
     pdf.set_font("Arial","",10)
     pdf.multi_cell(0,7,row.get("observaciones_formas",""), 1)
+
+    # -------------------------
+    # FIRMAS
+    # -------------------------
+    pdf.ln(1)
+    pdf.set_font("Arial","B",7)
+
+    pdf.cell(63,6,"COORDINADORA",1,0,"C")
+    pdf.cell(63,6,"ASESOR",1,0,"C")
+    pdf.cell(64,6,"SUPERVISOR",1,1,"C")
+
+    pdf.cell(63,20,"",1,0)
+    pdf.cell(63,20,"",1,0)
+    pdf.cell(64,20,"",1,1)
+
+    pdf.set_font("Arial","B",8)
+    pdf.cell(130,8,"OBSERVACIONES",1,0,"C")
+    pdf.cell(60,8,"RECIBE",1,1,"C")
+
+    pdf.set_font("Arial","",7)
+
+    for _ in range(2):
+        pdf.cell(130,6,"",1,0)
+        pdf.cell(60,6,"",1,1)
+
 
     pdf.ln(10)
     pdf.set_font("Arial","I",7)
