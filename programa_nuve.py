@@ -354,9 +354,10 @@ def generar_op_rollos(row):
         pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
 
     # Observaciones y Perforaciones
-    pdf.ln(4); pdf.set_font("Arial","B",11); pdf.cell(0,8,"3. ADICIONALES Y OBSERVACIONES",0,1,fill=True)
+    pdf.ln(4); pdf.set_font("Arial","B",9); pdf.cell(0,8,"3. ADICIONALES Y OBSERVACIONES",0,1,fill=True)
     pdf.cell(0,7,f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}",1,1)
-    pdf.multi_cell(0,7,f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)# -------------------------
+    pdf.multi_cell(0,7,f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)
+    # -------------------------
     # FIRMAS
     # -------------------------
     pdf.ln(1)
@@ -380,26 +381,26 @@ def generar_op_rollos(row):
 
     for i in range(6):
         # IZQUIERDA (1–6)
-        pdf.cell(4,8,str(i+1),1,0,"C")
-        pdf.cell(18,8,"CANT",1,0)
-        pdf.cell(18,8,"D",1,0,"C")
-        pdf.cell(18,8,"M",1,0,"C")
-        pdf.cell(18,8,"A",1,0,"C")
-        pdf.cell(18,8,"HORA",1,0,"C")
+        pdf.cell(4,7,str(i+1),1,0,"C")
+        pdf.cell(18,7,"CANT",1,0)
+        pdf.cell(18,7,"D",1,0,"C")
+        pdf.cell(18,7,"M",1,0,"C")
+        pdf.cell(18,7,"A",1,0,"C")
+        pdf.cell(18,7,"HORA",1,0,"C")
 
         # DERECHA (7–12)
-        pdf.cell(4,8,str(i+7),1,0,"C")
-        pdf.cell(18,8,"CANT",1,0)
-        pdf.cell(18,8,"D",1,0,"C")
-        pdf.cell(18,8,"M",1,0,"C")
-        pdf.cell(18,8,"A",1,0,"C")
-        pdf.cell(18,8,"HORA",1,1,"C")
+        pdf.cell(4,7,str(i+7),1,0,"C")
+        pdf.cell(18,7,"CANT",1,0)
+        pdf.cell(18,7,"D",1,0,"C")
+        pdf.cell(18,7,"M",1,0,"C")
+        pdf.cell(18,7,"A",1,0,"C")
+        pdf.cell(18,7,"HORA",1,1,"C")
     # -------------------------
     # OBSERVACIONES
     # -------------------------
     pdf.set_font("Arial","B",8)
-    pdf.cell(130,6,"OBSERVACIONES",1,0,"C")
-    pdf.cell(60,6,"RECIBE",1,1,"C")
+    pdf.cell(130,8,"OBSERVACIONES",1,0,"C")
+    pdf.cell(60,8,"RECIBE",1,1,"C")
 
     pdf.set_font("Arial","",7)
 
