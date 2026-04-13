@@ -475,9 +475,9 @@ def generar_op_formas(row):
     pdf.cell(65,7,f"Tipo Pegue: {row.get('presentacion2', 'N/A')}",1) 
     pdf.cell(125,7,f"Numeracion: DEL-  {row.get('num_id','NO')} AL-  {row.get('num_fd','')}",1,1)
     
-    pdf.cell(95,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
+    pdf.cell(125,7,f"Codigo Barras: {row.get('codigo_barras_detalle','')}",1)
     trans = "SI" if row.get('transportadora_formas') else "NO"
-    pdf.cell(95,7,f"Transportadora: {trans}",1,1)
+    pdf.cell(65,7,f"Transportadora: {trans}",1,1)
     pdf.cell(190,7,f"Destino: {row.get('destino_formas','NO APLICA')}",1,1)
 
     # 3. PERFORACIONES
