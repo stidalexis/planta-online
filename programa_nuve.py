@@ -325,7 +325,7 @@ def generar_op_rollos(row):
 
     # 1. INFORMACION GENERAL
     pdf.set_fill_color(230,230,230); pdf.set_font("Arial","B",11); pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","B",10)
     pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
     pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
@@ -333,7 +333,7 @@ def generar_op_rollos(row):
 
     # 2. ESPECIFICACIONES TÉCNICAS
     pdf.ln(4); pdf.set_font("Arial","B",11); pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","B",10)
     pdf.cell(63,7,f"Material: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
     pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
@@ -720,7 +720,7 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 # 🔐 LOGIN PRINCIPAL (pantalla completa)
 if not st.session_state.get('autenticado'):
-    st.title("🔐 Acceso al Sistema NUVE")
+    st.title("🔐 Acceso al Sistema C&B Palepes De Colombia")
     
     with st.form("login_form"):
         user = st.text_input("Usuario")
@@ -744,7 +744,7 @@ if not st.session_state.get('autenticado'):
 
 # --- ESTRUCTURA DE MENÚ CON PERMISOS POR ROL ---
 with st.sidebar:
-    st.title("🏭 NUVE V31.0")
+    st.title("🏭 C&B Papeles")
     
     # Obtenemos el rol (aseguramos minúsculas para evitar errores)
     rol = st.session_state.get('rol', 'operario').lower()
@@ -1002,8 +1002,6 @@ elif menu == "📅 Planificación":
             pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
 
             pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
-        
-###
 
             t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
 
