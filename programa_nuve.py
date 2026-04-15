@@ -322,6 +322,7 @@ def generar_op_rollos(row):
     pdf.set_text_color(255,255,255); pdf.set_font("Arial","B",16); pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
     pdf.set_font("Arial","B",12); pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
     pdf.set_text_color(0,0,0); pdf.ln(4)
+    y_start = 7
     pdf.set_font("Arial", 'B', 7)
     pdf.set_xy(150, y_start)
     pdf.cell(50, 4, "VERSIÓN: 1", 1, 1, 'C')
