@@ -379,22 +379,19 @@ def generar_op_rollos(row):
 
     pdf.set_font("Arial","",6)
 
-    for i in range(6):
-        # IZQUIERDA (1–6)
-        pdf.cell(4,7,str(i+1),1,0,"C")
-        pdf.cell(18,7,"CANT",1,0)
-        pdf.cell(18,7,"D",1,0,"C")
-        pdf.cell(18,7,"M",1,0,"C")
-        pdf.cell(18,7,"A",1,0,"C")
-        pdf.cell(18,7,"HORA",1,0,"C")
+    y_est = pdf.get_y() + 2
+    pdf.set_xy(10, y_est)
+    pdf.set_fill_color(210, 210, 210)
+    pdf.set_font("Arial", 'B', 9)
+    pdf.cell(190, 5, "REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
+    
+    w_e = 190 / 3
+    pdf.set_font("Arial", '', 6)
+    for i in range(4): 
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:___ H:___", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:___ H:___", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:___ H:___", 1, 1)
 
-        # DERECHA (7–12)
-        pdf.cell(4,7,str(i+7),1,0,"C")
-        pdf.cell(18,7,"CANT",1,0)
-        pdf.cell(18,7,"D",1,0,"C")
-        pdf.cell(18,7,"M",1,0,"C")
-        pdf.cell(18,7,"A",1,0,"C")
-        pdf.cell(18,7,"HORA",1,1,"C")
     # -------------------------
     # OBSERVACIONES
     # -------------------------
