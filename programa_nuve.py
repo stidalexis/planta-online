@@ -346,6 +346,9 @@ def generar_op_rollos(row):
     pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
     trans = "SI" if row.get('transportadora_rollos') else "NO"
     pdf.cell(95,7,f"Transportadora: {trans}",1,1)
+    pdf.cell(25, 8, "Impresión", 1, 0, 'C')
+    pdf.cell(82, 8, f" FRENTE: {row.get('tintas_frente_rollos', 'N/A')}", 1)
+    pdf.cell(83, 8, f" RESPALDO: {row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1)
     pdf.cell(190,7,f"Destino: {row.get('destino_rollos','PLANTA')}",1,1)
 
     # Tintas (Solo si es impreso)
