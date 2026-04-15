@@ -371,11 +371,9 @@ def generar_op_rollos(row):
     pdf.cell(63,20,"",1,0)
     pdf.cell(64,20,"",1,1)
 
-    # -------------------------
+     # -------------------------
     # ESTIBAS 
     # -------------------------
-    pdf.set_font("Arial","B",8)
-    pdf.cell(0,8,"ESTIBAS",0,1,fill=True)
 
     pdf.set_font("Arial","",6)
 
@@ -388,9 +386,9 @@ def generar_op_rollos(row):
     w_e = 190 / 3
     pdf.set_font("Arial", '', 8)
     for i in range(4): 
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:______H:______", 1, 0)
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:______H:______", 1, 0)
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:______H:______", 1, 1)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:_________H:___________", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:_________H:___________", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:_________H:___________", 1, 1)
 
     # -------------------------
     # OBSERVACIONES
