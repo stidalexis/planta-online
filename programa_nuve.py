@@ -319,12 +319,12 @@ def generar_op_rollos(row):
     pdf.add_page()
     # (Encabezado igual...)
     pdf.set_fill_color(13,71,161); pdf.rect(0,0,210,35,'F'); pdf.image("logo_cb.png",8,6,55)
-    pdf.set_text_color(255,255,255); pdf.set_font("Arial","B",16); pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
+    pdf.set_text_color(255,140,0); pdf.set_font("Arial","B",16); pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
     pdf.set_font("Arial","B",12); pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
     pdf.set_text_color(0,0,0); pdf.ln(4)
 
     # 1. INFORMACION GENERAL
-    pdf.set_fill_color(255,140,0); pdf.set_font("Arial","B",11); pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
+    pdf.set_fill_color(230,230,230); pdf.set_font("Arial","B",11); pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
     pdf.set_font("Arial","B",10)
     pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
