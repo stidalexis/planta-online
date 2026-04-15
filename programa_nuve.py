@@ -316,13 +316,14 @@ from datetime import datetime
 
 def generar_op_rollos(row):
     """
-    Versión Final: Una sola hoja, incluye Tabla de Estibas, 
-    Perforaciones, Ciudad de Destino y Empaque/Transporte real.
+    Versión Final Optimizada: Una sola hoja.
+    Incluye Perforaciones y Destino antes de Observaciones.
+    Mantiene Tabla de Estibas al final.
     """
     pdf = FPDF(orientation='P', unit='mm', format='A4')
     pdf.add_page()
     pdf.set_auto_page_break(auto=False)
-    pdf.set_margins(10, 5, 10) # Márgenes ajustados
+    pdf.set_margins(10, 5, 10) 
 
     # --- ENCABEZADO ---
     y_start = 7
@@ -346,7 +347,7 @@ def generar_op_rollos(row):
     pdf.set_xy(150, y_start + 12)
     pdf.cell(50, 10, f"No. {row.get('op', '')}", 1, 1, 'C')
 
-    # Fila de Control
+    # Fila de Control R / RC / N
     y_id = y_start + 22
     pdf.set_xy(10, y_id)
     pdf.set_font("Arial", 'B', 9)
@@ -355,18 +356,21 @@ def generar_op_rollos(row):
     pdf.text(50, y_id + 4, f"OP ANTERIOR N. {row.get('op_anterior', '______')}")
     pdf.text(110, y_id + 4, f"FECHA: {row.get('created_at', '')[:10]}")
 
-    # --- DATOS CLIENTE / VENDEDOR / DESTINO ---
+    # --- DATOS CLIENTE Y VENDEDOR ---
     y_cli = y_id + 8
     pdf.set_xy(10, y_cli)
     pdf.set_font("Arial", 'B', 8)
-    pdf.text(10, y_cli + 4, f"Cliente/Ref: {str(row.get('cliente', ''))[:45]}")
-    pdf.text(110, y_cli + 4, f"Ciudad Destino: {row.get('destino_rollos', 'N/A')}")
+    pdf.text(10, y_cli + 4, f"Cliente/Ref: {str(row.get('cliente', ''))[:50]}")
+    pdf.text(110, y_cli + 4, f"Vendedor: {row.get('vendedor', '')}")
     
+    # Cantidad y Stock Impreso
     y_ven = y_cli + 6
-    pdf.text(10, y_ven + 4, f"Vendedor: {row.get('vendedor', '')}")
-    pdf.text(110, y_ven + 4, f"Perforaciones: {row.get('perforacion_rollos', 'NO')}")
+    pdf.text(10, y_ven + 4, "¿Tiene stock Impreso en almacén?")
+    pdf.set_xy(60, y_ven + 1)
+    pdf.cell(3, 3, "", 1); pdf.text(64, y_ven + 4, "NO")
+    pdf.set_xy(72, y_ven + 1)
+    pdf.cell(3, 3, "", 1); pdf.text(76, y_ven + 4, "SI")
 
-    # Cantidad Grande
     pdf.set_xy(165, y_ven)
     pdf.cell(15, 5, "CANT.", 0)
     pdf.set_font("Arial", 'B', 11)
@@ -405,13 +409,19 @@ def generar_op_rollos(row):
     pdf.cell(63, 7, f" {row.get('unidades_caja', 'N/A')} Und", 1, 0, 'C')
     pdf.cell(64, 7, f" {row.get('transportadora_rollos', 'N/A')}", 1, 1, 'C')
 
-    # --- OBSERVACIONES COMERCIALES ---
+    # --- NUEVA SECCIÓN: DESTINO Y PERFORACIONES (ANTES DE OBSERVACIONES) ---
     pdf.set_font("Arial", 'B', 8)
+    pdf.cell(95, 6, f" CIUDAD DE DESTINO: {row.get('destino_rollos', 'N/A')}", 1, 0)
+    pdf.cell(95, 6, f" PERFORACIONES: {row.get('perforacion_rollos', 'NO')}", 1, 1)
+
+    # --- OBSERVACIONES ---
+    pdf.set_fill_color(230, 230, 230)
     pdf.cell(190, 5, "OBSERVACIONES PREVIAS A PRODUCCIÓN", 1, 1, 'C', True)
     pdf.set_font("Arial", '', 8)
+    # Altura dinámica para que no empuje la tabla de estibas fuera de la hoja
     pdf.multi_cell(190, 4, str(row.get('observaciones_rollos', '')), 1)
 
-    # --- TABLA DE ESTIBAS (REINCORPORADA) ---
+    # --- TABLA DE ESTIBAS (PRODUCCIÓN) ---
     y_est = pdf.get_y() + 2
     pdf.set_xy(10, y_est)
     pdf.set_fill_color(210, 210, 210)
@@ -420,14 +430,13 @@ def generar_op_rollos(row):
     
     w_e = 190 / 3
     pdf.set_font("Arial", '', 6)
-    # Dibujamos 4 filas de estibas (Total 12)
     for i in range(4): 
         pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:___ H:___", 1, 0)
         pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:___ H:___", 1, 0)
         pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:___ H:___", 1, 1)
 
     # --- FIRMAS ---
-    y_f = pdf.get_y() + 8
+    y_f = pdf.get_y() + 6
     pdf.set_font("Arial", 'B', 7)
     pdf.line(10, y_f, 60, y_f); pdf.text(10, y_f + 3, "FIRMA COORD. COMERCIAL")
     pdf.line(75, y_f, 125, y_f); pdf.text(75, y_f + 3, "FIRMA ASESOR")
