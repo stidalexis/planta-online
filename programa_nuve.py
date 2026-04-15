@@ -386,17 +386,17 @@ def generar_op_rollos(row):
     pdf.cell(190, 5, "REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
     
     w_e = 190 / 3
-    pdf.set_font("Arial", '', 6)
+    pdf.set_font("Arial", '', 8)
     for i in range(4): 
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:___ H:___", 1, 0)
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:___ H:___", 1, 0)
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:___ H:___", 1, 1)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:______H:______", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:______H:______", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:______H:______", 1, 1)
 
     # -------------------------
     # OBSERVACIONES
     # -------------------------
     pdf.set_font("Arial","B",8)
-    pdf.cell(130,8,"OBSERVACIONES",1,0,"C")
+    pdf.cell(130,8,"OBSERVACIONES FINALIZADO",1,0,"C")
     pdf.cell(60,8,"RECIBE",1,1,"C")
 
     pdf.set_font("Arial","",7)
