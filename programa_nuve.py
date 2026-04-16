@@ -324,7 +324,7 @@ def generar_op_rollos(row):
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
     elif "CAMBIOS" in tipo_op:
-        r, g, b = (222, 52, 18)     # Naranja
+        r, g, b = (222, 52, 18)     # rojo 
     else:
         r, g, b = (13, 71, 161)     # Azul 
 
@@ -436,7 +436,7 @@ def generar_op_formas(row):
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
     elif "CAMBIOS" in tipo_op:
-        r, g, b = (255, 165, 0)     # Naranja
+        r, g, b = (222, 52, 18)     # rojo
     else:
         r, g, b = (13, 71, 161)     # Azul 
 
@@ -566,7 +566,7 @@ def generar_op_rebobinado(row):
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
     elif "CAMBIOS" in tipo_op:
-        r, g, b = (255, 165, 0)     # Naranja
+        r, g, b = (222, 52, 18)     # rojo
     else:
         r, g, b = (13, 71, 161)     # Azul 
 
