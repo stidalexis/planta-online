@@ -430,7 +430,8 @@ def cell_fit(pdf, w, h, text, border=1):
 def generar_op_formas(row):
     pdf = FPDF()
     pdf.add_page()
-
+    
+    tipo_op = row.get('tipo_origen', '').upper()
     # --- ENCABEZADO (Mantenemos tu estilo actual) ---
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
@@ -559,7 +560,8 @@ def generar_op_formas(row):
 def generar_op_rebobinado(row):
     pdf = FPDF()
     pdf.add_page()
-
+    
+    tipo_op = row.get('tipo_origen', '').upper()
     # --- ENCABEZADO ---
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
