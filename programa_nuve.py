@@ -319,7 +319,7 @@ def generar_op_rollos(row):
     pdf.add_page()
 
     # 1. Lógica de color según el tipo de orden
-    tipo_op = row.get('tipo_orden', '').upper()
+    tipo_op = row.get('tipo_origen', '').upper()
 
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
@@ -1210,7 +1210,8 @@ elif menu == "📅 Planificación":
                     "cliente": cli,
                     "vendedor": vend,
                     "nombre_trabajo": trab,
-                    "tipo_orden": origen,
+                    "tipo_orden": t,
+                    "tipo_origen": origen,
                     "proxima_area": ruta_inicial,
                     "historial_procesos": []
                 }
