@@ -337,7 +337,7 @@ def generar_op_rollos(row):
     pdf.set_font("Arial", "B", 16)
     pdf.cell(0, 18, "ORDEN DE PRODUCCION - ROLLOS", 0, 1, "C")
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0,5,f"OP: {row['op']}   |   {(tipo_origen,'')}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}   |   {row['tipo_origen','']}",0,1,"C")
     
     # Volver a texto negro y continuar con el cuerpo
     pdf.set_text_color(0, 0, 0)
