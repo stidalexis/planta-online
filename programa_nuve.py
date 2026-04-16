@@ -326,7 +326,7 @@ def generar_op_rollos(row):
     elif "CAMBIOS" in tipo_op:
         r, g, b = (255, 165, 0)     # Naranja
     else:
-        r, g, b = (13, 71, 161)     # Azul (Repetición Exacta o Defecto)
+        r, g, b = (13, 71, 161)     # Azul 
 
     # 2. ENCABEZADO CON COLOR DINÁMICO
     pdf.set_fill_color(r, g, b)
@@ -432,14 +432,23 @@ def generar_op_formas(row):
     pdf.add_page()
 
     # --- ENCABEZADO (Mantenemos tu estilo actual) ---
-    pdf.set_fill_color(13,71,161)
-    pdf.rect(0,0,210,35,'F')
-    pdf.image("logo_cb.png",8,6,55)
+    if "NUEVA" in tipo_op:
+        r, g, b = (40, 167, 69)      # Verde
+    elif "CAMBIOS" in tipo_op:
+        r, g, b = (255, 165, 0)     # Naranja
+    else:
+        r, g, b = (13, 71, 161)     # Azul 
+
+    # 2. ENCABEZADO CON COLOR DINÁMICO
+    pdf.set_fill_color(r, g, b)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.image("logo_cb.png", 8, 6, 55)
+
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}   |   {row['tipo_origen']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
@@ -552,14 +561,23 @@ def generar_op_rebobinado(row):
     pdf.add_page()
 
     # --- ENCABEZADO ---
-    pdf.set_fill_color(13,71,161)
-    pdf.rect(0,0,210,35,'F')
-    pdf.image("logo_cb.png",8,6,55)
+    if "NUEVA" in tipo_op:
+        r, g, b = (40, 167, 69)      # Verde
+    elif "CAMBIOS" in tipo_op:
+        r, g, b = (255, 165, 0)     # Naranja
+    else:
+        r, g, b = (13, 71, 161)     # Azul 
+
+    # 2. ENCABEZADO CON COLOR DINÁMICO
+    pdf.set_fill_color(r, g, b)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.image("logo_cb.png", 8, 6, 55)
+
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION - REBOBINADO",0,1,"C")
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}   |   {row['tipo_origen']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
