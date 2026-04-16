@@ -1210,7 +1210,7 @@ elif menu == "📅 Planificación":
                     "cliente": cli,
                     "vendedor": vend,
                     "nombre_trabajo": trab,
-                    "tipo_orden": t,
+                    "tipo_orden": origen,
                     "proxima_area": ruta_inicial,
                     "historial_procesos": []
                 }
