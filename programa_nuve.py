@@ -1386,15 +1386,15 @@ elif menu == "📦 Bodega Terminado":
                                 "ultima_actualizacion": fecha_mov  # <--- CAMBIADO: Antes decía fecha_db
                             }).execute()
 
-                        # RECOMENDACIÓN: Registra también en el historial para que no se pierda la trazabilidad
-                        supabase.table("bodega_historial").insert({
-                            "nombre_trabajo": nom_trabajo,
-                            "tipo_movimiento": tipo_accion,
-                            "cajas": c_cajas,
-                            "rollos": c_rollos,
-                            "fecha": fecha_mov, # <--- Usar la misma variable aquí
-                            "usuario": st.session_state.get('nombre_usuario')
-                        }).execute()
+                            # RECOMENDACIÓN: Registra también en el historial para que no se pierda la trazabilidad
+                            supabase.table("bodega_historial").insert({
+                                "nombre_trabajo": nom_trabajo,
+                                "tipo_movimiento": tipo_accion,
+                                "cajas": c_cajas,
+                                "rollos": c_rollos,
+                                "fecha": fecha_mov, # <--- Usar la misma variable aquí
+                                "usuario": st.session_state.get('nombre_usuario')
+                            }).execute()
 
                         st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
                         time.sleep(1.2)
