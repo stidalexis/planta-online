@@ -324,7 +324,7 @@ def generar_op_rollos(row):
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
     elif "CAMBIOS" in tipo_op:
-        r, g, b = (222, 52, 18)     # rojo 
+        r, g, b = (255, 165, 0)     # Naranja
     else:
         r, g, b = (13, 71, 161)     # Azul 
 
@@ -436,7 +436,7 @@ def generar_op_formas(row):
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
     elif "CAMBIOS" in tipo_op:
-        r, g, b = (222, 52, 18)     # rojo
+        r, g, b = (255, 165, 0)     # Naranja
     else:
         r, g, b = (13, 71, 161)     # Azul 
 
@@ -566,7 +566,7 @@ def generar_op_rebobinado(row):
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # Verde
     elif "CAMBIOS" in tipo_op:
-        r, g, b = (222, 52, 18)     # rojo
+        r, g, b = (255, 165, 0)     # Naranja
     else:
         r, g, b = (13, 71, 161)     # Azul 
 
@@ -1342,6 +1342,7 @@ elif menu == "📦 Bodega Terminado":
                     notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
 
                 # BOTÓN DINÁMICO
+                # BOTÓN DINÁMICO
                 texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
                 btn_procesar = st.form_submit_button(texto_boton)
 
@@ -1349,7 +1350,9 @@ elif menu == "📦 Bodega Terminado":
                     if not nom_trabajo or nom_trabajo == "":
                         st.error("Debe especificar el nombre del trabajo.")
                     else:
-                        ahora_col = hora_colombia().strftime("%d/%m/%Y %H:%M")
+                        # Aquí defines la variable
+                        fecha_mov = hora_colombia().isoformat()
+                        
                         producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
                         
                         # Lógica de Suma o Resta
@@ -1370,7 +1373,7 @@ elif menu == "📦 Bodega Terminado":
                             supabase.table("bodega_producto_terminado").update({
                                 "stock_cajas": nuevo_stk_cajas,
                                 "stock_rollos": nuevo_stk_rollos,
-                                "ultima_actualizacion": ahora_col
+                                "ultima_actualizacion": fecha_mov  # <--- CAMBIADO: Antes decía fecha_db
                             }).eq("id", producto_actual['id']).execute()
                         
                         elif es_entrada:
@@ -1380,9 +1383,22 @@ elif menu == "📦 Bodega Terminado":
                                 "tipo_producto": tipo_prod,
                                 "stock_cajas": c_cajas,
                                 "stock_rollos": c_rollos,
-                                "ultima_actualizacion": ahora_col
+                                "ultima_actualizacion": fecha_mov  # <--- CAMBIADO: Antes decía fecha_db
                             }).execute()
-                        
+
+                        # RECOMENDACIÓN: Registra también en el historial para que no se pierda la trazabilidad
+                        supabase.table("bodega_historial").insert({
+                            "nombre_trabajo": nom_trabajo,
+                            "tipo_movimiento": tipo_accion,
+                            "cajas": c_cajas,
+                            "rollos": c_rollos,
+                            "fecha": fecha_mov, # <--- Usar la misma variable aquí
+                            "usuario": st.session_state.get('nombre_usuario')
+                        }).execute()
+
+                        st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
+                        time.sleep(1.2)
+                        st.rerun()
                         st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
                         time.sleep(1.2)
                         st.rerun()
