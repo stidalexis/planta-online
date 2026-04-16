@@ -1241,7 +1241,8 @@ elif menu == "📅 Planificación":
                         "perforaciones_detalle": perf_d,
                         "codigo_barras_detalle": barr_d,
                         "num_id": num_id,    
-                        "num_fd": num_fd,    
+                        "num_fd": num_fd, 
+                        "tipo_origen": origen,   
                         "presentacion2": pres_peg, 
                         "transportadora_formas": True if t_trans_f == "SI" else None,
                         "destino_formas": dest_f if t_trans_f == "SI" else None,
@@ -1255,6 +1256,7 @@ elif menu == "📅 Planificación":
                         "material": mat,
                         "gramaje_rollos": gram,
                         "ancho_base": ancho,
+                        "tipo_origen": origen,
                         "cantidad_rollos": int(cant_r),
                         "objetivo_rebobinado": objetivo,
                         "observaciones_rollos": obs
