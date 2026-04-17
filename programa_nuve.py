@@ -1541,7 +1541,7 @@ elif menu == "📦 Inventario":
 
 #  VALIDACION DE ACCESO A AREAS DE PRODUCCION 
 
-elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]:
+elif menu in ["🖨️ Impresion", "✂️ Corte", "📥 Colectoras", "📕 Encuadernacion", "🌀 Rebobinadoras"]:
     rol_actual = st.session_state.get("rol", "operario").lower()
 
 # DICCIONARIO DE PERMISIS UNIFICADO 
