@@ -10,7 +10,7 @@ import pytz
 
 #  CONFIGURACION DE PAGINA 
 
-st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
+st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
 
 #  CONEXION A SUPABASE 
 
@@ -19,7 +19,7 @@ try:
     KEY = st.secrets["SUPABASE_KEY"]
     supabase = create_client(URL, KEY)
 except Exception as e:
-    st.error("Error de conexión a Base de Datos. Revisa los Secrets.")
+    st.error("Error de conexion a Base de Datos. Revisa los Secrets.")
     st.stop()
     
 #  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL) 
@@ -35,7 +35,7 @@ st.markdown("""
     
     .section-header { background-color: #F0F2F6; padding: 10px; border-radius: 8px; font-weight: bold; color: #0D47A1; margin-top: 15px; margin-bottom: 10px; border-left: 6px solid #0D47A1; }
     
-    /* RADIOGRAFÍA: Cuadros blancos con texto en NEGRO */
+    /* RADIOGRAFIA: Cuadros blancos con texto en NEGRO */
     .metric-box { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 12px; border-radius: 8px; margin-bottom: 5px; color: #000000 !important; line-height: 1.6; }
     .metric-box b { color: #000000 !important; }
 
@@ -305,7 +305,7 @@ def generar_pdf_op(row):
 
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 7)
-    pdf.cell(0, 10, f"DOCUMENTO OFICIAL NUVE - GENERADO AUTOMATICAMENTE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", align='C')
+    pdf.cell(0, 10, f"DOCUMENTO OFICIAL C&B PAPELES  - GENERADO AUTOMATICAMENTE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", align='C')
     
     return bytes(pdf.output())
 
@@ -405,7 +405,7 @@ def generar_op_rollos(row):
 
     # PIE
     pdf.set_font("Arial", "I", 6)
-    pdf.cell(0, 5, f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
+    pdf.cell(0, 5, f"SISTEMA C&B PAPELES  - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
 
     return bytes(pdf.output())
 
@@ -554,7 +554,7 @@ def generar_op_formas(row):
 
     pdf.ln(10)
     pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.cell(0,10,f"SISTEMA C&B PAPELES  - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
     return bytes(pdf.output())
 
 def generar_op_rebobinado(row):
@@ -631,7 +631,7 @@ def generar_op_rebobinado(row):
     # PIE DE PÁGINA
     pdf.ln(10)
     pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA NUVE - GENERADO: {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.cell(0,10,f"SISTEMA C&B PAPELES  - GENERADO: {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
     return bytes(pdf.output())
 
@@ -885,7 +885,7 @@ elif menu == "🔍 Seguimiento":
             st.download_button(
                 "📥 Excel General",
                 data=excel_file,
-                file_name="Reporte_General_Nuve.xlsx",
+                file_name="Reporte_General_C&B PAPELES .xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         st.divider()
@@ -2015,3 +2015,4 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
+
