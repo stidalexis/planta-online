@@ -1365,7 +1365,6 @@ elif menu == "📦 Bodega Terminado":
                     notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
 
                 # BOTÓN DINÁMICO
-                # BOTÓN DINÁMICO
                 texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
                 btn_procesar = st.form_submit_button(texto_boton)
 
@@ -1396,7 +1395,8 @@ elif menu == "📦 Bodega Terminado":
                             supabase.table("bodega_producto_terminado").update({
                                 "stock_cajas": nuevo_stk_cajas,
                                 "stock_rollos": nuevo_stk_rollos,
-                                "ultima_actualizacion": fecha_mov  # <--- CAMBIADO: Antes decía fecha_db
+                                "observaciones_inv": notas,
+                                "ultima_actualizacion": fecha_mov 
                             }).eq("id", producto_actual['id']).execute()
                         
                         elif es_entrada:
@@ -1406,7 +1406,8 @@ elif menu == "📦 Bodega Terminado":
                                 "tipo_producto": tipo_prod,
                                 "stock_cajas": c_cajas,
                                 "stock_rollos": c_rollos,
-                                "ultima_actualizacion": fecha_mov  # <--- CAMBIADO: Antes decía fecha_db
+                                "observaciones_inv": notas,
+                                "ultima_actualizacion": fecha_mov  
                             }).execute()
 
                             # RECOMENDACIÓN: Registra también en el historial para que no se pierda la trazabilidad
@@ -1415,7 +1416,8 @@ elif menu == "📦 Bodega Terminado":
                                 "tipo_movimiento": tipo_accion,
                                 "cajas": c_cajas,
                                 "rollos": c_rollos,
-                                "fecha": fecha_mov, # <--- Usar la misma variable aquí
+                                "fecha": fecha_mov,
+                                "observaciones_inv": notas,
                                 "usuario": st.session_state.get('nombre_usuario')
                             }).execute()
 
