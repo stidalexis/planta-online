@@ -860,120 +860,107 @@ if menu == "🖥️ Monitor":
 #  MÓDULO 2: SEGUIMIENTO 
 
 # MÓDULO 2: SEGUIMIENTO
+# MÓDULO 2: SEGUIMIENTO
 elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes en Tiempo Real")
     
-    # 1. Traer órdenes planeadas y trabajos que se están ejecutando actualmente
-    # Esto nos permite saber si una orden ya fue tomada por una máquina
-    ordenes_res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute()
-    activos_res = supabase.table("trabajos_activos").select("op, maquina").execute()
-    
-    ordenes = ordenes_res.data
-    activos = activos_res.data
-
-    # Creamos un diccionario rápido para cruzar datos: { 'numero_op': 'nombre_maquina' }
-    op_en_maquina = {a['op']: a['maquina'] for a in activos}
+    # 1. Traer datos de órdenes y trabajos activos para comparar
+    try:
+        ordenes_res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute()
+        activos_res = supabase.table("trabajos_activos").select("op, maquina").execute()
+        
+        ordenes = ordenes_res.data
+        activos = activos_res.data
+        
+        # Diccionario para saber qué OP está en qué máquina actualmente
+        op_en_maquina = {str(a['op']): a['maquina'] for a in activos}
+    except Exception as e:
+        st.error(f"Error al conectar con las tablas: {e}")
+        ordenes = []
 
     if not ordenes:
-        st.warning("No hay órdenes registradas en el sistema.")
+        st.warning("No hay órdenes registradas.")
     else:
-        # Buscador rápido por número de OP
-        busqueda = st.text_input("Filtrar por número de OP o Cliente:", "")
+        # Buscador (Original)
+        busqueda = st.text_input("🔍 Filtrar por OP, Cliente o Trabajo:", "")
         
         for row in ordenes:
-            op_id = row['op']
-            area_destino = row['proxima_area']
+            op_id = str(row['op'])
+            area_destino = row.get('proxima_area', 'SIN ÁREA')
             cliente = row.get('cliente', 'N/A')
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
 
-            # Filtro de búsqueda opcional
-            if busqueda and (busqueda not in str(op_id) and busqueda.lower() not in cliente.lower()):
+            # Filtro de búsqueda
+            if busqueda and (busqueda not in op_id and busqueda.lower() not in cliente.lower() and busqueda.lower() not in nombre_t.lower()):
                 continue
 
-            # --- LÓGICA DE ESTADO DETALLADO (LO NUEVO) ---
+            # --- NUEVA LOGICA DE ESTATUS DETALLADO ---
             if op_id in op_en_maquina:
-                # Si la OP está en la tabla de activos, el operario ya la inició
                 maquina_nombre = op_en_maquina[op_id]
-                texto_estatus = f"🟢 EN {area_destino} (PROCESANDO EN: {maquina_nombre})"
-                color_borde = "green"
+                texto_estatus = f"🟢 EN {area_destino} (TRABAJANDO EN: {maquina_nombre})"
+                color_texto = "green"
             else:
-                # Si no aparece en activos, está en la fila del área correspondiente
-                texto_estatus = f"⏳ EN ESPERA DE {area_destino} (ASIGNACIÓN PENDIENTE)"
-                color_borde = "orange"
+                texto_estatus = f"⏳ EN ESPERA DE {area_destino} (COLA DE TRABAJO)"
+                color_texto = "orange"
 
-            # --- RENDERIZADO DE LA TARJETA ---
-            with st.expander(f"OP: {op_id} - {nombre_t} | {texto_estatus}"):
-                st.markdown(f"### Estatus Actual: :{color_borde}[{texto_estatus}]")
+            # --- DISEÑO DE TARJETA (EXPANDER) ---
+            with st.expander(f"📦 OP: {op_id} | {cliente} | {texto_estatus}"):
+                st.markdown(f"### Estatus: :{color_texto}[{texto_estatus}]")
                 
-                c1, c2, c3 = st.columns(3)
+                # Columnas de información técnica (Original)
+                c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    st.write(f"**👤 Cliente:** {cliente}")
-                    st.write(f"**📅 Creada:** {row.get('created_at', '')[:10]}")
+                    st.write("**👤 Cliente:**")
+                    st.write(cliente)
+                    st.write("**📅 Fecha:**")
+                    st.write(row.get('created_at', '')[:10])
                 with c2:
-                    st.write(f"**🏭 Área:** {area_destino}")
-                    st.write(f"**📦 Tipo:** {row.get('tipo_orden', 'N/A')}")
+                    st.write("**🏗️ Área Actual:**")
+                    st.info(area_destino)
+                    st.write("**📦 Cantidad:**")
+                    st.write(row.get('cantidad_total', '0'))
                 with c3:
-                    # Botón original para ver detalles técnicos (Radiografía)
+                    st.write("**📝 Trabajo:**")
+                    st.write(nombre_t)
+                    st.write("**⚙️ Tipo:**")
+                    st.write(row.get('tipo_orden', 'N/A'))
+                with c4:
+                    # BOTÓN ORIGINAL: Radiografía (modal_detalle_op debe estar definida arriba en tu código)
                     if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}"):
                         modal_detalle_op(row)
 
-                # Opción para descargar el PDF si es necesario desde aquí
-                if st.session_state.get('rol') == 'admin' or st.session_state.get('rol') == 'ventas':
-                    if "FORMAS" in row['tipo_orden']:
-                        pdf_func = generar_op_formas
-                    elif "ROLLOS" in row['tipo_orden']:
-                        pdf_func = generar_op_rollos
-                    else:
-                        pdf_func = generar_op_rebobinado
-                        
-                    st.download_button(
-                        label=f"📥 Descargar PDF OP {op_id}",
-                        data=pdf_func(row),
-                        file_name=f"OP_{op_id}.pdf",
-                        mime="application/pdf",
-                        key=f"dl_{op_id}"
-                    )
-        st.divider()
-        h1, h2, h3, h4, h5, h6, h7 = st.columns([1,2,2,1.5,1.5,1,1.5])
-        h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**"); h7.write("**Orden**")
-        for index, row in df.iterrows():
+                st.divider()
 
-            r1, r2, r3, r4, r5, r6, r7 = st.columns([1,2,2,1.5,1.5,1,1.5])
+                # --- BOTONES DE DESCARGA ORIGINALES (SIN OMITIR NADA) ---
+                if st.session_state.get('rol') in ['admin', 'ventas']:
+                    st.subheader("📄 Documentación Técnica")
+                    col_pdf1, col_pdf2 = st.columns(2)
+                    
+                    with col_pdf1:
+                        try:
+                            # Lógica original de selección de PDF
+                            tipo = row.get('tipo_orden', '')
+                            if "FORMAS" in tipo:
+                                pdf_data = generar_op_formas(row)
+                            elif "ROLLOS" in tipo:
+                                pdf_data = generar_op_rollos(row)
+                            else:
+                                pdf_data = generar_op_rebobinado(row)
+                                
+                            st.download_button(
+                                label=f"📥 Descargar PDF OP {op_id}",
+                                data=pdf_data,
+                                file_name=f"OP_{op_id}.pdf",
+                                mime="application/pdf",
+                                key=f"dl_pdf_{op_id}",
+                                use_container_width=True
+                            )
+                        except Exception as e:
+                            st.error(f"Error PDF: {e}")
 
-            r1.write(row['op'])
-            r2.write(row['cliente'])
-            r3.write(row['nombre_trabajo'])
-            r4.write(row['tipo_orden'])
-
-            color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
-            r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
-
-# BOTON VER DETALLE
-
-            if r6.button("👁️", key=f"v_{row['op']}"):
-                modal_detalle_op(row.to_dict())
-
-# BOTON ORDEN PDF
-
-            if r7.button("📄", key=f"pdf_{row['op']}"):
-
-                tipo = row["tipo_orden"]
-
-                if "FORMAS" in row["tipo_orden"]:
-                    pdf_bytes = generar_op_formas(row.to_dict())
-                elif tipo == "REBOBINADO":
-                    pdf_bytes = generar_op_rebobinado(row.to_dict())
-                else:
-                    pdf_bytes = generar_op_rollos(row.to_dict())
-
-                st.download_button(
-                    "⬇ Descargar Orden",
-                    data=pdf_bytes,
-                    file_name=f"OP_{row['op']}.pdf",
-                    mime="application/pdf",
-                    key=f"down_{row['op']}"
-                )    
-
+                    with col_pdf2:
+                        # Si tuvieras un segundo botón de reporte o etiquetas, iría aquí
+                        st.caption("PDF generado automáticamente según especificaciones técnicas.")
 #  MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) 
 
 elif menu == "📅 Planificación":
