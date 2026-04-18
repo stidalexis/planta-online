@@ -952,9 +952,6 @@ elif menu == "🔍 Seguimiento":
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
 
-                    with col_pdf2:
-                        # Si tuvieras un segundo botón de reporte o etiquetas, iría aquí
-                        st.caption("PDF generado automáticamente según especificaciones técnicas.")
 #  MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) 
 
 elif menu == "📅 Planificación":
