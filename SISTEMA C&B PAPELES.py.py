@@ -857,14 +857,11 @@ if menu == "🖥️ Monitor":
     time.sleep(30); 
     st.rerun()
 
-#  MÓDULO 2: SEGUIMIENTO 
-
-# MÓDULO 2: SEGUIMIENTO
 # MÓDULO 2: SEGUIMIENTO
 elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes en Tiempo Real")
     
-    # 1. Traer datos de órdenes y trabajos activos para comparar
+    # 1. Traer datos de órdenes y trabajos activos
     try:
         ordenes_res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute()
         activos_res = supabase.table("trabajos_activos").select("op, maquina").execute()
@@ -872,7 +869,7 @@ elif menu == "🔍 Seguimiento":
         ordenes = ordenes_res.data
         activos = activos_res.data
         
-        # Diccionario para saber qué OP está en qué máquina actualmente
+        # Diccionario de OPs en máquina
         op_en_maquina = {str(a['op']): a['maquina'] for a in activos}
     except Exception as e:
         st.error(f"Error al conectar con las tablas: {e}")
@@ -881,33 +878,36 @@ elif menu == "🔍 Seguimiento":
     if not ordenes:
         st.warning("No hay órdenes registradas.")
     else:
-        # Buscador (Original)
         busqueda = st.text_input("🔍 Filtrar por OP, Cliente o Trabajo:", "")
         
         for row in ordenes:
             op_id = str(row['op'])
-            area_destino = row.get('proxima_area', 'SIN ÁREA')
+            area_destino = row.get('proxima_area', 'SIN ÁREA').upper()
             cliente = row.get('cliente', 'N/A')
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
 
-            # Filtro de búsqueda
             if busqueda and (busqueda not in op_id and busqueda.lower() not in cliente.lower() and busqueda.lower() not in nombre_t.lower()):
                 continue
 
-            # --- NUEVA LOGICA DE ESTATUS DETALLADO ---
-            if op_id in op_en_maquina:
+            # --- LÓGICA DE ESTATUS MEJORADA ---
+            if area_destino == "FINALIZADO":
+                # Si ya llegó al final de la ruta
+                texto_estatus = "🔵 ORDEN FINALIZADA (BODEGA / DESPACHOS)"
+                color_texto = "blue"
+            elif op_id in op_en_maquina:
+                # Si está en la tabla de trabajos_activos
                 maquina_nombre = op_en_maquina[op_id]
-                texto_estatus = f"🟢 EN {area_destino} (TRABAJANDO EN: {maquina_nombre})"
+                texto_estatus = f"🟢 EN {area_destino} (PROCESANDO EN: {maquina_nombre})"
                 color_texto = "green"
             else:
-                texto_estatus = f"⏳ EN ESPERA DE {area_destino} (COLA DE TRABAJO)"
+                # Si no está en activos y no es finalizado, está esperando
+                texto_estatus = f"⏳ EN ESPERA DE {area_destino}"
                 color_texto = "orange"
 
-            # --- DISEÑO DE TARJETA (EXPANDER) ---
+            # --- DISEÑO DE TARJETA ---
             with st.expander(f"📦 OP: {op_id} | {cliente} | {texto_estatus}"):
                 st.markdown(f"### Estatus: :{color_texto}[{texto_estatus}]")
                 
-                # Columnas de información técnica (Original)
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
                     st.write("**👤 Cliente:**")
@@ -918,45 +918,39 @@ elif menu == "🔍 Seguimiento":
                     st.write("**🏗️ Área Actual:**")
                     st.info(area_destino)
                     st.write("**📦 Cantidad:**")
-                    st.write(row.get('cantidad_total', '0'))
+                    st.write(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
                 with c3:
                     st.write("**📝 Trabajo:**")
                     st.write(nombre_t)
                     st.write("**⚙️ Tipo:**")
                     st.write(row.get('tipo_orden', 'N/A'))
                 with c4:
-                    # BOTÓN ORIGINAL: Radiografía (modal_detalle_op debe estar definida arriba en tu código)
                     if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}"):
                         modal_detalle_op(row)
 
                 st.divider()
 
-                # --- BOTONES DE DESCARGA ORIGINALES (SIN OMITIR NADA) ---
+                # --- BOTONES DE DESCARGA ---
                 if st.session_state.get('rol') in ['admin', 'ventas']:
-                    st.subheader("📄 Documentación Técnica")
-                    col_pdf1, col_pdf2 = st.columns(2)
-                    
-                    with col_pdf1:
-                        try:
-                            # Lógica original de selección de PDF
-                            tipo = row.get('tipo_orden', '')
-                            if "FORMAS" in tipo:
-                                pdf_data = generar_op_formas(row)
-                            elif "ROLLOS" in tipo:
-                                pdf_data = generar_op_rollos(row)
-                            else:
-                                pdf_data = generar_op_rebobinado(row)
-                                
-                            st.download_button(
-                                label=f"📥 Descargar PDF OP {op_id}",
-                                data=pdf_data,
-                                file_name=f"OP_{op_id}.pdf",
-                                mime="application/pdf",
-                                key=f"dl_pdf_{op_id}",
-                                use_container_width=True
-                            )
-                        except Exception as e:
-                            st.error(f"Error PDF: {e}")
+                    try:
+                        tipo = row.get('tipo_orden', '')
+                        if "FORMAS" in tipo:
+                            pdf_data = generar_op_formas(row)
+                        elif "ROLLOS" in tipo:
+                            pdf_data = generar_op_rollos(row)
+                        else:
+                            pdf_data = generar_op_rebobinado(row)
+                            
+                        st.download_button(
+                            label=f"📥 Descargar PDF Orden {op_id}",
+                            data=pdf_data,
+                            file_name=f"OP_{op_id}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_pdf_{op_id}",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"No se pudo generar el PDF: {e}")
 
                     with col_pdf2:
                         # Si tuvieras un segundo botón de reporte o etiquetas, iría aquí
