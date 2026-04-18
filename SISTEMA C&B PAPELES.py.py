@@ -7,7 +7,7 @@ import io
 from fpdf import FPDF
 from datetime import datetime
 import pytz
-
+ 
 #  CONFIGURACION DE PAGINA 
 
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
