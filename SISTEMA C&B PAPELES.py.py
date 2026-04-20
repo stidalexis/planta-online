@@ -763,7 +763,7 @@ with st.sidebar:
     
     # 1. Definimos las opciones según el rol
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado"]
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado", "📊 Reportes Admin"]
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'supervisor_imp':
@@ -1475,6 +1475,42 @@ elif menu == "📦 Bodega Terminado":
                     st.warning(f"⚠️ Hay {len(bajo_stock)} productos con stock crítico (2 o menos cajas).")
         else:
             st.info("La bodega está vacía actualmente.")
+
+# === NUEVO MÓDULO: REPORTES 
+
+elif menu == "📊 Reportes Admin":
+    st.title("📊 Panel de Control y Reportes")
+        
+    tab_historial, tab_muertos, tab_paradas = st.tabs([
+            "📦 Historial de Bodega", 
+            "⏳ Tiempos Muertos", 
+            "🛑 Paradas de Máquina"
+    ])
+        
+    with tab_historial:
+        st.subheader("Historial de Movimientos")
+        res_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True).execute().data
+        if res_h:
+            df_h = pd.DataFrame(res_h)
+            st.dataframe(df_h, use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay datos en el historial de bodega.")
+
+    with tab_muertos:
+        st.subheader("Registro de Tiempos Muertos")
+        res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
+        if res_m:
+            st.dataframe(pd.DataFrame(res_m), use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay registros de tiempos muertos.")
+
+    with tab_paradas:
+        st.subheader("Registro de Paradas de Máquina")
+        res_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True).execute().data
+        if res_p:
+            st.dataframe(pd.DataFrame(res_p), use_container_width=True, hide_index=True)
+        else:
+            st.info("No hay registros de paradas de máquina.")
 
 # NUEVO  DE INVENTARIO CORES Y CAJAS
 
