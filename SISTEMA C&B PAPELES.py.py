@@ -1479,38 +1479,51 @@ elif menu == "📦 Bodega Terminado":
 # === NUEVO MÓDULO: REPORTES 
 
 elif menu == "📊 Reportes Admin":
-    st.title("📊 Panel de Control y Reportes")
+        st.title("📊 Panel de Control y Reportes")
         
-    tab_historial, tab_muertos, tab_paradas = st.tabs([
+        tab_historial, tab_muertos, tab_paradas = st.tabs([
             "📦 Historial de Bodega", 
-            "⏳ Tiempos Muertos", 
-            "🛑 Paradas de Máquina"
-    ])
+            "⏳ Disponibilidad (Máquina Libre)", 
+            "🛑 Reporte de Paradas (Fallas)"
+        ])
         
-    with tab_historial:
-        st.subheader("Historial de Movimientos")
-        res_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True).execute().data
-        if res_h:
-            df_h = pd.DataFrame(res_h)
-            st.dataframe(df_h, use_container_width=True, hide_index=True)
-        else:
-            st.info("No hay datos en el historial de bodega.")
+        with tab_historial:
+            st.subheader("Historial de Movimientos de Bodega")
+            res_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True).execute().data
+            if res_h:
+                df_h = pd.DataFrame(res_h)
+                st.dataframe(df_h, use_container_width=True, hide_index=True)
+            else:
+                st.info("Sin registros en bodega.")
 
-    with tab_muertos:
-        st.subheader("Registro de Tiempos Muertos")
-        res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
-        if res_m:
-            st.dataframe(pd.DataFrame(res_m), use_container_width=True, hide_index=True)
-        else:
-            st.info("No hay registros de tiempos muertos.")
+        with tab_muertos:
+            st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
+            # Aquí filtramos o mostramos el tiempo que la máquina estuvo esperando trabajo
+            res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
+            if res_m:
+                df_m = pd.DataFrame(res_m)
+                # Renombramos para claridad
+                if 'duracion_min' in df_m.columns:
+                    total_libre = df_m['duracion_min'].sum()
+                    st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre} min")
+                st.dataframe(df_m, use_container_width=True, hide_index=True)
+            else:
+                st.info("No hay registros de tiempo libre.")
 
-    with tab_paradas:
-        st.subheader("Registro de Paradas de Máquina")
-        res_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True).execute().data
-        if res_p:
-            st.dataframe(pd.DataFrame(res_p), use_container_width=True, hide_index=True)
-        else:
-            st.info("No hay registros de paradas de máquina.")
+        with tab_paradas:
+            st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
+            # Aquí mostramos cuando la máquina se detuvo por un problema real
+            res_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True).execute().data
+            if res_p:
+                df_p = pd.DataFrame(res_p)
+                # Cálculo de impacto
+                if 'duracion_min' in df_p.columns:
+                    total_parada = df_p['duracion_min'].sum()
+                    st.metric("Total Tiempo Perdido por Fallas", f"{total_parada} min", delta_color="inverse")
+                
+                st.dataframe(df_p, use_container_width=True, hide_index=True)
+            else:
+                st.info("No hay reportes de fallas técnicos.")
 
 # NUEVO  DE INVENTARIO CORES Y CAJAS
 
