@@ -1398,6 +1398,7 @@ elif menu == "📦 Bodega Terminado": # Corregido el 'lif'
                                 "tipo_producto": tipo_prod,
                                 "stock_cajas": c_cajas,
                                 "stock_rollos": c_rollos,
+                                "observaciones": notas,
                                 "ultima_actualizacion": fecha_mov  
                             }).execute()
 
@@ -1409,7 +1410,7 @@ elif menu == "📦 Bodega Terminado": # Corregido el 'lif'
                             "rollos": c_rollos,
                             "fecha": fecha_mov,
                             "usuario": st.session_state.get('nombre_usuario', 'Sistema'),
-                            "observaciones": notas # Agregado para aprovechar el campo
+                            "observaciones": notas 
                         }).execute()
 
                         st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
@@ -1423,8 +1424,8 @@ elif menu == "📦 Bodega Terminado": # Corregido el 'lif'
         
         if res_bodega:
             df_bodega = pd.DataFrame(res_bodega)
-            df_show = df_bodega[['nombre_trabajo', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion']]
-            df_show.columns = ['TRABAJO', 'TIPO', 'CAJAS', 'ROLLOS', 'ÚLT. MOVIMIENTO']
+            df_show = df_bodega[['nombre_trabajo', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'observaciones', 'ultima_actualizacion']]
+            df_show.columns = ['TRABAJO', 'TIPO', 'CAJAS', 'ROLLOS', 'ÚLT. MOVIMIENTO', 'observaciones']
             
             busqueda_b = st.text_input("🔍 Filtrar inventario por nombre...")
             if busqueda_b:
