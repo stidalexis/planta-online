@@ -5,7 +5,6 @@ from datetime import datetime
 import time
 import io
 from fpdf import FPDF
-from datetime import datetime
 import pytz
 
 #  CONFIGURACION DE PAGINA 
@@ -1422,10 +1421,7 @@ elif menu == "📦 Bodega Terminado":
                         st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
                         time.sleep(1.2)
                         st.rerun()
-                        st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
-                        time.sleep(1.2)
-                        st.rerun()
-    with tab_inv:
+                       
         st.subheader("Existencias en Bodega")
         
 # Traer datos actualizados
