@@ -1315,7 +1315,7 @@ elif menu == "📅 Planificación":
 elif menu == "📦 Bodega Terminado":
     st.title("📦 Inventario de Producto Terminado")
     
-    tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)"])
+    tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
     
     with tab_mov:
         st.subheader("🔄 Gestión de Movimientos")
