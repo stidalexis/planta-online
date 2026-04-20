@@ -10,7 +10,7 @@ import pytz
 
 #  CONFIGURACION DE PAGINA 
 
-st.set_page_config(layout="wide", page_title="SISTEMA NUVE V0.01 - TOTAL", page_icon="🏭")
+st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
 
 #  CONEXION A SUPABASE 
 
@@ -305,7 +305,7 @@ def generar_pdf_op(row):
 
     pdf.ln(10)
     pdf.set_font("Arial", 'I', 7)
-    pdf.cell(0, 10, f"DOCUMENTO OFICIAL NUVE - GENERADO AUTOMATICAMENTE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", align='C')
+    pdf.cell(0, 10, f"DOCUMENTO OFICIAL C&B PAPELES - GENERADO AUTOMATICAMENTE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", align='C')
     
     return bytes(pdf.output())
 
@@ -317,102 +317,95 @@ from datetime import datetime
 def generar_op_rollos(row):
     pdf = FPDF()
     pdf.add_page()
-    # (Encabezado igual...)
-    pdf.set_fill_color(13,71,161); pdf.rect(0,0,210,35,'F'); pdf.image("logo_cb.png",8,6,55)
-    pdf.set_text_color(255,255,255); pdf.set_font("Arial","B",16); pdf.cell(0,18,"ORDEN DE PRODUCCION - ROLLOS",0,1,"C")
-    pdf.set_font("Arial","B",12); pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
-    pdf.set_text_color(0,0,0); pdf.ln(4)
+
+    # 1. Lógica de color según el tipo de orden
+    tipo_op = row.get('tipo_origen', '').upper()
+
+    if "NUEVA" in tipo_op:
+        r, g, b = (40, 167, 69)      # Verde
+    elif "CAMBIOS" in tipo_op:
+        r, g, b = (255, 165, 0)     # Naranja
+    else:
+        r, g, b = (13, 71, 161)     # Azul 
+
+    # 2. ENCABEZADO CON COLOR DINÁMICO
+    pdf.set_fill_color(r, g, b)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.image("logo_cb.png", 8, 6, 55)
+    
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 18, "ORDEN DE PRODUCCION - ROLLOS", 0, 1, "C")
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0,5,f"OP: {row['op']}   |   {row['tipo_origen']}",0,1,"C")
+    
+    # Volver a texto negro y continuar con el cuerpo
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(4)
 
     # 1. INFORMACION GENERAL
-    pdf.set_fill_color(230,230,230); pdf.set_font("Arial","B",11); pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
-    pdf.set_font("Arial","B",10)
-    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
-    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
-    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
-    pdf.cell(95,7,f"Tipo Orden: {row.get('tipo_orden','')}",1,1)
+    pdf.set_fill_color(230, 230, 230); pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(95, 7, f"Cliente: {row.get('cliente','')}", 1)
+    pdf.cell(95, 7, f"Vendedor: {row.get('vendedor','')}", 1, 1)
+    pdf.cell(95, 7, f"Trabajo: {row.get('nombre_trabajo','')}", 1)
+    pdf.cell(95, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1)
 
     # 2. ESPECIFICACIONES TÉCNICAS
-    pdf.ln(4); pdf.set_font("Arial","B",11); pdf.cell(0,8,"2. ESPECIFICACIONES TECNICAS",0,1,fill=True)
-    pdf.set_font("Arial","B",10)
-    pdf.cell(63,7,f"Material: {row.get('material','')}",1)
-    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}",1)
-    pdf.cell(64,7,f"Core: {row.get('core','')}",1,1)
+    pdf.ln(4); pdf.set_font("Arial", "B", 11); pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
+    pdf.set_font("Arial", "B", 10)
+    pdf.cell(63, 7, f"Material: {row.get('material','')}", 1)
+    pdf.cell(63, 7, f"Gramaje: {row.get('gramaje_rollos','')}", 1)
+    pdf.cell(64, 7, f"Core: {row.get('core','')}", 1, 1)
 
-    pdf.cell(63,7,f"Cantidad Rollos: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(63,7,f"Unidades Bolsa: {row.get('unidades_bolsa','')}",1)
-    pdf.cell(64,7,f"Unidades Caja: {row.get('unidades_caja','')}",1,1)
+    pdf.cell(63, 7, f"Cantidad Rollos: {row.get('cantidad_rollos','')}", 1)
+    pdf.cell(63, 7, f"Unidades Bolsa: {row.get('unidades_bolsa','')}", 1)
+    pdf.cell(64, 7, f"Unidades Caja: {row.get('unidades_caja','')}", 1, 1)
     
     # Referencia y Transporte
-    pdf.cell(95,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1)
+    pdf.cell(95, 7, f"Referencia Comercial: {row.get('ref_comercial','')}", 1)
     trans = "SI" if row.get('transportadora_rollos') else "NO"
-    pdf.cell(95,7,f"Transportadora: {trans}",1,1)
-    pdf.cell(190,7,f"Destino: {row.get('destino_rollos','PLANTA')}",1,1)
-
-    # Tintas (Solo si es impreso)
-    if "IMPRESOS" in row.get('tipo_orden', ''):
-        pdf.cell(95,7,f"Tintas Frente: {row.get('tintas_frente_rollos','')}",1)
-        pdf.cell(95,7,f"Tintas Respaldo: {row.get('tintas_respaldo_rollos','')}",1,1)
+    pdf.cell(95, 7, f"Transportadora: {trans}", 1, 1)
+    pdf.cell(25, 8, "Impresión", 1, 0, 'C')
+    pdf.cell(82, 8, f" FRENTE: {row.get('tintas_frente_rollos', 'N/A')}", 1)
+    pdf.cell(83, 8, f" RESPALDO: {row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1)
+    pdf.cell(190, 7, f"Destino: {row.get('destino_rollos','PLANTA')}", 1, 1)
 
     # Observaciones y Perforaciones
-    pdf.ln(4); pdf.set_font("Arial","B",9); pdf.cell(0,8,"3. ADICIONALES Y OBSERVACIONES",0,1,fill=True)
-    pdf.cell(0,7,f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}",1,1)
-    pdf.multi_cell(0,7,f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)
-    # -------------------------
+    pdf.ln(4); pdf.set_font("Arial", "B", 9); pdf.cell(0, 8, "3. ADICIONALES Y OBSERVACIONES", 0, 1, fill=True)
+    pdf.cell(0, 7, f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}", 1, 1)
+    pdf.multi_cell(0, 7, f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)
+
     # FIRMAS
-    # -------------------------
-    pdf.ln(1)
-    pdf.set_font("Arial","B",7)
+    pdf.ln(1); pdf.set_font("Arial", "B", 7)
+    pdf.cell(63, 6, "COORDINADORA", 1, 0, "C"); pdf.cell(63, 6, "ASESOR", 1, 0, "C"); pdf.cell(64, 6, "SUPERVISOR", 1, 1, "C")
+    pdf.cell(63, 20, "", 1, 0); pdf.cell(63, 20, "", 1, 0); pdf.cell(64, 20, "", 1, 1)
 
-    pdf.cell(63,6,"COORDINADORA",1,0,"C")
-    pdf.cell(63,6,"ASESOR",1,0,"C")
-    pdf.cell(64,6,"SUPERVISOR",1,1,"C")
-
-    pdf.cell(63,20,"",1,0)
-    pdf.cell(63,20,"",1,0)
-    pdf.cell(64,20,"",1,1)
-
-    # -------------------------
     # ESTIBAS 
-    # -------------------------
-    pdf.set_font("Arial","B",8)
-    pdf.cell(0,8,"ESTIBAS",0,1,fill=True)
+    pdf.set_font("Arial", "", 6)
+    y_est = pdf.get_y() + 2
+    pdf.set_xy(10, y_est)
+    pdf.set_fill_color(210, 210, 210); pdf.set_font("Arial", 'B', 9)
+    pdf.cell(190, 5, "REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
+    
+    w_e = 190 / 3
+    pdf.set_font("Arial", '', 8)
+    for i in range(4): 
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:_________H:___________", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:_________H:___________", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:_________H:___________", 1, 1)
 
-    pdf.set_font("Arial","",6)
-
-    for i in range(6):
-        # IZQUIERDA (1–6)
-        pdf.cell(4,7,str(i+1),1,0,"C")
-        pdf.cell(18,7,"CANT",1,0)
-        pdf.cell(18,7,"D",1,0,"C")
-        pdf.cell(18,7,"M",1,0,"C")
-        pdf.cell(18,7,"A",1,0,"C")
-        pdf.cell(18,7,"HORA",1,0,"C")
-
-        # DERECHA (7–12)
-        pdf.cell(4,7,str(i+7),1,0,"C")
-        pdf.cell(18,7,"CANT",1,0)
-        pdf.cell(18,7,"D",1,0,"C")
-        pdf.cell(18,7,"M",1,0,"C")
-        pdf.cell(18,7,"A",1,0,"C")
-        pdf.cell(18,7,"HORA",1,1,"C")
-    # -------------------------
-    # OBSERVACIONES
-    # -------------------------
-    pdf.set_font("Arial","B",8)
-    pdf.cell(130,8,"OBSERVACIONES",1,0,"C")
-    pdf.cell(60,8,"RECIBE",1,1,"C")
-
-    pdf.set_font("Arial","",7)
-
+    # OBSERVACIONES FINALIZADO
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(130, 8, "OBSERVACIONES FINALIZADO", 1, 0, "C"); pdf.cell(60, 8, "RECIBE", 1, 1, "C")
+    pdf.set_font("Arial", "", 7)
     for _ in range(2):
-        pdf.cell(130,6,"",1,0)
-        pdf.cell(60,6,"",1,1)
+        pdf.cell(130, 6, "", 1, 0); pdf.cell(60, 6, "", 1, 1)
 
-    # -------------------------
     # PIE
-    # -------------------------
-    pdf.set_font("Arial","I",6)
-    pdf.cell(0,5,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.set_font("Arial", "I", 6)
+    pdf.cell(0, 5, f"SISTEMA C&B PAPELES - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
 
     return bytes(pdf.output())
 
@@ -437,16 +430,26 @@ def cell_fit(pdf, w, h, text, border=1):
 def generar_op_formas(row):
     pdf = FPDF()
     pdf.add_page()
-
+    
+    tipo_op = row.get('tipo_origen', '').upper()
     # --- ENCABEZADO (Mantenemos tu estilo actual) ---
-    pdf.set_fill_color(13,71,161)
-    pdf.rect(0,0,210,35,'F')
-    pdf.image("logo_cb.png",8,6,55)
+    if "NUEVA" in tipo_op:
+        r, g, b = (40, 167, 69)      # Verde
+    elif "CAMBIOS" in tipo_op:
+        r, g, b = (255, 165, 0)     # Naranja
+    else:
+        r, g, b = (13, 71, 161)     # Azul 
+
+    # 2. ENCABEZADO CON COLOR DINÁMICO
+    pdf.set_fill_color(r, g, b)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.image("logo_cb.png", 8, 6, 55)
+
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION - FORMAS",0,1,"C")
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}   |   {row['tipo_origen']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
@@ -551,22 +554,32 @@ def generar_op_formas(row):
 
     pdf.ln(10)
     pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA NUVE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.cell(0,10,f"SISTEMA C&B PAPELES - {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
     return bytes(pdf.output())
 
 def generar_op_rebobinado(row):
     pdf = FPDF()
     pdf.add_page()
-
+    
+    tipo_op = row.get('tipo_origen', '').upper()
     # --- ENCABEZADO ---
-    pdf.set_fill_color(13,71,161)
-    pdf.rect(0,0,210,35,'F')
-    pdf.image("logo_cb.png",8,6,55)
+    if "NUEVA" in tipo_op:
+        r, g, b = (40, 167, 69)      # Verde
+    elif "CAMBIOS" in tipo_op:
+        r, g, b = (255, 165, 0)     # Naranja
+    else:
+        r, g, b = (13, 71, 161)     # Azul 
+
+    # 2. ENCABEZADO CON COLOR DINÁMICO
+    pdf.set_fill_color(r, g, b)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.image("logo_cb.png", 8, 6, 55)
+
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
     pdf.cell(0,18,"ORDEN DE PRODUCCION - REBOBINADO",0,1,"C")
     pdf.set_font("Arial","B",12)
-    pdf.cell(0,5,f"OP: {row['op']}",0,1,"C")
+    pdf.cell(0,5,f"OP: {row['op']}   |   {row['tipo_origen']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
@@ -618,7 +631,7 @@ def generar_op_rebobinado(row):
     # PIE DE PÁGINA
     pdf.ln(10)
     pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA NUVE - GENERADO: {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.cell(0,10,f"SISTEMA C&B PAPELES - GENERADO: {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
     return bytes(pdf.output())
 
@@ -844,77 +857,100 @@ if menu == "🖥️ Monitor":
     time.sleep(30); 
     st.rerun()
 
-#  MÓDULO 2: SEGUIMIENTO 
-
+# MÓDULO 2: SEGUIMIENTO
 elif menu == "🔍 Seguimiento":
-    st.title("Seguimiento de Producción")
-    res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute().data
+    st.title("🔍 Seguimiento de Órdenes en Tiempo Real")
     
-#  BUSCADOR 
+    # 1. Traer datos de órdenes y trabajos activos
+    try:
+        ordenes_res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute()
+        activos_res = supabase.table("trabajos_activos").select("op, maquina").execute()
+        
+        ordenes = ordenes_res.data
+        activos = activos_res.data
+        
+        # Diccionario de OPs en máquina
+        op_en_maquina = {str(a['op']): a['maquina'] for a in activos}
+    except Exception as e:
+        st.error(f"Error al conectar con las tablas: {e}")
+        ordenes = []
 
-    buscar = st.text_input("🔎 Buscar por OP, Cliente o Nombre del Trabajo")
-    
-    if res:
-        df = pd.DataFrame(res)
+    if not ordenes:
+        st.warning("No hay órdenes registradas.")
+    else:
+        busqueda = st.text_input("🔍 Filtrar por OP, Cliente o Trabajo:", "")
+        
+        for row in ordenes:
+            op_id = str(row['op'])
+            area_destino = row.get('proxima_area', 'SIN ÁREA').upper()
+            cliente = row.get('cliente', 'N/A')
+            nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
 
-# FILTRO DE BUSQUEDA
+            if busqueda and (busqueda not in op_id and busqueda.lower() not in cliente.lower() and busqueda.lower() not in nombre_t.lower()):
+                continue
 
-        if buscar:
-            buscar = buscar.upper()
-            df = df[
-                df["op"].fillna("").str.upper().str.contains(buscar, na=False) |
-                df["nombre_trabajo"].fillna("").str.upper().str.contains(buscar, na=False) |
-                df["cliente"].fillna("").str.upper().str.contains(buscar, na=False)
-            ]
-        excel_file = to_excel_limpio(df, "GENERAL")
+            # --- LÓGICA DE ESTATUS MEJORADA ---
+            if area_destino == "FINALIZADO":
+                # Si ya llegó al final de la ruta
+                texto_estatus = "🔵 ORDEN FINALIZADA (BODEGA / DESPACHOS)"
+                color_texto = "blue"
+            elif op_id in op_en_maquina:
+                # Si está en la tabla de trabajos_activos
+                maquina_nombre = op_en_maquina[op_id]
+                texto_estatus = f"🟢 EN {area_destino} (PROCESANDO EN: {maquina_nombre})"
+                color_texto = "green"
+            else:
+                # Si no está en activos y no es finalizado, está esperando
+                texto_estatus = f"⏳ EN ESPERA DE {area_destino}"
+                color_texto = "orange"
 
-        if excel_file:
-            st.download_button(
-                "📥 Excel General",
-                data=excel_file,
-                file_name="Reporte_General_Nuve.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        st.divider()
-        h1, h2, h3, h4, h5, h6, h7 = st.columns([1,2,2,1.5,1.5,1,1.5])
-        h1.write("**OP**"); h2.write("**Cliente**"); h3.write("**Trabajo**"); h4.write("**Tipo**"); h5.write("**Status**"); h6.write("**Ver**"); h7.write("**Orden**")
-        for index, row in df.iterrows():
+            # --- DISEÑO DE TARJETA ---
+            with st.expander(f"📦 OP: {op_id} | {cliente} | {texto_estatus}"):
+                st.markdown(f"### Estatus: :{color_texto}[{texto_estatus}]")
+                
+                c1, c2, c3, c4 = st.columns(4)
+                with c1:
+                    st.write("**👤 Cliente:**")
+                    st.write(cliente)
+                    st.write("**📅 Fecha:**")
+                    st.write(row.get('created_at', '')[:10])
+                with c2:
+                    st.write("**🏗️ Área Actual:**")
+                    st.info(area_destino)
+                    st.write("**📦 Cantidad:**")
+                    st.write(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
+                with c3:
+                    st.write("**📝 Trabajo:**")
+                    st.write(nombre_t)
+                    st.write("**⚙️ Tipo:**")
+                    st.write(row.get('tipo_orden', 'N/A'))
+                with c4:
+                    if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}"):
+                        modal_detalle_op(row)
 
-            r1, r2, r3, r4, r5, r6, r7 = st.columns([1,2,2,1.5,1.5,1,1.5])
+                st.divider()
 
-            r1.write(row['op'])
-            r2.write(row['cliente'])
-            r3.write(row['nombre_trabajo'])
-            r4.write(row['tipo_orden'])
-
-            color = "#FF9800" if row['proxima_area'] != "FINALIZADO" else "#4CAF50"
-            r5.markdown(f"<span style='color:{color}; font-weight:bold;'>{row['proxima_area']}</span>", unsafe_allow_html=True)
-
-# BOTON VER DETALLE
-
-            if r6.button("👁️", key=f"v_{row['op']}"):
-                modal_detalle_op(row.to_dict())
-
-# BOTON ORDEN PDF
-
-            if r7.button("📄", key=f"pdf_{row['op']}"):
-
-                tipo = row["tipo_orden"]
-
-                if "FORMAS" in row["tipo_orden"]:
-                    pdf_bytes = generar_op_formas(row.to_dict())
-                elif tipo == "REBOBINADO":
-                    pdf_bytes = generar_op_rebobinado(row.to_dict())
-                else:
-                    pdf_bytes = generar_op_rollos(row.to_dict())
-
-                st.download_button(
-                    "⬇ Descargar Orden",
-                    data=pdf_bytes,
-                    file_name=f"OP_{row['op']}.pdf",
-                    mime="application/pdf",
-                    key=f"down_{row['op']}"
-                )    
+                # --- BOTONES DE DESCARGA ---
+                if st.session_state.get('rol') in ['admin', 'ventas']:
+                    try:
+                        tipo = row.get('tipo_orden', '')
+                        if "FORMAS" in tipo:
+                            pdf_data = generar_op_formas(row)
+                        elif "ROLLOS" in tipo:
+                            pdf_data = generar_op_rollos(row)
+                        else:
+                            pdf_data = generar_op_rebobinado(row)
+                            
+                        st.download_button(
+                            label=f"📥 Descargar PDF Orden {op_id}",
+                            data=pdf_data,
+                            file_name=f"OP_{op_id}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_pdf_{op_id}",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"No se pudo generar el PDF: {e}")
 
 #  MÓDULO 3: PLANIFICACIÓN (CON REPETICIÓN Y AUTO-LLENADO) 
 
@@ -1218,6 +1254,7 @@ elif menu == "📅 Planificación":
                     "vendedor": vend,
                     "nombre_trabajo": trab,
                     "tipo_orden": t,
+                    "tipo_origen": origen,
                     "proxima_area": ruta_inicial,
                     "historial_procesos": []
                 }
@@ -1229,7 +1266,8 @@ elif menu == "📅 Planificación":
                         "perforaciones_detalle": perf_d,
                         "codigo_barras_detalle": barr_d,
                         "num_id": num_id,    
-                        "num_fd": num_fd,    
+                        "num_fd": num_fd, 
+                        "tipo_origen": origen,   
                         "presentacion2": pres_peg, 
                         "transportadora_formas": True if t_trans_f == "SI" else None,
                         "destino_formas": dest_f if t_trans_f == "SI" else None,
@@ -1243,6 +1281,7 @@ elif menu == "📅 Planificación":
                         "material": mat,
                         "gramaje_rollos": gram,
                         "ancho_base": ancho,
+                        "tipo_origen": origen,
                         "cantidad_rollos": int(cant_r),
                         "objetivo_rebobinado": objetivo,
                         "observaciones_rollos": obs
@@ -1326,6 +1365,7 @@ elif menu == "📦 Bodega Terminado":
                     notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
 
                 # BOTÓN DINÁMICO
+                # BOTÓN DINÁMICO
                 texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
                 btn_procesar = st.form_submit_button(texto_boton)
 
@@ -1333,7 +1373,9 @@ elif menu == "📦 Bodega Terminado":
                     if not nom_trabajo or nom_trabajo == "":
                         st.error("Debe especificar el nombre del trabajo.")
                     else:
-                        ahora_col = hora_colombia().strftime("%d/%m/%Y %H:%M")
+                        # Aquí defines la variable
+                        fecha_mov = hora_colombia().isoformat()
+                        
                         producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
                         
                         # Lógica de Suma o Resta
@@ -1354,7 +1396,7 @@ elif menu == "📦 Bodega Terminado":
                             supabase.table("bodega_producto_terminado").update({
                                 "stock_cajas": nuevo_stk_cajas,
                                 "stock_rollos": nuevo_stk_rollos,
-                                "ultima_actualizacion": ahora_col
+                                "ultima_actualizacion": fecha_mov  
                             }).eq("id", producto_actual['id']).execute()
                         
                         elif es_entrada:
@@ -1364,9 +1406,22 @@ elif menu == "📦 Bodega Terminado":
                                 "tipo_producto": tipo_prod,
                                 "stock_cajas": c_cajas,
                                 "stock_rollos": c_rollos,
-                                "ultima_actualizacion": ahora_col
+                                "ultima_actualizacion": fecha_mov  
                             }).execute()
-                        
+
+                            # RECOMENDACIÓN:
+                            supabase.table("bodega_historial").insert({
+                                "nombre_trabajo": nom_trabajo,
+                                "tipo_movimiento": tipo_accion,
+                                "cajas": c_cajas,
+                                "rollos": c_rollos,
+                                "fecha": fecha_mov,
+                                "usuario": st.session_state.get('nombre_usuario')
+                            }).execute()
+
+                        st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
+                        time.sleep(1.2)
+                        st.rerun()
                         st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
                         time.sleep(1.2)
                         st.rerun()
