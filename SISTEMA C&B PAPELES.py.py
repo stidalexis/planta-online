@@ -1635,7 +1635,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             pausa_segundos = (ahora - inicio_p).total_seconds()
             
 # Guardar en la tabla histórica de tiempos muertos
-                            supabase.table("tiempos_muertos").insert({
+                            supabase.table("paradas_maquina").insert({
                                 "maquina": m,
                                 "motivo": tr.get('motivo_pausa'),
                                 "inicio": tr["inicio_pausa"],
