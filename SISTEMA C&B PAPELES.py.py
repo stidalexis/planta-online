@@ -1324,7 +1324,7 @@ elif menu == "📦 Bodega Terminado":
         rol_usuario = st.session_state.get('rol', '').lower()
         
         # Definimos quién puede hacer qué
-        puede_ingresar = rol_usuario in ['admin'] 
+        puede_ingresar = rol_usuario in ['admin', 'patinador_roll' ] 
         puede_despachar = rol_usuario in ['admin', 'ventas']
 
         # 2. SELECTOR DE OPERACIÓN FILTRADO
