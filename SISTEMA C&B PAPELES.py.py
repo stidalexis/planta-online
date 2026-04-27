@@ -763,7 +763,7 @@ with st.sidebar:
     
     # 1. Definimos las opciones según el rol
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado", "📊 Reportes Admin"]
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa"]
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'supervisor_imp':
@@ -776,6 +776,8 @@ with st.sidebar:
         opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
     elif rol == 'patinador_roll':
         opciones_menu = ["📦 Bodega Terminado"]
+    elif rol == 'diseno':
+        opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
     else:
         # Operarios y otros roles
         opciones_menu = ["🖥️ Monitor"]
@@ -795,6 +797,75 @@ with st.sidebar:
     st.info(f"Usuario: {st.session_state.get('nombre_usuario')}\n\nRol: {rol.upper()}")
     st.caption("Conectado a Supabase Cloud")
 
+# --- MÓDULO DISEÑO Y PRE-PRENSA ---
+if menu == "🎨 Diseño y Pre-Prensa":
+    st.title("🎨 Módulo de Diseño y Pre-Prensa")
+    
+    # 1. Traer OPs que están en proceso de diseño
+    ops_diseno = supabase.table("ordenes_planeadas")\
+        .select("*")\
+        .ilike("proxima_area", "DISEÑO%")\
+        .execute().data
+    
+    if not ops_diseno:
+        st.info("No hay órdenes pendientes de revisión en Diseño.")
+    else:
+        tab1, tab2 = st.tabs(["📋 1. AUDITORÍA (Revisión Comercial)", "🎞️ 2. PRE-PRENSA (Técnico)"])
+
+        with tab1:
+            st.subheader("Revisión de Archivos y Especificaciones")
+            # Filtrar solo las que están en Auditoría
+            pendientes_auditoria = [op for op in ops_diseno if "AUDITORIA" in op['proxima_area']]
+            
+            for op in pendientes_auditoria:
+                with st.expander(f"OP: {op['op']} - {op['nombre_trabajo']}"):
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.write(f"**Cliente:** {op['cliente']}")
+                        st.write(f"**Vendedor:** {op['vendedor']}")
+                    with col2:
+                        # Botón para ver detalles (usas tu función modal_detalle_op)
+                        if st.button(f"🔍 Ver Radiografía", key=f"aud_{op['op']}"):
+                            modal_detalle_op(op)
+                    
+                    st.divider()
+                    obs_auditoria = st.text_area("Observaciones de Auditoría", key=f"obs_aud_{op['op']}")
+                    
+                    if st.button("✅ Aprobar Auditoría y pasar a Pre-Prensa", key=f"btn_aud_{op['op']}"):
+                        supabase.table("ordenes_planeadas").update({
+                            "proxima_area": "DISEÑO (PRE-PRENSA)",
+                            "observaciones_formas": f"{op.get('observaciones_formas','')}\n[AUDITORIA]: {obs_auditoria}"
+                        }).eq("op", op['op']).execute()
+                        st.success(f"OP {op['op']} enviada a Pre-Prensa")
+                        time.sleep(1)
+                        st.rerun()
+
+        with tab2:
+            st.subheader("Preparación Técnica de Planchas / Negativos")
+            # Filtrar solo las que están en Pre-Prensa
+            pendientes_preprensa = [op for op in ops_diseno if "PRE-PRENSA" in op['proxima_area']]
+            
+            for op in pendientes_preprensa:
+                with st.expander(f"OP: {op['op']} - {op['nombre_trabajo']}"):
+                    st.info(f"Estado: Listo para montar planchas/arte.")
+                    
+                    c1, c2, c3 = st.columns(3)
+                    with c1:
+                        st.write(f"**Tintas F:** {op.get('tintas_frente_rollos', 'Ver detalles')}")
+                    with c2:
+                        st.write(f"**Tintas R:** {op.get('tintas_respaldo_rollos', 'Ver detalles')}")
+                    
+                    obs_pre = st.text_area("Instrucciones para Impresión", key=f"obs_pre_{op['op']}")
+                    
+                    if st.button("🚀 APROBAR PARA IMPRESIÓN", key=f"btn_pre_{op['op']}", use_container_width=True):
+                        # Aquí movemos la OP al área de IMPRESIÓN
+                        supabase.table("ordenes_planeadas").update({
+                            "proxima_area": "IMPRESIÓN",
+                            "observaciones_formas": f"{op.get('observaciones_formas','')}\n[PRE-PRENSA]: {obs_pre}"
+                        }).eq("op", op['op']).execute()
+                        st.success(f"OP {op['op']} enviada a Planta de Impresión")
+                        time.sleep(1)
+                        st.rerun()
 #  MÓDULO 1: MONITOR 
 
 if menu == "🖥️ Monitor":
@@ -1232,13 +1303,13 @@ elif menu == "📅 Planificación":
 # DEFINIR AREA INICIAL SEGUN TIPO
 
                 if t == "FORMAS IMPRESAS":
-                    ruta_inicial = "IMPRESIÓN"
+                    ruta_inicial = "DISEÑO (AUDITORIA)"
 
                 elif t == "FORMAS BLANCAS":
                     ruta_inicial = "IMPRESIÓN"
 
                 elif t == "ROLLOS IMPRESOS":
-                    ruta_inicial = "IMPRESIÓN"
+                    ruta_inicial = "DISEÑO (AUDITORIA)"
 
                 elif t == "ROLLOS BLANCOS":
                     ruta_inicial = "CORTE"
