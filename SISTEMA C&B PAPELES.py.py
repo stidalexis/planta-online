@@ -989,83 +989,107 @@ elif menu == "🔍 Seguimiento":
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
 
-if menu == "🎨 Diseño y Pre-Prensa":
+elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
     
-# TARER LAS OP QUE ESTAN EN DISEÑO Y SUS PROCESOS
+    # 1. Definimos las pestañas primero
+    tab1, tab2 = st.tabs(["📋 1. AUDITORÍA (Revisión 1)", "🎞️ 2. PRE-PRENSA (Revisión 2)"])
 
-    ops_diseno = supabase.table("ordenes_planeadas")\
-        .select("*")\
-        .ilike("proxima_area", "DISEÑO%")\
-        .execute().data
-    
-    if not ops_diseno:
-        st.info("No hay órdenes pendientes de revisión en Diseño.")
-    else:
-        tab1, tab2 = st.tabs(["📋 1. AUDITORÍA (Revision 1)", "🎞️ 2. PRE-PRENSA (revision 2)"])
-
-        with tab1:
-            st.subheader("Revisión de Archivos y Especificaciones")
-
-# FILTRAR SOLO LAS QUE ESTAN EN AUDITORIA
-
-            pendientes_auditoria = [op for op in ops_diseno if "AUDITORIA" in op['proxima_area']]
+    # --- VENTANA 1: AUDITORÍA ---
+    with tab1:
+        st.subheader("🕵️ Auditoría Técnica de Diseño")
+        # Traemos solo las que están esperando en el estado 'DISEÑO'
+        op_pendientes = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "DISEÑO").execute().data
+        
+        if op_pendientes:
+            op_sel = st.selectbox("Seleccione OP para Auditar:", 
+                                 [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], 
+                                 key="sel_auditoria")
             
-            for op in pendientes_auditoria:
-                with st.expander(f"OP: {op['op']} - {op['nombre_trabajo']}"):
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.write(f"**Cliente:** {op['cliente']}")
-                        st.write(f"**Vendedor:** {op['vendedor']}")
-                    with col2:
+            op_id = op_sel.split(" - ")[0]
+            datos_op = next(o for o in op_pendientes if str(o['op']) == op_id)
 
-# BOTO0N DE DETALLES (FALTA AREGLAR MAS INFORMACION)
+            # --- VISUALIZACIÓN DE DETALLES ---
+            with st.expander("📄 VER DETALLES COMPLETOS DE LA ORDEN", expanded=True):
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    st.markdown(f"**Cliente:** {datos_op.get('cliente')}")
+                    st.markdown(f"**Vendedor:** {datos_op.get('vendedor')}")
+                with c2:
+                    tipo = datos_op.get('tipo_orden', '')
+                    cant = datos_op.get('cantidad_formas') if "FORMAS" in tipo else datos_op.get('cantidad_rollos')
+                    st.markdown(f"**Tipo:** {tipo}")
+                    st.markdown(f"**Cantidad:** {cant}")
+                with c3:
+                    st.markdown(f"**Fecha:** {datos_op.get('created_at', '')[:10]}")
+                    st.markdown(f"**Material:** {datos_op.get('material', 'N/A')}")
+                
+                if "FORMAS" in tipo:
+                    st.write("**Detalle de Partes:**")
+                    st.table(datos_op.get('detalles_partes_json', []))
 
-                        if st.button(f"🔍 Ver Radiografía", key=f"aud_{op['op']}"):
-                            modal_detalle_op(op)
-                    
-                    st.divider()
-                    obs_auditoria = st.text_area("link del arte", key=f"obs_aud_{op['op']}")
-                    
-                    if st.button("✅ Aprobar Auditoría y pasar a Pre-Prensa", key=f"btn_aud_{op['op']}"):
-                        supabase.table("ordenes_planeadas").update({
-                            "proxima_area": "DISEÑO (PRE-PRENSA)",
-                            "observaciones_formas": f"{op.get('observaciones_formas','')}\n[AUDITORIA]: {obs_auditoria}"
-                        }).eq("op", op['op']).execute()
-                        st.success(f"OP {op['op']} enviada a Pre-Prensa")
-                        time.sleep(1)
-                        st.rerun()
-
-        with tab2:
-            st.subheader("Preparación Técnica de Planchas / Negativos")
-
-# FILTRAR LAS OP QUE ESTAN EN PRE-PRENSA
-
-            pendientes_preprensa = [op for op in ops_diseno if "PRE-PRENSA" in op['proxima_area']]
+            # --- CARGA DE DATOS ---
+            st.divider()
+            # Usamos keys únicas para evitar errores de duplicidad de Streamlit
+            link_dis = st.text_input("🔗 Link de Diseño (Drive/Canva/Dropbox):", 
+                                    value=datos_op.get('link_diseno', ''), key="input_link")
+            obs_dis = st.text_area("✍️ Observaciones de Auditoría:", 
+                                  value=datos_op.get('observaciones_diseno', ''), key="input_obs")
             
-            for op in pendientes_preprensa:
-                with st.expander(f"OP: {op['op']} - {op['nombre_trabajo']}"):
-                    st.info(f"Estado: Listo para montar planchas/arte.")
-                    
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        st.write(f"**Tintas F:** {op.get('tintas_frente_rollos', 'Ver detalles')}")
-                    with c2:
-                        st.write(f"**Tintas R:** {op.get('tintas_respaldo_rollos', 'Ver detalles')}")
-                    
-                    obs_pre = st.text_area("Instrucciones para Impresión", key=f"obs_pre_{op['op']}")
-                    
-                    if st.button("🚀 APROBAR PARA IMPRESIÓN", key=f"btn_pre_{op['op']}", use_container_width=True):
+            if st.button("✅ Aprobar Auditoría y Enviar a Pre-Prensa", use_container_width=True):
+                supabase.table("ordenes_planeadas").update({
+                    "link_diseno": link_dis,
+                    "observaciones_diseno": obs_dis,
+                    "proxima_area": "PRE-PRENSA" 
+                }).eq("op", op_id).execute()
+                st.success(f"OP {op_id} auditada con éxito.")
+                time.sleep(1)
+                st.rerun()
+        else:
+            st.info("No hay órdenes pendientes de Auditoría.")
 
-# ACA LAS OP SALEN DE DOISEÑO Y PASAN A SU RUTA
+    # --- VENTANA 2: PRE-PRENSA ---
+    with tab2:
+        st.subheader("🎞️ Control de Pre-Prensa")
+        # Traemos solo las que ya fueron auditadas y están en 'PRE-PRENSA'
+        op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
-                        supabase.table("ordenes_planeadas").update({
-                            "proxima_area": "IMPRESIÓN",
-                            "observaciones_formas": f"{op.get('observaciones_formas','')}\n[PRE-PRENSA]: {obs_pre}"
-                        }).eq("op", op['op']).execute()
-                        st.success(f"OP {op['op']} enviada a Planta de Impresión")
-                        time.sleep(1)
-                        st.rerun()                       
+        if op_pre:
+            op_sel_2 = st.selectbox("Seleccione OP para Pre-Prensa:", 
+                                   [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], 
+                                   key="sel_preprensa")
+            
+            op_id_2 = op_sel_2.split(" - ")[0]
+            datos_op_2 = next(o for o in op_pre if str(o['op']) == op_id_2)
+
+            # --- MOSTRAR LO QUE SE HIZO EN LA AUDITORÍA 1 ---
+            col_info_1, col_info_2 = st.columns(2)
+            with col_info_1:
+                st.warning("⚠️ **DATOS DE AUDITORÍA ANTERIOR:**")
+                if datos_op_2.get('link_diseno'):
+                    st.link_button("🌐 ABRIR LINK DE DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
+                else:
+                    st.write("❌ No se cargó link en la auditoría.")
+                st.write(f"**Notas del Auditor:** {datos_op_2.get('observaciones_diseno', 'Sin observaciones')}")
+
+            with col_info_2:
+                st.info("📋 **RESUMEN TÉCNICO:**")
+                st.write(f"**Trabajo:** {datos_op_2.get('nombre_trabajo')}")
+                st.write(f"**Cliente:** {datos_op_2.get('cliente')}")
+                st.write(f"**Material:** {datos_op_2.get('material', 'N/A')}")
+
+            # --- ACCIÓN FINAL ---
+            st.divider()
+            if st.button("🚀 Finalizar Pre-Prensa y Enviar a Producción", use_container_width=True):
+                # Aquí lo enviamos al siguiente proceso (ej: IMPRESIÓN)
+                supabase.table("ordenes_planeadas").update({
+                    "proxima_area": "IMPRESIÓN" 
+                }).eq("op", op_id_2).execute()
+                st.success(f"OP {op_id_2} enviada a Impresión correctamente.")
+                time.sleep(1)
+                st.rerun()
+        else:
+            st.info("No hay órdenes esperando en Pre-Prensa.")                   
 
 # MODULO 3: PLANIFICACION 
 
