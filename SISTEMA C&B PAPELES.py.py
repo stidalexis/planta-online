@@ -992,46 +992,53 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
     
-    # --- FUNCIÓN PARA MOSTRAR FICHA TÉCNICA COMPLETA ---
-    def mostrar_ficha_tecnica(datos):
+    # --- FUNCIÓN CON DATOS REALES DE TU BASE DE DATOS ---
+    def mostrar_ficha_tecnica_real(datos):
         st.markdown("### 📝 Ficha Técnica de Producción")
         
-        # Bloque Principal
-        c1, c2, c3, c4 = st.columns(4)
+        # Fila 1: Datos Básicos
+        c1, c2, c3 = st.columns(3)
         with c1:
             st.markdown(f"**OP:** `{datos.get('op')}`")
-            st.markdown(f"**Cliente:** \n{datos.get('cliente')}")
-            st.markdown(f"**Trabajo:** \n{datos.get('nombre_trabajo')}")
+            st.markdown(f"**Cliente:** {datos.get('cliente')}")
         with c2:
-            st.markdown(f"**Tipo:** \n{datos.get('tipo_orden')}")
-            st.markdown(f"**Material:** \n{datos.get('material')}")
-            st.markdown(f"**Ancho:** {datos.get('ancho_material')} mm")
-        with c3:
-            st.markdown(f"**Tintas Frente:** {datos.get('tintas_frente')}")
-            st.markdown(f"**Tintas Dorso:** {datos.get('tintas_dorso')}")
-            st.markdown(f"**Barniz:** {datos.get('barniz', 'No')}")
-        with c4:
-            st.markdown(f"**Cant. Formas:** {datos.get('cantidad_formas', 0)}")
-            st.markdown(f"**Cant. Rollos:** {datos.get('cantidad_rollos', 0)}")
+            st.markdown(f"**Trabajo:** {datos.get('nombre_trabajo')}")
             st.markdown(f"**Vendedor:** {datos.get('vendedor')}")
+        with c3:
+            st.markdown(f"**Fecha Creación:** {datos.get('created_at', '')[:10]}")
+            st.markdown(f"**Tipo de Orden:** {datos.get('tipo_orden')}")
 
         st.divider()
-        
-        # Bloque Secundario (Especificaciones Técnicas)
-        col_esp1, col_esp2 = st.columns(2)
-        with col_esp1:
-            st.info(f"""
-            **⚙️ Especificaciones:**
-            - **Tamaño Final:** {datos.get('tamano_final', 'N/A')}
-            - **Repeticiones:** {datos.get('repeticiones', 'N/A')}
-            - **Sentido Salida:** {datos.get('sentido_salida', 'N/A')}
-            - **Corte:** {datos.get('corte_final', 'N/A')}
-            """)
-        with col_esp2:
-            st.warning(f"**📌 Notas de Ventas:**\n\n{datos.get('observaciones_ventas', 'Sin observaciones')}")
 
+        # Fila 2: Detalles Técnicos de Material y Tintas
+        c4, c5, c6 = st.columns(3)
+        with c4:
+            st.markdown(f"**Material:** {datos.get('material')}")
+            st.markdown(f"**Ancho Material:** {datos.get('ancho_material')} mm")
+        with c5:
+            st.markdown(f"**Tintas Frente:** {datos.get('tintas_frente')}")
+            st.markdown(f"**Tintas Dorso:** {datos.get('tintas_dorso')}")
+        with c6:
+            st.markdown(f"**Barniz:** {datos.get('barniz')}")
+            # Mostramos cantidad según el tipo
+            tipo = str(datos.get('tipo_orden', '')).upper()
+            cant = datos.get('cantidad_formas') if "FORMAS" in tipo else datos.get('cantidad_rollos')
+            st.markdown(f"**Cantidad Total:** {cant}")
+
+        # Fila 3: Medidas y Acabados
+        st.divider()
+        c7, c8, c9 = st.columns(3)
+        with c7:
+            st.markdown(f"**Tamaño Final:** {datos.get('tamano_final')}")
+        with c8:
+            st.markdown(f"**Repeticiones:** {datos.get('repeticiones')}")
+        with c9:
+            st.markdown(f"**Sentido Salida:** {datos.get('sentido_salida')}")
+            st.markdown(f"**Corte Final:** {datos.get('corte_final')}")
+
+        # Si es Formas Continuas, mostrar la tabla de partes
         if datos.get('detalles_partes_json'):
-            st.markdown("**📄 Estructura de Partes:**")
+            st.markdown("**📄 Estructura de Partes (Papel/Tintas):**")
             st.table(datos.get('detalles_partes_json'))
 
     tab1, tab2 = st.tabs(["📋 1. AUDITORÍA TÉCNICA", "🎞️ 2. PRE-PRENSA FINAL"])
@@ -1042,17 +1049,16 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            op_sel = st.selectbox("Seleccione orden para auditar:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_sel")
+            op_sel = st.selectbox("Seleccione orden para auditar:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_sel_real")
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-            # Visualización
             with st.container(border=True):
-                mostrar_ficha_tecnica(datos_op)
+                mostrar_ficha_tecnica_real(datos_op)
             
             st.divider()
-            link_dis = st.text_input("🔗 Link de Diseño Final (Drive/Cloud):", value=datos_op.get('link_diseno', ''))
-            obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', ''))
+            link_dis = st.text_input("🔗 Link de Diseño Final (Drive/Cloud):", value=datos_op.get('link_diseno', '') if datos_op.get('link_diseno') else "")
+            obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') if datos_op.get('observaciones_diseno') else "")
             
             if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
                 if link_dis:
@@ -1061,11 +1067,11 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                         "observaciones_diseno": obs_dis,
                         "proxima_area": "PRE-PRENSA"
                     }).eq("op", op_id).execute()
-                    st.success(f"OP {op_id} enviada a Pre-Prensa.")
+                    st.success(f"OP {op_id} aprobada.")
                     time.sleep(1)
                     st.rerun()
                 else:
-                    st.error("⚠️ Debe adjuntar el link del diseño para poder aprobar.")
+                    st.error("⚠️ Es obligatorio pegar el link del diseño.")
         else:
             st.info("No hay órdenes pendientes en Diseño.")
 
@@ -1075,12 +1081,13 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_sel_2 = st.selectbox("Seleccione orden para procesar:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_sel")
+            op_sel_2 = st.selectbox("Seleccione orden para procesar:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_sel_real")
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
 
-            # Información de Auditoría Anterior (CORREGIDO st.warning)
-            st.warning(f"📝 **NOTAS DE AUDITORÍA:** {datos_op_2.get('observaciones_diseno', 'Sin notas')}")
+            # Mostrar observaciones del auditor anterior
+            if datos_op_2.get('observaciones_diseno'):
+                st.warning(f"📝 **NOTAS DE AUDITORÍA:** {datos_op_2.get('observaciones_diseno')}")
             
             if datos_op_2.get('link_diseno'):
                 st.link_button("🌐 ABRIR ARCHIVO DE DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
@@ -1088,7 +1095,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             st.divider()
             
             with st.container(border=True):
-                mostrar_ficha_tecnica(datos_op_2)
+                mostrar_ficha_tecnica_real(datos_op_2)
 
             if st.button("🚀 FINALIZAR Y PASAR A IMPRESIÓN", use_container_width=True):
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
@@ -1096,7 +1103,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 time.sleep(1)
                 st.rerun()
         else:
-            st.info("No hay órdenes pendientes en Pre-Prensa.")                 
+            st.info("No hay órdenes pendientes en Pre-Prensa.")              
 
 # MODULO 3: PLANIFICACION 
 
