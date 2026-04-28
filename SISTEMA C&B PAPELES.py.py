@@ -992,121 +992,121 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
     
-    def mostrar_ficha_tecnica_segmentada(datos):
+    # --- FUNCIÓN PARA MOSTRAR FICHA TÉCNICA AL HACER CLIC ---
+    def ventana_detalle_op(datos):
         tipo_orden = str(datos.get('tipo_orden', '')).upper()
         
-        # --- ENCABEZADO COMÚN PARA AMBOS ---
-        st.subheader(f"📄 Ficha Técnica: {'ETIQUETAS / ROLLOS' if 'ROLLOS' in tipo_orden else 'FORMAS CONTINUAS'}")
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.markdown(f"**OP:** `{datos.get('op')}`")
-            st.markdown(f"**Cliente:** {datos.get('cliente')}")
-        with c2:
-            st.markdown(f"**Trabajo:** {datos.get('nombre_trabajo')}")
-            st.markdown(f"**Vendedor:** {datos.get('vendedor')}")
-        with c3:
-            st.markdown(f"**Tintas Frente:** {datos.get('tintas_frente')}")
-            st.markdown(f"**Tintas Dorso:** {datos.get('tintas_dorso')}")
-        with c4:
-            st.markdown(f"**Material:** {datos.get('material')}")
-            st.markdown(f"**Ancho Material:** {datos.get('ancho_material')} mm")
-
-        st.divider()
-
-        # --- LÓGICA PARA ROLLOS ---
-        if "ROLLOS" in tipo_orden:
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.info("**📏 Medidas y Cantidad**")
-                st.markdown(f"- **Cant. Rollos:** {datos.get('cantidad_rollos')}")
-                st.markdown(f"- **Tamaño Final:** {datos.get('tamano_final')}")
-                st.markdown(f"- **Corte Final:** {datos.get('corte_final')}")
-            with col2:
-                st.info("**⚙️ Especificaciones de Rollo**")
-                st.markdown(f"- **Sentido de Salida:** {datos.get('sentido_salida')}")
-                st.markdown(f"- **Repeticiones:** {datos.get('repeticiones')}")
-                st.markdown(f"- **Barniz:** {datos.get('barniz')}")
-            with col3:
-                st.info("**📌 Notas de Ventas**")
-                st.write(datos.get('observaciones_ventas', 'Sin observaciones'))
-
-        # --- LÓGICA PARA FORMAS ---
-        else:
-            col1, col2 = st.columns([1, 2])
-            with col1:
-                st.info("**📋 Datos de Formas**")
-                st.markdown(f"- **Cant. Formas:** {datos.get('cantidad_formas')}")
-                st.markdown(f"- **Tamaño Final:** {datos.get('tamano_final')}")
-                st.markdown(f"- **Corte/Acabado:** {datos.get('corte_final')}")
-            with col2:
-                st.info("**📑 Estructura de Partes (Papeles y Tintas)**")
-                if datos.get('detalles_partes_json'):
-                    st.table(datos.get('detalles_partes_json'))
-                else:
-                    st.warning("No se definieron detalles de partes para esta forma.")
+        with st.container(border=True):
+            st.markdown(f"### 📄 FICHA TÉCNICA: {tipo_orden}")
             
-            st.warning(f"**Notas de Ventas:** {datos.get('observaciones_ventas', 'Sin observaciones')}")
+            # FILA 1: IDENTIFICACIÓN
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("OP", datos.get('op'))
+            c2.write(f"**Cliente:**\n{datos.get('cliente')}")
+            c3.write(f"**Trabajo:**\n{datos.get('nombre_trabajo')}")
+            c4.write(f"**Vendedor:**\n{datos.get('vendedor')}")
+            
+            st.divider()
 
-    # --- PESTAÑAS ---
+            # FILA 2: DATOS TÉCNICOS BASE
+            c5, c6, c7, c8 = st.columns(4)
+            with c5:
+                st.write("**🎨 Tintas:**")
+                st.write(f"Frente: {datos.get('tintas_frente')}")
+                st.write(f"Dorso: {datos.get('tintas_dorso')}")
+            with c6:
+                st.write("**🧪 Acabados:**")
+                st.write(f"Barniz: {datos.get('barniz')}")
+                st.write(f"Corte: {datos.get('corte_final')}")
+            with c7:
+                st.write("**📦 Material:**")
+                st.write(f"Tipo: {datos.get('material')}")
+                st.write(f"Ancho: {datos.get('ancho_material')} mm")
+            with c8:
+                st.write("**📏 Medidas:**")
+                st.write(f"Tamaño: {datos.get('tamano_final')}")
+                if "ROLLOS" in tipo_orden:
+                    st.write(f"Repeticiones: {datos.get('repeticiones')}")
+
+            # FILA 3: ESPECÍFICOS SEGÚN TIPO
+            st.divider()
+            if "ROLLOS" in tipo_orden:
+                col_r1, col_r2 = st.columns(2)
+                with col_r1:
+                    st.success(f"**Total Rollos:** {datos.get('cantidad_rollos')}")
+                    st.write(f"**Sentido de Salida:** {datos.get('sentido_salida')}")
+                with col_r2:
+                    st.warning(f"**Notas Ventas:** {datos.get('observaciones_ventas', 'Sin notas')}")
+            else:
+                col_f1, col_f2 = st.columns([1, 2])
+                with col_f1:
+                    st.success(f"**Total Formas:** {datos.get('cantidad_formas')}")
+                    st.warning(f"**Notas Ventas:** {datos.get('observaciones_ventas', 'Sin notas')}")
+                with col_f2:
+                    st.write("**📑 Estructura de Partes:**")
+                    if datos.get('detalles_partes_json'):
+                        st.table(datos.get('detalles_partes_json'))
+
     tab1, tab2 = st.tabs(["📋 1. AUDITORÍA TÉCNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
+    # --- VENTANA 1: AUDITORÍA ---
     with tab1:
         st.subheader("🕵️ Revisión de Diseño")
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            op_sel = st.selectbox("Seleccione orden para auditar:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v3")
+            op_sel = st.selectbox("Seleccione OP para Auditar:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_sel_v4")
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-            with st.container(border=True):
-                mostrar_ficha_tecnica_segmentada(datos_op)
+            # BOTÓN PARA MOSTRAR DATOS
+            if st.button("🔍 VER FICHA TÉCNICA COMPLETA", key="btn_ver_aud"):
+                ventana_detalle_op(datos_op)
             
             st.divider()
-            link_dis = st.text_input("🔗 Link de Diseño Final (Drive/Cloud):", value=datos_op.get('link_diseno', '') if datos_op.get('link_diseno') else "")
-            obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') if datos_op.get('observaciones_diseno') else "")
+            link_dis = st.text_input("🔗 Link de Diseño Final:", value=datos_op.get('link_diseno', '') or "")
+            obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
             
-            if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
+            if st.button("✅ APROBAR Y PASAR A PRE-PRENSA", use_container_width=True):
                 if link_dis:
                     supabase.table("ordenes_planeadas").update({
-                        "link_diseno": link_dis,
-                        "observaciones_diseno": obs_dis,
+                        "link_diseno": link_dis, 
+                        "observaciones_diseno": obs_dis, 
                         "proxima_area": "PRE-PRENSA"
                     }).eq("op", op_id).execute()
-                    st.success(f"OP {op_id} enviada a Pre-Prensa.")
-                    time.sleep(1)
-                    st.rerun()
+                    st.success("Auditado correctamente.")
+                    time.sleep(1); st.rerun()
                 else:
-                    st.error("⚠️ El link de diseño es obligatorio.")
+                    st.error("El link es obligatorio.")
         else:
-            st.info("No hay órdenes pendientes en Diseño.")
+            st.info("No hay órdenes en Diseño.")
 
+    # --- VENTANA 2: PRE-PRENSA ---
     with tab2:
         st.subheader("🎞️ Revisión Pre-Prensa")
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_sel_2 = st.selectbox("Seleccione orden:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v3")
+            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_sel_v4")
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
 
-            if datos_op_2.get('observaciones_diseno'):
-                st.warning(f"📝 **NOTAS DE AUDITORÍA:** {datos_op_2.get('observaciones_diseno')}")
-            
-            if datos_op_2.get('link_diseno'):
-                st.link_button("🌐 ABRIR ARCHIVO DE DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
-            
-            st.divider()
-            with st.container(border=True):
-                mostrar_ficha_tecnica_segmentada(datos_op_2)
+            col_btn1, col_btn2 = st.columns(2)
+            with col_btn1:
+                if st.button("🔍 VER FICHA TÉCNICA", key="btn_ver_pre"):
+                    ventana_detalle_op(datos_op_2)
+            with col_btn2:
+                if datos_op_2.get('link_diseno'):
+                    st.link_button("🌐 ABRIR DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
 
-            if st.button("🚀 FINALIZAR Y ENVIAR A PLANTA", use_container_width=True):
+            if datos_op_2.get('observaciones_diseno'):
+                st.warning(f"**Notas de Auditoría:** {datos_op_2.get('observaciones_diseno')}")
+
+            if st.button("🚀 FINALIZAR Y ENVIAR A IMPRESIÓN", use_container_width=True):
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
-                st.success(f"OP {op_id_2} enviada a Impresión.")
-                time.sleep(1)
-                st.rerun()
+                st.success("Enviado a Planta."); time.sleep(1); st.rerun()
         else:
-            st.info("No hay órdenes pendientes en Pre-Prensa.")          
+            st.info("No hay órdenes en Pre-Prensa.")         
 
 # MODULO 3: PLANIFICACION 
 
