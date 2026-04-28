@@ -992,11 +992,10 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
-    # --- FUNCIÓN RADIOGRAFÍA COMPLETA (Toda la info de creación) ---
+    # --- FUNCIÓN RADIOGRAFÍA COMPLETA ---
     def radiografia_completa_op(datos):
         st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
         
-        # INFORMACION GENERAL Y COMERCIAL
         with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             c1.write(f"**OP #:**\n{datos.get('op')}")
@@ -1008,7 +1007,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
-        # ESPECIFICACIONES TECNICAS DEL PRODUCTO
         with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
@@ -1035,7 +1033,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
                 st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
-        # DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
         c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
             st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
@@ -1047,7 +1044,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             else:
                 st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
 
-    # PESTAÑAS 
     tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
     with tab1:
@@ -1055,28 +1051,30 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v5")
+            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v_final")
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-            # BOTONES DE ACCION RAPIDA
             col_acc1, col_acc2 = st.columns(2)
             with col_acc1:
-                ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
+                ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud_final")
             with col_acc2:
-                # INTEGRACIÓN BOTÓN DESCARGA PDF AUDITORÍA
+                # INTEGRACIÓN SEGURA DEL PDF
                 try:
+                    # Intentamos llamar a la función que tienes en tu archivo
                     pdf_data = generar_pdf(datos_op)
                     st.download_button(
                         label=f"📥 Descargar PDF Orden {op_id}",
                         data=pdf_data,
                         file_name=f"OP_{op_id}.pdf",
                         mime="application/pdf",
-                        key=f"dl_pdf_aud_{op_id}",
+                        key=f"dl_pdf_aud_f_{op_id}",
                         use_container_width=True
                     )
+                except NameError:
+                    st.error("Error: La función 'generar_pdf' no se encuentra definida arriba de este módulo.")
                 except Exception as e:
-                    st.error(f"No se pudo generar el PDF: {e}")
+                    st.error(f"Error técnico: {e}")
             
             if ver_radio:
                 radiografia_completa_op(datos_op)
@@ -1097,30 +1095,29 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v5")
+            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v_final")
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
 
             c_p1, c_p2, c_p3 = st.columns(3)
             with c_p1:
-                ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
+                ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre_final")
             with c_p2:
                 if datos_op_2.get('link_diseno'):
                     st.link_button("🌐 ABRIR DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
             with c_p3:
-                # INTEGRACIÓN BOTÓN DESCARGA PDF PRE-PRENSA
                 try:
                     pdf_data_pre = generar_pdf(datos_op_2)
                     st.download_button(
-                        label=f"📑 Descargar PDF {op_id_2}",
+                        label=f"📑 PDF OP {op_id_2}",
                         data=pdf_data_pre,
                         file_name=f"OP_{op_id_2}.pdf",
                         mime="application/pdf",
-                        key=f"dl_pdf_pre_{op_id_2}",
+                        key=f"dl_pdf_pre_f_{op_id_2}",
                         use_container_width=True
                     )
-                except Exception as e:
-                    st.error(f"Error al procesar PDF: {e}")
+                except:
+                    st.error("Error al generar PDF")
 
             if ver_radio_2:
                 radiografia_completa_op(datos_op_2)
@@ -1129,9 +1126,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
             if st.button("🚀 FINALIZAR Y ENVIAR A PLANTA", use_container_width=True):
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
-                st.success("Enviado."); time.sleep(1); st.rerun()
-        else:
-            st.info("No hay órdenes pendientes.")       
+                st.success("Enviado."); time.sleep(1); st.rerun()       
 
 # MODULO 3: PLANIFICACION 
 
