@@ -1036,22 +1036,23 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
                 st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
-        # 3. DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
+#  DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
         c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
-            st.info(f"**📝 Observaciones de Ventas:**\n{datos.get('observaciones_ventas', 'Sin observaciones')}")
+            st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
+            st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
         with c_obs2:
             if datos.get('detalles_partes_json'):
                 st.write("**📑 Estructura de Partes (Papel/Tintas):**")
                 st.table(datos_op.get('detalles_partes_json'))
             else:
-                st.write("**Tipo de Producto:** Producto de una sola capa / Etiqueta")
+                st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
 
-    # --- PESTAÑAS ---
-    tab1, tab2 = st.tabs(["📋 1. AUDITORÍA TÉCNICA", "🎞️ 2. PRE-PRENSA FINAL"])
+#  PESTAÑAS 
+    tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
     with tab1:
-        st.subheader("🕵️ Revisión de Diseño")
+        st.subheader("🕵️ Revision de Diseño")
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
@@ -1059,10 +1060,10 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-            # BOTONES DE ACCIÓN RÁPIDA
+# BOTONES DE ACCIoN RaPIDA
             col_acc1, col_acc2 = st.columns(2)
             with col_acc1:
-                ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFÍA COMPLETA", key="tog_aud")
+                ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             with col_acc2:
                 # Generador de PDF (Simulado con los datos de la OP)
                 if st.button(f"📥 GENERAR PDF OP {op_id}"):
@@ -1110,7 +1111,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
                 st.success("Enviado."); time.sleep(1); st.rerun()
         else:
-            st.info("No hay órdenes pendientes.")        
+            st.info("No hay órdenes pendientes.")         
 
 # MODULO 3: PLANIFICACION 
 
