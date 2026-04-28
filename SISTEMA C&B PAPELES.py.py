@@ -994,39 +994,47 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
     # --- FUNCIÓN RADIOGRAFÍA COMPLETA (Toda la info de creación) ---
     def radiografia_completa_op(datos):
-        st.markdown("### 📋 RADIOGRAFÍA COMPLETA DE CREACIÓN")
+        st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
         
-        # 1. INFORMACIÓN GENERAL Y COMERCIAL
-        with st.expander("🏢 INFORMACIÓN COMERCIAL", expanded=True):
+ #  INFORMACIoN GENERAL Y COMERCIAL
+        with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             c1.write(f"**OP #:**\n{datos.get('op')}")
-            c2.write(f"**Cliente:**\n{datos.get('cliente')}")
-            c3.write(f"**Vendedor:**\n{datos.get('vendedor')}")
-            c4.write(f"**Fecha Creación:**\n{datos.get('created_at', '')[:19]}")
+            c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
+            c2.write(f"**CLIENTE:**\n{datos.get('cliente')}")
+            c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
+            c3.write(f"**FECHA DE CREACION:**\n{datos.get('created_at', '')[:19]}")
+            c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
+            c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
+            c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
-        # 2. ESPECIFICACIONES TÉCNICAS DEL PRODUCTO
-        with st.expander("⚙️ ESPECIFICACIONES TÉCNICAS", expanded=True):
+#  ESPECIFICACIONES TeCNICAS DEL PRODUCTO
+        with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
-                st.markdown("**🎨 Impresión**")
-                st.write(f"Tintas Frente: {datos.get('tintas_frente')}")
-                st.write(f"Tintas Dorso: {datos.get('tintas_dorso')}")
-                st.write(f"Barniz: {datos.get('barniz')}")
+                st.markdown("**ADICIONALES ROLLOS**")
+                st.write(f"TINTAS FRENTE: {datos.get('tintas_frente_rollos')}")
+                st.write(f"TINTAS RESPALDO: {datos.get('tintas_respaldo_rollos')}")
+                st.write(f"CANTIDAD SOLICITADA: {datos.get('cantidad_rollos')}")
+                st.write(f"CORE: {datos.get('core')}")
             with c2:
-                st.markdown("**📦 Sustrato/Material**")
-                st.write(f"Material: {datos.get('material')}")
-                st.write(f"Ancho: {datos.get('ancho_material')} mm")
-                st.write(f"Adhesivo/Base: {datos.get('tipo_orden')}")
+                st.markdown("**ADICIONALES ROLLOS**")
+                st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
+                st.write(f"UNIDADRES POR BOLSA: {datos.get('unidades_bolsa')}")
+                st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
+                st.write(f"REPETICION : {datos.get('tipo_origen')}")
             with c3:
-                st.markdown("**📏 Dimensiones**")
-                st.write(f"Tamaño Final: {datos.get('tamano_final')}")
-                st.write(f"Repeticiones: {datos.get('repeticiones')}")
-                st.write(f"Corte: {datos.get('corte_final')}")
+                st.markdown("**ADICIONALES FORMAS**")
+                st.write(f"PERFORECIOBNES: {datos.get('perforaciones_detalle')}")
+                st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
+                st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
+                st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
+            
             with c4:
-                st.markdown("**🌀 Acabado de Salida**")
-                st.write(f"Sentido Salida: {datos.get('sentido_salida')}")
-                st.write(f"Cant. Rollos: {datos.get('cantidad_rollos', 0)}")
-                st.write(f"Cant. Formas: {datos.get('cantidad_formas', 0)}")
+                st.markdown("**ADICIONAlES DE FORMAS**")
+                st.write(f"PRESENTACION: {datos.get('presentacion')}")
+                st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
+                st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
         # 3. DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
         c_obs1, c_obs2 = st.columns(2)
