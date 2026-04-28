@@ -1073,7 +1073,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                             mime="application/pdf",
                             key=f"dl_pdf_{op_id}",
                             use_container_width=True
-                        )
+                    )
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
                     
