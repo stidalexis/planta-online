@@ -996,7 +996,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
     def radiografia_completa_op(datos):
         st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
         
- #  INFORMACIoN GENERAL Y COMERCIAL
+        # INFORMACION GENERAL Y COMERCIAL
         with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             c1.write(f"**OP #:**\n{datos.get('op')}")
@@ -1008,7 +1008,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
-#  ESPECIFICACIONES TeCNICAS DEL PRODUCTO
+        # ESPECIFICACIONES TECNICAS DEL PRODUCTO
         with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
@@ -1020,23 +1020,22 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             with c2:
                 st.markdown("**ADICIONALES ROLLOS**")
                 st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
-                st.write(f"UNIDADRES POR BOLSA: {datos.get('unidades_bolsa')}")
+                st.write(f"UNIDADES POR BOLSA: {datos.get('unidades_bolsa')}")
                 st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
                 st.write(f"REPETICION : {datos.get('tipo_origen')}")
             with c3:
                 st.markdown("**ADICIONALES FORMAS**")
-                st.write(f"PERFORECIOBNES: {datos.get('perforaciones_detalle')}")
+                st.write(f"PERFORACIONES: {datos.get('perforaciones_detalle')}")
                 st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
                 st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
                 st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
-            
             with c4:
-                st.markdown("**ADICIONAlES DE FORMAS**")
+                st.markdown("**ADICIONALES DE FORMAS**")
                 st.write(f"PRESENTACION: {datos.get('presentacion')}")
                 st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
                 st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
-#  DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
+        # DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
         c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
             st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
@@ -1044,11 +1043,11 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         with c_obs2:
             if datos.get('detalles_partes_json'):
                 st.write("**📑 Estructura de Partes (Papel/Tintas):**")
-                st.table(datos_op.get('detalles_partes_json'))
+                st.table(datos.get('detalles_partes_json'))
             else:
                 st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
 
-#  PESTAÑAS 
+    # PESTAÑAS 
     tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
     with tab1:
@@ -1060,15 +1059,24 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-# BOTONES DE ACCIoN RaPIDA
+            # BOTONES DE ACCION RAPIDA
             col_acc1, col_acc2 = st.columns(2)
             with col_acc1:
                 ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             with col_acc2:
-                # Generador de PDF (Simulado con los datos de la OP)
-                if st.button(f"📥 GENERAR PDF OP {op_id}"):
-                    st.info("Función de PDF vinculada a la base de datos.")
-                    # Aquí puedes llamar a tu lógica de fpdf si la tienes como función
+                # INTEGRACIÓN BOTÓN DESCARGA PDF AUDITORÍA
+                try:
+                    pdf_data = generar_pdf(datos_op)
+                    st.download_button(
+                        label=f"📥 Descargar PDF Orden {op_id}",
+                        data=pdf_data,
+                        file_name=f"OP_{op_id}.pdf",
+                        mime="application/pdf",
+                        key=f"dl_pdf_aud_{op_id}",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.error(f"No se pudo generar el PDF: {e}")
             
             if ver_radio:
                 radiografia_completa_op(datos_op)
@@ -1100,7 +1108,19 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 if datos_op_2.get('link_diseno'):
                     st.link_button("🌐 ABRIR DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
             with c_p3:
-                st.button(f"📑 PDF OP {op_id_2}")
+                # INTEGRACIÓN BOTÓN DESCARGA PDF PRE-PRENSA
+                try:
+                    pdf_data_pre = generar_pdf(datos_op_2)
+                    st.download_button(
+                        label=f"📑 Descargar PDF {op_id_2}",
+                        data=pdf_data_pre,
+                        file_name=f"OP_{op_id_2}.pdf",
+                        mime="application/pdf",
+                        key=f"dl_pdf_pre_{op_id_2}",
+                        use_container_width=True
+                    )
+                except Exception as e:
+                    st.error(f"Error al procesar PDF: {e}")
 
             if ver_radio_2:
                 radiografia_completa_op(datos_op_2)
@@ -1111,7 +1131,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
                 st.success("Enviado."); time.sleep(1); st.rerun()
         else:
-            st.info("No hay órdenes pendientes.")        
+            st.info("No hay órdenes pendientes.")       
 
 # MODULO 3: PLANIFICACION 
 
