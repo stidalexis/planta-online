@@ -994,100 +994,113 @@ elif menu == "🎨 Diseño y Pre-Prensa":
     
     tab1, tab2 = st.tabs(["📋 1. AUDITORÍA (Revisión 1)", "🎞️ 2. PRE-PRENSA (Revisión 2)"])
 
+    # Función interna para mostrar TODA la ficha técnica
+    def mostrar_ficha_tecnica(datos):
+        st.markdown("### 📝 Ficha Técnica Detallada")
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown(f"**OP:** `{datos.get('op')}`")
+            st.markdown(f"**Cliente:** {datos.get('cliente')}")
+            st.markdown(f"**Trabajo:** {datos.get('nombre_trabajo')}")
+        with c2:
+            st.markdown(f"**Tipo:** {datos.get('tipo_orden')}")
+            st.markdown(f"**Material:** {datos.get('material')}")
+            st.markdown(f"**Ancho Material:** {datos.get('ancho_material')} mm")
+        with c3:
+            st.markdown(f"**Tintas Frente:** {datos.get('tintas_frente')}")
+            st.markdown(f"**Tintas Dorso:** {datos.get('tintas_dorso')}")
+            st.markdown(f"**Barniz:** {datos.get('barniz', 'No')}")
+        with c4:
+            st.markdown(f"**Cant. Formas:** {datos.get('cantidad_formas', 0)}")
+            st.markdown(f"**Cant. Rollos:** {datos.get('cantidad_rollos', 0)}")
+            st.markdown(f"**Vendedor:** {datos.get('vendedor')}")
+
+        st.divider()
+        col_esp1, col_esp2 = st.columns(2)
+        with col_esp1:
+            st.markdown("**⚙️ Especificaciones de Producción:**")
+            st.info(f"""
+            - **Tamaño:** {datos.get('tamano_final', 'N/A')}
+            - **Repeticiones:** {datos.get('repeticiones', 'N/A')}
+            - **Sentido Salida:** {datos.get('sentido_salida', 'N/A')}
+            - **Corte:** {datos.get('corte_final', 'N/A')}
+            """)
+        with col_esp2:
+            st.markdown("**📌 Notas de Ventas:**")
+            st.warning(datos.get('observaciones_ventas', 'Sin observaciones'))
+
+        # Si hay detalles de partes (Formas Continuas)
+        if datos.get('detalles_partes_json'):
+            st.markdown("**📄 Detalle de Partes (Papel / Tintas):**")
+            st.table(datos.get('detalles_partes_json'))
+
+    # --- VENTANA 1: AUDITORÍA ---
     with tab1:
         st.subheader("🕵️ Auditoría Técnica de Diseño")
-        
-        # CAMBIO CLAVE: Usamos .ilike para que no importe si es "diseño", "DISEÑO" o "Diseño"
-        op_pendientes = supabase.table("ordenes_planeadas")\
-            .select("*")\
-            .ilike("proxima_area", "DISEÑO%")\
-            .execute().data
+        op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            # Creamos una lista limpia de nombres para el selector
-            op_list = [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes]
-            op_sel = st.selectbox("Seleccione OP para Auditar:", op_list, key="sel_auditoria_v2")
-            
+            op_sel = st.selectbox("Seleccione OP para Auditar:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_sel")
             op_id = op_sel.split(" - ")[0]
-            # Buscamos los datos de la OP seleccionada
-            datos_op = next((o for o in op_pendientes if str(o['op']) == str(op_id)), None)
+            datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-            if datos_op:
-                with st.expander("📄 VER DETALLES COMPLETOS DE LA ORDEN", expanded=True):
-                    c1, c2, c3 = st.columns(3)
-                    with c1:
-                        st.markdown(f"**Cliente:** {datos_op.get('cliente', 'N/A')}")
-                        st.markdown(f"**Vendedor:** {datos_op.get('vendedor', 'N/A')}")
-                    with c2:
-                        tipo = datos_op.get('tipo_orden', '')
-                        # Validamos qué cantidad mostrar según el tipo de orden
-                        cant = datos_op.get('cantidad_formas') if "FORMAS" in tipo.upper() else datos_op.get('cantidad_rollos')
-                        st.markdown(f"**Tipo:** {tipo}")
-                        st.markdown(f"**Cantidad:** {cant if cant else 'N/A'}")
-                    with c3:
-                        st.markdown(f"**Fecha:** {datos_op.get('created_at', '')[:10]}")
-                        st.markdown(f"**Material:** {datos_op.get('material', 'N/A')}")
-                
-                st.divider()
-                # El valor por defecto es lo que ya tenga en la base de datos (por si están editando)
-                link_dis = st.text_input("🔗 Link de Diseño (Drive/Canva/Dropbox):", 
-                                        value=datos_op.get('link_diseno', '') if datos_op.get('link_diseno') else "")
-                obs_dis = st.text_area("✍️ Observaciones de Auditoría:", 
-                                      value=datos_op.get('observaciones_diseno', '') if datos_op.get('observaciones_diseno') else "")
-                
-                if st.button("✅ Aprobar Auditoría y Enviar a Pre-Prensa"):
-                    if not link_dis:
-                        st.error("Por favor, ingresa el link de diseño antes de aprobar.")
-                    else:
-                        supabase.table("ordenes_planeadas").update({
-                            "link_diseno": link_dis,
-                            "observaciones_diseno": obs_dis,
-                            "proxima_area": "PRE-PRENSA" 
-                        }).eq("op", op_id).execute()
-                        st.success(f"OP {op_id} enviada a Pre-Prensa")
-                        time.sleep(1)
-                        st.rerun()
+            # Botón para el PDF (Usando tu lógica de FPDF)
+            if st.button(f"📥 Descargar PDF Técnico OP {op_id}"):
+                # Aquí puedes llamar a tu función generar_pdf(datos_op) si la tienes global
+                # O simplemente mostrar los datos como lo hacemos abajo
+                st.info("Generando vista previa...")
+
+            with st.container(border=True):
+                mostrar_ficha_tecnica(datos_op)
+            
+            st.divider()
+            link_dis = st.text_input("🔗 Link de Diseño Final:", value=datos_op.get('link_diseno', ''), placeholder="Pegue aquí el link de Drive, Canva, etc.")
+            obs_dis = st.text_area("✍️ Notas de Auditoría para Pre-Prensa:", value=datos_op.get('observaciones_diseno', ''))
+            
+            if st.button("✅ APROBAR Y PASAR A PRE-PRENSA", use_container_width=True):
+                if link_dis:
+                    supabase.table("ordenes_planeadas").update({
+                        "link_diseno": link_dis,
+                        "observaciones_diseno": obs_dis,
+                        "proxima_area": "PRE-PRENSA"
+                    }).eq("op", op_id).execute()
+                    st.success("Auditoría 1 completada.")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("Es obligatorio cargar el link de diseño para avanzar.")
         else:
-            st.info("No hay órdenes con estado 'DISEÑO' en la base de datos.")
+            st.info("No hay órdenes esperando auditoría.")
 
+    # --- VENTANA 2: PRE-PRENSA ---
     with tab2:
-        st.subheader("🎞️ Control de Pre-Prensa")
-        # Filtramos las que ya pasaron por auditoría
+        st.subheader("🎞️ Revisión Final de Pre-Prensa")
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_list_2 = [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre]
-            op_sel_2 = st.selectbox("Seleccione OP para Pre-Prensa:", op_list_2, key="sel_preprensa_v2")
-            
+            op_sel_2 = st.selectbox("Seleccione OP para Revisión Final:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_sel")
             op_id_2 = op_sel_2.split(" - ")[0]
-            datos_op_2 = next((o for o in op_pre if str(o['op']) == str(op_id_2)), None)
+            datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
 
-            if datos_op_2:
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    st.warning("⚠️ **RESULTADO AUDITORÍA 1:**")
-                    link = datos_op_2.get('link_diseno')
-                    if link:
-                        st.link_button("🌐 ABRIR LINK DE DISEÑO", link, use_container_width=True)
-                    else:
-                        st.write("❌ No se encontró link.")
-                    st.write(f"**Notas:** {datos_op_2.get('observaciones_diseno', 'Sin notas')}")
+            # Alerta con el link del auditor anterior
+            with st.warning():
+                c1, c2 = st.columns([1, 3])
+                with c1:
+                    if datos_op_2.get('link_diseno'):
+                        st.link_button("🌐 IR AL DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
+                with c2:
+                    st.write(f"**Instrucciones de Auditoría:** {datos_op_2.get('observaciones_diseno', 'Sin notas')}")
 
-                with col_b:
-                    st.info("📋 **RESUMEN TÉCNICO:**")
-                    st.write(f"**Trabajo:** {datos_op_2.get('nombre_trabajo')}")
-                    st.write(f"**Material:** {datos_op_2.get('material', 'N/A')}")
+            with st.container(border=True):
+                mostrar_ficha_tecnica(datos_op_2)
 
-                st.divider()
-                if st.button("🚀 Finalizar Pre-Prensa y Enviar a Planta"):
-                    supabase.table("ordenes_planeadas").update({
-                        "proxima_area": "IMPRESIÓN" 
-                    }).eq("op", op_id_2).execute()
-                    st.success(f"OP {op_id_2} lista para producción.")
-                    time.sleep(1)
-                    st.rerun()
+            if st.button("🚀 FINALIZAR Y ENVIAR A IMPRESIÓN", use_container_width=True):
+                supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
+                st.success("Orden enviada a planta de impresión.")
+                time.sleep(1)
+                st.rerun()
         else:
-            st.info("No hay órdenes esperando en Pre-Prensa.")                 
+            st.info("No hay órdenes en cola de Pre-Prensa.")                   
 
 # MODULO 3: PLANIFICACION 
 
