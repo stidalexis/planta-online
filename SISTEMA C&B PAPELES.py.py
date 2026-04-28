@@ -1066,8 +1066,17 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             with col_acc2:
                 # Generador de PDF (Simulado con los datos de la OP)
-                if st.button(f"📥 GENERAR PDF OP {op_id}"):
-                    st.info("Función de PDF vinculada a la base de datos.")
+                if st.download_button(
+                            label=f"📥 Descargar PDF Orden {op_id}",
+                            data=pdf_data,
+                            file_name=f"OP_{op_id}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_pdf_{op_id}",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"No se pudo generar el PDF: {e}")
+                    
                     # Aquí puedes llamar a tu lógica de fpdf si la tienes como función
             
             if ver_radio:
