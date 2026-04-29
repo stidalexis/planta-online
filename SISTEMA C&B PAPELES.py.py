@@ -1821,7 +1821,7 @@ elif menu == "📦 Almacen Terminado":
 
 #  REGISTRAR SIEMPRE EN HISTORIAL 
 
-                            supabase.table("almacen_historial").insert({
+                            supabase.table("bodega_historial").insert({
                                 "nombre_trabajo": nom_trabajo,
                                 "tipo_movimiento": "ENTRADA" if es_entrada else "SALIDA",
                                 "cajas": c_cajas,
