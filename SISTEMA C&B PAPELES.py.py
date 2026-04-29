@@ -1077,6 +1077,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             
             st.divider()
             link_dis = st.text_input("🔗 Link de Diseño Final:", value=datos_op.get('link_diseno', '') or "")
+            link_di = st.text_input("🔗 Link de Diseño Final:", value=datos_op.get('link_diseno2', '') or "")
             obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
             
             if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
