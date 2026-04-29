@@ -1666,7 +1666,7 @@ elif menu == "📊 Reportes Admin":
         
         with tab_historial:
             st.subheader("Historial de Movimientos de Bodega")
-            res_h = supabase.table("bodega_historial", "almacen_historial").select("*").order("fecha", desc=True).execute().data
+            res_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True).execute().data
             if res_h:
                 df_h = pd.DataFrame(res_h)
                 st.dataframe(df_h, use_container_width=True, hide_index=True)
