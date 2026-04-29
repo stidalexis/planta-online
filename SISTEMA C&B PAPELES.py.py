@@ -964,6 +964,7 @@ elif menu == "🔍 Seguimiento":
                     st.write("**⚙️ Tipo:**")
                     st.write(row.get('tipo_orden', 'N/A'))
                 with c4:
+                    st.write(row.get('link_destino', 'N/A'))
                     if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}"):
                         modal_detalle_op(row)
 
