@@ -1705,6 +1705,185 @@ elif menu == "📊 Reportes Admin":
             else:
                 st.info("No hay reportes de fallas técnicos.")
 
+
+elif menu == "📦 Almacen Terminado":
+    st.title("📦 Inventario de Productos Almacen")
+    
+    tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
+    
+    with tab_mov:
+        st.subheader("🔄 Gestión de Movimientos")
+        
+# IDENTIFICAR PERMISOS SEGUN ROL
+
+        rol_usuario = st.session_state.get('rol', '').lower()
+        
+# DEFINE QUIN PUEDE HACER QUE DENTRO DEL MODULO 
+
+        puede_ingresar = rol_usuario in ['admin', 'patinador_roll' ] 
+        puede_despachar = rol_usuario in ['admin', 'ventas']
+
+#  SELECTOR DE OPERACION FILTRADO
+
+        opciones_disponibles = []
+        if puede_ingresar: opciones_disponibles.append("➕ ENTRADA (Ingreso)")
+        if puede_despachar: opciones_disponibles.append("➖ SALIDA (Despacho)")
+
+        if not opciones_disponibles:
+            st.warning("⚠️ Tu rol no tiene permisos para registrar movimientos en bodega.")
+        else:
+            tipo_accion = st.radio("Seleccione operación:", opciones_disponibles, horizontal=True)
+            
+            productos_db = supabase.table("almacen_producto_terminado").select("*").execute().data
+            nombres_existentes = sorted([p['nombre_trabajo'] for p in productos_db])
+
+            with st.form("form_movimiento_separado"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+#  SI ES INGRESO SEJA CREAR SI ES SALIDA SOLO SELECCIONA DE LO YA EXISTENTE
+
+                    if "ENTRADA" in tipo_accion:
+                        nuevo_o_existente = st.checkbox("¿Es un producto nuevo en bodega?")
+                        if nuevo_o_existente:
+                            nom_trabajo = st.text_input("Nombre del Trabajo (NUEVO)").upper()
+                        else:
+                            nom_trabajo = st.selectbox("Seleccione Trabajo Existente:", [""] + nombres_existentes)
+                    else:
+                        st.info("ℹ️ Solo puede dar salida a productos que ya están en el inventario.")
+                        nom_trabajo = st.selectbox("Seleccione Trabajo para Despacho:", [""] + nombres_existentes)
+                    
+                    tipo_prod = st.selectbox("Tipo de Producto:", ["BLANCO", "IMPRESO", "REBOBINADO"])
+                
+                with col2:
+                    c_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
+                    c_rollos = st.number_input("Cantidad de Rollos", min_value=0, step=1)
+                    notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
+
+# BOTON DINAMICO DE REGISTRO A INGRESOS
+
+                texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
+                btn_procesar = st.form_submit_button(texto_boton)
+
+                if btn_procesar:
+                    if not nom_trabajo or nom_trabajo == "":
+                        st.error("Debe especificar el nombre del trabajo.")
+                    elif c_cajas == 0 and c_rollos == 0:
+                        st.warning("Ingrese una cantidad válida de cajas o rollos.")
+                    else:
+                        fecha_mov = hora_colombia().isoformat()
+                        producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
+                        
+# LOGICA DE SUMA Y RESTA
+
+                        es_entrada = "ENTRADA" in tipo_accion
+                        factor = 1 if es_entrada else -1
+
+# VALIDACION DE STOCK PARA SALIDAS
+
+                        if not es_entrada:
+                            if not producto_actual:
+                                st.error("El producto no existe en inventario.")
+                                st.stop()
+                            if c_cajas > producto_actual.get('stock_cajas', 0):
+                                st.error(f"❌ Stock insuficiente. Solo hay {producto_actual['stock_cajas']} cajas disponibles.")
+                                st.stop()
+
+# ACTUALIZAR O INSERTAR EN BODEGA ACTUAL
+
+                        try:
+                            if producto_actual:
+
+# ACTUALIZAR EXISTENTE
+
+                                nuevo_stk_cajas = producto_actual['stock_cajas'] + (c_cajas * factor)
+                                nuevo_stk_rollos = producto_actual['stock_rollos'] + (c_rollos * factor)
+                                
+                                supabase.table("almacen_producto_terminado").update({
+                                    "stock_cajas": nuevo_stk_cajas,
+                                    "stock_rollos": nuevo_stk_rollos,
+                                    "ultima_actualizacion": fecha_mov,
+                                    "observaciones": notas  
+                                }).eq("id", producto_actual['id']).execute()
+                            
+                            elif es_entrada:
+
+# INSERTAR NUEVO (Solo si es entrada)
+
+                                supabase.table("almacen_producto_terminado").insert({
+                                    "nombre_trabajo": nom_trabajo,
+                                    "tipo_producto": tipo_prod,
+                                    "stock_cajas": c_cajas,
+                                    "stock_rollos": c_rollos,
+                                    "ultima_actualizacion": fecha_mov,
+                                    "observaciones": notas
+                                }).execute()
+
+#  REGISTRAR SIEMPRE EN HISTORIAL 
+
+                            supabase.table("almacen_historial").insert({
+                                "nombre_trabajo": nom_trabajo,
+                                "tipo_movimiento": "ENTRADA" if es_entrada else "SALIDA",
+                                "cajas": c_cajas,
+                                "rollos": c_rollos,
+                                "fecha": fecha_mov,
+                                "usuario": st.session_state.get('nombre_usuario', 'Sistema'),
+                                "observaciones": notas
+                            }).execute()
+
+                            st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
+                            time.sleep(1.2)
+                            st.rerun()
+                        
+                        except Exception as e:
+                            st.error(f"Error al procesar en base de datos: {e}")
+
+# PESTAÑA DE INVENTARIO ACTUAL
+
+    with tab_inv:
+        st.subheader("📊 Existencias en Bodega")
+        
+        res_bodega = supabase.table("almacen_producto_terminado").select("*").order("nombre_trabajo").execute().data
+        
+        if res_bodega:
+            df_bodega = pd.DataFrame(res_bodega)
+            
+            cols_esperadas = ['nombre_trabajo', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion', 'observaciones']
+            cols_finales = [c for c in cols_esperadas if c in df_bodega.columns]
+            
+            df_show = df_bodega[cols_finales].copy()
+            
+# RENOMBRAR COLUMBAS PARA VISUALIZACION 
+
+            nombres_columnas = {
+                'nombre_trabajo': 'TRABAJO',
+                'tipo_producto': 'TIPO',
+                'stock_cajas': 'CAJAS',
+                'stock_rollos': 'ROLLOS',
+                'ultima_actualizacion': 'ÚLT. MOVIMIENTO',
+                'observaciones': 'OBSERVACIONES'
+            }
+            df_show.rename(columns=nombres_columnas, inplace=True)
+            
+# BUSCADOR RAPIDO
+
+            busqueda_b = st.text_input("🔍 Filtrar inventario por nombre...")
+            if busqueda_b:
+                df_show = df_show[df_show['TRABAJO'].str.contains(busqueda_b.upper(), na=False)]
+            
+# MOSTRAR TABLAS 
+
+            st.dataframe(df_show, use_container_width=True, hide_index=True)
+            
+# ALERTAS D ESTOCK BAJO 
+
+            if 'CAJAS' in df_show.columns:
+                bajo_stock = df_show[df_show['CAJAS'] <= 2]
+                if not bajo_stock.empty:
+                    st.warning(f"⚠️ Hay {len(bajo_stock)} productos con stock crítico (2 o menos cajas).")
+        else:
+            st.info("La bodega está vacía actualmente.")
+
 # MODULO DE INVENTARIO CORES Y CAJAS
 
 elif menu == "📦 Inventario":
