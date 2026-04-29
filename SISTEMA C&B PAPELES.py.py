@@ -964,9 +964,6 @@ elif menu == "🔍 Seguimiento":
                     st.write("**⚙️ Tipo:**")
                     st.write(row.get('tipo_orden', 'N/A'))
                 with c4:
-                    st.write("**⚙️ links:**")
-                if datos_op_2.get('link_diseno'):
-                    st.link_button("🌐 ABRIR DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
                     if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}"):
                         modal_detalle_op(row)
 
@@ -1079,7 +1076,8 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 radiografia_completa_op(datos_op)
             
             st.divider()
-            link_dis = st.text_input("🔗 Link de Diseño Final:", value=datos_op.get('link_diseno', '') or "")
+            link_dis = st.text_input("🔗 Link de srte finsl:", value=datos_op.get('link_diseno', '') or "")
+            link_dis = st.text_input("🔗 Link de tiket de este trabajo:", value=datos_op.get('link_diseno2', '') or "")
             obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
             
             if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
@@ -1104,6 +1102,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             with c_p2:
                 if datos_op_2.get('link_diseno'):
                     st.link_button("🌐 ABRIR DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
+                    st.link_button("🌐 ABRIR TIKET", datos_op_2.get('link_diseno2'), use_container_width=True)
             with c_p3:
                 st.button(f"📑 PDF OP {op_id_2}")
 
