@@ -792,7 +792,7 @@ with st.sidebar:
 # DEFINICION DE PERMISOS SEGUN ROL
 
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen Terminado"]
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'supervisor_imp':
@@ -805,6 +805,8 @@ with st.sidebar:
         opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
     elif rol == 'patinador_roll':
         opciones_menu = ["📦 Bodega Terminado"]
+    elif rol == 'almacen':
+        opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'diseno':
         opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
     else:
@@ -1475,7 +1477,7 @@ elif menu == "📅 Planificación":
 
 # MODULO: BODEGA PRODUCTO TERMINADO 
 
-elif menu == "📦 Bodega Terminado":
+elif menu == "📦 Bodega MaterialTerminado":
     st.title("📦 Inventario de Producto Terminado")
     
     tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
@@ -1706,7 +1708,7 @@ elif menu == "📊 Reportes Admin":
                 st.info("No hay reportes de fallas técnicos.")
 
 
-elif menu == "📦 Almacen Terminado":
+elif menu == "📦 Almacen/Despachos":
     st.title("📦 Inventario de Productos Almacen")
     
     tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
@@ -1720,14 +1722,14 @@ elif menu == "📦 Almacen Terminado":
         
 # DEFINE QUIN PUEDE HACER QUE DENTRO DEL MODULO 
 
-        puede_ingresar = rol_usuario in ['admin', 'patinador_roll' ] 
-        puede_despachar = rol_usuario in ['admin', 'ventas']
+        puede_ingresar = rol_usuario in ['admin', 'almacen' ] 
+        puede_despachar = rol_usuario in ['admin']
 
 #  SELECTOR DE OPERACION FILTRADO
 
         opciones_disponibles = []
-        if puede_ingresar: opciones_disponibles.append("➕ ENTRADA (Ingreso)")
-        if puede_despachar: opciones_disponibles.append("➖ SALIDA (Despacho)")
+        if puede_ingresar: opciones_disponibles.append("➕ ENTRADA DE MERCANCIA (Ingreso)")
+        if puede_despachar: opciones_disponibles.append("➖ SALIDA DE MERCANCIA (Despacho)")
 
         if not opciones_disponibles:
             st.warning("⚠️ Tu rol no tiene permisos para registrar movimientos en bodega.")
@@ -2458,7 +2460,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseno', "patinador_roll" ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseno', "patinador_roll", "almacen" ], key="admin_r")
         
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
