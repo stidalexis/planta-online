@@ -792,7 +792,7 @@ with st.sidebar:
 # DEFINICION DE PERMISOS SEGUN ROL
 
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa"]
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega Terminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen Terminado"]
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'supervisor_imp':
