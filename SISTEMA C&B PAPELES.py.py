@@ -1109,7 +1109,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
 
             with c_p2:
-                sub_c1, sub_c2 = st.columns(2)
+                sub_c1, sub_c2, sub_c3  = st.columns(2)
                 if datos_op_2.get('link_diseno'):
                     sub_c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
                 if datos_op_2.get('link_ticket'):
