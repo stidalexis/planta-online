@@ -994,63 +994,28 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
-#  FUNCION RADIOGRAFIA COMPLETA 
+    # 1. FUNCIÓN PARA GENERAR EL PDF (Ponla al principio del módulo)
+    def crear_pdf_descarga(datos):
+        from fpdf import FPDF
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", 'B', 16)
+        pdf.cell(200, 10, txt=f"ORDEN DE PRODUCCION: {datos.get('op')}", ln=True, align='C')
+        pdf.set_font("Arial", size=12)
+        pdf.ln(10)
+        # Agregamos algunos datos al PDF
+        pdf.cell(200, 10, txt=f"Cliente: {datos.get('cliente')}", ln=True)
+        pdf.cell(200, 10, txt=f"Trabajo: {datos.get('nombre_trabajo')}", ln=True)
+        pdf.cell(200, 10, txt=f"Link Arte: {datos.get('link_diseno')}", ln=True)
+        pdf.cell(200, 10, txt=f"Link Ticket: {datos.get('link_ticket')}", ln=True)
+        return pdf.output(dest='S').encode('latin-1')
+
+    # --- (Tu función radiografia_completa_op se queda igual) ---
     def radiografia_completa_op(datos):
+        # ... (mantén tu código de radiografía aquí) ...
         st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
-        
- #  INFORMACIoN GENERAL Y COMERCIAL
-        with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
-            c1, c2, c3, c4 = st.columns(4)
-            c1.write(f"**OP #:**\n{datos.get('op')}")
-            c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
-            c2.write(f"**CLIENTE:**\n{datos.get('cliente')}")
-            c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
-            c3.write(f"**FECHA DE CREACION:**\n{datos.get('created_at', '')[:19]}")
-            c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
-            c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
-            c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
+        # ... rest of your function ...
 
-#  ESPECIFICACIONES TeCNICAS DEL PRODUCTO
-        with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
-            c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                st.markdown("**ADICIONALES ROLLOS**")
-                st.write(f"TINTAS FRENTE: {datos.get('tintas_frente_rollos')}")
-                st.write(f"TINTAS RESPALDO: {datos.get('tintas_respaldo_rollos')}")
-                st.write(f"CANTIDAD SOLICITADA: {datos.get('cantidad_rollos')}")
-                st.write(f"CORE: {datos.get('core')}")
-            with c2:
-                st.markdown("**ADICIONALES ROLLOS**")
-                st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
-                st.write(f"UNIDADRES POR BOLSA: {datos.get('unidades_bolsa')}")
-                st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
-                st.write(f"REPETICION : {datos.get('tipo_origen')}")
-            with c3:
-                st.markdown("**ADICIONALES FORMAS**")
-                st.write(f"PERFORECIOBNES: {datos.get('perforaciones_detalle')}")
-                st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
-                st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
-                st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
-            
-            with c4:
-                st.markdown("**ADICIONAlES DE FORMAS**")
-                st.write(f"PRESENTACION: {datos.get('presentacion')}")
-                st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
-                st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
-
-#  DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
-        c_obs1, c_obs2 = st.columns(2)
-        with c_obs1:
-            st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
-            st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
-        with c_obs2:
-            if datos.get('detalles_partes_json'):
-                st.write("**📑 Estructura de Partes (Papel/Tintas):**")
-                st.table(datos_op.get('detalles_partes_json'))
-            else:
-                st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
-
-#  PESTAÑAS 
     tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
     with tab1:
@@ -1062,29 +1027,50 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-# BOTONES DE ACCIoN RAPIDA
             col_acc1, col_acc2 = st.columns(2)
             with col_acc1:
                 ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             with col_acc2:
-                # Generador de PDF (Simulado con los datos de la OP)
-                if st.button(f"📥 GENERAR PDF OP {op_id}"):
-                    st.info("Función de PDF vinculada a la base de datos.")
-                    # FALTA AGREGAR LA LOGICA DE DESCARGA DE PDF
+                # --- CORRECCIÓN PDF ---
+                pdf_data = crear_pdf_descarga(datos_op)
+                st.download_button(
+                    label=f"📥 DESCARGAR PDF OP {op_id}",
+                    data=pdf_data,
+                    file_name=f"OP_{op_id}.pdf",
+                    mime="application/pdf"
+                )
             
             if ver_radio:
                 radiografia_completa_op(datos_op)
             
             st.divider()
-            link_dis = st.text_input("🔗 Link de Diseño Final:", value=datos_op.get('link_diseno', '') or "")
+            
+            # --- CORRECCIÓN LINKS (PARTE 1) ---
+            col_links = st.columns(2)
+            with col_links[0]:
+                # Usamos datos_op que es lo que viene de la base de datos
+                link_arte = st.text_input("Link del Arte (Drive/Cloud):", value=datos_op.get('link_diseno', '') or "")
+
+            with col_links[1]:
+                # Nuevo campo para el Ticket
+                link_ticket = st.text_input("Link del Ticket:", value=datos_op.get('link_ticket', '') or "")
+            
             obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
             
             if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
-                if link_dis:
-                    supabase.table("ordenes_planeadas").update({"link_diseno": link_dis, "observaciones_diseno": obs_dis, "proxima_area": "PRE-PRENSA"}).eq("op", op_id).execute()
-                    st.success("Enviado."); time.sleep(1); st.rerun()
+                if link_arte: # Validamos que al menos el arte esté
+                    # --- CORRECCIÓN GUARDADO ---
+                    # Añadimos link_ticket a la actualización
+                    update_data = {
+                        "link_diseno": link_arte, 
+                        "link_ticket": link_ticket, 
+                        "observaciones_diseno": obs_dis, 
+                        "proxima_area": "PRE-PRENSA"
+                    }
+                    supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
+                    st.success("Enviado a Pre-Prensa con éxito."); time.sleep(1); st.rerun()
                 else:
-                    st.error("El link es obligatorio.")
+                    st.error("El link del ARTE es obligatorio para avanzar.")
 
     with tab2:
         st.subheader("🎞️ Revisión Pre-Prensa")
@@ -1098,11 +1084,18 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             c_p1, c_p2, c_p3 = st.columns(3)
             with c_p1:
                 ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
+            
+            # --- CORRECCIÓN VISUALIZACIÓN LINKS (PARTE 2) ---
             with c_p2:
                 if datos_op_2.get('link_diseno'):
-                    st.link_button("🌐 ABRIR DISEÑO", datos_op_2.get('link_diseno'), use_container_width=True)
+                    st.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
+                if datos_op_2.get('link_ticket'):
+                    st.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
+            
             with c_p3:
-                st.button(f"📑 PDF OP {op_id_2}")
+                # PDF también disponible en Fase 2
+                pdf_data_2 = crear_pdf_descarga(datos_op_2)
+                st.download_button(label="📑 Descargar PDF", data=pdf_data_2, file_name=f"OP_{op_id_2}.pdf", key="btn_pdf_pre")
 
             if ver_radio_2:
                 radiografia_completa_op(datos_op_2)
@@ -1111,9 +1104,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
             if st.button("🚀 FINALIZAR Y ENVIAR A PLANTA", use_container_width=True):
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
-                st.success("Enviado."); time.sleep(1); st.rerun()
-        else:
-            st.info("No hay órdenes pendientes.")        
+                st.success("Enviado a Planta."); time.sleep(1); st.rerun()      
 
 # MODULO 3: PLANIFICACION 
 
