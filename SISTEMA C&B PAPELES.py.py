@@ -994,27 +994,10 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
-    # 1. FUNCIÓN PARA GENERAR EL PDF (Ponla al principio del módulo)
-    def crear_pdf_descarga(datos):
-        from fpdf import FPDF
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", 'B', 16)
-        pdf.cell(200, 10, txt=f"ORDEN DE PRODUCCION: {datos.get('op')}", ln=True, align='C')
-        pdf.set_font("Arial", size=12)
-        pdf.ln(10)
-        # Agregamos algunos datos al PDF
-        pdf.cell(200, 10, txt=f"Cliente: {datos.get('cliente')}", ln=True)
-        pdf.cell(200, 10, txt=f"Trabajo: {datos.get('nombre_trabajo')}", ln=True)
-        pdf.cell(200, 10, txt=f"Link Arte: {datos.get('link_diseno')}", ln=True)
-        pdf.cell(200, 10, txt=f"Link Ticket: {datos.get('link_ticket')}", ln=True)
-        return pdf.output(dest='S').encode('latin-1')
-
-    # --- (Tu función radiografia_completa_op se queda igual) ---
+    # --- (Mantenemos tu función de radiografía igual) ---
     def radiografia_completa_op(datos):
-        # ... (mantén tu código de radiografía aquí) ...
         st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
-        # ... rest of your function ...
+        # ... (aquí va el contenido de tu función que ya tenías)
 
     tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
@@ -1027,40 +1010,29 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
-            col_acc1, col_acc2 = st.columns(2)
-            with col_acc1:
-                ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
-            with col_acc2:
-                # --- CORRECCIÓN PDF ---
-                pdf_data = crear_pdf_descarga(datos_op)
-                st.download_button(
-                    label=f"📥 DESCARGAR PDF OP {op_id}",
-                    data=pdf_data,
-                    file_name=f"OP_{op_id}.pdf",
-                    mime="application/pdf"
-                )
+            # Botón único para ver radiografía
+            ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             
             if ver_radio:
                 radiografia_completa_op(datos_op)
             
             st.divider()
             
-            # --- CORRECCIÓN LINKS (PARTE 1) ---
+            # --- SECCIÓN DE LINKS ACTUALIZADA ---
             col_links = st.columns(2)
             with col_links[0]:
-                # Usamos datos_op que es lo que viene de la base de datos
+                # Vinculado a 'link_diseno' en Supabase
                 link_arte = st.text_input("Link del Arte (Drive/Cloud):", value=datos_op.get('link_diseno', '') or "")
 
             with col_links[1]:
-                # Nuevo campo para el Ticket
+                # Vinculado a 'link_ticket' en Supabase
                 link_ticket = st.text_input("Link del Ticket:", value=datos_op.get('link_ticket', '') or "")
             
             obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
             
             if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
-                if link_arte: # Validamos que al menos el arte esté
-                    # --- CORRECCIÓN GUARDADO ---
-                    # Añadimos link_ticket a la actualización
+                if link_arte:
+                    # Actualizamos ambos links en la base de datos
                     update_data = {
                         "link_diseno": link_arte, 
                         "link_ticket": link_ticket, 
@@ -1068,9 +1040,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                         "proxima_area": "PRE-PRENSA"
                     }
                     supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
-                    st.success("Enviado a Pre-Prensa con éxito."); time.sleep(1); st.rerun()
+                    st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
                 else:
-                    st.error("El link del ARTE es obligatorio para avanzar.")
+                    st.error("El link del ARTE es obligatorio.")
 
     with tab2:
         st.subheader("🎞️ Revisión Pre-Prensa")
@@ -1081,22 +1053,18 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
 
-            c_p1, c_p2, c_p3 = st.columns(3)
+            c_p1, c_p2 = st.columns([1, 2])
             with c_p1:
                 ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
             
-            # --- CORRECCIÓN VISUALIZACIÓN LINKS (PARTE 2) ---
+            # --- BOTONES PARA ABRIR LINKS ---
             with c_p2:
+                sub_c1, sub_c2 = st.columns(2)
                 if datos_op_2.get('link_diseno'):
-                    st.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
+                    sub_c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
                 if datos_op_2.get('link_ticket'):
-                    st.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
+                    sub_c2.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
             
-            with c_p3:
-                # PDF también disponible en Fase 2
-                pdf_data_2 = crear_pdf_descarga(datos_op_2)
-                st.download_button(label="📑 Descargar PDF", data=pdf_data_2, file_name=f"OP_{op_id_2}.pdf", key="btn_pdf_pre")
-
             if ver_radio_2:
                 radiografia_completa_op(datos_op_2)
 
