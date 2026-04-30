@@ -994,10 +994,9 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
-#  FUNCION RADIOGRAFIA COMPLETA 
     def radiografia_completa_op(datos):
         st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
-        
+
  #  INFORMACIoN GENERAL Y COMERCIAL
         with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
@@ -1050,7 +1049,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             else:
                 st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
 
-#  PESTAÑAS 
+
     tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
     with tab1:
@@ -1061,9 +1060,14 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v5")
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
+
+            # Botón único para ver radiografía
+            ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             
             if ver_radio:
                 radiografia_completa_op(datos_op)
+            
+            st.divider()
             
 # SECCION DE LINKS 
             col_links = st.columns(2)
@@ -1090,6 +1094,36 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                     st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
                 else:
                     st.error("El link del ARTE es obligatorio.")
+
+    with tab2:
+        st.subheader("🎞️ Revisión Pre-Prensa")
+        op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
+
+        if op_pre:
+            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v5")
+            op_id_2 = op_sel_2.split(" - ")[0]
+            datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
+
+            c_p1, c_p2 = st.columns([1, 2])
+            with c_p1:
+                ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
+            
+#  BOTONES PARA ABRIR LINKS 
+            with c_p2:
+                sub_c1, sub_c2 = st.columns(2)
+                if datos_op_2.get('link_diseno'):
+                    sub_c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
+                if datos_op_2.get('link_ticket'):
+                    sub_c2.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
+            
+            if ver_radio_2:
+                radiografia_completa_op(datos_op_2)
+
+            st.warning(f"**Notas Auditoría:** {datos_op_2.get('observaciones_diseno', 'Sin notas')}")
+
+            if st.button("🚀 FINALIZAR Y ENVIAR A PLANTA", use_container_width=True):
+                supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
+                st.success("Enviado a Planta."); time.sleep(1); st.rerun()
 
     with tab2:
         st.subheader("🎞️ Revisión Pre-Prensa")
