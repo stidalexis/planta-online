@@ -792,7 +792,7 @@ with st.sidebar:
 # DEFINICION DE PERMISOS SEGUN ROL
 
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🎨 Diseño y Pre-Prensa", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Bodega MaterialTerminado", "📦 Almacen/Despachos", "📦 Inventario", "📊 Reportes Admin"]     
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega MaterialTerminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'supervisor_imp':
@@ -994,11 +994,63 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
-    # --- (Mantenemos tu función de radiografía igual) ---
+#  FUNCION RADIOGRAFIA COMPLETA 
     def radiografia_completa_op(datos):
         st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
-        # ... (aquí va el contenido de tu función que ya tenías)
+        
+ #  INFORMACIoN GENERAL Y COMERCIAL
+        with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
+            c1, c2, c3, c4 = st.columns(4)
+            c1.write(f"**OP #:**\n{datos.get('op')}")
+            c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
+            c2.write(f"**CLIENTE:**\n{datos.get('cliente')}")
+            c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
+            c3.write(f"**FECHA DE CREACION:**\n{datos.get('created_at', '')[:19]}")
+            c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
+            c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
+            c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
+#  ESPECIFICACIONES TeCNICAS DEL PRODUCTO
+        with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown("**ADICIONALES ROLLOS**")
+                st.write(f"TINTAS FRENTE: {datos.get('tintas_frente_rollos')}")
+                st.write(f"TINTAS RESPALDO: {datos.get('tintas_respaldo_rollos')}")
+                st.write(f"CANTIDAD SOLICITADA: {datos.get('cantidad_rollos')}")
+                st.write(f"CORE: {datos.get('core')}")
+            with c2:
+                st.markdown("**ADICIONALES ROLLOS**")
+                st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
+                st.write(f"UNIDADRES POR BOLSA: {datos.get('unidades_bolsa')}")
+                st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
+                st.write(f"REPETICION : {datos.get('tipo_origen')}")
+            with c3:
+                st.markdown("**ADICIONALES FORMAS**")
+                st.write(f"PERFORECIOBNES: {datos.get('perforaciones_detalle')}")
+                st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
+                st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
+                st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
+            
+            with c4:
+                st.markdown("**ADICIONAlES DE FORMAS**")
+                st.write(f"PRESENTACION: {datos.get('presentacion')}")
+                st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
+                st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
+
+#  DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
+        c_obs1, c_obs2 = st.columns(2)
+        with c_obs1:
+            st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
+            st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
+        with c_obs2:
+            if datos.get('detalles_partes_json'):
+                st.write("**📑 Estructura de Partes (Papel/Tintas):**")
+                st.table(datos_op.get('detalles_partes_json'))
+            else:
+                st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
+
+#  PESTAÑAS 
     tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
 
     with tab1:
@@ -1009,16 +1061,11 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v5")
             op_id = op_sel.split(" - ")[0]
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
-
-            # Botón único para ver radiografía
-            ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             
             if ver_radio:
                 radiografia_completa_op(datos_op)
             
-            st.divider()
-            
-            # --- SECCIÓN DE LINKS ACTUALIZADA ---
+# SECCION DE LINKS 
             col_links = st.columns(2)
             with col_links[0]:
                 # Vinculado a 'link_diseno' en Supabase
@@ -1057,7 +1104,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             with c_p1:
                 ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
             
-            # --- BOTONES PARA ABRIR LINKS ---
+#  BOTONES PARA ABRIR LINKS 
             with c_p2:
                 sub_c1, sub_c2 = st.columns(2)
                 if datos_op_2.get('link_diseno'):
@@ -1072,8 +1119,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
             if st.button("🚀 FINALIZAR Y ENVIAR A PLANTA", use_container_width=True):
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
-                st.success("Enviado a Planta."); time.sleep(1); st.rerun()      
-
+                st.success("Enviado a Planta."); time.sleep(1); st.rerun()
 # MODULO 3: PLANIFICACION 
 
 elif menu == "📅 Planificación":
