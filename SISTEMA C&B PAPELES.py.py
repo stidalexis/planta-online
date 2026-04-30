@@ -1134,18 +1134,17 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
 
-            c_p1, c_p2 = st.columns([1, 2])
+            c_p1, c_p2,  = st.columns(3)
             with c_p1:
                 ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
-            
-#  BOTONES PARA ABRIR LINKS 
+
             with c_p2:
                 sub_c1, sub_c2 = st.columns(2)
                 if datos_op_2.get('link_diseno'):
                     sub_c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
                 if datos_op_2.get('link_ticket'):
                     sub_c2.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
-            
+
             if ver_radio_2:
                 radiografia_completa_op(datos_op_2)
 
@@ -1153,7 +1152,10 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
             if st.button("🚀 FINALIZAR Y ENVIAR A PLANTA", use_container_width=True):
                 supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
-                st.success("Enviado a Planta."); time.sleep(1); st.rerun()
+                st.success("Enviado."); time.sleep(1); st.rerun()
+        else:
+            st.info("No hay órdenes pendientes.") 
+            
 # MODULO 3: PLANIFICACION 
 
 elif menu == "📅 Planificación":
