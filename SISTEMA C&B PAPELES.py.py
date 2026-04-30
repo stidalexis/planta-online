@@ -1104,12 +1104,12 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
 
-            c_p1, c_p2,  = st.columns(3)
+            c_p1, c_p2,  = st.columns(2)
             with c_p1:
                 ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
 
             with c_p2:
-                sub_c1, sub_c2, sub_c3  = st.columns(2)
+                sub_c1, sub_c2 = st.columns(2)
                 if datos_op_2.get('link_diseno'):
                     sub_c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
                 if datos_op_2.get('link_ticket'):
