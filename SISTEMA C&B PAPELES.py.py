@@ -964,8 +964,22 @@ elif menu == "🔍 Seguimiento":
                     st.write("**⚙️ Tipo:**")
                     st.write(row.get('tipo_orden', 'N/A'))
                 with c4:
-                    if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}"):
+                    st.write("**🛠️ Acciones y Enlaces:**")
+# Botón de Radiografía 
+                    if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
+ # NUEVO: Mostrar 
+                    link_arte = row.get('link_diseno')
+                    link_ticket = row.get('link_ticket')
+
+                    if link_arte:
+                        st.link_button("🎨 Ver Arte", link_arte, use_container_width=True)
+                    
+                    if link_ticket:
+                        st.link_button("🎫 Ver Ticket", link_ticket, use_container_width=True)
+                    
+                    if not link_arte and not link_ticket:
+                        st.caption("Sin links adjuntos")
 
                 st.divider()
 
