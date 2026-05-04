@@ -960,6 +960,8 @@ elif menu == "🔍 Seguimiento":
                     st.info(area_destino)
                     st.write("**📦 CANTIDAD SOLICITADA:**")
                     st.write(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
+                    st.write("**📖 REFERENCIA COMERCIAL:**")
+                    st.write(row.get('ref_comercial', '')[:10])
                 with c3:
                     st.write("**📝 NOMBRE DE TRABAJO:**")
                     st.write(nombre_t)
