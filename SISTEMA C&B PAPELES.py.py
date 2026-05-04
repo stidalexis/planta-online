@@ -953,6 +953,8 @@ elif menu == "🔍 Seguimiento":
                     st.write(cliente)
                     st.write("**📅 Fecha:**")
                     st.write(row.get('created_at', '')[:10])
+                    st.write("**🔙 ORDEN ANTERIOR:**")
+                    st.write(row.get('op_anterior', '')[:10])
                 with c2:
                     st.write("**🏗️ Área Actual:**")
                     st.info(area_destino)
