@@ -136,35 +136,6 @@ def calcular_duracion_laboral(inicio, fin):
         actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0, tzinfo=actual.tzinfo)
 
     return str(total).split('.')[0]
-
-
-# DESCARGA EL EXCEL DE EL HISTORIAL
-
-def to_excel_limpio(df_input, tipo=None):
-
-    output = io.BytesIO()
-
-    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-
-        if tipo == "GENERAL":
-            df_f = df_input[df_input['tipo_orden'].str.contains("FORMAS", na=False)].dropna(axis=1, how='all')
-            df_r = df_input[df_input['tipo_orden'].str.contains("ROLLOS", na=False)].dropna(axis=1, how='all')
-
-            if not df_f.empty:
-                df_f.to_excel(writer, index=False, sheet_name='FORMAS')
-
-            if not df_r.empty:
-                df_r.to_excel(writer, index=False, sheet_name='ROLLOS')
-
-        else:
-            df_unit = df_input.dropna(axis=1, how='all')
-
-            if 'id' in df_unit.columns:
-                df_unit = df_unit.drop(columns=['id'])
-
-            df_unit.to_excel(writer, index=False, sheet_name='DETALLE_OP')
-
-    return output.getvalue()
     
 #  PDF DE CERTIFICADO 
 
