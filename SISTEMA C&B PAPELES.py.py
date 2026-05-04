@@ -2328,126 +2328,94 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  ENTREGAS PARCIALES 
 
             if parcial:
-
+                # 1. Validaciones: No permitimos avanzar si no hay datos básicos
                 if not op_name:
-                    st.error("Debes ingresar el operario")
+                    st.error("❌ Error: Debes ingresar el nombre del operario antes de registrar el parcial.")
                     st.stop()
 
                 if cantidad_parcial <= 0:
-                    st.error("Debes ingresar cantidad parcial")
+                    st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
                     st.stop()
 
+                # 2. Captura de tiempos (Usamos exactamente tu lógica de conversión)
                 inicio_raw = r['hora_inicio']
-
+                
+                # Convertir a datetime manejando formato ISO o objeto directo
                 if isinstance(inicio_raw, str):
                     inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
                 else:
                     inicio = inicio_raw
 
+                # Ajustar a Zona Horaria de Colombia
+                tz = pytz.timezone("America/Bogota")
+                if inicio.tzinfo is None:
+                    inicio = tz.localize(inicio)
+                else:
+                    inicio = inicio.astimezone(tz)
+
+                # Obtener hora actual y ajustar si hubo pausas
                 fin = hora_colombia()
-
-                tiempo_pausa = r.get("tiempo_pausa", 0)
-
-                fin_ajustado = fin
-
+                tiempo_pausa = r.get("tiempo_pausa", 0) # Segundos que la máquina estuvo pausada
                 from datetime import timedelta
                 fin_ajustado = fin - timedelta(seconds=tiempo_pausa)
 
+                # Calcular cuánto tiempo real se trabajó
                 duracion = calcular_duracion_laboral(inicio, fin_ajustado)
 
-#  RUTAS 2
+                # 3. Obtener los datos actuales de la Orden (OP) para no sobreescribir
                 d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                tipo = d_op['tipo_orden']
-                n_area = "FINALIZADO"
-
-                if tipo == "FORMAS IMPRESAS":
-                    if area_act == "IMPRESIÓN":
-                        n_area = "COLECTORAS"
-                    elif area_act == "COLECTORAS":
-                        n_area = "ENCUADERNACIÓN"
-
-                elif tipo == "FORMAS BLANCAS":
-                    if area_act == "IMPRESIÓN":
-                        n_area = "COLECTORAS"
-                    elif area_act == "COLECTORAS":
-                        n_area = "ENCUADERNACIÓN"
-
-                elif tipo == "ROLLOS IMPRESOS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "CORTE"
-
-                elif tipo == "ROLLOS BLANCOS":
-                        if area_act == "CORTE":
-                            n_area = "FINALIZADO"
-
+                
+                # Extraer el historial existente o crear una lista vacía si es la primera vez
                 hist = d_op.get('historial_procesos') or []
 
-                hist.append({
+                # 4. Construir el nuevo registro del historial para este parcial
+                registro_parcial = {
                     "area": area_act,
                     "maquina": r['maquina'],
                     "operario": op_name,
                     "auxiliar": auxiliar,
                     "fecha": fin.strftime("%d/%m/%Y %H:%M"),
                     "duracion": duracion,
-                    "tipo": "PARCIAL",
+                    "tipo": "ENTREGA PARCIAL",
                     "cantidad_parcial": cantidad_parcial,
-                    "observaciones": obs_parcial
-                })
-
-#  SOLO AVANZA, NO CIERRA
-
-                n_area = area_act 
-                if tipo == "RESMA":
-                    if area_act == "IMPRESIÓN":
-                        n_area_siguiente = "COLECTORAS"
-                    elif area_act == "COLECTORAS":
-                        n_area_siguiente = "ENCUADERNACIÓN"
-                    else:
-                        n_area_siguiente = "FINALIZADO"
-
-                elif tipo == "ROLLOS IMPRESOS":
-                    if area_act == "IMPRESIÓN":
-                        n_area_siguiente = "CORTE"
-                    else:
-                        n_area_siguiente = "FINALIZADO"
-                else:
-                    n_area_siguiente = "FINALIZADO"
-
-                hist = d_op.get('historial_processes') or []
-
-                hist.append({
-                    "area": area_act,
-                    "maquina": r['maquina'],
-                    "operario": op_name,
-                    "auxiliar": auxiliar,
-                    "fecha": fin.strftime("%d/%m/%Y %H:%M"),
-                    "duracion": duracion,
-                    "tipo": "PARCIAL",
-                    "cantidad_parcial": cantidad_parcial,
-                    "observaciones": f"ENTREGA PARCIAL: {obs_parcial}"
-                })
+                    "observaciones": f"PARCIAL: {obs_parcial}"
+                }
                 
+                # Agregamos el registro al historial
+                hist.append(registro_parcial)
+
+                # 5. ACTUALIZACIÓN EN 'ordenes_planeadas'
+                # Importante: proxima_area = area_act hace que la OP regrese a la lista de "Disponibles"
+                # en la misma área donde el operario está trabajando.
                 supabase.table("ordenes_planeadas").update({
-                    "proxima_area": n_area_siguiente, # Esto la manda a la siguiente fila del monitor
+                    "proxima_area": area_act, 
                     "historial_procesos": hist,
-                    "estado_parcial": "ACTIVO EN ORIGEN" # Marca especial para saber que no ha terminado en el área anterior
+                    "estado": "PENDIENTE (PARCIAL)"
                 }).eq("op", r['op']).execute()
 
-                st.success(f"Entrega parcial registrada. La OP ahora aparece en {n_area_siguiente} y sigue disponible aquí.")
+                # 6. LIBERAR LA MÁQUINA EN 'trabajos_activos'
+                # Esta es la línea que borra la orden de la máquina y la pone gris en el monitor
+                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
 
-# LIBERAR MAQUINA
+                # 7. Registrar en tiempos muertos (Opcional, para marcar fin de tramo)
+                try:
+                    supabase.table("tiempos_muertos").insert({
+                        "maquina": r['maquina'],
+                        "motivo": "FIN TRAMO PARCIAL",
+                        "inicio": fin.isoformat(),
+                        "fin": fin.isoformat(),
+                        "duracion_segundos": 0
+                    }).execute()
+                except Exception as e:
+                    # Si falla el insert en tiempos muertos, que no detenga el proceso principal
+                    pass
 
-                supabase.table("trabajos_activos").delete().eq("id", r['id']).execute()
-            
-                supabase.table("tiempos_muertos").insert({
-                    "maquina": r['maquina'],
-                    "motivo": "FIN TRAMO PARCIAL",
-                    "inicio": fin.isoformat(),
-                    "fin": fin.isoformat(),
-                    "duracion_segundos": 0
-                }).execute()
-                
+                # 8. Limpiar estado y reiniciar la aplicación
+                st.success(f"✅ Parcial de {cantidad_parcial} unidades guardado. La máquina {r['maquina']} ahora está LIBRE.")
+                st.session_state.rep = None # Limpiamos la selección de la OP actual
+                time.sleep(1.5)
                 st.rerun()
+
 
 if st.session_state.get('rol') == 'admin':
     st.divider()
