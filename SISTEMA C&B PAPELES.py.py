@@ -954,8 +954,8 @@ elif menu == "🔍 Seguimiento":
                     st.write("**📅 Fecha:**")
                     st.write(row.get('created_at', '')[:10])
                 with c2:
-                    st.write("**🏗️ Área Actual:**")
-                    st.info(area_destino)
+                    st.write("**🏗️ OP ANTERIOR :**")
+                    st.info('op_anterior')
                     st.write("**📦 Cantidad:**")
                     st.write(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
                 with c3:
