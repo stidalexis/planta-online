@@ -945,40 +945,40 @@ elif menu == "🔍 Seguimiento":
 #  DISEÑO DE TARJETA 
 
             with st.expander(f"📦 OP: {op_id} | {cliente} | {texto_estatus}"):
-                st.markdown(f"### Estatus: :{color_texto}[{texto_estatus}]")
+                st.markdown(f"### ESTATUS DE TRABAJO: :{color_texto}[{texto_estatus}]")
                 
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    st.write("**👤 Cliente:**")
+                    st.write("**👤 CLIENTE:**")
                     st.write(cliente)
-                    st.write("**📅 Fecha:**")
+                    st.write("**📅 FECHA:**")
                     st.write(row.get('created_at', '')[:10])
                     st.write("**🔙 ORDEN ANTERIOR:**")
                     st.write(row.get('op_anterior', '')[:10])
                 with c2:
-                    st.write("**🏗️ Área Actual:**")
+                    st.write("**🏗️ AREA ACTUAL:**")
                     st.info(area_destino)
-                    st.write("**📦 Cantidad:**")
+                    st.write("**📦 CANTIDAD SOLICITADA:**")
                     st.write(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
                 with c3:
-                    st.write("**📝 Trabajo:**")
+                    st.write("**📝 NOMBRE DE TRABAJO:**")
                     st.write(nombre_t)
-                    st.write("**⚙️ Tipo:**")
+                    st.write("**⚙️ TIPO DE TRABAJO:**")
                     st.write(row.get('tipo_orden', 'N/A'))
                 with c4:
-                    st.write("**🛠️ Acciones y Enlaces:**")
+                    st.write("**🛠️ ACCIONES Y ENLACES:**")
 # Botón de Radiografía 
-                    if st.button(f"📋 Ver Radiografía OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
+                    if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
- # NUEVO: Mostrar 
+ # NUEVO: Mostrar                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
                     link_arte = row.get('link_diseno')
                     link_ticket = row.get('link_ticket')
 
                     if link_arte:
-                        st.link_button("🎨 Ver Arte", link_arte, use_container_width=True)
+                        st.link_button("🎨 VER ARTE", link_arte, use_container_width=True)
                     
                     if link_ticket:
-                        st.link_button("🎫 Ver Ticket", link_ticket, use_container_width=True)
+                        st.link_button("🎫 VER TICKET", link_ticket, use_container_width=True)
                     
                     if not link_arte and not link_ticket:
                         st.caption("Sin links adjuntos")
