@@ -1343,7 +1343,7 @@ elif menu == "📅 Planificación":
                 r4, r5, r6 = st.columns(3)
                 cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
                 
-                cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS"]
+                cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS", " NINGUNO"]
                 idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
                 core = r5.selectbox("Core / Centro", cores, index=idx_core)
                                 
