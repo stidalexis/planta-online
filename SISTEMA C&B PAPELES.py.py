@@ -760,7 +760,7 @@ if not st.session_state.get('autenticado'):
 # ESTRUCTURA DE MENU CON PERMISOS POR ROL
 
 with st.sidebar:
-    st.title("🏭 C&B Papeles")
+     st.title("🏭 C&B PAPELES DE COLOMBIA S.A.S")
     
     rol = st.session_state.get('rol', 'operario').lower()
     
