@@ -1759,7 +1759,7 @@ elif menu == "📦 Almacen/Despachos":
                         st.info("ℹ️ Solo puede dar salida a productos que ya están en el inventario.")
                         nom_trabajo = st.selectbox("Seleccione Trabajo para Despacho:", [""] + nombres_existentes)
                     
-                    tipo_prod = st.selectbox("Tipo de Producto:", ["BLANCO", "IMPRESO", "REBOBINADO"])
+                    tipo_prod = st.selectbox("Tipo de Producto:", ["BLANCO", "IMPRESO", "REBOBINADO", "ADHESIVO"])
                 
                 with col2:
                     c_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
