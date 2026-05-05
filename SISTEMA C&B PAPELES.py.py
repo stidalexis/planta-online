@@ -646,6 +646,7 @@ def modal_detalle_op(row):
         👤 <b>Cliente:</b> {row.get('cliente')}<br>
         💼 <b>Vendedor:</b> {row.get('vendedor')}<br>
         📑 <b>referencia:</b> {row.get('ref_comercial')}<br>
+        🔙 <b>orden anterior:</b> {row.get('op_anterior')}<br>
         📅 <b>Fecha:</b> {row.get('created_at', '')[:10]}
         </div>
         """, unsafe_allow_html=True)
