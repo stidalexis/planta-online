@@ -766,6 +766,10 @@ with st.sidebar:
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega MaterialTerminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
+    elif rol == 'jefe_log':
+        opciones_menu = ["📦 Bodega MaterialTerminado""📊 Reportes Admin", "📦 Almacen/Despachos"]
+    elif rol == 'patinador_log':
+        opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'supervisor_imp':
         opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📕 Encuadernación"]
     elif rol == 'supervisor_cor':
@@ -1722,8 +1726,8 @@ elif menu == "📦 Almacen/Despachos":
         
 # DEFINE QUIN PUEDE HACER QUE DENTRO DEL MODULO 
 
-        puede_ingresar = rol_usuario in ['admin', 'almacen' ] 
-        puede_despachar = rol_usuario in ['admin']
+        puede_ingresar = rol_usuario in ['admin', 'jefe_log', 'patinador_log' ] 
+        puede_despachar = rol_usuario in ['admin', 'jefe_log', 'patinador_log']
 
 #  SELECTOR DE OPERACION FILTRADO
 
@@ -2428,7 +2432,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseno', "patinador_roll", "almacen" ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseno', "patinador_roll", "almacen", "jefe_log", "patinador_log" ], key="admin_r")
         
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
