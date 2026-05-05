@@ -767,7 +767,7 @@ with st.sidebar:
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'jefe_log':
-        opciones_menu = ["📦 Bodega MaterialTerminado""📊 Reportes Admin", "📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Bodega MaterialTerminado", "📊 Reportes Admin", "📦 Almacen/Despachos"]
     elif rol == 'patinador_log':
         opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'supervisor_imp':
