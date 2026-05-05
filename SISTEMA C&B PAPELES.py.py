@@ -666,8 +666,8 @@ def modal_detalle_op(row):
             <div class='metric-box'>
             📄 <b>Material:</b> {row.get('material')}<br>
             📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
-            📦 <b>unidadses por caja:</b> {row.get('unidades_caja')}<br>
-            🛍️ <b>unidadses por bolsa:</b> {row.get('unidades_bolsa')}<br>
+            📦 <b>unidades por caja:</b> {row.get('unidades_caja')}<br>
+            🛍️ <b>unidades por bolsa:</b> {row.get('unidades_bolsa')}<br>
             📦 <b>Cantidad:</b> {row.get('cantidad_rollos')}
             </div>
             """, unsafe_allow_html=True)
