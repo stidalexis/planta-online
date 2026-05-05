@@ -645,6 +645,7 @@ def modal_detalle_op(row):
         <div class='metric-box'>
         👤 <b>Cliente:</b> {row.get('cliente')}<br>
         💼 <b>Vendedor:</b> {row.get('vendedor')}<br>
+        📑 <b>referencia:</b> {row.get('ref_comercial')}<br>
         📅 <b>Fecha:</b> {row.get('created_at', '')[:10]}
         </div>
         """, unsafe_allow_html=True)
@@ -664,6 +665,8 @@ def modal_detalle_op(row):
             <div class='metric-box'>
             📄 <b>Material:</b> {row.get('material')}<br>
             📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
+            📦 <b>unidadses por caja:</b> {row.get('unidades_caja')}<br>
+            🛍️ <b>unidadses por bolsa:</b> {row.get('unidades_bolsa')}<br>
             📦 <b>Cantidad:</b> {row.get('cantidad_rollos')}
             </div>
             """, unsafe_allow_html=True)
