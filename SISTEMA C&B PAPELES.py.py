@@ -735,7 +735,7 @@ if 'rep' not in st.session_state: st.session_state.rep = None
 # LOGIN PRINCIPAL 
 
 if not st.session_state.get('autenticado'):
-    st.title("🔐 Acceso al Sistema C&B Palepes De Colombia")
+    st.title("🔐 Acceso al Sistema C&B PAPELS DE COLOMBIA S.A.S")
     
     with st.form("login_form"):
         user = st.text_input("Usuario")
