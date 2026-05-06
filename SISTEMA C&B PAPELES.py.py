@@ -1134,7 +1134,7 @@ elif menu == "📅 Planificación":
 
     st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
     origen = st.radio("¿Cómo desea ingresar la orden?", 
-                      ["NUEVA (Desde cero)", "REPETICION ( Exacta )", "REPETICION ( CON CAMBIOS )"], 
+                      ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                       horizontal=True)
     
 # VARIABLE PARA ALMACENAR DATOS RECUPERADOS
