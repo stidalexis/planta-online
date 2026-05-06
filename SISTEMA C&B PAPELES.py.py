@@ -760,7 +760,7 @@ if not st.session_state.get('autenticado'):
 # ESTRUCTURA DE MENU CON PERMISOS POR ROL
 
 with st.sidebar:
-    st.title("🏭 C&B PAPELES DE COLOMBIA S.A.S")
+    st.title("🏭 C&B Papeles")
     
     rol = st.session_state.get('rol', 'operario').lower()
     
@@ -788,7 +788,7 @@ with st.sidebar:
         opciones_menu = ["📦 Bodega MaterialTerminado"]
     elif rol == 'almacen':
         opciones_menu = ["📦 Almacen/Despachos"]
-    elif rol == 'diseno':
+    elif rol == 'diseño':
         opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
     else:
 
@@ -1071,18 +1071,18 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 # SECCION DE LINKS 
             col_links = st.columns(2)
             with col_links[0]:
-                # Vinculado a 'link_diseno' en Supabase
-                link_arte = st.text_input("Link del Arte (Drive/Cloud):", value=datos_op.get('link_diseno', '') or "")
+# Vinculado a 'link_diseno' en Supabase
+                link_arte = st.text_input("Link del Arte :", value=datos_op.get('link_diseno', '') or "")
 
             with col_links[1]:
-                # Vinculado a 'link_ticket' en Supabase
+# Vinculado a 'link_ticket' en Supabase
                 link_ticket = st.text_input("Link del Ticket:", value=datos_op.get('link_ticket', '') or "")
             
             obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
             
             if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
                 if link_arte:
-                    # Actualizamos ambos links en la base de datos
+
                     update_data = {
                         "link_diseno": link_arte, 
                         "link_ticket": link_ticket, 
@@ -2438,7 +2438,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseno', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log' ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', 'diseño' ], key="admin_r")
         
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
