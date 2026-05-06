@@ -1056,7 +1056,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v5")
+            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} | - | {o['nombre_trabajo']} | - | {o['tipo_origen']}" for o in op_pendientes], key="aud_v5")
             op_id = op_sel.split(" - ")[0]
             
             # Buscamos los datos de la OP seleccionada
