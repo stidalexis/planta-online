@@ -1072,6 +1072,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                     num_ticket = st.number_input("Número de Ticket:", value=int(datos_op.get('num_ticket', 0) or 0), step=1)
                 
                 obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
+                num_plancha = st.text_input("ID o Referencia de Plancha:")
                 
                 if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
                     if link_arte and num_ticket > 0:
