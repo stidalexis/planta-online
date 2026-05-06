@@ -1098,7 +1098,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v5")
+            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pre], key="pre_v5")
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next((o for o in op_pre if str(o['op']) == str(op_id_2)), None)
 
