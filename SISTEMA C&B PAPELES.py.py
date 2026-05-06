@@ -1055,7 +1055,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v5")
+            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pendientes], key="aud_v5")
             op_id = op_sel.split(" - ")[0]
             datos_op = next((o for o in op_pendientes if str(o['op']) == str(op_id)), None)
 
@@ -1091,7 +1091,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v5")
+            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pre], key="pre_v5")
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next((o for o in op_pre if str(o['op']) == str(op_id_2)), None)
 
@@ -1113,7 +1113,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_final = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "REVISION_FINAL").execute().data
 
         if op_final:
-            op_sel_3 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_final], key="final_v5")
+            op_sel_3 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_final], key="final_v5")
             op_id_3 = op_sel_3.split(" - ")[0]
             datos_op_3 = next((o for o in op_final if str(o['op']) == str(op_id_3)), None)
 
