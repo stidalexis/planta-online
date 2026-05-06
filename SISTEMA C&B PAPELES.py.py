@@ -994,7 +994,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
     def radiografia_completa_op(datos):
-        st.expander("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
+        st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
 
  #  INFORMACIoN GENERAL Y COMERCIAL
         with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
