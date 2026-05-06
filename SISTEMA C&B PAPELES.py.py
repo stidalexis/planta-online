@@ -1013,27 +1013,38 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.markdown("**ADICIONALES ROLLOS**")
                 st.write(f"TINTAS FRENTE: {datos.get('tintas_frente_rollos')}")
                 st.write(f"TINTAS RESPALDO: {datos.get('tintas_respaldo_rollos')}")
+                st.write(f"CANTIDAD SOLICITADA: {datos.get('cantidad_rollos')}")
+                st.write(f"CORE: {datos.get('core')}")
             with c2:
-                st.markdown("**LOGÍSTICA**")
-                st.write(f"REF. COMERCIAL: {datos.get('ref_comercial')}")
-                st.write(f"UNIDADES BOLSA: {datos.get('unidades_bolsa')}")
+                st.markdown("**ADICIONALES ROLLOS**")
+                st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
+                st.write(f"UNIDADRES POR BOLSA: {datos.get('unidades_bolsa')}")
+                st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
+                st.write(f"REPETICION : {datos.get('tipo_origen')}")
             with c3:
                 st.markdown("**ADICIONALES FORMAS**")
-                st.write(f"PERFORACIONES: {datos.get('perforaciones_detalle')}")
-                st.write(f"COD. BARRAS: {datos.get('codigo_barras_detalle')}")
+                st.write(f"PERFORECIOBNES: {datos.get('perforaciones_detalle')}")
+                st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
+                st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
+                st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
+            
             with c4:
-                st.markdown("**PRESENTACIÓN**")
+                st.markdown("**ADICIONAlES DE FORMAS**")
                 st.write(f"PRESENTACION: {datos.get('presentacion')}")
-                st.write(f"PARTES: {datos.get('num_partes', 0)}")
+                st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
+                st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
         c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
-            st.info(f"**📝 OBSERVACIONES:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
+            st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
+            st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
         with c_obs2:
             if datos.get('detalles_partes_json'):
-                st.table(datos.get('detalles_partes_json'))
+                st.write("**📑 Estructura de Partes (Papel/Tintas):**")
+                st.table(datos_op.get('detalles_partes_json'))
             else:
-                st.write("**Tipo:** ROLLOS IMPRESOS")
+                st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
+
 
 #  DEFINICION DE VENTANAS
     tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLACA"])
