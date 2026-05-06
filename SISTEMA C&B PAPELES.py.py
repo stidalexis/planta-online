@@ -1061,7 +1061,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
 
             # Botón único para ver radiografía
-            ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
+            ver_radio = st.expander("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             
             if ver_radio:
                 radiografia_completa_op(datos_op)
