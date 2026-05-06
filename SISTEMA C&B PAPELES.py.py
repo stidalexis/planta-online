@@ -1058,16 +1058,15 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         if op_pendientes:
             op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v5")
             op_id = op_sel.split(" - ")[0]
-            datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
-
-            # Botón único para ver radiografía
-            ver_radio = st.toggle("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
             
-            if ver_radio:
+            # Buscamos los datos de la OP seleccionada
+            datos_op = next((o for o in op_pendientes if str(o['op']) == str(op_id)), None)
+
+            if datos_op:
+                # LLAMADA DIRECTA: Ahora la información comercial y técnica se ve de inmediato
                 radiografia_completa_op(datos_op)
             
             st.divider()
-            
 # SECCION DE LINKS 
             col_links = st.columns(2)
             with col_links[0]:
@@ -1101,29 +1100,22 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         if op_pre:
             op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v5")
             op_id_2 = op_sel_2.split(" - ")[0]
-            datos_op_2 = next(o for o in op_pre if str(o['op']) == str(op_id_2))
+            datos_op_2 = next((o for o in op_pre if str(o['op']) == str(op_id_2)), None)
 
-            c_p1, c_p2,  = st.columns(2)
-            with c_p1:
-                ver_radio_2 = st.toggle("🔍 VER RADIOGRAFÍA", key="tog_pre")
+            if datos_op_2:
+                # Mostramos los botones de links arriba para acceso rápido
+                c_p1, c_p2 = st.columns([1, 1])
+                with c_p1:
+                    if datos_op_2.get('link_diseno'):
+                        st.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
+                with c_p2:
+                    if datos_op_2.get('link_ticket'):
+                        st.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
 
-            with c_p2:
-                sub_c1, sub_c2 = st.columns(2)
-                if datos_op_2.get('link_diseno'):
-                    sub_c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
-                if datos_op_2.get('link_ticket'):
-                    sub_c2.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
-
-            if ver_radio_2:
+                # Mostramos la radiografía automáticamente
                 radiografia_completa_op(datos_op_2)
 
-            st.warning(f"**Notas Auditoría:** {datos_op_2.get('observaciones_diseno', 'Sin notas')}")
-
-            if st.button("🚀 FINALIZAR Y ENVIAR A PLANTA", use_container_width=True):
-                supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_2).execute()
-                st.success("Enviado."); time.sleep(1); st.rerun()
-        else:
-            st.info("No hay órdenes pendientes.") 
+            st.warning(f"**Notas Auditoría:** {datos_op_2.get('observaciones_diseno', 'Sin notas')}") 
             
 # MODULO 3: PLANIFICACION 
 
