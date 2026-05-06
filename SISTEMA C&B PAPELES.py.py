@@ -995,8 +995,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
     def radiografia_completa_op(datos):
         st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
-
- #  INFORMACIoN GENERAL Y COMERCIAL
+        
         with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             c1.write(f"**OP #:**\n{datos.get('op')}")
@@ -1008,114 +1007,119 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
-#  ESPECIFICACIONES TeCNICAS DEL PRODUCTO
         with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
                 st.markdown("**ADICIONALES ROLLOS**")
                 st.write(f"TINTAS FRENTE: {datos.get('tintas_frente_rollos')}")
                 st.write(f"TINTAS RESPALDO: {datos.get('tintas_respaldo_rollos')}")
-                st.write(f"CANTIDAD SOLICITADA: {datos.get('cantidad_rollos')}")
-                st.write(f"CORE: {datos.get('core')}")
             with c2:
-                st.markdown("**ADICIONALES ROLLOS**")
-                st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
-                st.write(f"UNIDADRES POR BOLSA: {datos.get('unidades_bolsa')}")
-                st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
-                st.write(f"REPETICION : {datos.get('tipo_origen')}")
+                st.markdown("**LOGÍSTICA**")
+                st.write(f"REF. COMERCIAL: {datos.get('ref_comercial')}")
+                st.write(f"UNIDADES BOLSA: {datos.get('unidades_bolsa')}")
             with c3:
                 st.markdown("**ADICIONALES FORMAS**")
-                st.write(f"PERFORECIOBNES: {datos.get('perforaciones_detalle')}")
-                st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
-                st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
-                st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
-            
+                st.write(f"PERFORACIONES: {datos.get('perforaciones_detalle')}")
+                st.write(f"COD. BARRAS: {datos.get('codigo_barras_detalle')}")
             with c4:
-                st.markdown("**ADICIONAlES DE FORMAS**")
+                st.markdown("**PRESENTACIÓN**")
                 st.write(f"PRESENTACION: {datos.get('presentacion')}")
-                st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
-                st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
+                st.write(f"PARTES: {datos.get('num_partes', 0)}")
 
-#  DETALLE DE PARTES (SI ES FORMAS) Y OBSERVACIONES
         c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
-            st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
-            st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
+            st.info(f"**📝 OBSERVACIONES:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
         with c_obs2:
             if datos.get('detalles_partes_json'):
-                st.write("**📑 Estructura de Partes (Papel/Tintas):**")
-                st.table(datos_op.get('detalles_partes_json'))
+                st.table(datos.get('detalles_partes_json'))
             else:
-                st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
+                st.write("**Tipo:** ROLLOS IMPRESOS")
 
+#  DEFINICION DE VENTANAS
+    tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLACA"])
 
-    tab1, tab2 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA FINAL"])
-
+#  AUDITORIA
     with tab1:
-        st.subheader("🕵️ Revision de Diseño")
+        st.subheader("🕵️ Revisión de Diseño")
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pendientes], key="aud_v5")
+            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pendientes], key="aud_v5")
             op_id = op_sel.split(" - ")[0]
-            
-            # Buscamos los datos de la OP seleccionada
             datos_op = next((o for o in op_pendientes if str(o['op']) == str(op_id)), None)
 
             if datos_op:
-                # LLAMADA DIRECTA: Ahora la información comercial y técnica se ve de inmediato
                 radiografia_completa_op(datos_op)
-            
-            st.divider()
-# SECCION DE LINKS 
-            col_links = st.columns(2)
-            with col_links[0]:
-                # Vinculado a 'link_diseno' en Supabase
-                link_arte = st.text_input("Link del Arte (Drive/Cloud):", value=datos_op.get('link_diseno', '') or "")
+                st.divider()
+                
+                col_inputs = st.columns(2)
+                with col_inputs[0]:
+                    link_arte = st.text_input("Link del Arte (Drive):", value=datos_op.get('link_diseno', '') or "")
+                with col_inputs[1]:
+                    
+                    num_ticket = st.number_input("Número de Ticket:", value=int(datos_op.get('num_ticket', 0) or 0), step=1)
+                
+                obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
+                
+                if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
+                    if link_arte and num_ticket > 0:
+                        update_data = {
+                            "link_diseno": link_arte, 
+                            "num_ticket": num_ticket, 
+                            "observaciones_diseno": obs_dis, 
+                            "proxima_area": "PRE-PRENSA"
+                        }
+                        supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
+                        st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
+                    else:
+                        st.error("El link del ARTE y el NÚMERO DE TICKET son obligatorios.")
 
-            with col_links[1]:
-                # Vinculado a 'link_ticket' en Supabase
-                link_ticket = st.text_input("Link del Ticket:", value=datos_op.get('link_ticket', '') or "")
-            
-            obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
-            
-            if st.button("✅ APROBAR Y ENVIAR A PRE-PRENSA", use_container_width=True):
-                if link_arte:
-                    # Actualizamos ambos links en la base de datos
-                    update_data = {
-                        "link_diseno": link_arte, 
-                        "link_ticket": link_ticket, 
-                        "observaciones_diseno": obs_dis, 
-                        "proxima_area": "PRE-PRENSA"
-                    }
-                    supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
-                    st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
-                else:
-                    st.error("El link del ARTE es obligatorio.")
-
+# 2: PRE-PRENSA
     with tab2:
-        st.subheader("🎞️ Revisión Pre-Prensa")
+        st.subheader("🎞️ Procesamiento de Archivos")
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pre], key="pre_v5")
+            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_pre], key="pre_v5")
             op_id_2 = op_sel_2.split(" - ")[0]
             datos_op_2 = next((o for o in op_pre if str(o['op']) == str(op_id_2)), None)
 
             if datos_op_2:
-                # Mostramos los botones de links arriba para acceso rápido
-                c_p1, c_p2 = st.columns([1, 1])
-                with c_p1:
-                    if datos_op_2.get('link_diseno'):
-                        st.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno'), use_container_width=True)
-                with c_p2:
-                    if datos_op_2.get('link_ticket'):
-                        st.link_button("🎫 ABRIR TICKET", datos_op_2.get('link_ticket'), use_container_width=True)
+               
+                c1, c2 = st.columns(2)
+                c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno', '#'), use_container_width=True)
+                c2.metric("🎫 TICKET ASIGNADO", datos_op_2.get('num_ticket', 0))
 
-                # Mostramos la radiografía automáticamente
                 radiografia_completa_op(datos_op_2)
+                
+                if st.button("🚀 ENVIAR A REVISIÓN FINAL", use_container_width=True):
+                    supabase.table("ordenes_planeadas").update({"proxima_area": "REVISION_FINAL"}).eq("op", op_id_2).execute()
+                    st.success("Enviado a Revisión Final."); time.sleep(1); st.rerun()
 
-            st.warning(f"**Notas Auditoría:** {datos_op_2.get('observaciones_diseno', 'Sin notas')}") 
+# 3: REVISION FINAL CON PLANCHA 
+    with tab3:
+        st.subheader("⚡ Control de Planchas y Salida")
+        op_final = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "REVISION_FINAL").execute().data
+
+        if op_final:
+            op_sel_3 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']}" for o in op_final], key="final_v5")
+            op_id_3 = op_sel_3.split(" - ")[0]
+            datos_op_3 = next((o for o in op_final if str(o['op']) == str(op_id_3)), None)
+
+            if datos_op_3:
+                st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **Notas:** {datos_op_3.get('observaciones_diseno')}")
+                
+# Aquí puedes agregar campos específicos de planchas
+                num_plancha = st.text_input("ID o Referencia de Plancha:")
+                
+                radiografia_completa_op(datos_op_3)
+
+                if st.button("🏁 FINALIZAR Y ENVIAR A IMPRESIÓN", use_container_width=True):
+                    # Actualizamos a IMPRESIÓN para que pase a la planta
+                    supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_3).execute()
+                    st.success("Orden enviada a planta exitosamente."); time.sleep(1); st.rerun()
+        else:
+            st.info("No hay órdenes pendientes para revisión de plancha.")
             
 # MODULO 3: PLANIFICACION 
 
