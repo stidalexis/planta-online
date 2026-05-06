@@ -1058,7 +1058,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         if op_pendientes:
             op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} | - | {o['nombre_trabajo']} | - | {o['tipo_origen']}" for o in op_pendientes], key="aud_v5")
             op_id = op_sel.split(" - ")[0]
-            datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id))
+            datos_op = next(o for o in op_pendientes if str(o['op']) == str(op_id)), None
 
             # Botón único para ver radiografía
             ver_radio = st.expander("🔍 MOSTRAR RADIOGRAFIA COMPLETA", key="tog_aud")
