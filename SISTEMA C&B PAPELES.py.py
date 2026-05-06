@@ -1120,7 +1120,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             datos_op_3 = next((o for o in op_final if str(o['op']) == str(op_id_3)), None)
 
             if datos_op_3:
-                st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **Notas:** {datos_op_3.get('observaciones_diseno')}")
+                st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **Notas:** {datos_op_3.get('observaciones_diseno')} | **Notas:** {datos_op_3.get('observaciones_diseno2')}")
                 
 # Aquí puedes agregar campos específicos de planchas
                 num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:")
