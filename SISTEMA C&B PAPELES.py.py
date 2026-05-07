@@ -1036,12 +1036,12 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
                 st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
-        c_obs1, c_obs2 = st.columns(2)
+        c_obs1, c_obs2 = st.columns(1)
         with c_obs1:
             st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
             st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
             st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
-        with c_obs2:
+        with c_obs1:
             if datos.get('detalles_partes_json'):
                 st.write("**📑 Estructura de Partes (Papel/Tintas):**")
                 st.table(datos_op.get('detalles_partes_json'))
