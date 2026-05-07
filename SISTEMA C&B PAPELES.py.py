@@ -948,6 +948,8 @@ elif menu == "🔍 Seguimiento":
                     st.write(nombre_t)
                     st.write("**⚙️ TIPO DE TRABAJO:**")
                     st.write(row.get('tipo_orden', 'N/A'))
+                    st.write("**📋 OBSERVACIONES DE DISEÑO:**")
+                    st.write(row.get('observaciones_diseno2', 'N/A'))
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
 # Botón de Radiografía 
