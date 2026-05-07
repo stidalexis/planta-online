@@ -799,7 +799,7 @@ with st.sidebar:
         opciones_menu = ["📦 Bodega MaterialTerminado"]
     elif rol == 'almacen':
         opciones_menu = ["📦 Almacen/Despachos"]
-    elif rol == 'diseno':
+    elif rol == 'diseño':
         opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
     else:
 
@@ -2460,7 +2460,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseno', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log' ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log' ], key="admin_r")
         
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
