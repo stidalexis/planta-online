@@ -1086,6 +1086,53 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                         st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
                     else:
                         st.error("El link del ARTE y el NÚMERO DE TICKET son obligatorios.")
+
+# 2: PRE-PRENSA
+    with tab2:
+        st.subheader("🎞️ Procesamiento de Archivos")
+        op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
+
+        if op_pre:
+            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pre], key="pre_v5")
+            op_id_2 = op_sel_2.split(" - ")[0]
+            datos_op_2 = next((o for o in op_pre if str(o['op']) == str(op_id_2)), None)
+
+            if datos_op_2:
+               
+                c1, c2 = st.columns(2)
+                c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno', '#'), use_container_width=True)
+                c2.metric("🎫 TICKET ASIGNADO", datos_op_2.get('num_ticket', 0))
+
+                radiografia_completa_op(datos_op_2)
+                
+                if st.button("🚀 ENVIAR A REVISIÓN FINAL", use_container_width=True):
+                    supabase.table("ordenes_planeadas").update({"proxima_area": "REVISION_FINAL"}).eq("op", op_id_2).execute()
+                    st.success("Enviado a Revisión Final."); time.sleep(1); st.rerun()
+
+# 3: REVISION FINAL CON PLANCHA 
+    with tab3:
+        st.subheader("⚡ Control de Planchas y Salida")
+        op_final = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "REVISION_FINAL").execute().data
+
+        if op_final:
+            op_sel_3 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_final], key="final_v5")
+            op_id_3 = op_sel_3.split(" - ")[0]
+            datos_op_3 = next((o for o in op_final if str(o['op']) == str(op_id_3)), None)
+
+            if datos_op_3:
+                st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **Notas:** {datos_op_3.get('observaciones_diseno')} | **DATOS DE PLANCHAS A REVELAR:** {datos_op_3.get('observaciones_diseno2')}")
+                
+# Aquí puedes agregar campos específicos de planchas
+                num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:")
+                
+                radiografia_completa_op(datos_op_3)
+
+                if st.button("🏁 FINALIZAR Y ENVIAR A IMPRESIÓN", use_container_width=True):
+                    # Actualizamos a IMPRESIÓN para que pase a la planta
+                    supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_3).execute()
+                    st.success("Orden enviada a planta exitosamente."); time.sleep(1); st.rerun()
+        else:
+            st.info("No hay órdenes pendientes para revisión de plancha.")
             
 # MODULO 3: PLANIFICACION 
 
