@@ -982,7 +982,7 @@ elif menu == "🔍 Seguimiento":
                 st.divider()
 
 #  BOTONES DE DESCARGA 
-                if st.session_state.get('rol') in ['admin', 'ventas']:
+                if st.session_state.get('rol') in ['admin', 'ventas', 'dideño']:
                     try:
                         tipo = row.get('tipo_orden', '')
                         if "FORMAS" in tipo:
