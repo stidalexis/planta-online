@@ -1010,7 +1010,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
         with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
-            c1, c2, c3, c4, c5 = st.columns(4)
+            c1, c2, c3, c4 = st.columns(4)
             with c1:
                 st.markdown("**ADICIONALES ROLLOS**")
                 st.write(f"TINTAS FRENTE: {datos.get('tintas_frente_rollos')}")
