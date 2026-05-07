@@ -677,7 +677,7 @@ def modal_detalle_op(row):
             st.markdown(f"""
             <div class='metric-box'>
             📄 <b>Material:</b> {row.get('material')}<br>
-            📏 <b>Gramaje:</b> {row.get('gramaje_rollos','GRS')}<br>
+            📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
             📦 <b>unidades por caja:</b> {row.get('unidades_caja')}<br>
             🛍️ <b>unidades por bolsa:</b> {row.get('unidades_bolsa')}<br>
             📦 <b>Cantidad:</b> {row.get('cantidad_rollos')}
