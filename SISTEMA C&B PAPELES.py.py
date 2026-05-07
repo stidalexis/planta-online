@@ -1032,12 +1032,12 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             with c2:
                 st.markdown("**ADICIONALES ROLLOS**")
                 st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
-                st.write(f"UNIDADRES POR BOLSA: {datos.get('unidades_bolsa')}")
+                st.write(f"UNIDADES POR BOLSA: {datos.get('unidades_bolsa')}")
                 st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
                 st.write(f"REPETICION : {datos.get('tipo_origen')}")
             with c3:
                 st.markdown("**ADICIONALES FORMAS**")
-                st.write(f"PERFORECIOBNES: {datos.get('perforaciones_detalle')}")
+                st.write(f"PERFORACIONES: {datos.get('perforaciones_detalle')}")
                 st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
                 st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
                 st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
