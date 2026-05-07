@@ -656,7 +656,7 @@ def modal_detalle_op(row):
         <div class='metric-box'>
         👤 <b>Cliente:</b> {row.get('cliente')}<br>
         💼 <b>Vendedor:</b> {row.get('vendedor')}<br>
-        📝 <b>Nombre trabajo:</b> {row.get('nombre_t')}<br>
+        📝 <b>Nombre trabajo:</b> {row.get('nombre_trabajo')}<br>
         📑 <b>referencia:</b> {row.get('ref_comercial')}<br>
         🔙 <b>orden anterior:</b> {row.get('op_anterior')}<br>
         📅 <b>Fecha:</b> {row.get('created_at', '')[:10]}
