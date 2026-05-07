@@ -982,7 +982,7 @@ elif menu == "🔍 Seguimiento":
                 st.divider()
 
 #  BOTONES DE DESCARGA 
-                if st.session_state.get('rol') in ['admin', 'ventas', 'dideño']:
+                if st.session_state.get('rol') in ['admin', 'ventas', 'diseño']:
                     try:
                         tipo = row.get('tipo_orden', '')
                         if "FORMAS" in tipo:
@@ -1047,14 +1047,15 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
                 st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
-        
+        c_obs1, c_obs2 = st.columns(2)
+        with c_obs1:
             st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
             st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
             st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
-        
+        with c_obs2:
             if datos.get('detalles_partes_json'):
                 st.write("**📑 Estructura de Partes (Papel/Tintas):**")
-                st.table(datos.get('detalles_partes_json'))
+                st.table(datos_op.get('detalles_partes_json'))
             else:
                 st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
 
