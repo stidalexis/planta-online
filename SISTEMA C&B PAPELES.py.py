@@ -1080,7 +1080,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                             "link_diseno": link_arte, 
                             "num_ticket": num_ticket, 
                             "observaciones_diseno": obs_dis, 
-                            "observaciones_diseno2": obs_dis1,
                             "proxima_area": "PRE-PRENSA"
                         }
                         supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
