@@ -656,6 +656,7 @@ def modal_detalle_op(row):
         <div class='metric-box'>
         👤 <b>Cliente:</b> {row.get('cliente')}<br>
         💼 <b>Vendedor:</b> {row.get('vendedor')}<br>
+        📝 <b>Nombre trabajo:</b> {row.get('nombre_t')}<br>
         📑 <b>referencia:</b> {row.get('ref_comercial')}<br>
         🔙 <b>orden anterior:</b> {row.get('op_anterior')}<br>
         📅 <b>Fecha:</b> {row.get('created_at', '')[:10]}
@@ -676,7 +677,7 @@ def modal_detalle_op(row):
             st.markdown(f"""
             <div class='metric-box'>
             📄 <b>Material:</b> {row.get('material')}<br>
-            📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
+            📏 <b>Gramaje:</b> {row.get('gramaje_rollos','GRS')}<br>
             📦 <b>unidades por caja:</b> {row.get('unidades_caja')}<br>
             🛍️ <b>unidades por bolsa:</b> {row.get('unidades_bolsa')}<br>
             📦 <b>Cantidad:</b> {row.get('cantidad_rollos')}
@@ -963,7 +964,7 @@ elif menu == "🔍 Seguimiento":
                     st.write(row.get('observaciones_diseno', 'N/A'))
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
-# Botón de Radiografía 
+# BOTON DE READIOGRAFIA
                     if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
  # NUEVO: Mostrar                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
@@ -981,7 +982,7 @@ elif menu == "🔍 Seguimiento":
 
                 st.divider()
 
-#  BOTONES DE DESCARGA 
+#  BOTONES DE DESCARGA ORDEN EN PDF
                 if st.session_state.get('rol') in ['admin', 'ventas', 'diseño']:
                     try:
                         tipo = row.get('tipo_orden', '')
