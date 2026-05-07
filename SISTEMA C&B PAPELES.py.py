@@ -1036,7 +1036,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
                 st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
 
-        c_obs1 = st.columns(1)
+        c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
             st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
             st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
@@ -1047,6 +1047,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.table(datos_op.get('detalles_partes_json'))
             else:
                 st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
+
 
 #  DEFINICION DE VENTANAS
     tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLACA"])
