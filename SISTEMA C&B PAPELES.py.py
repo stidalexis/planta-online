@@ -285,6 +285,17 @@ def generar_pdf_op(row):
 from fpdf import FPDF
 from datetime import datetime
 
+# FUNCION PARA AJUSTAR TEXTO
+
+def cell_fit(pdf, w, h, text, border=1):
+
+    text = str(text)
+
+    while pdf.get_string_width(text) > (w - 2):
+        text = text[:-1]
+
+    pdf.cell(w, h, text, border)
+
 def generar_op_rollos(row):
     pdf = FPDF()
     pdf.add_page()
