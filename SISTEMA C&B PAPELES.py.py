@@ -1072,14 +1072,15 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                     num_ticket = st.number_input("Número de Ticket:", value=int(datos_op.get('num_ticket', 0) or 0), step=1)
                 
                 obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
-                obs_dis = st.text_area("✍️ ESPESIFICACIONE SPARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "")
+                obs_dise = st.text_area("✍️ ESPESIFICACIONE SPARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "")
                 
                 if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
                     if link_arte and num_ticket > 0:
                         update_data = {
                             "link_diseno": link_arte, 
                             "num_ticket": num_ticket, 
-                            "observaciones_diseno": obs_dis, 
+                            "observaciones_diseno": obs_dis,
+                            "observaciones_diseno2": obs_dise,  
                             "proxima_area": "PRE-PRENSA"
                         }
                         supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
