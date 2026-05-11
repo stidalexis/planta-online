@@ -111,27 +111,31 @@ def hora_colombia():
 
 # FUNCION DE HORARIOS
 
-def calcular_duracion_laboral(inicio, fin, segundos_pausa=0):
-    """Calcula el tiempo laboral de 6am a 10pm restando las pausas."""
-    tz = pytz.timezone("America/Bogota")
-    if inicio.tzinfo is None: inicio = tz.localize(inicio)
-    if fin.tzinfo is None: fin = tz.localize(fin)
+def calcular_duracion_laboral(inicio, fin):
 
-    total_minutos = 0
-    current_date = inicio.date()
+    jornada_inicio = 6
+    jornada_fin = 22
 
-    while current_date <= fin.date():
-        start_work = tz.localize(datetime.combine(current_date, datetime.min.time().replace(hour=6)))
-        end_work = tz.localize(datetime.combine(current_date, datetime.min.time().replace(hour=22)))
-        actual_start = max(inicio, start_work)
-        actual_end = min(fin, end_work)
-        if actual_start < actual_end:
-            total_minutos += (actual_end - actual_start).total_seconds() / 60
-        current_date += pd.Timedelta(days=1)
+    actual = inicio
+    total = timedelta()
 
-    # RESTA DE PAUSAS
-    minutos_finales = total_minutos - (segundos_pausa / 60)
-    return round(max(0, minutos_finales), 2)
+    while actual.date() <= fin.date():
+
+        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0, tzinfo=actual.tzinfo)
+        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0, tzinfo=actual.tzinfo)
+
+        if actual.date() == inicio.date():
+            dia_inicio = max(inicio, dia_inicio)
+
+        if actual.date() == fin.date():
+            dia_fin = min(fin, dia_fin)
+
+        if dia_inicio < dia_fin:
+            total += (dia_fin - dia_inicio)
+
+        actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0, tzinfo=actual.tzinfo)
+
+    return str(total).split('.')[0]
     
 #  PDF DE CERTIFICADO 
 
@@ -2004,13 +2008,15 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
-#  LOGICA DE ENCENDIDO / APAGADO 
+ # LOGICA DE PARADAS TECNICAS 
+
                 if not tr.get("pausado"):
-                    st.success(f"🟢 MÁQUINA EN MARCHA")
-                    with st.popover("🚨 APAGAR / PARADA TÉCNICA"):
-                        # Usamos 'p_mot_' para que la clave sea única y no dé error
-                        motivo_p = st.selectbox("Motivo de parada:", MOTIVOS_PARADA, key=f"p_mot_{m}")
-                        if st.button("Confirmar Apagado (OFF)", key=f"btn_p_off_{m}", type="primary"):
+
+# BOTON DE PARADA 
+
+                    with st.popover("🚨 REGISTRAR PARADA"):
+                        motivo_p = st.selectbox("Motivo de parada:", MOTIVOS_PARADA, key=f"mot_{m}")
+                        if st.button("Confirmar Parada", key=f"btn_p_{m}", type="primary"):
                             supabase.table("trabajos_activos").update({
                                 "pausado": True,
                                 "inicio_pausa": hora_colombia().isoformat(),
@@ -2018,25 +2024,32 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             }).eq("maquina", m).execute()
                             st.rerun()
                 else:
-                    st.error(f"🛑 APAGADA POR: {tr.get('motivo_pausa', 'Sin motivo')}")
-                    if st.button(f"▶️ ENCENDER MÁQUINA (ON)", key=f"btn_p_on_{m}", type="secondary"):
+
+# MOSTRAR PORQUE ESTA DETENIDA LA AMQUINA 
+
+                    st.error(f"DETENIDA POR: {tr.get('motivo_pausa', 'Sin motivo')}")
+                    if st.button(f"▶️ REANUDAR TRABAJO", key=f"r_{m}", type="secondary"):
                         try:
                             inicio_p = datetime.fromisoformat(tr["inicio_pausa"].replace("Z", "+00:00"))
                             ahora = hora_colombia()
                             pausa_segundos = (ahora - inicio_p).total_seconds()
             
-                            # Guardar en el historial de paradas
+# GUARDAR ENH LA TABLA DE TIEMPOS MUERTOS
+
                             supabase.table("paradas_maquina").insert({
-                                "maquina": m, "motivo": tr.get('motivo_pausa'),
-                                "inicio": tr["inicio_pausa"], "fin": ahora.isoformat(),
+                                "maquina": m,
+                                "motivo": tr.get('motivo_pausa'),
+                                "inicio": tr["inicio_pausa"],
+                                "fin": ahora.isoformat(),
                                 "duracion_segundos": pausa_segundos
                             }).execute()
 
-                            # Sumar el tiempo a la columna tiempo_pausa
-                            t_previo = tr.get("tiempo_pausa", 0) if tr.get("tiempo_pausa") else 0
+# ACTUALIZAR EL REGISTRO DE ACTIVOS PARA IR TRABAJANO
+
+                            nuevo_tiempo_acumulado = tr.get("tiempo_pausa", 0) + pausa_segundos
                             supabase.table("trabajos_activos").update({
                                 "pausado": False,
-                                "tiempo_pausa": t_previo + pausa_segundos,
+                                "tiempo_pausa": nuevo_tiempo_acumulado,
                                 "inicio_pausa": None,
                                 "motivo_pausa": None
                             }).eq("maquina", m).execute()
@@ -2254,10 +2267,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  HORA ACTUAL CONSISTENTE
 
                     fin = hora_colombia()
-# Recuperar segundos que estuvo apagada
-                    segundos_off = r.get("tiempo_pausa", 0) if r.get("tiempo_pausa") else 0
-# Calcular restando las pausa
-                    duracion = calcular_duracion_laboral(inicio, fin, segundos_pausa=segundos_off)
+
+#  CALCULAR DURACION
+
+                    duracion = calcular_duracion_laboral(inicio, fin)
 
 #  LOGICA DE DESCUENTO DE INVENTARIO
 
