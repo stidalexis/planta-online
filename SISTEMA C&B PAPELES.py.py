@@ -849,30 +849,6 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
         }).execute()
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
-
-# --- FUNCIÓN DE AUDITORÍA / HISTORIAL ---
-def registrar_accion(accion, detalles, maquina="N/A"):
-    try:
-        
-        user_info = st.session_state.get('usuario', {})
-        # Si user_info es una lista (a veces Supabase devuelve lista), tomamos el primer elemento
-        if isinstance(user_info, list) and len(user_info) > 0:
-            user_info = user_info[0]
-            
-        nombre = user_info.get('nombre_usuario', 'Desconocido')
-        rol = user_info.get('rol', 'N/A')
-        
-        supabase.table("historial_acciones").insert({
-            "usuario": nombre,
-            "rol": rol,
-            "accion": accion,
-            "detalles": detalles,
-            "maquina": maquina,
-            "fecha_hora": hora_colombia().isoformat()
-        }).execute()
-    except Exception as e:
-        print(f"Error en log: {e}")
-
 # MODULO MONITOR 
 
 if menu == "🖥️ Monitor":
@@ -1580,8 +1556,6 @@ elif menu == "📅 Planificación":
                     })
 
                 supabase.table("ordenes_planeadas").insert(payload).execute()
-
-                registrar_accion("CREACIÓN OP", f"Creó la OP {op_final} para {cli}")
 
                 st.success(f"Orden {op_final} registrada.")
                 st.session_state.sel_tipo = None
@@ -2548,10 +2522,6 @@ if st.session_state.get('rol') == 'admin':
                     
                     if nuevo_st != estado_actual:
                         cambiar_estado_maquina(maq, nuevo_st)
-
-                        estado_txt = "ENCENDIDO" if nuevo_st else "APAGADO"
-                        registrar_accion("CAMBIO ESTADO", f"Cambió {maq} a {estado_txt}", maquina=maq)
-
                         st.toast(f"Máquina {maq} {'ACTIVADA' if nuevo_st else 'DESACTIVADA'}")
                         time.sleep(0.5) # Pausa breve para que el usuario vea el mensaje
                         st.rerun() # Esto refresca todo el sistema con el nuevo estado
@@ -2586,21 +2556,3 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
-
-    st.divider()
-    
-    with st.expander("📜 HISTORIAL GLOBAL DE MOVIMIENTOS"):
-        try:
-            # Traemos los últimos 50 movimientos
-            res_logs = supabase.table("historial_acciones").select("*").order("fecha_hora", desc=True).limit(50).execute()
-            logs = res_logs.data
-            if logs:
-                df_logs = pd.DataFrame(logs)
-                df_logs['fecha_hora'] = pd.to_datetime(df_logs['fecha_hora']).dt.strftime('%d/%m %H:%M')
-                df_logs = df_logs[['fecha_hora', 'usuario', 'accion', 'detalles', 'maquina']]
-                st.table(df_logs)
-            else:
-                st.info("No hay acciones registradas aún.")
-        except Exception as e:
-            st.error(f"Error al cargar el historial: {e}")
-        
