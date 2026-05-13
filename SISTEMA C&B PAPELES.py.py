@@ -111,16 +111,22 @@ def hora_colombia():
 
 # FUNCION DE HORARIOS
 
-def calcular_duracion_laboral(inicio, fin):
-
+def calcular_duracion_laboral(inicio, fin, nombre_maquina=None):
     jornada_inicio = 6
     jornada_fin = 22
-
     actual = inicio
     total = timedelta()
 
-    while actual.date() <= fin.date():
+    # Si pasamos una máquina, verificamos si está encendida
+    esta_on = True
+    if nombre_maquina:
+        esta_on = obtener_estado_maquina(nombre_maquina)
 
+    # Si la máquina está apagada (OFF), devolvemos 0 tiempo de inmediato
+    if not esta_on:
+        return "0:00:00"
+
+    while actual.date() <= fin.date():
         dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0, tzinfo=actual.tzinfo)
         dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0, tzinfo=actual.tzinfo)
 
@@ -823,6 +829,26 @@ with st.sidebar:
     st.info(f"Usuario: {st.session_state.get('nombre_usuario')}\n\nRol: {rol.upper()}")
     st.caption("Conectado a Supabase Cloud")
 
+# --- NUEVA FUNCIÓN PARA GESTIÓN DE MÁQUINAS ---
+
+def obtener_estado_maquina(nombre_maquina):
+    try:
+        res = supabase.table("estado_maquinas").select("estado").eq("maquina", nombre_maquina).execute()
+        if res.data:
+            return res.data[0]['estado']
+        return True  # Si no existe en la tabla, asumimos que está ON
+    except:
+        return True
+
+def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
+    try:
+        supabase.table("estado_maquinas").upsert({
+            "maquina": nombre_maquina,
+            "estado": nuevo_estado,
+            "ultima_modificacion": hora_colombia().isoformat()
+        }).execute()
+    except Exception as e:
+        st.error(f"Error al cambiar estado: {e}")
 # MODULO MONITOR 
 
 if menu == "🖥️ Monitor":
@@ -836,21 +862,34 @@ if menu == "🖥️ Monitor":
 
     for a in act_data:
         try:
+            # 1. Verificamos si la máquina está encendida
+            if not obtener_estado_maquina(a['maquina']):
+                continue 
+            
             inicio = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
-            ahora = hora_colombia()
 
-            horas = (ahora - inicio).total_seconds() / 3600
+            # 2. CAMBIO CLAVE: Usamos la función de duración laboral en lugar de la resta simple
+            # Esto hará que si son las 8:00 AM y la OP empezó ayer, solo cuente las horas de jornada.
+            tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'])
+            
+            # Convertimos el texto "HH:MM:SS" a horas decimales para la validación de la alerta
+            h, m, s = map(int, tiempo_texto.split(':'))
+            horas_laborales = h + m/60 + s/3600
 
-            if horas > 4:  # ⚠️ SE PUIEDE CAMBIA A 6 U 8 HORAS
-                alertas.append(f"⚠️ OP {a['op']} en {a['maquina']} lleva {round(horas,1)}h")
+            # 3. Validamos con las horas de trabajo real
+            if horas_laborales > 4:  
+                alertas.append(f"🚨 OP {a['op']} en {a['maquina']} lleva {round(horas_laborales,1)}h de trabajo activo")
 
-        except:
+        except Exception as e:
+            # Es mejor no dejar el pass vacío para saber si algo falla
+            print(f"Error en alerta: {e}")
             pass
 
     if alertas:
         st.error("🚨 ALERTAS DE PRODUCCIÓN:")
+        cols_alertas = st.columns(len(alertas) if len(alertas) < 4 else 4) # Opcional: para que se vean mejor
         for al in alertas:
-            st.write(al)
+            st.warning(al) # Warning se ve menos agresivo que error en lista
 
 #  TRAER NOMBRES DE  LA OP
 
@@ -2452,7 +2491,29 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 
 if st.session_state.get('rol') == 'admin':
+    # --- BLOQUE 1: INTERRUPTORES DE MÁQUINAS ---
+    with st.expander("⚙️ INTERRUPTORES DE MÁQUINAS (ON/OFF)"):
+        st.warning("Si apagas una máquina, el sistema no contará tiempos laborados para ella.")
+        
+        for area, lista_maquinas in MAQUINAS.items():
+            st.subheader(f"Área: {area}")
+            cols = st.columns(4) 
+            for i, maq in enumerate(lista_maquinas):
+                col_idx = i % 4
+                with cols[col_idx]:
+                    estado_actual = obtener_estado_maquina(maq)
+                    # El interruptor (toggle)
+                    nuevo_st = st.toggle(f"{maq}", value=estado_actual, key=f"switch_{maq}")
+                    
+                    if nuevo_st != estado_actual:
+                        cambiar_estado_maquina(maq, nuevo_st)
+                        st.toast(f"Máquina {maq} {'ACTIVADA' if nuevo_st else 'DESACTIVADA'}")
+                        time.sleep(0.5) # Pausa breve para que el usuario vea el mensaje
+                        st.rerun() # Esto refresca todo el sistema con el nuevo estado
+
     st.divider()
+
+    # --- BLOQUE 2: ADMINISTRACIÓN DE USUARIOS ---
     with st.expander("➕ Panel de Administración de Usuarios"):
         st.info("Desde aquí se puede dar de alta nuevos operarios en la base de datos de Supabase.")
         
