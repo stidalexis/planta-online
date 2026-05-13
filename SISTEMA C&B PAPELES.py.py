@@ -859,7 +859,7 @@ def registrar_accion(accion, detalles, maquina="N/A"):
         if isinstance(user_info, list) and len(user_info) > 0:
             user_info = user_info[0]
             
-        nombre = user_info.get('nombre', 'Desconocido')
+        nombre = user_info.get('nombre_usuario', 'Desconocido')
         rol = user_info.get('rol', 'N/A')
         
         supabase.table("historial_acciones").insert({
