@@ -852,51 +852,48 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
 # MODULO MONITOR 
 
 if menu == "🖥️ Monitor":
-    st.title("Monitor de Planta")
+    st.markdown("<div class='title-area'>🖥️ MONITOR DE PRODUCCIÓN EN TIEMPO REAL</div>", unsafe_allow_html=True)
     
+    # --- 1. OPTIMIZACIÓN: TRAER ESTADOS DE MÁQUINAS DE UN SOLO GOLPE ---
+    try:
+        estados_db = supabase.table("estado_maquinas").select("maquina, estado").execute().data
+        # Diccionario rápido: {'MAQ1': True, 'MAQ2': False}
+        diccionario_estados = {item['maquina']: item['estado'] for item in estados_db}
+    except Exception as e:
+        st.error(f"Error al cargar estados: {e}")
+        diccionario_estados = {}
+
+    # Traer datos de trabajos activos
     act_data = supabase.table("trabajos_activos").select("*").execute().data
 
-#  ALERTAS DE OP ESTANCADAS
-
+    # --- 2. ALERTAS DE OP ESTANCADAS (Filtrando por ON/OFF) ---
     alertas = []
-
     for a in act_data:
         try:
-            # 1. Verificamos si la máquina está encendida
-            if not obtener_estado_maquina(a['maquina']):
+            # Usamos el diccionario en lugar de ir a la base de datos en cada ciclo
+            if not diccionario_estados.get(a['maquina'], True):
                 continue 
             
             inicio = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
-
-            # 2. CAMBIO CLAVE: Usamos la función de duración laboral en lugar de la resta simple
-            # Esto hará que si son las 8:00 AM y la OP empezó ayer, solo cuente las horas de jornada.
+            # Pasamos el estado ya conocido a la función
             tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'])
             
-            # Convertimos el texto "HH:MM:SS" a horas decimales para la validación de la alerta
             h, m, s = map(int, tiempo_texto.split(':'))
             horas_laborales = h + m/60 + s/3600
 
-            # 3. Validamos con las horas de trabajo real
             if horas_laborales > 4:  
                 alertas.append(f"🚨 OP {a['op']} en {a['maquina']} lleva {round(horas_laborales,1)}h de trabajo activo")
-
         except Exception as e:
-            # Es mejor no dejar el pass vacío para saber si algo falla
             print(f"Error en alerta: {e}")
-            pass
 
     if alertas:
         st.error("🚨 ALERTAS DE PRODUCCIÓN:")
-        cols_alertas = st.columns(len(alertas) if len(alertas) < 4 else 4) # Opcional: para que se vean mejor
         for al in alertas:
-            st.warning(al) # Warning se ve menos agresivo que error en lista
+            st.warning(al)
 
-#  TRAER NOMBRES DE  LA OP
-
+    # --- 3. PREPARAR DATOS DE OPERACIONES ---
     ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
     map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
-
-# UNIR TODOS LOS DATOS 
 
     act = {}
     for a in act_data:
@@ -904,23 +901,41 @@ if menu == "🖥️ Monitor":
         a['nombre_trabajo'] = map_ops.get(op, "SIN NOMBRE")
         act[a['maquina']] = a
         
+    # --- 4. DIBUJAR INTERFAZ (Con lógica de colores) ---
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
         
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
-                if m in act:
+                # Verificar si la máquina está encendida en el diccionario
+                esta_encendida = diccionario_estados.get(m, True)
+
+                if not esta_encendida:
+                    # TARJETA GRIS: Máquina apagada (Vacaciones/Mantenimiento)
+                    st.markdown(
+                        f"""<div style='background-color: #424242; color: #9E9E9E; padding: 20px; 
+                        border-radius: 15px; text-align: center; border: 2px solid #212121;'>
+                        <span style='font-size: 18px; font-weight: bold;'>{m}</span><br>
+                        <span style='font-size: 14px;'>🚫 FUERA DE SERVICIO</span>
+                        </div>""", 
+                        unsafe_allow_html=True
+                    )
+                elif m in act:
+                    # TARJETA AZUL/VIBRANTE: En producción
                     st.markdown(
                         f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
                         unsafe_allow_html=True
                     )
                 else:
+                    # TARJETA VERDE: Libre
                     st.markdown(
                         f"<div class='card-vacia'>{m}<br>LIBRE</div>",
                         unsafe_allow_html=True
                     )
-    time.sleep(30); 
+
+    # --- 5. REFRESCO AUTOMÁTICO ---
+    time.sleep(30)
     st.rerun()
 
 # MODULO SEGUIMIENTO
