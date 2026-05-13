@@ -853,13 +853,14 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
 # --- FUNCIÓN DE AUDITORÍA / HISTORIAL ---
 def registrar_accion(accion, detalles, maquina="N/A"):
     try:
-# Extraemos el nombre y rol de quien está logueado
-
+        
         user_info = st.session_state.get('usuario', {})
-# Si no hay objeto usuario (porque es un login), intentamos sacar el nombre directo
-
-        nombre = user_info.get('nombre', 'Desconocido') if isinstance(user_info, dict) else "Sistema"
-        rol = user_info.get('rol', 'N/A') if isinstance(user_info, dict) else "N/A"
+        # Si user_info es una lista (a veces Supabase devuelve lista), tomamos el primer elemento
+        if isinstance(user_info, list) and len(user_info) > 0:
+            user_info = user_info[0]
+            
+        nombre = user_info.get('nombre', 'Desconocido')
+        rol = user_info.get('rol', 'N/A')
         
         supabase.table("historial_acciones").insert({
             "usuario": nombre,
