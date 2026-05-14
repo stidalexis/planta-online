@@ -969,8 +969,9 @@ elif menu == "🔍 Seguimiento":
             area_destino = row.get('proxima_area', 'SIN ÁREA').upper()
             cliente = row.get('cliente', 'N/A')
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
+            vendedor = row.get('cliente', 'N/A')
 
-            if busqueda and (busqueda not in op_id and busqueda.lower() not in cliente.lower() and busqueda.lower() not in nombre_t.lower()):
+            if busqueda and (busqueda not in op_id and busqueda.lower() not in cliente.lower() and busqueda.lower() not in nombre_t.lower() and busqueda.lower() not in vendedor.lower()):
                 continue
 
 # LOGICA DE ESTATUS MEJORADA
