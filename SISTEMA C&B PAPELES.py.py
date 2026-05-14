@@ -992,7 +992,7 @@ elif menu == "🔍 Seguimiento":
 
 #  DISEÑO DE TARJETA 
 
-            with st.expander(f"📦 OP: {op_id} | {cliente} | {texto_estatus}"):
+            with st.expander(f"📦 OP: {op_id} | {cliente} | {texto_estatus} | {vendedor}"):
                 st.markdown(f"### ESTATUS DE TRABAJO: :{color_texto}[{texto_estatus}]")
                 
                 c1, c2, c3, c4 = st.columns(4)
