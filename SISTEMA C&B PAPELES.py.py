@@ -962,17 +962,25 @@ elif menu == "🔍 Seguimiento":
     if not ordenes:
         st.warning("No hay órdenes registradas.")
     else:
-        busqueda = st.text_input("🔍 Filtrar por OP, Cliente o Trabajo:", "")
+        busqueda = st.text_input("🔍 Filtrar por OP, Cliente, Trabajo o Vendedor:", "")
         
         for row in ordenes:
             op_id = str(row['op'])
             area_destino = row.get('proxima_area', 'SIN ÁREA').upper()
             cliente = row.get('cliente', 'N/A')
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
-            vendedor = row.get('cliente', 'N/A')
+            # Extraemos el nombre del vendedor de la base de datos
+            vendedor = row.get('vendedor', 'N/A') 
 
-            if busqueda and (busqueda not in op_id and busqueda.lower() not in cliente.lower() and busqueda.lower() not in nombre_t.lower() and busqueda.lower() not in vendedor.lower()):
-                continue
+# LOGICA DE FILTRADO 
+            if busqueda:
+                b = busqueda.lower()
+                
+                if (b not in op_id.lower() and 
+                    b not in cliente.lower() and 
+                    b not in nombre_t.lower() and 
+                    b not in vendedor.lower()):
+                    continue
 
 # LOGICA DE ESTATUS MEJORADA
 
