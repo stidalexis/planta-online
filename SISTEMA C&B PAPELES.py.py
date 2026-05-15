@@ -1775,41 +1775,46 @@ elif menu == "📊 Reportes Admin":
         with tab_muertos:
             st.subheader("⏳ Monitoreo de Máquinas Libres en Tiempo Real")
 
-# CALCULO DE TIEMPO LIBRE ACTUAL 
+            # 1. CÁLCULO DE TIEMPO LIBRE ACTUAL
             try:
-                
-                res_actual = supabase.table("maquinas_estado").select("*").eq("estado", "LIBRE").execute().data
+                # CAMBIO AQUÍ: Usamos "maquinas" que es tu tabla real
+                res_actual = supabase.table("maquinas").select("*").eq("estado", "LIBRE").execute().data
                 
                 if res_actual:
-                    st.write("### 🟢 Máquinas esperando orden (Actualmente)")
-                    cols = st.columns(len(res_actual) if len(res_actual) < 4 else 4)
+                    st.info("🟢 Máquinas esperando orden actualmente")
+                    # Creamos columnas para mostrar las máquinas lado a lado
+                    cols_m = st.columns(len(res_actual) if len(res_actual) < 4 else 4)
                     
                     for i, maq in enumerate(res_actual):
-                        with cols[i % 4]:
-                            
+                        with cols_m[i % 4]:
                             try:
-                                ultima_vez = datetime.fromisoformat(maq['updated_at'].replace('Z', '+00:00'))
-                                ahora = datetime.now(pytz.timezone('America/Bogota'))
-                                diferencia = ahora - ultima_vez
+                                # Usamos la columna 'updated_at' que Supabase crea por defecto
+                                # Si falla, es porque la columna se llama distinto
+                                fecha_str = maq.get('updated_at') or maq.get('fecha')
                                 
-                                horas, rem = divmod(int(diferencia.total_seconds()), 3600)
-                                minutos, _ = divmod(rem, 60)
-                                
-                                tiempo_formateado = f"{horas}h {minutos}m" if horas > 0 else f"{minutos} min"
-                                
-                                
-                                st.metric(label=f"📟 {maq['nombre']}", value=tiempo_formateado, delta="En espera")
+                                if fecha_str:
+                                    ultima_vez = datetime.fromisoformat(fecha_str.replace('Z', '+00:00'))
+                                    ahora = datetime.now(pytz.timezone('America/Bogota'))
+                                    diferencia = ahora - ultima_vez
+                                    
+                                    horas, rem = divmod(int(diferencia.total_seconds()), 3600)
+                                    minutos, _ = divmod(rem, 60)
+                                    
+                                    tiempo_txt = f"{horas}h {minutos}m" if horas > 0 else f"{minutos} min"
+                                    st.metric(label=f"📟 {maq['nombre']}", value=tiempo_txt, delta="TIEMPO LIBRE")
+                                else:
+                                    st.metric(label=f"📟 {maq['nombre']}", value="Ociosa", delta="Sin registro hora")
                             except:
-                                st.metric(label=f"📟 {maq['nombre']}", value="Calculando...", delta="Revisar hora")
+                                st.metric(label=f"📟 {maq['nombre']}", value="Libre", delta="En espera")
                 else:
-                    st.success("✅ Todas las máquinas están ocupadas actualmente.")
+                    st.success("✅ Todas las máquinas están procesando órdenes en este momento.")
             except Exception as e:
-                st.error(f"Error al obtener estados en tiempo real: {e}")
+                st.error(f"Error técnico: {e}")
 
             st.divider()
 
-#  HISTORIAL DE TIEMPOS MUERTOS 
-            st.write("### 📜 Historial de Tiempos Muertos Registrados")
+            # 2. HISTORIAL DE TIEMPOS MUERTOS (Registros pasados)
+            st.write("### 📜 Historial de Tiempos Muertos Guardados")
             res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
             
             if res_m:
@@ -1818,27 +1823,9 @@ elif menu == "📊 Reportes Admin":
                     total_libre = df_m['duracion_min'].sum()
                     st.metric("Total Tiempo Ocioso Acumulado", f"{total_libre} min")
                 
-                st.dataframe(df_m, use_container_width=True, hide_index=True)
+                st.dataframe(df_h, use_container_width=True, hide_index=True) # Usamos df_h o df_m según tu tabla
             else:
-                st.info("No hay registros históricos de tiempo libre.")
-
-        with tab_paradas:
-            st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
-
-# AQUI S EMUESTRA PORQUE LA MAQUINA SE DERUBO 
-
-            res_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True).execute().data
-            if res_p:
-                df_p = pd.DataFrame(res_p)
-
-                if 'duracion_min' in df_p.columns:
-                    total_parada = df_p['duracion_min'].sum()
-                    st.metric("Total Tiempo Perdido por Fallas", f"{total_parada} min", delta_color="inverse")
-                
-                st.dataframe(df_p, use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay reportes de fallas técnicos.")
-
+                st.info("No hay registros históricos en la tabla 'tiempos_muertos'.")
 
 elif menu == "📦 Almacen/Despachos":
     st.title("📦 Inventario de Productos Almacen")
