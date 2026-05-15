@@ -1773,19 +1773,54 @@ elif menu == "📊 Reportes Admin":
                 st.info("Sin registros en bodega.")
 
         with tab_muertos:
-            st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
+            st.subheader("⏳ Monitoreo de Máquinas Libres en Tiempo Real")
 
-#  TOMA DE TIEMPOS DE MAQUIA LIBRE ENTRE UN AOP Y OTRA 
+# CALCULO DE TIEMPO LIBRE ACTUAL 
+            try:
+                
+                res_actual = supabase.table("maquinas_estado").select("*").eq("estado", "LIBRE").execute().data
+                
+                if res_actual:
+                    st.write("### 🟢 Máquinas esperando orden (Actualmente)")
+                    cols = st.columns(len(res_actual) if len(res_actual) < 4 else 4)
+                    
+                    for i, maq in enumerate(res_actual):
+                        with cols[i % 4]:
+                            
+                            try:
+                                ultima_vez = datetime.fromisoformat(maq['updated_at'].replace('Z', '+00:00'))
+                                ahora = datetime.now(pytz.timezone('America/Bogota'))
+                                diferencia = ahora - ultima_vez
+                                
+                                horas, rem = divmod(int(diferencia.total_seconds()), 3600)
+                                minutos, _ = divmod(rem, 60)
+                                
+                                tiempo_formateado = f"{horas}h {minutos}m" if horas > 0 else f"{minutos} min"
+                                
+                                
+                                st.metric(label=f"📟 {maq['nombre']}", value=tiempo_formateado, delta="En espera")
+                            except:
+                                st.metric(label=f"📟 {maq['nombre']}", value="Calculando...", delta="Revisar hora")
+                else:
+                    st.success("✅ Todas las máquinas están ocupadas actualmente.")
+            except Exception as e:
+                st.error(f"Error al obtener estados en tiempo real: {e}")
 
+            st.divider()
+
+#  HISTORIAL DE TIEMPOS MUERTOS 
+            st.write("### 📜 Historial de Tiempos Muertos Registrados")
             res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
+            
             if res_m:
                 df_m = pd.DataFrame(res_m)
                 if 'duracion_min' in df_m.columns:
                     total_libre = df_m['duracion_min'].sum()
-                    st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre} min")
+                    st.metric("Total Tiempo Ocioso Acumulado", f"{total_libre} min")
+                
                 st.dataframe(df_m, use_container_width=True, hide_index=True)
             else:
-                st.info("No hay registros de tiempo libre.")
+                st.info("No hay registros históricos de tiempo libre.")
 
         with tab_paradas:
             st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
