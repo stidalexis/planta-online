@@ -1782,7 +1782,7 @@ elif menu == "📊 Reportes Admin":
             st.write("### 🟢 Estado Actual de Máquinas")
             try:
                 # Usamos la tabla corregida 'estado_maquinas'
-                res_actual = supabase.table("estado_maquinas").select("*").eq("estado2", "LIBRE").execute().data
+                res_actual = supabase.table("estado_maquinas").select("*").eq("estado", "False").execute().data
                 
                 if res_actual:
                     cols_m = st.columns(len(res_actual) if len(res_actual) < 4 else 4)
