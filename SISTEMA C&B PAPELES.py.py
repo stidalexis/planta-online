@@ -18,10 +18,10 @@ try:
     KEY = st.secrets["SUPABASE_KEY"]
     supabase = create_client(URL, KEY)
 except Exception as e:
-    st.error("Error de conexión a Base de Datos. Revisa los Secrets.")
+    st.error("Error de conexion a Base de Datos. Revisar los Secrets.")
     st.stop()
     
-#  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL) 
+#  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL)
 
 st.markdown("""
     <style>
@@ -76,8 +76,8 @@ MAQUINAS = {
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
 }
 PRESENTACIONES = ["BLOCK", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS", "FORMA CONTINUA"]
-PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", ]
-MOTIVOS_PARADA = ["Mantenimiento Mecánico", "Falta de Material", "Cambio de Referencia", "Limpieza", "Falla Eléctrica", "Almuerzo/Cena","Ajuste de Registro"]
+PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
+MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
 #  USUARIOS ORGANIZADOS POR ROL 
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
@@ -122,7 +122,8 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None):
     if nombre_maquina:
         esta_on = obtener_estado_maquina(nombre_maquina)
 
-    # Si la máquina está apagada (OFF), devolvemos 0 tiempo de inmediato
+# SI LA MAQUINA ESTA APAGANA NO CUENTA NADA
+
     if not esta_on:
         return "0:00:00"
 
@@ -750,7 +751,7 @@ def modal_detalle_op(row):
 if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
-# LOGIN PRINCIPAL 
+# LOGIN PRINCIPAL  LOGUIN
 
 if not st.session_state.get('autenticado'):
     st.title("🔐 Acceso al Sistema C&B PAPELES DE COLOMBIA S.A.S")
@@ -829,14 +830,14 @@ with st.sidebar:
     st.info(f"Usuario: {st.session_state.get('nombre_usuario')}\n\nRol: {rol.upper()}")
     st.caption("Conectado a Supabase Cloud")
 
-# --- NUEVA FUNCIÓN PARA GESTIÓN DE MÁQUINAS ---
+#  FUNCION PARA GESTION DE MAQUINAS   
 
 def obtener_estado_maquina(nombre_maquina):
     try:
         res = supabase.table("estado_maquinas").select("estado").eq("maquina", nombre_maquina).execute()
         if res.data:
             return res.data[0]['estado']
-        return True  # Si no existe en la tabla, asumimos que está ON
+        return True  # Si no existe en la tabla, asumimos que esta ON
     except:
         return True
 
@@ -854,28 +855,36 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
 if menu == "🖥️ Monitor":
     st.markdown("<div class='title-area'>🖥️ MONITOR DE PRODUCCIÓN EN TIEMPO REAL</div>", unsafe_allow_html=True)
     
-    # --- 1. OPTIMIZACIÓN: TRAER ESTADOS DE MÁQUINAS DE UN SOLO GOLPE ---
+#  OPTIMIZACION: TRAER ESTADOS DE MAQUINAS DE UN SOLO GOLPE 
     try:
         estados_db = supabase.table("estado_maquinas").select("maquina, estado").execute().data
-        # Diccionario rápido: {'MAQ1': True, 'MAQ2': False}
+
+# Diccionario rápido: {'MAQ1': True, 'MAQ2': False}
+
         diccionario_estados = {item['maquina']: item['estado'] for item in estados_db}
     except Exception as e:
         st.error(f"Error al cargar estados: {e}")
         diccionario_estados = {}
 
-    # Traer datos de trabajos activos
+# Traer datos de trabajos activos
+
     act_data = supabase.table("trabajos_activos").select("*").execute().data
 
-    # --- 2. ALERTAS DE OP ESTANCADAS (Filtrando por ON/OFF) ---
+# ALERTAS DE OP ESTANCADAS (Filtrando por ON/OFF)
+
     alertas = []
     for a in act_data:
         try:
-            # Usamos el diccionario en lugar de ir a la base de datos en cada ciclo
+
+# USA EL DICCIONARIO PARA NO BUSCAR EN LA SUPABASE
+
             if not diccionario_estados.get(a['maquina'], True):
                 continue 
             
             inicio = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
-            # Pasamos el estado ya conocido a la función
+
+# PASAMOS EL ESTADO ACTUAL ALA FUNCION 
+
             tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'])
             
             h, m, s = map(int, tiempo_texto.split(':'))
@@ -891,7 +900,8 @@ if menu == "🖥️ Monitor":
         for al in alertas:
             st.warning(al)
 
-    # --- 3. PREPARAR DATOS DE OPERACIONES ---
+# PREPARAR DATOS DE OPERACIONES 
+
     ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
     map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
 
@@ -901,18 +911,23 @@ if menu == "🖥️ Monitor":
         a['nombre_trabajo'] = map_ops.get(op, "SIN NOMBRE")
         act[a['maquina']] = a
         
-    # --- 4. DIBUJAR INTERFAZ (Con lógica de colores) ---
+#  DIBUJAR INTERFAZ (Con logica de colores) 
+
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
         
         for idx, m in enumerate(maquinas):
             with cols[idx % 4]:
-                # Verificar si la máquina está encendida en el diccionario
+
+# Verificar si la maquina esta encendida en el diccionario
+
                 esta_encendida = diccionario_estados.get(m, True)
 
                 if not esta_encendida:
-                    # TARJETA GRIS: Máquina apagada (Vacaciones/Mantenimiento)
+
+# TARJETA GRIS: Maquina apagada (Mantenimiento/etc)
+
                     st.markdown(
                         f"""<div style='background-color: #424242; color: #9E9E9E; padding: 20px; 
                         border-radius: 15px; text-align: center; border: 2px solid #212121;'>
@@ -922,19 +937,24 @@ if menu == "🖥️ Monitor":
                         unsafe_allow_html=True
                     )
                 elif m in act:
-                    # TARJETA AZUL/VIBRANTE: En producción
+
+# TARJETA AZUL/VIBRANTE: En produccion
+
                     st.markdown(
                         f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
                         unsafe_allow_html=True
                     )
                 else:
-                    # TARJETA VERDE: Libre
+
+# TARJETA VERDE: Libre
+
                     st.markdown(
                         f"<div class='card-vacia'>{m}<br>LIBRE</div>",
                         unsafe_allow_html=True
                     )
 
-    # --- 5. REFRESCO AUTOMÁTICO ---
+#  REFRESCO AUTOMATICO 
+
     time.sleep(30)
     st.rerun()
 
@@ -972,7 +992,8 @@ elif menu == "🔍 Seguimiento":
             # Extraemos el nombre del vendedor de la base de datos
             vendedor = row.get('vendedor', 'N/A') 
 
-# LOGICA DE FILTRADO 
+# LOGICA DE FILTRADO
+
             if busqueda:
                 b = busqueda.lower()
                 
@@ -1027,10 +1048,14 @@ elif menu == "🔍 Seguimiento":
                     st.write(row.get('observaciones_diseno', 'N/A'))
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
+
 # BOTON DE READIOGRAFIA
+
                     if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
- # NUEVO: Mostrar                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+
+ # MOSTRAR      
+
                     link_arte = row.get('link_diseno')
                     link_ticket = row.get('link_ticket')
 
@@ -1046,6 +1071,7 @@ elif menu == "🔍 Seguimiento":
                 st.divider()
 
 #  BOTONES DE DESCARGA ORDEN EN PDF
+
                 if st.session_state.get('rol') in ['admin', 'ventas', 'diseño']:
                     try:
                         tipo = row.get('tipo_orden', '')
@@ -1125,9 +1151,11 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
 
 #  DEFINICION DE VENTANAS
-    tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLACA"])
+
+    tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLANCHA"])
 
 #  AUDITORIA
+
     with tab1:
         st.subheader("🕵️ Revisión de Diseño")
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
@@ -1165,7 +1193,8 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                     else:
                         st.error("El link del ARTE y el NÚMERO DE TICKET son obligatorios.")
 
-# 2: PRE-PRENSA
+# PRE-PRENSA
+
     with tab2:
         st.subheader("🎞️ Procesamiento de Archivos")
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
@@ -1187,7 +1216,8 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                     supabase.table("ordenes_planeadas").update({"proxima_area": "REVISION_FINAL"}).eq("op", op_id_2).execute()
                     st.success("Enviado a Revisión Final."); time.sleep(1); st.rerun()
 
-# 3: REVISION FINAL CON PLANCHA 
+# REVISION FINAL CON PLANCHA 
+
     with tab3:
         st.subheader("⚡ Control de Planchas y Salida")
         op_final = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "REVISION_FINAL").execute().data
@@ -1200,19 +1230,21 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             if datos_op_3:
                 st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **DATOS DE PLANCHAS A REVELAR:** {datos_op_3.get('observaciones_diseno2')}")
                 
-# Aquí puedes agregar campos específicos de planchas
+# Aqui agregar campos especificos de planchas  ########################################################################33
                 num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:")
                 
                 radiografia_completa_op(datos_op_3)
 
                 if st.button("🏁 FINALIZAR Y ENVIAR A IMPRESIÓN", use_container_width=True):
-                    # Actualizamos a IMPRESIÓN para que pase a la planta
+
+# Actualizamos a IMPRESION para que pase a la planta
+
                     supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_3).execute()
                     st.success("Orden enviada a planta exitosamente."); time.sleep(1); st.rerun()
         else:
             st.info("No hay órdenes pendientes para revisión de plancha.")
             
-# MODULO 3: PLANIFICACION 
+# MODULO PLANIFICACION 
 
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
@@ -1609,6 +1641,7 @@ elif menu == "📦 Bodega MaterialTerminado":
                 col1, col2 = st.columns(2)
                 
                 with col1:
+
 #  SI ES INGRESO SEJA CREAR SI ES SALIDA SOLO SELECCIONA DE LO YA EXISTENTE
 
                     if "ENTRADA" in tipo_accion:
@@ -2429,7 +2462,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
                 st.stop()
                 
-            # 2. Captura de tiempos (Tu lógica nativa de conversión)
+# Captura de tiempos (Tu logica nativa de conversion)
+
             inicio_raw = r['hora_inicio']
             if isinstance(inicio_raw, str):
                 inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
@@ -2445,7 +2479,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             fin = hora_colombia()
             duracion = calcular_duracion_laboral(inicio, fin, r['maquina'])
             
-            # 3. Preparar el nuevo historial
+# Preparar el nuevo historial
+
             hist = r.get('historial_procesos', [])
             if not hist:
                 hist = []
@@ -2454,11 +2489,13 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if obs_parcial:
                 datos_c['observacion_parcial'] = obs_parcial
                 
-            # Recuperamos operario y auxiliar directamente del registro activo 'r'
+# Recuperamos operario y auxiliar directamente del registro activo 'r'
+
             operario_actual = r.get('operario', 'Operario Planta')
             auxiliar_actual = r.get('auxiliar', '')
                 
-            # Agregamos al historial de forma segura
+# Agregamos al historial de forma segura
+
             hist.append({
                 "area": area_act,
                 "maquina": r['maquina'],
@@ -2471,17 +2508,20 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 "observaciones": obs_parcial if obs_parcial else f"Entrega parcial de {cantidad_parcial} unidades."
             })
             
-            # --- CAMBIO CLAVE SIMULTÁNEO ---
+#  CAMBIO CLAVE SIMULTANEO 
+
             n_area_parcial = "CORTE" if area_act == "IMPRESIÓN" else n_area
             
-            # 4. Actualizar la orden planeada para que esté disponible en la siguiente área
+# Actualizar la orden planeada para que este disponible en la siguiente area
+
             try:
                 supabase.table("ordenes_planeadas").update({
                     "proxima_area": n_area_parcial,
                     "historial_procesos": hist
                 }).eq("op", r['op']).execute()
                 
-                # 5. Mantener la máquina ocupada en Impresión reseteando el tiempo
+#  Mantener la maquina ocupada en Impresion reseteando el tiempo
+
                 supabase.table("trabajos_activos").update({
                     "hora_inicio": fin.isoformat(),
                     "tiempo_pausa": 0,
@@ -2499,7 +2539,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 
 if st.session_state.get('rol') == 'admin':
-    # --- BLOQUE 1: INTERRUPTORES DE MÁQUINAS ---
+
+#  BLOQUE INTERRUPTORES DE MAQUINAS
+
     with st.expander("⚙️ INTERRUPTORES DE MÁQUINAS (ON/OFF)"):
         st.warning("Si apagas una máquina, el sistema no contará tiempos laborados para ella.")
         
@@ -2510,18 +2552,21 @@ if st.session_state.get('rol') == 'admin':
                 col_idx = i % 4
                 with cols[col_idx]:
                     estado_actual = obtener_estado_maquina(maq)
-                    # El interruptor (toggle)
+
+# El interruptor (toggle)
+
                     nuevo_st = st.toggle(f"{maq}", value=estado_actual, key=f"switch_{maq}")
                     
                     if nuevo_st != estado_actual:
                         cambiar_estado_maquina(maq, nuevo_st)
                         st.toast(f"Máquina {maq} {'ACTIVADA' if nuevo_st else 'DESACTIVADA'}")
-                        time.sleep(0.5) # Pausa breve para que el usuario vea el mensaje
-                        st.rerun() # Esto refresca todo el sistema con el nuevo estado
+                        time.sleep(0.5) 
+                        st.rerun() 
 
     st.divider()
 
-    # --- BLOQUE 2: ADMINISTRACIÓN DE USUARIOS ---
+#  BLOQUE 2: ADMINISTRACION DE USUARIOS 
+
     with st.expander("➕ Panel de Administración de Usuarios"):
         st.info("Desde aquí se puede dar de alta nuevos operarios en la base de datos de Supabase.")
         
