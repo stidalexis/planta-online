@@ -2424,17 +2424,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 #  ENTREGAS PARCIALES 
 
-            # ENTREGAS PARCIALES
         if parcial:
-            # 1. Validaciones: No permitimos avanzar si no hay datos básicos
-            if not op_name:
+            # 1. Validaciones usando tus variables exactas (op_prod)
+            if not op_prod:
                 st.error("❌ Error: Debes ingresar el nombre del operario antes de registrar el parcial.")
                 st.stop()
             if cantidad_parcial <= 0:
                 st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
                 st.stop()
                 
-            # 2. Captura de tiempos (Usamos exactamente tu lógica de conversión)
+            # 2. Captura de tiempos (Tu lógica nativa de conversión)
             inicio_raw = r['hora_inicio']
             if isinstance(inicio_raw, str):
                 inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
@@ -2459,11 +2458,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if obs_parcial:
                 datos_c['observacion_parcial'] = obs_parcial
                 
+            # Agregamos al historial usando op_prod y aux_prod
             hist.append({
                 "area": area_act,
                 "maquina": r['maquina'],
-                "operario": op_name,
-                "auxiliar": aux_name,
+                "operario": op_prod,
+                "auxiliar": aux_prod,
                 "fecha": fin.strftime("%d/%m/%Y %H:%M"),
                 "duracion": duracion,
                 "tipo": "PARCIAL",
@@ -2472,21 +2472,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             })
             
             # --- CAMBIO CLAVE SIMULTÁNEO ---
-            # Si estamos en IMPRESIÓN, el parcial viaja de inmediato a CORTE. 
-            # Si estás en otra área, puedes definir a dónde viaja el parcial (ej: REBOBINADORAS o ENCUADERNACIÓN)
             n_area_parcial = "CORTE" if area_act == "IMPRESIÓN" else n_area
             
-            # 4. Actualizar la orden planeada para que aparezca en el área de destino del parcial
+            # 4. Actualizar la orden planeada para que esté disponible en la siguiente área
             try:
                 supabase.table("ordenes_planeadas").update({
                     "proxima_area": n_area_parcial,
                     "historial_procesos": hist
                 }).eq("op", r['op']).execute()
                 
-                # 5. IMPORTANTE: NO borramos el trabajo activo en impresión. 
-                # En su lugar, actualizamos su 'hora_inicio' al momento exacto de la entrega parcial.
-                # De esta forma, la máquina sigue ocupada en Impresión ("En Proceso") calculando el tiempo restante,
-                # pero la OP ya se liberó para que Corte la pueda iniciar en paralelo.
+                # 5. Mantener la máquina ocupada en Impresión reseteando el tiempo
                 supabase.table("trabajos_activos").update({
                     "hora_inicio": fin.isoformat(),
                     "tiempo_pausa": 0,
@@ -2494,7 +2489,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     "motivo_pausa": None
                 }).eq("maquina", r['maquina']).execute()
                 
-                st.success(f"✅ Parcial de {cantidad_parcial} unidades enviado a {n_area_parcial}. ¡La máquina {r['maquina']} continúa en proceso en Impresión!")
+                st.success(f"✅ Parcial de {cantidad_parcial} unidades enviado a {n_area_parcial}. ¡La máquina {r['maquina']} continúa trabajando en paralelo!")
                 st.session_state.rep = None
                 time.sleep(1.5)
                 st.rerun()
