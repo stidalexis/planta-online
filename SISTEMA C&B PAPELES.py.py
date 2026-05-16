@@ -2424,94 +2424,83 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 #  ENTREGAS PARCIALES 
 
-            if parcial:
-                # 1. Validaciones: No permitimos avanzar si no hay datos básicos
-                if not op_name:
-                    st.error("❌ Error: Debes ingresar el nombre del operario antes de registrar el parcial.")
-                    st.stop()
-
-                if cantidad_parcial <= 0:
-                    st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
-                    st.stop()
-
-                # 2. Captura de tiempos (Usamos exactamente tu lógica de conversión)
-                inicio_raw = r['hora_inicio']
+            # ENTREGAS PARCIALES
+        if parcial:
+            # 1. Validaciones: No permitimos avanzar si no hay datos básicos
+            if not op_name:
+                st.error("❌ Error: Debes ingresar el nombre del operario antes de registrar el parcial.")
+                st.stop()
+            if cantidad_parcial <= 0:
+                st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
+                st.stop()
                 
-                # Convertir a datetime manejando formato ISO o objeto directo
-                if isinstance(inicio_raw, str):
-                    inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
-                else:
-                    inicio = inicio_raw
-
-                # Ajustar a Zona Horaria de Colombia
-                tz = pytz.timezone("America/Bogota")
-                if inicio.tzinfo is None:
-                    inicio = tz.localize(inicio)
-                else:
-                    inicio = inicio.astimezone(tz)
-
-                # Obtener hora actual y ajustar si hubo pausas
-                fin = hora_colombia()
-                tiempo_pausa = r.get("tiempo_pausa", 0) # Segundos que la máquina estuvo pausada
-                from datetime import timedelta
-                fin_ajustado = fin - timedelta(seconds=tiempo_pausa)
-
-                # Calcular cuánto tiempo real se trabajó
-                duracion = calcular_duracion_laboral(inicio, fin_ajustado)
-
-                # 3. Obtener los datos actuales de la Orden (OP) para no sobreescribir
-                d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+            # 2. Captura de tiempos (Usamos exactamente tu lógica de conversión)
+            inicio_raw = r['hora_inicio']
+            if isinstance(inicio_raw, str):
+                inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
+            else:
+                inicio = inicio_raw
                 
-                # Extraer el historial existente o crear una lista vacía si es la primera vez
-                hist = d_op.get('historial_procesos') or []
-
-                # 4. Construir el nuevo registro del historial para este parcial
-                registro_parcial = {
-                    "area": area_act,
-                    "maquina": r['maquina'],
-                    "operario": op_name,
-                    "auxiliar": auxiliar,
-                    "fecha": fin.strftime("%d/%m/%Y %H:%M"),
-                    "duracion": duracion,
-                    "tipo": "ENTREGA PARCIAL",
-                    "cantidad_parcial": cantidad_parcial,
-                    "observaciones": f"PARCIAL: {obs_parcial}"
-                }
+            tz = pytz.timezone("America/Bogota")
+            if inicio.tzinfo is None:
+                inicio = tz.localize(inicio)
+            else:
+                inicio = inicio.astimezone(tz)
                 
-                # Agregamos el registro al historial
-                hist.append(registro_parcial)
-
-                # 5. ACTUALIZACIÓN EN 'ordenes_planeadas'
-                # Importante: proxima_area = area_act hace que la OP regrese a la lista de "Disponibles"
-                # en la misma área donde el operario está trabajando.
+            fin = hora_colombia()
+            duracion = calcular_duracion_laboral(inicio, fin, r['maquina'])
+            
+            # 3. Preparar el nuevo historial
+            hist = r.get('historial_procesos', [])
+            if not hist:
+                hist = []
+                
+            datos_c['cantidad_parcial_entregada'] = cantidad_parcial
+            if obs_parcial:
+                datos_c['observacion_parcial'] = obs_parcial
+                
+            hist.append({
+                "area": area_act,
+                "maquina": r['maquina'],
+                "operario": op_name,
+                "auxiliar": aux_name,
+                "fecha": fin.strftime("%d/%m/%Y %H:%M"),
+                "duracion": duracion,
+                "tipo": "PARCIAL",
+                "datos_cierre": datos_c,
+                "observaciones": obs_prod if obs_prod else f"Entrega parcial de {cantidad_parcial} unidades."
+            })
+            
+            # --- CAMBIO CLAVE SIMULTÁNEO ---
+            # Si estamos en IMPRESIÓN, el parcial viaja de inmediato a CORTE. 
+            # Si estás en otra área, puedes definir a dónde viaja el parcial (ej: REBOBINADORAS o ENCUADERNACIÓN)
+            n_area_parcial = "CORTE" if area_act == "IMPRESIÓN" else n_area
+            
+            # 4. Actualizar la orden planeada para que aparezca en el área de destino del parcial
+            try:
                 supabase.table("ordenes_planeadas").update({
-                    "proxima_area": area_act, 
-                    "historial_procesos": hist,
-                    "estado": "PENDIENTE (PARCIAL)"
+                    "proxima_area": n_area_parcial,
+                    "historial_procesos": hist
                 }).eq("op", r['op']).execute()
-
-                # 6. LIBERAR LA MÁQUINA EN 'trabajos_activos'
-                # Esta es la línea que borra la orden de la máquina y la pone gris en el monitor
-                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-
-                # 7. Registrar en tiempos muertos (Opcional, para marcar fin de tramo)
-                try:
-                    supabase.table("tiempos_muertos").insert({
-                        "maquina": r['maquina'],
-                        "motivo": "FIN TRAMO PARCIAL",
-                        "inicio": fin.isoformat(),
-                        "fin": fin.isoformat(),
-                        "duracion_segundos": 0
-                    }).execute()
-                except Exception as e:
-                    # Si falla el insert en tiempos muertos, que no detenga el proceso principal
-                    pass
-
-                # 8. Limpiar estado y reiniciar la aplicación
-                st.success(f"✅ Parcial de {cantidad_parcial} unidades guardado. La máquina {r['maquina']} ahora está LIBRE.")
-                st.session_state.rep = None # Limpiamos la selección de la OP actual
+                
+                # 5. IMPORTANTE: NO borramos el trabajo activo en impresión. 
+                # En su lugar, actualizamos su 'hora_inicio' al momento exacto de la entrega parcial.
+                # De esta forma, la máquina sigue ocupada en Impresión ("En Proceso") calculando el tiempo restante,
+                # pero la OP ya se liberó para que Corte la pueda iniciar en paralelo.
+                supabase.table("trabajos_activos").update({
+                    "hora_inicio": fin.isoformat(),
+                    "tiempo_pausa": 0,
+                    "inicio_pausa": None,
+                    "motivo_pausa": None
+                }).eq("maquina", r['maquina']).execute()
+                
+                st.success(f"✅ Parcial de {cantidad_parcial} unidades enviado a {n_area_parcial}. ¡La máquina {r['maquina']} continúa en proceso en Impresión!")
+                st.session_state.rep = None
                 time.sleep(1.5)
                 st.rerun()
+                
+            except Exception as e:
+                st.error(f"Error al procesar la entrega parcial en la base de datos: {e}")
 
 
 if st.session_state.get('rol') == 'admin':
