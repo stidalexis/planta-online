@@ -2423,12 +2423,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.rerun()
 
 #  ENTREGAS PARCIALES 
-
         if parcial:
-            # 1. Validaciones usando tus variables exactas (op_prod)
-            if not op_prod:
-                st.error("❌ Error: Debes ingresar el nombre del operario antes de registrar el parcial.")
-                st.stop()
+            # 1. Validaciones de la cantidad
             if cantidad_parcial <= 0:
                 st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
                 st.stop()
@@ -2458,17 +2454,21 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if obs_parcial:
                 datos_c['observacion_parcial'] = obs_parcial
                 
-            # Agregamos al historial usando op_prod y aux_prod
+            # Recuperamos operario y auxiliar directamente del registro activo 'r'
+            operario_actual = r.get('operario', 'Operario Planta')
+            auxiliar_actual = r.get('auxiliar', '')
+                
+            # Agregamos al historial de forma segura
             hist.append({
                 "area": area_act,
                 "maquina": r['maquina'],
-                "operario": op_prod,
-                "auxiliar": aux_prod,
+                "operario": operario_actual,
+                "auxiliar": auxiliar_actual,
                 "fecha": fin.strftime("%d/%m/%Y %H:%M"),
                 "duracion": duracion,
                 "tipo": "PARCIAL",
                 "datos_cierre": datos_c,
-                "observaciones": obs_prod if obs_prod else f"Entrega parcial de {cantidad_parcial} unidades."
+                "observaciones": obs_parcial if obs_parcial else f"Entrega parcial de {cantidad_parcial} unidades."
             })
             
             # --- CAMBIO CLAVE SIMULTÁNEO ---
