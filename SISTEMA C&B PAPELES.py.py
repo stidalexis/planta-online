@@ -23,48 +23,64 @@ except Exception as e:
     
 #  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL)
 
+#  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL UNIFICADO) 
+
 st.markdown("""
     <style>
-    .stButton > button { height: 70px !important; border-radius: 15px; font-weight: bold; font-size: 20px !important; width: 100%; }
-    .title-area { background-color: #0D47A1; color: white; padding: 15px; border-radius: 10px; text-align: center; font-weight: bold; font-size: 22px; margin-bottom: 20px; }
-    
-    /* MONITOR: Cartas con fondo vibrante y texto en NEGRO absoluto */
-    .card-produccion { background-color: #00E676; border: 2px solid #00C853; padding: 20px; border-radius: 15px; text-align: center; color: #000000 !important; font-weight: bold; font-size: 18px; margin-bottom: 10px; }
-    .card-vacia { background-color: #F5F5F5; border: 1px solid #E0E0E0; padding: 20px; border-radius: 15px; text-align: center; color: #000000 !important; font-size: 16px; margin-bottom: 10px; }
-    
-    .section-header { background-color: #F0F2F6; padding: 10px; border-radius: 8px; font-weight: bold; color: #0D47A1; margin-top: 15px; margin-bottom: 10px; border-left: 6px solid #0D47A1; }
-    
-    /* RADIOGRAFÍA: Cuadros blancos con texto en NEGRO */
-    .metric-box { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 12px; border-radius: 8px; margin-bottom: 5px; color: #000000 !important; line-height: 1.6; }
-    .metric-box b { color: #000000 !important; }
-
-    /* ESTILO PROFESIONAL PARA HISTORIAL EN PANTALLA */
-    .historial-card {
-        background-color: #f8f9fa;
-        border-radius: 10px;
-        border-left: 5px solid #0D47A1;
-        padding: 15px;
-        margin-bottom: 15px;
-        box-shadow: 2px 2px 5px rgba(0,0,0,0.05);
+    /* Estilos generales de botones táctiles */
+    .stButton > button { 
+        height: 70px !important; 
+        border-radius: 15px; 
+        font-weight: bold; 
+        font-size: 20px !important; 
+        width: 100%; 
     }
-    .historial-header {
-        display: flex;
-        justify-content: space-between;
-        font-weight: bold;
-        color: #0D47A1;
-        border-bottom: 1px solid #dee2e6;
-        padding-bottom: 5px;
-        margin-bottom: 10px;
+    
+    /* Encabezados de Área */
+    .title-area { 
+        background-color: #0D47A1; 
+        color: white; 
+        padding: 15px; 
+        border-radius: 10px; 
+        text-align: center; 
+        font-weight: bold; 
+        font-size: 22px; 
+        margin-bottom: 20px; 
     }
-    .historial-tecnico {
-        font-size: 0.9em;
-        color: #333;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
+    
+    /* MONITOR: Tarjetas dinámicas optimizadas con alto contraste */
+    .card-produccion-verde { 
+        background-color: #00E676; 
+        padding: 20px; 
+        border-radius: 12px; 
+        margin-bottom: 15px; 
+        border-left: 10px solid #00C853; 
+        color: #000000 !important; 
+    }
+    .card-produccion-amarillo { 
+        background-color: #FFD600; 
+        padding: 20px; 
+        border-radius: 12px; 
+        margin-bottom: 15px; 
+        border-left: 10px solid #FFAB00; 
+        color: #000000 !important; 
+    }
+    .card-produccion-rojo { 
+        background-color: #FF5252; 
+        padding: 20px; 
+        border-radius: 12px; 
+        margin-bottom: 15px; 
+        border-left: 10px solid #D50000; 
+        color: #000000 !important; 
+    }
+    
+    /* Forzar visibilidad de textos negros dentro de las tarjetas */
+    .card-produccion-verde *, .card-produccion-amarillo *, .card-produccion-rojo * {
+        color: #000000 !important;
+        font-weight: bold !important;
     }
     </style>
-    """, unsafe_allow_html=True)
+""", unsafe_allow_html=True)
 
 #  CONSTANTES 
 
@@ -111,38 +127,24 @@ def hora_colombia():
 
 # FUNCION DE HORARIOS
 
-def calcular_duracion_laboral(inicio, fin, nombre_maquina=None):
-    jornada_inicio = 6
-    jornada_fin = 22
-    actual = inicio
-    total = timedelta()
-
-    # Si pasamos una máquina, verificamos si está encendida
-    esta_on = True
-    if nombre_maquina:
-        esta_on = obtener_estado_maquina(nombre_maquina)
-
-# SI LA MAQUINA ESTA APAGANA NO CUENTA NADA
-
-    if not esta_on:
-        return "0:00:00"
-
-    while actual.date() <= fin.date():
-        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0, tzinfo=actual.tzinfo)
-        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0, tzinfo=actual.tzinfo)
-
-        if actual.date() == inicio.date():
-            dia_inicio = max(inicio, dia_inicio)
-
-        if actual.date() == fin.date():
-            dia_fin = min(fin, dia_fin)
-
-        if dia_inicio < dia_fin:
-            total += (dia_fin - dia_inicio)
-
-        actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0, tzinfo=actual.tzinfo)
-
-    return str(total).split('.')[0]
+def calcular_duracion_laboral(inicio, fin, maquina_nombre=""):
+    """
+    Calcula los minutos transcurridos entre dos fechas, descontando por completo 
+    el tiempo que pase fuera de la jornada operativa (22:00 a 06:00 del día siguiente).
+    """
+    if fin <= inicio:
+        return 0
+        
+    minutos_operativos = 0
+    proceso = inicio
+    
+    # Avanzar minuto a minuto evaluando el rango laboral
+    while proceso < fin:
+        if 6 <= proceso.hour < 22:
+            minutos_operativos += 1
+        proceso += timedelta(minutes=1)
+        
+    return minutos_operativos
     
 #  PDF DE CERTIFICADO 
 
@@ -1787,56 +1789,46 @@ elif menu == "📦 Bodega MaterialTerminado":
 
 # MODULO: REPORTES 
 
-elif menu == "📊 Reportes Admin":
-        st.title("📊 Panel de Control y Reportes")
+elif menu_opt == "📊 Reportes Admin":
+    st.markdown("<div class='title-area'>📊 PANEL DE REPORTES Y AUDITORÍA DE PLANTA</div>", unsafe_allow_html=True)
+    
+    # 1. Filtros de Fecha Rápidos
+    c1, c2 = st.columns(2)
+    with c1:
+        f_inicio = st.date_input("Fecha Inicio", datetime.today())
+    with c2:
+        f_fin = st.date_input("Fecha Fin", datetime.today())
         
-        tab_historial, tab_muertos, tab_paradas = st.tabs([
-            "📦 Historial de Bodega", 
-            "⏳ Disponibilidad (Máquina Libre)", 
-            "🛑 Reporte de Paradas (Fallas)"
-        ])
+    # Convertir filtros a string para la consulta de base de datos
+    f_ini_str = f_inicio.strftime("%Y-%m-%d") + "T00:00:00"
+    f_fin_str = f_fin.strftime("%Y-%m-%d") + "T23:59:59"
+    
+    # 2. Descarga de datos optimizada (Trae solo lo necesario)
+    try:
+        res = supabase.table("ordenes_planeadas").select("*").gte("created_at", f_ini_str).lte("created_at", f_fin_str).execute()
+        act_data = res.data if res.data else []
+    except Exception as e:
+        st.error(f"Error al conectar con Supabase: {e}")
+        act_data = []
+
+    if not act_data:
+        st.info("📅 No se encontraron órdenes creadas en el rango de fechas seleccionado.")
+    else:
+        df_op = pd.DataFrame(act_data)
         
-        with tab_historial:
-            st.subheader("Historial de Movimientos de Bodega")
-            res_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True).execute().data
-            if res_h:
-                df_h = pd.DataFrame(res_h)
-                st.dataframe(df_h, use_container_width=True, hide_index=True)
-            else:
-                st.info("Sin registros en bodega.")
-
-        with tab_muertos:
-            st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
-
-#  TOMA DE TIEMPOS DE MAQUIA LIBRE ENTRE UN AOP Y OTRA 
-
-            res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
-            if res_m:
-                df_m = pd.DataFrame(res_m)
-                if 'duracion_min' in df_m.columns:
-                    total_libre = df_m['duracion_min'].sum()
-                    st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre} min")
-                st.dataframe(df_m, use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay registros de tiempo libre.")
-
-        with tab_paradas:
-            st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
-
-# AQUI S EMUESTRA PORQUE LA MAQUINA SE DERUBO 
-
-            res_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True).execute().data
-            if res_p:
-                df_p = pd.DataFrame(res_p)
-
-                if 'duracion_min' in df_p.columns:
-                    total_parada = df_p['duracion_min'].sum()
-                    st.metric("Total Tiempo Perdido por Fallas", f"{total_parada} min", delta_color="inverse")
-                
-                st.dataframe(df_p, use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay reportes de fallas técnicos.")
-
+        # Selección de columnas útiles para la vista del Administrador
+        columnas_utiles = ['op', 'cliente', 'producto', 'cantidad_solicitada', 'proxima_area', 'estado_general', 'created_at']
+        columnas_presentes = [c for c in columnas_utiles if c in df_op.columns]
+        
+        df_mostrar = df_op[columnas_presentes].copy()
+        df_mostrar.rename(columns={
+            'op': 'Orden (OP)', 'cliente': 'Cliente', 'producto': 'Producto', 
+            'cantidad_solicitada': 'Cant. Solicitada', 'proxima_area': 'Área Actual',
+            'estado_general': 'Estado', 'created_at': 'Fecha Creación'
+        }, inplace=True)
+        
+        st.subheader(f"📋 Órdenes Registradas ({len(df_mostrar)})")
+        st.dataframe(df_mostrar, use_container_width=True)
 
 elif menu == "📦 Almacen/Despachos":
     st.title("📦 Inventario de Productos Almacen")
