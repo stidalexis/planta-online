@@ -725,28 +725,26 @@ if 'rep' not in st.session_state: st.session_state.rep = None
 
 # LOGIN PRINCIPAL  LOGUIN
 
-if not st.session_state.get('autenticado'):
-    st.title("🔐 Acceso al Sistema C&B PAPELES DE COLOMBIA S.A.S")
-    
-    with st.form("login_form"):
-        user = st.text_input("Usuario")
-        pw = st.text_input("Contraseña", type="password")
-        boton_login = st.form_submit_button("Ingresar")
-        
-        if boton_login:
-            datos_usuario = validar_usuario_supabase(user, pw)
-            
-            if datos_usuario:
-                st.session_state['autenticado'] = True
-                st.session_state['usuario_actual'] = datos_usuario['usuario']
-                st.session_state['nombre_usuario'] = datos_usuario['nombre']
-                st.session_state['rol'] = datos_usuario['rol']
-                st.success(f"Bienvenido {datos_usuario['nombre']}")
-                time.sleep(1)
-                st.rerun()
-            else:
-                st.error("Usuario o contraseña incorrectos")
-    st.stop() 
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    # 1. MOSTRAR EXCLUSIVAMENTE EL FORMULARIO DE LOGIN AQUÍ
+    u = st.text_input("Usuario")
+    p = st.text_input("Clave", type="password")
+    if st.button("🔑 Ingresar al Sistema"):
+        user_data = validar_usuario_supabase(u, p)
+        if user_data:
+            st.session_state["autenticado"] = True
+            st.session_state["usuario"] = user_data["nombre"]
+            st.session_state["rol"] = user_data["rol"]
+            st.rerun()
+        else:
+            st.error("Credenciales incorrectas")
+else:
+    # 2. MOSTRAR EL RESTO DEL SISTEMA (Botones, tablas, Supabase) SOLO SI YA ESTÁ LOGUEADO
+    st.sidebar.write(f"Usuario: {st.session_state['usuario']}")
+    # Aquí metes tus pestañas ("MONITOR DE OPERACIONES", "INGRESAR ORDENES", etc.)
 
 # ESTRUCTURA DE MENU CON PERMISOS POR ROL
 
