@@ -395,11 +395,6 @@ def generar_op_rollos(row):
 
     return bytes(pdf.output())
 
-# PDF ORDEN PRODUCCION FORMAS
-
-from fpdf import FPDF
-from datetime import datetime
-
 # GENERAR PDF FORMAS
 
 def generar_op_formas(row):
