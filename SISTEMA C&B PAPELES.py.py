@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from datetime import datetime
+from datetime import datetime, timedelta  
 import time
 import io
 from fpdf import FPDF
@@ -101,9 +101,15 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
 
 #  FUNCIONES AUXILIARES 
 
-from datetime import timedelta
-import io
-import pandas as pd
+
+def cell_fit(pdf, w, h, text, border=1):
+
+    text = str(text)
+
+    while pdf.get_string_width(text) > (w - 2):
+        text = text[:-1]
+
+    pdf.cell(w, h, text, border)
 
 def hora_colombia():
     tz = pytz.timezone("America/Bogota")
@@ -117,7 +123,6 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None):
     actual = inicio
     total = timedelta()
 
-    # Si pasamos una máquina, verificamos si está encendida
     esta_on = True
     if nombre_maquina:
         esta_on = obtener_estado_maquina(nombre_maquina)
@@ -235,7 +240,6 @@ def generar_pdf_op(row):
 # DATOS TECNICOS SALIDA JHSON
 
             pdf.set_font("Arial", '', 8)
-            datos_c = h.get('datos_cierre', {})
 
             datos_c = h.get('datos_cierre', {})
 
@@ -286,22 +290,6 @@ def generar_pdf_op(row):
     pdf.cell(0, 10, f"DOCUMENTO OFICIAL C&B PAPELES - GENERADO AUTOMATICAMENTE - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", align='C')
     
     return bytes(pdf.output())
-
-# PDF ORDEN PRODUCCION ROLLOS
-
-from fpdf import FPDF
-from datetime import datetime
-
-# FUNCION PARA AJUSTAR TEXTO
-
-def cell_fit(pdf, w, h, text, border=1):
-
-    text = str(text)
-
-    while pdf.get_string_width(text) > (w - 2):
-        text = text[:-1]
-
-    pdf.cell(w, h, text, border)
 
 def generar_op_rollos(row):
     pdf = FPDF()
@@ -411,17 +399,6 @@ def generar_op_rollos(row):
 
 from fpdf import FPDF
 from datetime import datetime
-
-# FUNCION PARA AJUSTAR TEXTO
-
-def cell_fit(pdf, w, h, text, border=1):
-
-    text = str(text)
-
-    while pdf.get_string_width(text) > (w - 2):
-        text = text[:-1]
-
-    pdf.cell(w, h, text, border)
 
 # GENERAR PDF FORMAS
 
