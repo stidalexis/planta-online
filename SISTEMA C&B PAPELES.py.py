@@ -2232,12 +2232,20 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['cajas_totales'] = f2.number_input("Total Cajas Empacadas", 0, help="Esta cantidad se restará del inventario de la caja seleccionada arriba.")
                 datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
 
+## COLECTORAS
+
             elif area_act == "COLECTORAS":
                 c1, c2, c3 = st.columns(3) 
                 datos_c['tipo_papel'] = c1.text_input("tipo de papel")
                 datos_c['formas_colectadas'] = c2.number_input("total formas colectadas", 0)
                 datos_c['partes'] = c3.number_input("total partes colectadas", 0)
                 
+                st.markdown("---")
+                datos_c['destino_final'] = st.radio(
+                    "¿Cuál es el siguiente paso?",
+                    ["Enviar a Encuadernación", "Finalizar en Colectora"],
+                    index=0
+                )
 # CONSUMO DE CAJAS EN COLECTORAS
                 st.markdown("---")
                 col_inv_col = st.columns(2)
@@ -2301,13 +2309,31 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             obs_parcial = st.text_input("Observación parcial")
 
             col_f1, col_f2 = st.columns(2)
+            finalizar = col_f1.form_submit_button("🏁 FINALIZAR Y MOVER")
+            parcial = col_f2.form_submit_button("📦 ENTREGA PARCIAL")
 
-            with col_f1:
-                finalizar = st.form_submit_button("🏁 FINALIZAR Y MOVER")
+            if finalizar:
+                if op_name:
+                    inicio = datetime.fromisoformat(r['hora_inicio'].replace("Z", "+00:00")) if isinstance(r['hora_inicio'], str) else r['hora_inicio']
+                    fin = hora_colombia()
+                    duracion = calcular_duracion_laboral(inicio, fin)
 
-            with col_f2:
-                parcial = st.form_submit_button("📦 ENTREGA PARCIAL")
+                    # RUTAS DINÁMICAS
+                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
+                    tipo = d_op['tipo_orden']
+                    n_area = "FINALIZADO"
 
+                    if tipo in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
+                        if area_act == "IMPRESIÓN":
+                            n_area = "COLECTORAS"
+                        elif area_act == "COLECTORAS":
+                            # AQUÍ SE USA LA NUEVA LÓGICA
+                            if datos_c.get('destino_final') == "Finalizar en Colectora":
+                                n_area = "FINALIZADO"
+                            else:
+                                n_area = "ENCUADERNACIÓN"
+                        elif area_act == "ENCUADERNACIÓN":
+                            n_area = "FINALIZADO"
 #  FINALIZAR TRABAJO ( LOGICA)
 
             if finalizar:
