@@ -2397,19 +2397,14 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 #  RUTAS 
 
-                    if tipo == "FORMAS IMPRESAS":
+                    if tipo in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                         if area_act == "IMPRESIÓN":
                             n_area = "COLECTORAS"
                         elif area_act == "COLECTORAS":
-                            n_area = "ENCUADERNACIÓN"
-                        elif area_act == "ENCUADERNACIÓN":
-                             n_area = "FINALIZADO"
-
-                    elif tipo == "FORMAS BLANCAS":
-                        if area_act == "IMPRESIÓN":
-                            n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS":
-                            n_area = "ENCUADERNACIÓN"
+                            if datos_c.get('destino_final') == "Finalizar en Colectora":
+                                n_area = "FINALIZADO"
+                            else:
+                                n_area = "ENCUADERNACIÓN"
                         elif area_act == "ENCUADERNACIÓN":
                             n_area = "FINALIZADO"
 
@@ -2428,7 +2423,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             n_area = "FINALIZADO"
 
                     hist = d_op.get('historial_procesos') or []
-
                     hist.append({
                         "area": area_act,
                         "maquina": r['maquina'],
@@ -2444,12 +2438,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     supabase.table("ordenes_planeadas").update({
                         "proxima_area": n_area,
                         "historial_procesos": hist
-                   }).eq("op", r['op']).execute()
-
-#  SOLO FINAL BORRA ACTIVO
+                    }).eq("op", r['op']).execute()
 
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
-
                     st.session_state.rep = None
                     st.rerun()
 
