@@ -337,8 +337,7 @@ def generar_op_rollos(row):
     pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(63, 7, f"Material: {row.get('material','')}", 1)
-    pdf.cell(63, 7, "Gramaje", 1, 0, 'C')
-    pdf.cell(63, 7, f": {row.get('gramaje_rollos','')}", 1)
+    pdf.cell(63, 7, f"Gramaje: {row.get('gramaje_rollos','')}", 1)
     pdf.cell(64, 7, f"Core: {row.get('core','')}", 1, 1)
 
     pdf.cell(63, 7, f"Cantidad Rollos: {row.get('cantidad_rollos','')}", 1)
