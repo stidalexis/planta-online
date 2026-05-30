@@ -916,6 +916,8 @@ if menu == "🖥️ Monitor":
                     d_op = supabase.table("ordenes_planeadas").select("tipo_orden, historial_procesos").eq("op", tr['op']).single().execute().data
                     historial = d_op.get('historial_procesos', []) if d_op else []
                     num_pasos = len(historial)
+                    pasos = [item['area'][:3].upper() for item in historial]
+                    flujo = " ➡️ ".join(pasos) if pasos else "INICIO"
                     
                     # 2. TARJETA VIBRANTE CON RADIOGRAFÍA INTEGRADA
                     with st.container():
@@ -924,22 +926,21 @@ if menu == "🖥️ Monitor":
                             <b>{m}</b><br>
                             OP: {tr['op']}<br>
                             <small>{tr['nombre_trabajo']}</small><br>
-                            <span style='font-size: 12px; color: #FFF;'>Pasos realizados: {num_pasos}</span>
+                            <hr style='margin: 5px 0;'>
+                            <div style='font-size: 11px; color: #FFD700;'>RADIOGRAFÍA:</div>
+                            <div style='font-size: 12px; font-weight: bold;'>{flujo}</div>
                             </div>""",
                             unsafe_allow_html=True
                         )
                         
-                        # 3. POP OVER PARA DETALLE (Radiografía completa)
-                        with st.popover("📖 Ver Bitácora"):
+                        # 3. POP OVER PARA DETALLE (Si necesitas ver la bitácora)
+                        with st.popover("🔍 Ver Detalle"):
                             st.write(f"### Detalles OP {tr['op']}")
-                            st.info(f"Tipo: {d_op.get('tipo_orden', 'N/A')}")
+                            # Aquí mostramos el resumen tipo "Radiografía"
+                            st.write(f"**Ruta actual:** {flujo}")
                             st.write("---")
-                            if historial:
-                                for item in reversed(historial): # Mostramos lo más reciente primero
-                                    st.write(f"✅ **{item['area']}** - {item['operario']}")
-                                    st.caption(f"Fecha: {item['fecha']} | Duración: {item['duracion']}")
-                            else:
-                                st.warning("No hay procesos registrados aún.")
+                            for item in reversed(historial):
+                                st.write(f"✅ **{item['area']}** por {item['operario']}")
 
 # TARJETA AZUL/VIBRANTE: En produccion
 
