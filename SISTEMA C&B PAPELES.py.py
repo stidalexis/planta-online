@@ -175,7 +175,7 @@ def generar_pdf_op(row):
     
 #  SECCION DATOS DE VENTA PDF
 
-    pdf.set_font("Arial", 'B', 10)
+    pdf.set_font("Arial", 'B', 11)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, " 1. INFORMACION GENERAL Y ORIGEN", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
@@ -333,7 +333,8 @@ def generar_op_rollos(row):
 
 # ESPECIFICACIONES TECNICAS
 
-    pdf.ln(4); pdf.set_font("Arial", "B", 11); pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
+    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(63, 7, f"Material: {row.get('material','')}", 1)
     pdf.cell(63, 7, f"Gramaje: {row.get('gramaje_rollos','')}", 1)
@@ -355,9 +356,12 @@ def generar_op_rollos(row):
 
 # OBSERFVACIONES Y PERFORACIONES 
 
-    pdf.ln(4); pdf.set_font("Arial", "B", 9); pdf.cell(0, 8, "3. ADICIONALES Y OBSERVACIONES", 0, 1, fill=True)
+    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    pdf.cell(0, 8, "3. ADICIONALES Y OBSERVACIONES", 0, 1, fill=True)
+    pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 7, f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}", 1, 1)
-    pdf.multi_cell(0, 7, f"OBSERVACIONES: {row.get('observaciones_rollos','')}", 1)
+    pdf.set_text_color(255, 0, 0)
+    pdf.multi_cell(0, 7, f"Observaciones: {row.get('observaciones_rollos','')}", 1)
 
 # FIRMAS O SELLOS 
 
