@@ -947,35 +947,36 @@ if menu == "🖥️ Monitor":
                                 st.write("---")
                                 st.write("**Detalles Técnicos:**")
                                 c1, c2, c3, c4 = st.columns(4)
-                            with c1:
-                                st.write("**👤 CLIENTE:**")
-                                st.write(cliente)
-                                st.write("**📅 FECHA:**")
-                                st.write(row.get('created_at', '')[:10])
-                                st.write("**🔙 ORDEN ANTERIOR:**")
-                                st.write(row.get('op_anterior', '')[:10])
-                            with c2:
-                                st.write("**🏗️ AREA ACTUAL:**")
-                                st.info(area_destino)
-                                st.write("**📦 CANTIDAD SOLICITADA:**")
-                                st.write(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
-                                st.write("**📖 REFERENCIA COMERCIAL:**")
-                                st.write(row.get('ref_comercial', ''))
-                            with c3:
-                                st.write("**📝 NOMBRE DE TRABAJO:**")
-                                st.write(nombre_t)
-                                st.write("**⚙️ TIPO DE TRABAJO:**")
-                                st.write(row.get('tipo_orden', 'N/A'))
-                                st.write("**📋 OBSERVACIONES DE DISEÑO:**")
-                                st.write(row.get('observaciones_diseno', 'N/A'))
-                            with c4:
-                                st.write("**🛠️ ACCIONES Y ENLACES:**")
+                                with c1:
+                                        st.write("**👤 CLIENTE:**")
+                                        
+                                        st.write("**📅 FECHA:**")
+                                        st.write(row.get('created_at', '')[:10])
+                                        st.write("**🔙 ORDEN ANTERIOR:**")
+                                        
+                                with c2:
+                                        st.write("**🏗️ AREA ACTUAL:**")
+                                  
+                                        st.write("**📦 CANTIDAD SOLICITADA:**")
+                                
+                                        st.write("**📖 REFERENCIA COMERCIAL:**")
+                                      
+                                with c3:
+                                        st.write("**📝 NOMBRE DE TRABAJO:**")
+                                        
+                                        st.write("**⚙️ TIPO DE TRABAJO:**")
+                                      
+                                        st.write("**📋 OBSERVACIONES DE DISEÑO:**")
+                                       
+                                with c4:
+                                        st.write("**🛠️ ACCIONES Y ENLACES:**")
                             
                             st.write("---")
                             st.write("### 📜 Bitácora de Proceso")
                             for item in reversed(historial):
                                 st.write(f"✅ **{item['area']}** - {item['operario']}")
                                 st.caption(f"Fecha: {item['fecha']} | Obs: {item.get('observaciones', 'Sin obs.')}")
+
 # TARJETA AZUL/VIBRANTE: En produccion
 
                     st.markdown(
