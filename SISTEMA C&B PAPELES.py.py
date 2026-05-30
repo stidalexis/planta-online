@@ -2073,8 +2073,27 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         with cols[idx % 3]:
             if m in activos:
                 tr = activos[m]
-
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
+
+    # NUEVO: BOTÓN DE BITÁCORA
+                with st.popover("📖 Ver Bitácora OP"):
+                    st.subheader(f"Bitácora: OP {tr['op']}")
+        
+        # Consultamos el historial directamente de la orden
+                    d_op = supabase.table("ordenes_planeadas").select("historial_procesos").eq("op", tr['op']).single().execute().data
+                    historial = d_op.get('historial_procesos', []) if d_op else []
+        
+                    if historial:
+                        for item in historial:
+                            st.markdown(f"""
+                            **Área:** {item['area']}  
+                            **Operario:** {item['operario']}  
+                            **Fecha:** {item['fecha']}  
+                            **Duración:** {item['duracion']}  
+                            ---
+                            """)
+                    else:
+                        st.info("Esta OP aún no tiene procesos registrados.")
 
  # LOGICA DE PARADAS TECNICAS 
 
