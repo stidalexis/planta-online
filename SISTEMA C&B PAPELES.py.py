@@ -916,10 +916,10 @@ if menu == "🖥️ Monitor":
                     d_op = supabase.table("ordenes_planeadas").select("tipo_orden, historial_procesos").eq("op", tr['op']).single().execute().data
                     historial = d_op.get('historial_procesos', []) if d_op else []
                     num_pasos = len(historial)
+                    # 2. RADIOGRAFÍA EN LA TARJETA (Resumen visual)
                     pasos = [item['area'][:3].upper() for item in historial]
                     flujo = " ➡️ ".join(pasos) if pasos else "INICIO"
                     
-                    # 2. TARJETA VIBRANTE CON RADIOGRAFÍA INTEGRADA
                     with st.container():
                         st.markdown(
                             f"""<div class='card-produccion'>
@@ -927,21 +927,32 @@ if menu == "🖥️ Monitor":
                             OP: {tr['op']}<br>
                             <small>{tr['nombre_trabajo']}</small><br>
                             <hr style='margin: 5px 0;'>
-                            <div style='font-size: 11px; color: #FFD700;'>RADIOGRAFÍA:</div>
-                            <div style='font-size: 12px; font-weight: bold;'>{flujo}</div>
+                            <div style='font-size: 11px; color: #FFD700;'>RUTA: {flujo}</div>
                             </div>""",
                             unsafe_allow_html=True
                         )
                         
-                        # 3. POP OVER PARA DETALLE (Si necesitas ver la bitácora)
-                        with st.popover("🔍 Ver Detalle"):
-                            st.write(f"### Detalles OP {tr['op']}")
-                            # Aquí mostramos el resumen tipo "Radiografía"
-                            st.write(f"**Ruta actual:** {flujo}")
+                        # 3. POP OVER CON RADIOGRAFÍA TÉCNICA COMPLETA
+                        with st.popover("🔍 Ver Radiografía Técnica"):
+                            st.write(f"### 📋 Ficha Técnica: OP {tr['op']}")
+                            
+                            # Aquí traemos la orden completa para ver los datos técnicos
+                            # Asumimos que 'd_op' ya tiene todos los campos como 'vendedor', 'medidas', etc.
+                            if d_op:
+                                col1, col2 = st.columns(2)
+                                col1.write(f"**Vendedor:** {d_op.get('vendedor', 'N/A')}")
+                                col1.write(f"**Tipo:** {d_op.get('tipo_orden', 'N/A')}")
+                                col2.write(f"**Cant. Solicitada:** {d_op.get('cantidad', 'N/A')}")
+                                
+                                st.write("---")
+                                st.write("**Detalles Técnicos:**")
+                                st.json(d_op) # O puedes poner campo por campo: col1.write(f"Medidas: {d_op.get('medidas')}")
+                            
                             st.write("---")
+                            st.write("### 📜 Bitácora de Proceso")
                             for item in reversed(historial):
-                                st.write(f"✅ **{item['area']}** por {item['operario']}")
-
+                                st.write(f"✅ **{item['area']}** - {item['operario']}")
+                                st.caption(f"Fecha: {item['fecha']} | Obs: {item.get('observaciones', 'Sin obs.')}")
 # TARJETA AZUL/VIBRANTE: En produccion
 
                     st.markdown(
