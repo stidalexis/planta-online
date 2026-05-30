@@ -909,6 +909,37 @@ if menu == "🖥️ Monitor":
                         unsafe_allow_html=True
                     )
                 elif m in act:
+                    # Datos del trabajo actual
+                    tr = act[m]
+                    
+                    # 1. Consultamos el historial de la OP (Radiografía)
+                    d_op = supabase.table("ordenes_planeadas").select("tipo_orden, historial_procesos").eq("op", tr['op']).single().execute().data
+                    historial = d_op.get('historial_procesos', []) if d_op else []
+                    num_pasos = len(historial)
+                    
+                    # 2. TARJETA VIBRANTE CON RADIOGRAFÍA INTEGRADA
+                    with st.container():
+                        st.markdown(
+                            f"""<div class='card-produccion'>
+                            <b>{m}</b><br>
+                            OP: {tr['op']}<br>
+                            <small>{tr['nombre_trabajo']}</small><br>
+                            <span style='font-size: 12px; color: #FFF;'>Pasos realizados: {num_pasos}</span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                        
+                        # 3. POP OVER PARA DETALLE (Radiografía completa)
+                        with st.popover("📖 Ver Bitácora"):
+                            st.write(f"### Detalles OP {tr['op']}")
+                            st.info(f"Tipo: {d_op.get('tipo_orden', 'N/A')}")
+                            st.write("---")
+                            if historial:
+                                for item in reversed(historial): # Mostramos lo más reciente primero
+                                    st.write(f"✅ **{item['area']}** - {item['operario']}")
+                                    st.caption(f"Fecha: {item['fecha']} | Duración: {item['duracion']}")
+                            else:
+                                st.warning("No hay procesos registrados aún.")
 
 # TARJETA AZUL/VIBRANTE: En produccion
 
@@ -2073,27 +2104,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         with cols[idx % 3]:
             if m in activos:
                 tr = activos[m]
-                st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
-    # NUEVO: BOTÓN DE BITÁCORA
-                with st.popover("📖 Ver Bitácora OP"):
-                    st.subheader(f"Bitácora: OP {tr['op']}")
-        
-        # Consultamos el historial directamente de la orden
-                    d_op = supabase.table("ordenes_planeadas").select("historial_procesos").eq("op", tr['op']).single().execute().data
-                    historial = d_op.get('historial_procesos', []) if d_op else []
-        
-                    if historial:
-                        for item in historial:
-                            st.markdown(f"""
-                            **Área:** {item['area']}  
-                            **Operario:** {item['operario']}  
-                            **Fecha:** {item['fecha']}  
-                            **Duración:** {item['duracion']}  
-                            ---
-                            """)
-                    else:
-                        st.info("Esta OP aún no tiene procesos registrados.")
+                st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
  # LOGICA DE PARADAS TECNICAS 
 
