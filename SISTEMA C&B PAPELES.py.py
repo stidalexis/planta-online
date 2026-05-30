@@ -162,7 +162,7 @@ def generar_pdf_op(row):
 
 # LOGO CYB PAPELES
 
-    pdf.image("logo_cb.png", 7, 5, 60)
+    pdf.image("logo_cb.png", 4, 5, 60)
     
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 18)
