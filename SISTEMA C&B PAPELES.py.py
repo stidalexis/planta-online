@@ -310,7 +310,7 @@ def generar_op_rollos(row):
 
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
-    pdf.image("logo_cb.png", 8, 6, 55)
+    pdf.image("logo_cb.png", 2, 2, 60)
     
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", "B", 16)
@@ -416,7 +416,7 @@ def generar_op_formas(row):
 
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
-    pdf.image("logo_cb.png", 8, 6, 55)
+    pdf.image("logo_cb.png", 2, 2, 60)
 
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
@@ -551,7 +551,7 @@ def generar_op_rebobinado(row):
 
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
-    pdf.image("logo_cb.png", 8, 6, 55)
+    pdf.image("logo_cb.png", 2, 2, 60)
 
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
