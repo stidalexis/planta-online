@@ -380,7 +380,7 @@ def generar_op_rollos(row):
     y_est = pdf.get_y() + 2
     pdf.set_xy(10, y_est)
     pdf.set_fill_color(210, 210, 210); pdf.set_font("Arial", 'B', 11)
-    pdf.cell(190, 5, "5 .REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
+    pdf.cell(190, 5, "5 .REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 0, 1, 'C', fill=True)
     
     w_e = 190 / 3
     pdf.set_font("Arial", '', 8)
