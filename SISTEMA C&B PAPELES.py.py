@@ -350,8 +350,8 @@ def generar_op_rollos(row):
     trans = "SI" if row.get('transportadora_rollos') else "NO"
     pdf.cell(95, 7, f"Transportadora: {trans}", 1, 1)
     pdf.cell(25, 8, "Impresión", 1, 0, 'C')
-    pdf.cell(82, 8, f" FRENTE: {row.get('tintas_frente_rollos', 'N/A')}", 1)
-    pdf.cell(83, 8, f" RESPALDO: {row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1)
+    pdf.cell(82, 8, f" Frente: {row.get('tintas_frente_rollos', 'N/A')}", 1)
+    pdf.cell(83, 8, f" Respaldo: {row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1)
     pdf.cell(190, 7, f"Destino: {row.get('destino_rollos','PLANTA')}", 1, 1)
 
 # OBSERFVACIONES Y PERFORACIONES 
@@ -363,13 +363,15 @@ def generar_op_rollos(row):
     pdf.set_text_color(255, 0, 0)
     pdf.multi_cell(0, 7, f"Observaciones: {row.get('observaciones_rollos','')}", 1)
 
-# FIRMAS O SELLOS 
+# FIRMAS O SELLOS
+    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    pdf.cell(0, 8, "4 FIRMAS", 0, 1, fill=True)
     pdf.set_text_color(0, 0, 0)
-    pdf.ln(1); pdf.set_font("Arial", "B", 7)
+    pdf.ln(1); pdf.set_font("Arial", "B", 6)
     pdf.set_fill_color(230, 230, 230)
-    pdf.cell(63, 6, "COORDINADORA", 1, 0, "C", fill=True) 
+    pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
     pdf.cell(63, 6, "ASESOR", 1, 0, "C", fill=True) 
-    pdf.cell(64, 6, "SUPERVISOR", 1, 1, "C", fill=True)
+    pdf.cell(64, 6, "SUPERVISOR DE PRODUCCION", 1, 1, "C", fill=True)
     pdf.cell(63, 20, "", 1, 0); pdf.cell(63, 20, "", 1, 0); pdf.cell(64, 20, "", 1, 1)
 
 # DATOS DE ESTIBAS 
