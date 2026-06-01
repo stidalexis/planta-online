@@ -512,6 +512,7 @@ def generar_op_formas(row):
 
     pdf.ln(5)
     pdf.set_font("Arial","B",11)
+    pdf.set_text_color(255, 0, 0)
     pdf.cell(0,8,"5. OBSERVACIONES GENERALES",0,1,fill=True)
     pdf.set_font("Arial","",10)
     pdf.multi_cell(0,7,row.get("observaciones_formas",""), 1)
