@@ -442,7 +442,7 @@ def generar_op_formas(row):
     pdf.set_fill_color(230,230,230)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","B",10)
     pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
     pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
     pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
