@@ -530,10 +530,6 @@ def generar_op_formas(row):
     pdf.cell(64, 6, "SUPERVISOR DE PRODUCCION", 1, 1, "C", fill=True)
     pdf.cell(63, 20, "", 1, 0); pdf.cell(63, 20, "", 1, 0); pdf.cell(64, 20, "", 1, 1)
 
-    pdf.set_font("Arial","B",8)
-    pdf.cell(130,8,"OBSERVACIONES",1,0,"C")
-    pdf.cell(60,8,"RECIBE",1,1,"C")
-
     pdf.set_font("Arial", "B", 8)
     pdf.cell(130, 8, "OBSERVACIONES FINALIZADO", 1, 0, "C"); pdf.cell(60, 8, "RECIBE", 1, 1, "C")
     pdf.set_font("Arial", "", 7)
