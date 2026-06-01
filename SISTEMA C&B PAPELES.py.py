@@ -364,9 +364,9 @@ def generar_op_rollos(row):
     pdf.multi_cell(0, 7, f"Observaciones: {row.get('observaciones_rollos','')}", 1)
 
 # FIRMAS O SELLOS
+    pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
     pdf.cell(0, 8, "4 FIRMAS", 0, 1, fill=True)
-    pdf.set_text_color(0, 0, 0)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
