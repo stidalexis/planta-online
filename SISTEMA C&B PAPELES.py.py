@@ -366,7 +366,7 @@ def generar_op_rollos(row):
 # FIRMAS O SELLOS
     pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
-    pdf.cell(0, 8, "4 FIRMAS", 0, 1, fill=True)
+    pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
@@ -376,11 +376,11 @@ def generar_op_rollos(row):
 
 # DATOS DE ESTIBAS 
 
-    pdf.set_font("Arial", "", 6)
+    pdf.set_font("Arial", "", 11)
     y_est = pdf.get_y() + 2
     pdf.set_xy(10, y_est)
     pdf.set_fill_color(210, 210, 210); pdf.set_font("Arial", 'B', 9)
-    pdf.cell(190, 5, "REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
+    pdf.cell(190, 5, "5 .REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
     
     w_e = 190 / 3
     pdf.set_font("Arial", '', 8)
@@ -403,6 +403,7 @@ def generar_op_rollos(row):
     pdf.cell(0, 5, f"SISTEMA C&B PAPELES - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
 
     return bytes(pdf.output())
+
 
 # GENERAR PDF FORMAS
 
