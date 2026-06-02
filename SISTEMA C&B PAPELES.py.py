@@ -771,25 +771,25 @@ with st.sidebar:
 # DEFINICION DE PERMISOS SEGUN ROL
 
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "⏱️ Seguimiento Cortadoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega MaterialTerminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]     
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'jefe_log':
-        opciones_menu = ["📦 Bodega MaterialTerminado", "📊 Reportes Admin", "📦 Almacen/Despachos"]
+        opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos"]
     elif rol == 'patinador_log':
         opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'aux_log':
         opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'supervisor_imp':
-        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📕 Encuadernación"]
+        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📥 Colectoras", "📕 Encuadernación"]
     elif rol == 'supervisor_cor':
-        opciones_menu = ["🖥️ Monitor", "✂️ Corte"]
+        opciones_menu = ["🖥️ Monitor", "✂️ Corte", "⏱️ Seguimiento Cortadoras"]
     elif rol == 'supervisor_enc':
         opciones_menu = ["🖥️ Monitor", "📕 Encuadernación"]
     elif rol == 'supervisor_reb':
         opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
     elif rol == 'patinador_roll':
-        opciones_menu = ["📦 Bodega MaterialTerminado"]
+        opciones_menu = ["📦 salida produccion P1"]
     elif rol == 'almacen':
         opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'diseño':
@@ -1591,7 +1591,7 @@ elif menu == "📅 Planificación":
 
 # MODULO: BODEGA PRODUCTO TERMINADO 
 
-elif menu == "📦 Bodega MaterialTerminado":
+elif menu == "📦 salida produccion P1":
     st.title("📦 Inventario de Producto Terminado")
     
     tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
@@ -2091,6 +2091,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     st.info("No hay registros previos para esta máquina.")
             except Exception as e:
                 st.error(f"Error al cargar el historial: {e}")
+
 # MODULO DE INVENTARIO CORES Y CAJAS
 
 elif menu == "📦 Inventario":
