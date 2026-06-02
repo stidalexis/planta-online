@@ -987,6 +987,7 @@ elif menu == "🔍 Seguimiento":
                     b not in cliente.lower() and 
                     b not in nombre_t.lower() and
                     b not in lugar.lower() and  
+                    b not in area_destino.lower() and 
                     b not in vendedor.lower()):
                     continue
 
