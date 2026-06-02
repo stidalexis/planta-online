@@ -974,10 +974,9 @@ elif menu == "🔍 Seguimiento":
             area_destino = row.get('proxima_area', 'SIN ÁREA').upper()
             cliente = row.get('cliente', 'N/A')
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
-            # Extraemos el nombre del vendedor de la base de datos
             vendedor = row.get('vendedor', 'N/A')
-            area = row.get('area_proxima', 'N/A')  
-
+            area_proxima = row.get('area_proxima', 'N/A')
+           
 
 # LOGICA DE FILTRADO
 
@@ -986,7 +985,8 @@ elif menu == "🔍 Seguimiento":
                 
                 if (b not in op_id.lower() and 
                     b not in cliente.lower() and 
-                    b not in nombre_t.lower() and 
+                    b not in nombre_t.lower() and
+                    b not in area_proxima.lower() and  
                     b not in vendedor.lower()):
                     continue
 
