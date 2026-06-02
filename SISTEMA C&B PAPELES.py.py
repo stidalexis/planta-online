@@ -522,13 +522,17 @@ def generar_op_formas(row):
     pdf.ln(1)
     pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
-    pdf.cell(0, 8, "6. FIRMAS", 0, 1, fill=True)
+    pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
     pdf.cell(63, 6, "ASESOR", 1, 0, "C", fill=True) 
     pdf.cell(64, 6, "SUPERVISOR DE PRODUCCION", 1, 1, "C", fill=True)
     pdf.cell(63, 20, "", 1, 0); pdf.cell(63, 20, "", 1, 0); pdf.cell(64, 20, "", 1, 1)
+
+    pdf.set_font("Arial","B",8)
+    pdf.cell(130,8,"OBSERVACIONES",1,0,"C")
+    pdf.cell(60,8,"RECIBE",1,1,"C")
 
     pdf.set_font("Arial", "B", 8)
     pdf.cell(130, 8, "OBSERVACIONES FINALIZADO", 1, 0, "C"); pdf.cell(60, 8, "RECIBE", 1, 1, "C")
@@ -767,7 +771,7 @@ with st.sidebar:
 # DEFINICION DE PERMISOS SEGUN ROL
 
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega MaterialTerminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]     
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "⏱️ Seguimiento Cortadoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 Bodega MaterialTerminado", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'jefe_log':
@@ -1996,6 +2000,97 @@ elif menu == "📦 Almacen/Despachos":
                     st.warning(f"⚠️ Hay {len(bajo_stock)} productos con stock crítico (2 o menos cajas).")
         else:
             st.info("La bodega está vacía actualmente.")
+
+elif menu == "⏱️ Seguimiento Cortadoras":
+        st.header("⏱️ Seguimiento Horario de Cortadoras")
+        
+        # Usamos las máquinas de corte configuradas en tus CONSTANTES
+        maq_sel = st.selectbox("Seleccione la Máquina", MAQUINAS["CORTE"])
+        
+        t1, t2 = st.tabs(["📝 Registro", "📋 Historial"])
+        
+        with t1:
+            with st.form("f_seg_hor", clear_on_submit=True):
+                ca, cb, cc = st.columns(3)
+                with ca:
+                    op_s = st.text_input("OP")
+                    nt_s = st.text_input("Nombre Trabajo")
+                    # En tu sistema original no hay MARCAS_PAPEL, usamos un input de texto o genérico
+                    tipo_p = st.text_input("Tipo de Papel / Material")
+                    turno_s = st.selectbox("Turno", ["Mañana", "Tarde", "Noche"])
+                with cb:
+                    m_r = st.number_input("Metros de Rollo", min_value=0, value=0)
+                    med_r = st.text_input("Medida de Rollo")
+                    u_c = st.number_input("Unid/Caja", min_value=0, value=0)
+                    n_c = st.number_input("Número Cajas", min_value=0, value=0)
+                with cc:
+                    n_v = st.number_input("Varillas", min_value=0, value=0)
+                    p_d = st.number_input("Desp. KG", min_value=0.0, value=0.0, step=0.1)
+                    mot_d = st.text_input("Motivo Desp.")
+                    obs = st.text_area("Observaciones")
+                
+                # Campos de cierre de turno opcionales
+                st.markdown("---")
+                st.markdown("##### 📦 Datos de Cierre de Turno (Opcional)")
+                col_x, col_y = st.columns(2)
+                with col_x: 
+                    c_t = st.number_input("TOTAL CAJAS TURNO", min_value=0, value=0)
+                with col_y: 
+                    v_t = st.number_input("TOTAL VARILLAS TURNO", min_value=0, value=0)
+                
+                if st.form_submit_button("🚀 Guardar Avance"):
+                    if not op_s:
+                        st.error("⚠️ El número de OP es obligatorio para registrar el avance.")
+                    else:
+                        try:
+                            # Guardamos directamente en la tabla de Supabase creada en el Paso 1
+                            datos_insertar = {
+                                "fecha": hora_colombia().strftime("%Y-%m-%d"), 
+                                "hora_registro": hora_colombia().strftime("%H:%M:%S"),
+                                "turno": turno_s, 
+                                "maquina": maq_sel, 
+                                "op": str(op_s), 
+                                "nombre_trabajo": nt_s,
+                                "tipo_papel": tipo_p, 
+                                "metros_rollo": m_r, 
+                                "medida_rollo": med_r,
+                                "unidades_por_caja": u_c, 
+                                "num_varillas": n_v, 
+                                "num_cajas": n_c,
+                                "peso_desperdicio": p_d, 
+                                "motivo_desperdicio_seg": mot_d, 
+                                "observaciones": obs,
+                                "total_cajas_empacadas": c_t, 
+                                "total_varillas_sacadas": v_t
+                            }
+                            
+                            supabase.table("seguimiento_cortadoras").insert(datos_insertar).execute()
+                            st.success(f"🎉 Avance de la máquina {maq_sel} guardado exitosamente en la nube.")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error al guardar en Supabase: {e}")
+                            
+        with t2:
+            st.markdown(f"### Historial Reciente - {maq_sel}")
+            try:
+                # Cargamos los datos desde Supabase filtrando directamente por la máquina seleccionada
+                respuesta = supabase.table("seguimiento_cortadoras")\
+                                    .select("*")\
+                                    .eq("maquina", maq_sel)\
+                                    .order("id", descending=True)\
+                                    .execute()
+                
+                if respuesta.data:
+                    df_h = pd.DataFrame(respuesta.data)
+                    
+                    # Reorganizamos columnas para que se vea estético
+                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
+                    st.dataframe(df_h[columnas_visibles], use_container_width=True)
+                else:
+                    st.info("No hay registros previos para esta máquina.")
+            except Exception as e:
+                st.error(f"Error al cargar el historial: {e}")
 
 # MODULO DE INVENTARIO CORES Y CAJAS
 
