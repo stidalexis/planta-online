@@ -975,7 +975,9 @@ elif menu == "🔍 Seguimiento":
             cliente = row.get('cliente', 'N/A')
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
             # Extraemos el nombre del vendedor de la base de datos
-            vendedor = row.get('vendedor', 'N/A') 
+            vendedor = row.get('vendedor', 'N/A')
+            area = row.get('area_proxima', 'N/A')  
+
 
 # LOGICA DE FILTRADO
 
