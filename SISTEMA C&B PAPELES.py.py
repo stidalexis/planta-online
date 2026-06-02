@@ -975,7 +975,7 @@ elif menu == "🔍 Seguimiento":
             cliente = row.get('cliente', 'N/A')
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
             vendedor = row.get('vendedor', 'N/A')
-            area_proxima = row.get('area_proxima', 'N/A')
+            lugar = row.get('tipo_origen', 'N/A')
            
 
 # LOGICA DE FILTRADO
@@ -986,9 +986,10 @@ elif menu == "🔍 Seguimiento":
                 if (b not in op_id.lower() and 
                     b not in cliente.lower() and 
                     b not in nombre_t.lower() and
-                    b not in area_proxima.lower() and  
+                    b not in lugar.lower() and  
                     b not in vendedor.lower()):
                     continue
+
 
 # LOGICA DE ESTATUS MEJORADA
 
