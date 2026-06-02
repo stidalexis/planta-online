@@ -2074,11 +2074,11 @@ elif menu == "⏱️ Seguimiento Cortadoras":
         with t2:
             st.markdown(f"### Historial Reciente - {maq_sel}")
             try:
-                # Cargamos los datos desde Supabase filtrando directamente por la máquina seleccionada
+                # CORRECCIÓN: Cambiamos 'descending=True' por 'desc=True'
                 respuesta = supabase.table("seguimiento_cortadoras")\
                                     .select("*")\
                                     .eq("maquina", maq_sel)\
-                                    .order("id", descending=True)\
+                                    .order("id", desc=True)\
                                     .execute()
                 
                 if respuesta.data:
@@ -2091,7 +2091,6 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     st.info("No hay registros previos para esta máquina.")
             except Exception as e:
                 st.error(f"Error al cargar el historial: {e}")
-
 # MODULO DE INVENTARIO CORES Y CAJAS
 
 elif menu == "📦 Inventario":
