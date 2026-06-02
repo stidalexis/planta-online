@@ -2085,7 +2085,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     df_h = pd.DataFrame(respuesta.data)
                     
                     # Reorganizamos columnas para que se vea estético
-                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
+                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones", "total_cajas_empacadas", "total_varillas_sacadas"]
                     st.dataframe(df_h[columnas_visibles], use_container_width=True)
                 else:
                     st.info("No hay registros previos para esta máquina.")
