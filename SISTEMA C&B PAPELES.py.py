@@ -2031,7 +2031,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                 
                 # Campos de cierre de turno opcionales
                 st.markdown("---")
-                st.markdown("##### 📦 Datos de Cierre de Turno (Opcional)")
+                st.markdown("##### 📦 Datos de Cierre de Turno (Opcional Si solo corto un tipo de trabajo)")
                 col_x, col_y = st.columns(2)
                 with col_x: 
                     c_t = st.number_input("TOTAL CAJAS TURNO", min_value=0, value=0)
