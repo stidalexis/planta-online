@@ -2019,7 +2019,6 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                 with ca:
                     op_s = st.text_input("OP")
                     nt_s = st.text_input("Nombre Trabajo")
-                    # En tu sistema original no hay MARCAS_PAPEL, usamos un input de texto o genérico
                     tipo_p = st.text_input("Tipo de Papel / Material")
                     turno_s = st.selectbox("Turno", ["Mañana", "Tarde", "Noche"])
                 with cb:
@@ -2035,7 +2034,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                 
                 # Campos de cierre de turno opcionales
                 st.markdown("---")
-                st.markdown("##### 📦 Datos de Cierre de Turno (Opcional Si solo corto un tipo de trabajo)")
+                st.markdown("##### 📦 Datos de Cierre de Turno (Opcional)")
                 col_x, col_y = st.columns(2)
                 with col_x: 
                     c_t = st.number_input("TOTAL CAJAS TURNO", min_value=0, value=0)
@@ -2047,7 +2046,6 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                         st.error("⚠️ El número de OP es obligatorio para registrar el avance.")
                     else:
                         try:
-                            # Guardamos directamente en la tabla de Supabase creada en el Paso 1
                             datos_insertar = {
                                 "fecha": hora_colombia().strftime("%Y-%m-%d"), 
                                 "hora_registro": hora_colombia().strftime("%H:%M:%S"),
@@ -2061,7 +2059,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                                 "unidades_por_caja": u_c, 
                                 "num_varillas": n_v, 
                                 "num_cajas": n_c,
-                                "peso_desperdicio": p_d, 
+                                "peso_desperficio": p_d, 
                                 "motivo_desperdicio_seg": mot_d, 
                                 "observaciones": obs,
                                 "total_cajas_empacadas": c_t, 
@@ -2078,19 +2076,30 @@ elif menu == "⏱️ Seguimiento Cortadoras":
         with t2:
             st.markdown(f"### Historial Reciente - {maq_sel}")
             try:
-                # CORRECCIÓN: Cambiamos 'descending=True' por 'desc=True'
-                respuesta = supabase.table("seguimiento_cortadoras")\
-                                    .select("*")\
-                                    .eq("maquina", maq_sel)\
-                                    .order("id", desc=True)\
-                                    .execute()
+                # CORRECCIÓN DEFINITIVA: Separamos la consulta para evitar el error de argumentos en order()
+                query = supabase.table("seguimiento_cortadoras").select("*").eq("maquina", maq_sel)
+                respuesta = query.order("id", desc=True).execute()
                 
                 if respuesta.data:
                     df_h = pd.DataFrame(respuesta.data)
                     
-                    # Reorganizamos columnas para que se vea estético
-                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones", "total_cajas_empacadas", "total_varillas_sacadas"]
-                    st.dataframe(df_h[columnas_visibles], use_container_width=True)
+                    # Nombres de columnas mapeados exactamente a tu BD
+                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperficio", "observaciones"]
+                    
+                    # Opcional: Renombrar las columnas para que el operario las vea bonitas
+                    df_mostrar = df_h[columnas_visibles].rename(columns={
+                        "fecha": "Fecha",
+                        "hora_registro": "Hora",
+                        "turno": "Turno",
+                        "op": "OP",
+                        "nombre_trabajo": "Trabajo",
+                        "num_cajas": "Cajas",
+                        "num_varillas": "Varillas",
+                        "peso_desperficio": "Desp. (KG)",
+                        "observaciones": "Observaciones"
+                    })
+                    
+                    st.dataframe(df_mostrar, use_container_width=True)
                 else:
                     st.info("No hay registros previos para esta máquina.")
             except Exception as e:
