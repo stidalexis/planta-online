@@ -2059,7 +2059,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                                 "unidades_por_caja": u_c, 
                                 "num_varillas": n_v, 
                                 "num_cajas": n_c,
-                                "peso_desperficio": p_d, 
+                                "peso_desperdicio": p_d, # CORREGIDO AQUÍ
                                 "motivo_desperdicio_seg": mot_d, 
                                 "observaciones": obs,
                                 "total_cajas_empacadas": c_t, 
@@ -2076,17 +2076,16 @@ elif menu == "⏱️ Seguimiento Cortadoras":
         with t2:
             st.markdown(f"### Historial Reciente - {maq_sel}")
             try:
-                # CORRECCIÓN DEFINITIVA: Separamos la consulta para evitar el error de argumentos en order()
                 query = supabase.table("seguimiento_cortadoras").select("*").eq("maquina", maq_sel)
                 respuesta = query.order("id", desc=True).execute()
                 
                 if respuesta.data:
                     df_h = pd.DataFrame(respuesta.data)
                     
-                    # Nombres de columnas mapeados exactamente a tu BD
-                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperficio", "observaciones"]
+                    # CORREGIDO: 'peso_desperdicio' con D
+                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
                     
-                    # Opcional: Renombrar las columnas para que el operario las vea bonitas
+                    # Renombrar las columnas para que se vea estético en pantalla
                     df_mostrar = df_h[columnas_visibles].rename(columns={
                         "fecha": "Fecha",
                         "hora_registro": "Hora",
@@ -2095,7 +2094,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                         "nombre_trabajo": "Trabajo",
                         "num_cajas": "Cajas",
                         "num_varillas": "Varillas",
-                        "peso_desperficio": "Desp. (KG)",
+                        "peso_desperdicio": "Desp. (KG)",
                         "observaciones": "Observaciones"
                     })
                     
