@@ -2633,32 +2633,25 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  CAMBIO CLAVE SIMULTANEO 
 
             n_area_parcial = "CORTE" if area_act == "IMPRESIÓN" else n_area
-            
-# Actualizar la orden planeada para que este disponible en la siguiente area
 
             try:
+                # 1. OP avanza a siguiente area Y queda visible en area origen
                 supabase.table("ordenes_planeadas").update({
                     "proxima_area": n_area_parcial,
+                    "estado_parcial": f"ACTIVO EN {area_act}",
                     "historial_procesos": hist
                 }).eq("op", r['op']).execute()
-                
-#  Mantener la maquina ocupada en Impresion reseteando el tiempo
 
-                supabase.table("trabajos_activos").update({
-                    "hora_inicio": fin.isoformat(),
-                    "tiempo_pausa": 0,
-                    "inicio_pausa": None,
-                    "motivo_pausa": None
-                }).eq("maquina", r['maquina']).execute()
-                
-                st.success(f"✅ Parcial de {cantidad_parcial} unidades enviado a {n_area_parcial}. ¡La máquina {r['maquina']} continúa trabajando en paralelo!")
+                # 2. Maquina queda LIBRE
+                supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+
+                st.success(f"✅ Parcial enviado a {n_area_parcial}. La máquina {r['maquina']} quedó libre y la OP sigue activa en {area_act}.")
                 st.session_state.rep = None
                 time.sleep(1.5)
                 st.rerun()
-                
-            except Exception as e:
-                st.error(f"Error al procesar la entrega parcial en la base de datos: {e}")
 
+            except Exception as e:
+                st.error(f"Error al procesar la entrega parcial: {e}")
 
 if st.session_state.get('rol') == 'admin':
 
