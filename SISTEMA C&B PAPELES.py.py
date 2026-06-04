@@ -2851,105 +2851,134 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
-def render_avatar_svg(items_equipados):
-    """Genera un SVG del avatar con los items equipados."""
-    
-    # Extraer categorías equipadas
+def render_avatar_3d(items_equipados, nombre_usuario=""):
+    """Genera el HTML del avatar 3D con Three.js según los items equipados."""
     equipado = {it.get('categoria', ''): it for it in items_equipados}
-    
-    # Colores base del personaje
-    skin = "#FDBCB4"
-    hair_color = equipado.get('cabello', {}).get('color_hex', '#4A2C0A')
-    hat_shape = equipado.get('sombrero', {}).get('svg_data', '')
-    shirt_color = equipado.get('camisa', {}).get('color_hex', '#1565C0')
-    badge_text = equipado.get('insignia', {}).get('label', '')
-    
-    hat_svg = ""
-    if "corona" in hat_shape.lower() if hat_shape else False:
-        hat_svg = f'<polygon points="100,10 85,40 100,30 115,40" fill="#FFD700" stroke="#FFA000" stroke-width="2"/>'
-    elif "gorra" in hat_shape.lower() if hat_shape else False:
-        hat_svg = f'<ellipse cx="100" cy="42" rx="35" ry="10" fill="{hair_color}"/><rect x="65" y="32" width="70" height="12" rx="6" fill="{hair_color}"/><rect x="95" y="30" width="20" height="5" rx="3" fill="{hair_color}"/>'
-    elif "casco" in hat_shape.lower() if hat_shape else False:
-        hat_svg = f'<ellipse cx="100" cy="45" rx="33" ry="18" fill="#FF6F00"/><rect x="67" y="50" width="66" height="8" rx="4" fill="#FF6F00"/>'
 
-    badge_svg = ""
-    if badge_text:
-        badge_svg = f'<rect x="72" y="118" width="56" height="18" rx="9" fill="#FFD700" stroke="#FFA000" stroke-width="1.5"/><text x="100" y="131" text-anchor="middle" font-size="9" font-family="Arial" font-weight="bold" fill="#333">{badge_text}</text>'
+    hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
+    shirt_hex  = equipado.get('camisa',   {}).get('color_hex', '#1565c0').lstrip('#')
+    hat_type   = equipado.get('sombrero', {}).get('svg_data',  'none').lower().strip() or 'none'
+    badge_text = equipado.get('insignia', {}).get('label', 'none') or 'none'
 
     return f"""
-    <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" width="200" height="260">
-      <!-- Fondo -->
-      <defs>
-        <radialGradient id="bg" cx="50%" cy="50%" r="60%">
-          <stop offset="0%" style="stop-color:#e3f2fd"/>
-          <stop offset="100%" style="stop-color:#bbdefb"/>
-        </radialGradient>
-      </defs>
-      <rect width="200" height="260" rx="20" fill="url(#bg)"/>
-      
-      <!-- Sombra cuerpo -->
-      <ellipse cx="100" cy="248" rx="45" ry="8" fill="#0D47A1" opacity="0.15"/>
-      
-      <!-- Cuerpo / camisa -->
-      <rect x="62" y="130" width="76" height="80" rx="18" fill="{shirt_color}"/>
-      <!-- Cuello camisa -->
-      <polygon points="88,130 100,148 112,130" fill="{shirt_color}"/>
-      <!-- Botones camisa -->
-      <circle cx="100" cy="155" r="3" fill="white" opacity="0.5"/>
-      <circle cx="100" cy="168" r="3" fill="white" opacity="0.5"/>
-      
-      <!-- Pantalón -->
-      <rect x="62" y="195" width="33" height="55" rx="10" fill="#1A237E"/>
-      <rect x="105" y="195" width="33" height="55" rx="10" fill="#1A237E"/>
-      
-      <!-- Zapatos -->
-      <ellipse cx="78" cy="248" rx="18" ry="7" fill="#212121"/>
-      <ellipse cx="122" cy="248" rx="18" ry="7" fill="#212121"/>
-      
-      <!-- Brazos -->
-      <rect x="32" y="132" width="30" height="60" rx="15" fill="{shirt_color}"/>
-      <rect x="138" y="132" width="30" height="60" rx="15" fill="{shirt_color}"/>
-      <!-- Manos -->
-      <ellipse cx="47" cy="196" rx="13" ry="11" fill="{skin}"/>
-      <ellipse cx="153" cy="196" rx="13" ry="11" fill="{skin}"/>
-      
-      <!-- Cuello -->
-      <rect x="88" y="112" width="24" height="22" rx="8" fill="{skin}"/>
-      
-      <!-- Cabeza -->
-      <ellipse cx="100" cy="80" rx="38" ry="42" fill="{skin}"/>
-      
-      <!-- Cabello -->
-      <ellipse cx="100" cy="45" rx="37" ry="20" fill="{hair_color}"/>
-      <ellipse cx="68" cy="72" rx="10" ry="22" fill="{hair_color}"/>
-      <ellipse cx="132" cy="72" rx="10" ry="22" fill="{hair_color}"/>
-      
-      <!-- Sombrero/accesorio cabeza -->
-      {hat_svg}
-      
-      <!-- Ojos -->
-      <ellipse cx="85" cy="78" rx="7" ry="8" fill="white"/>
-      <ellipse cx="115" cy="78" rx="7" ry="8" fill="white"/>
-      <circle cx="87" cy="79" r="4" fill="#333"/>
-      <circle cx="117" cy="79" r="4" fill="#333"/>
-      <circle cx="88" cy="78" r="1.5" fill="white"/>
-      <circle cx="118" cy="78" r="1.5" fill="white"/>
-      
-      <!-- Cejas -->
-      <path d="M78 69 Q85 65 92 69" stroke="{hair_color}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      <path d="M108 69 Q115 65 122 69" stroke="{hair_color}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      
-      <!-- Nariz -->
-      <ellipse cx="100" cy="90" rx="4" ry="3" fill="#E8A090" opacity="0.6"/>
-      
-      <!-- Sonrisa -->
-      <path d="M88 102 Q100 114 112 102" stroke="#C0756A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-      
-      <!-- Insignia/badge -->
-      {badge_svg}
-    </svg>
-    """
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<div style="text-align:center;">
+  <canvas id="av3d" width="260" height="340"
+    style="border-radius:14px;border:1px solid #e0e0e0;cursor:grab;display:inline-block;"></canvas>
+  <div style="font-weight:bold;color:#0D47A1;margin-top:6px;">{nombre_usuario}</div>
+</div>
+<script>
+(function(){{
+  const canvas = document.getElementById('av3d');
+  if(!canvas||!window.THREE)return;
+  const renderer = new THREE.WebGLRenderer({{canvas,antialias:true,alpha:true}});
+  renderer.setSize(260,340); renderer.shadowMap.enabled=true;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(42,260/340,0.1,100);
+  camera.position.set(0,1.1,4.8); camera.lookAt(0,0.8,0);
+  scene.add(new THREE.AmbientLight(0xffffff,0.7));
+  const dl=new THREE.DirectionalLight(0xffffff,1.0); dl.position.set(3,6,4); dl.castShadow=true; scene.add(dl);
+  const fl=new THREE.DirectionalLight(0x8ab4f8,0.3); fl.position.set(-3,2,-2); scene.add(fl);
+  const hairColor = parseInt('{hair_hex}',16);
+  const shirtColor= parseInt('{shirt_hex}',16);
+  const skinColor = 0xfdbcb4;
+  const pantsColor= 0x1a237e;
+  const hatType   = '{hat_type}';
+  const badgeText = '{badge_text}';
+  function mat(c,r=0.7,m=0){{return new THREE.MeshStandardMaterial({{color:c,roughness:r,metalness:m}});}}
+  function box(w,h,d,c,x,y,z){{const ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));ms.position.set(x,y,z);ms.castShadow=true;return ms;}}
+  function sph(r,c,x,y,z,sx=1,sy=1,sz=1){{const ms=new THREE.Mesh(new THREE.SphereGeometry(r,32,32),mat(c));ms.position.set(x,y,z);ms.scale.set(sx,sy,sz);ms.castShadow=true;return ms;}}
+  function cyl(rt,rb,h,c,x,y,z,rx=0){{const ms=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,20),mat(c));ms.position.set(x,y,z);ms.rotation.x=rx;ms.castShadow=true;return ms;}}
+  const g=new THREE.Group(); scene.add(g);
+  // HEAD
+  g.add(sph(0.42,skinColor,0,2.08,0,1,1.05,1));
+  // EYES
+  [-0.15,0.15].forEach(xo=>{{
+    const ew=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),mat(0xffffff,0.9));ew.position.set(xo,2.1,0.36);ew.scale.set(1,1.1,0.5);g.add(ew);
+    const ep=new THREE.Mesh(new THREE.SphereGeometry(0.062,12,12),mat(0x1a1a2e,1));ep.position.set(xo,2.1,0.40);ep.scale.set(1,1,0.5);g.add(ep);
+    const es=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),mat(0xffffff,0.1,0.8));es.position.set(xo+0.025,2.13,0.43);g.add(es);
+  }});
+  // BROWS
+  [-0.15,0.15].forEach(xo=>{{const b=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.03,0.04),mat(hairColor,0.9));b.position.set(xo,2.23,0.36);b.rotation.z=xo<0?0.12:-0.12;g.add(b);}});
+  // NOSE
+  const ns=sph(0.055,0xe8a090,0,1.99,0.40);ns.scale.set(1,0.7,1);g.add(ns);
+  // MOUTH
+  const mo=new THREE.Mesh(new THREE.TorusGeometry(0.10,0.025,8,16,Math.PI),mat(0xc07060,0.9));mo.position.set(0,1.90,0.39);mo.rotation.x=Math.PI;g.add(mo);
+  // EARS
+  [-0.43,0.43].forEach(xo=>{{g.add(sph(0.10,skinColor,xo,2.06,0,0.6,1,0.5));}});
+  // HAIR
+  g.add(sph(0.44,hairColor,0,2.28,0,1,0.65,1));
+  [-0.35,0.35].forEach(xo=>{{g.add(sph(0.22,hairColor,xo,2.05,-0.05,0.7,1.2,0.7));}});
+  // NECK
+  g.add(cyl(0.14,0.16,0.22,skinColor,0,1.62,0));
+  // TORSO
+  g.add(box(0.88,0.88,0.5,shirtColor,0,1.05,0));
+  const cm=mat(shirtColor,0.8);
+  const c1=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.28,0.06),cm);c1.position.set(-0.06,1.39,0.26);c1.rotation.z=0.35;g.add(c1);
+  const c2=c1.clone();c2.position.set(0.06,1.39,0.26);c2.rotation.z=-0.35;g.add(c2);
+  [1.22,1.07,0.92].forEach(y=>{{const bt=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.04,10),mat(0xffffff,0.5,0.3));bt.position.set(0,y,0.26);bt.rotation.x=Math.PI/2;g.add(bt);}});
+  // ARMS
+  [-0.58,0.58].forEach(xo=>{{
+    const ua=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.12,0.52,16),mat(shirtColor,0.8));ua.position.set(xo,1.1,0);ua.rotation.z=xo<0?0.25:-0.25;g.add(ua);
+    const fa=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.09,0.42,16),mat(skinColor,0.7));fa.position.set(xo<0?-0.64:0.64,0.74,0);fa.rotation.z=xo<0?0.18:-0.18;g.add(fa);
+    g.add(sph(0.115,skinColor,xo<0?-0.70:0.70,0.50,0,1,1.1,0.9));
+  }});
+  // LOWER
+  g.add(box(0.82,0.22,0.46,pantsColor,0,0.57,0));
+  g.add(box(0.84,0.08,0.48,0x1a1a1a,0,0.69,0));
+  const bk=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.07,0.05),mat(0xd4a017,0.3,0.9));bk.position.set(0,0.69,0.26);g.add(bk);
+  [-0.21,0.21].forEach(xo=>{{
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.165,0.14,0.66,16),mat(pantsColor,0.8)));
+    g.children[g.children.length-1].position.set(xo,0.15,0);
+    const sh=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.12,0.42),mat(0x111111,0.9));sh.position.set(xo,-0.21,0.06);sh.rotation.x=-0.12;g.add(sh);
+    g.add(sph(0.12,0x111111,xo,-0.20,0.22,1,0.7,0.7));
+  }});
+  // BADGE
+  if(badgeText!=='none'){{
+    const bc={{'TOP 1':0xffd700,'MVP':0xe91e63,'PRO':0x2196f3,'ROOKIE':0x4caf50}}[badgeText]||0xffd700;
+    const bdg=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.10,0.04),mat(bc,0.4,0.5));bdg.position.set(0.26,1.18,0.27);g.add(bdg);
+  }}
+  // HAT
+  if(hatType==='corona'){{
+    const bm=mat(0xffd700,0.3,0.9);
+    const base=cyl(0.40,0.38,0.18,0xffd700,0,2.56,0);base.material=bm;g.add(base);
+    [-0.28,0,0.28].forEach((xo,i)=>{{const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.07,0.22+i*0.06,8),bm);sp.position.set(xo,2.72+(i===1?0.04:0),0.22);g.add(sp);}});
+    const gm=sph(0.055,0xe91e63,0,2.82,0.22);gm.material=mat(0xe91e63,0.1,0.9);g.add(gm);
+  }} else if(hatType==='gorra'){{
+    const cm2=mat(0x1565c0,0.8);
+    const cap=cyl(0.40,0.38,0.24,0x1565c0,0,2.58,0);cap.material=cm2;g.add(cap);
+    const br=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.05,24,1,false,Math.PI*0.1,Math.PI*0.8),cm2);br.position.set(0,2.46,0.30);br.rotation.x=0.3;g.add(br);
+    const tp=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.06,24),cm2);tp.position.set(0,2.70,0);g.add(tp);
+  }} else if(hatType==='casco'){{
+    const hm=mat(0xff6f00,0.5,0.4);
+    const hh=sph(0.48,0xff6f00,0,2.22,0,1.0,0.85,1.0);hh.material=hm;g.add(hh);
+    const hb=new THREE.Mesh(new THREE.CylinderGeometry(0.50,0.46,0.07,24),hm);hb.position.set(0,1.92,0);g.add(hb);
+    const hs=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.52,0.06),mat(0xffffff,0.7));hs.position.set(0,2.26,0.44);g.add(hs);
+  }} else if(hatType==='sombrero'){{
+    const sm=mat(0x4a2c0a,0.9);
+    const sbr=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.70,0.07,32),sm);sbr.position.set(0,2.48,0);g.add(sbr);
+    const scr=cyl(0.30,0.32,0.44,0x4a2c0a,0,2.72,0);scr.material=sm;g.add(scr);
+    const sbd=new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.31,0.10,32),mat(0xb8860b,0.5,0.3));sbd.position.set(0,2.50,0);g.add(sbd);
+  }}
+  // SHADOW DISC
+  const sd=new THREE.Mesh(new THREE.CircleGeometry(0.65,32),new THREE.MeshBasicMaterial({{color:0x000000,transparent:true,opacity:0.10}}));
+  sd.rotation.x=-Math.PI/2; sd.position.y=-0.285; scene.add(sd);
+  // DRAG
+  let drag=false,prevX=0,rotY=0.3;
+  canvas.addEventListener('mousedown',e=>{{drag=true;prevX=e.clientX;}});
+  canvas.addEventListener('touchstart',e=>{{drag=true;prevX=e.touches[0].clientX;}});
+  window.addEventListener('mouseup',()=>drag=false);
+  window.addEventListener('touchend',()=>drag=false);
+  canvas.addEventListener('mousemove',e=>{{if(!drag)return;rotY+=(e.clientX-prevX)*0.012;prevX=e.clientX;g.rotation.y=rotY;}});
+  canvas.addEventListener('touchmove',e=>{{if(!drag)return;rotY+=(e.touches[0].clientX-prevX)*0.012;prevX=e.touches[0].clientX;g.rotation.y=rotY;}});
+  let t=0;
+  (function anim(){{requestAnimationFrame(anim);t+=0.018;if(!drag)g.rotation.y+=0.004;g.position.y=Math.sin(t)*0.04;renderer.render(scene,camera);}})();
+}})();
+</script>
+"""
 
+# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 
 if menu == "🛒 Mercado":
@@ -3063,9 +3092,9 @@ if menu == "🛒 Mercado":
                         d['categoria'] = d.get('categoria', '')
                         items_equipados_full.append(d)
 
-            svg_code = render_avatar_svg(items_equipados_full)
-            st.markdown(svg_code, unsafe_allow_html=True)
-            st.markdown(f"<div style='text-align:center;font-weight:bold;color:#0D47A1;'>{nombre_actual}</div>", unsafe_allow_html=True)
+            html_3d = render_avatar_3d(items_equipados_full, nombre_actual)
+            import streamlit.components.v1 as components
+            components.html(html_3d, height=380, scrolling=False)
 
         with col_inv:
             st.markdown("**Mi Inventario — selecciona qué equipar**")
