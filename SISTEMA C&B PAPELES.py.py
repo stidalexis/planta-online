@@ -2800,7 +2800,7 @@ def mercado_comprar_item(usuario, item_id, item_nombre, precio):
         
         # Descontar coins
         nuevos_coins = coins_actuales - precio
-        supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}).execute()
+        supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}, on_conflict="usuario").execute()
         
         # Agregar al inventario del avatar
         supabase.table("inventario_avatar").insert({
