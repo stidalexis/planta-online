@@ -2570,7 +2570,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                     supabase.table("ordenes_planeadas").update({
                         "proxima_area": n_area,
-                        "historial_procesos": hist
+                        "historial_procesos": hist,
+                        "estado_parcial": None
                     }).eq("op", r['op']).execute()
 
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
