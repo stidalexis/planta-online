@@ -771,29 +771,29 @@ with st.sidebar:
 # DEFINICION DE PERMISOS SEGUN ROL
 
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos"]     
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
     elif rol == 'ventas':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🛒 Mercado"]
     elif rol == 'jefe_log':
-        opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos"]
+        opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos", "🛒 Mercado"]
     elif rol == 'patinador_log':
-        opciones_menu = ["📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Almacen/Despachos", "🛒 Mercado"]
     elif rol == 'aux_log':
-        opciones_menu = ["📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Almacen/Despachos", "🛒 Mercado"]
     elif rol == 'supervisor_imp':
-        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📥 Colectoras", "📕 Encuadernación"]
+        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📥 Colectoras", "📕 Encuadernación", "🛒 Mercado"]
     elif rol == 'supervisor_cor':
-        opciones_menu = ["🖥️ Monitor", "✂️ Corte", "⏱️ Seguimiento Cortadoras"]
+        opciones_menu = ["🖥️ Monitor", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "🛒 Mercado"]
     elif rol == 'supervisor_enc':
-        opciones_menu = ["🖥️ Monitor", "📕 Encuadernación"]
+        opciones_menu = ["🖥️ Monitor", "📕 Encuadernación", "🛒 Mercado"]
     elif rol == 'supervisor_reb':
-        opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
+        opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras", "🛒 Mercado"]
     elif rol == 'patinador_roll':
-        opciones_menu = ["📦 salida produccion P1"]
+        opciones_menu = ["📦 salida produccion P1", "🛒 Mercado"]
     elif rol == 'almacen':
-        opciones_menu = ["📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Almacen/Despachos", "🛒 Mercado"]
     elif rol == 'diseño':
-        opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
+        opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento", "🛒 Mercado"]
     else:
 
 # OPERARIOS Y OTROS ROLES SI LOS DEJA DENTRAR
@@ -2732,3 +2732,522 @@ if st.session_state.get('rol') == 'admin':
             else:
                 st.warning("Por favor, completa todos los campos.")
 
+
+# ══════════════════════════════════════════════════════════════
+#   MÓDULO: 🛒 MERCADO DE AVATARES C&B PAPELES
+# ══════════════════════════════════════════════════════════════
+
+# ── FUNCIONES DE MERCADO ──────────────────────────────────────
+
+def mercado_obtener_coins(usuario):
+    """Retorna los coins actuales de un usuario."""
+    try:
+        res = supabase.table("monedas_usuarios").select("coins").eq("usuario", usuario).execute()
+        if res.data:
+            return res.data[0]['coins']
+        # Si no existe, crea registro con 0 coins
+        supabase.table("monedas_usuarios").insert({"usuario": usuario, "coins": 0}).execute()
+        return 0
+    except:
+        return 0
+
+def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
+    """Suma o resta coins a un usuario y registra el movimiento."""
+    try:
+        coins_actuales = mercado_obtener_coins(usuario)
+        nuevos_coins = max(0, coins_actuales + cantidad)
+        supabase.table("monedas_usuarios").upsert({
+            "usuario": usuario,
+            "coins": nuevos_coins
+        }).execute()
+        # Registrar movimiento en historial
+        supabase.table("monedas_historial").insert({
+            "usuario": usuario,
+            "cantidad": cantidad,
+            "motivo": motivo,
+            "admin": admin_who,
+            "fecha": hora_colombia().isoformat()
+        }).execute()
+        return nuevos_coins
+    except Exception as e:
+        st.error(f"Error al ajustar coins: {e}")
+        return None
+
+def mercado_obtener_items_tienda():
+    """Retorna todos los items disponibles en la tienda."""
+    try:
+        res = supabase.table("items_mercado").select("*").eq("activo", True).order("precio").execute()
+        return res.data or []
+    except:
+        return []
+
+def mercado_obtener_items_usuario(usuario):
+    """Retorna los items que posee un usuario."""
+    try:
+        res = supabase.table("inventario_avatar").select("*").eq("usuario", usuario).execute()
+        return res.data or []
+    except:
+        return []
+
+def mercado_comprar_item(usuario, item_id, item_nombre, precio):
+    """Procesa la compra de un item."""
+    try:
+        coins_actuales = mercado_obtener_coins(usuario)
+        if coins_actuales < precio:
+            return False, "No tienes suficientes coins 💸"
+        
+        # Verificar si ya lo tiene
+        tiene = supabase.table("inventario_avatar").select("id").eq("usuario", usuario).eq("item_id", item_id).execute()
+        if tiene.data:
+            return False, "Ya tienes este item ✋"
+        
+        # Descontar coins
+        nuevos_coins = coins_actuales - precio
+        supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}).execute()
+        
+        # Agregar al inventario del avatar
+        supabase.table("inventario_avatar").insert({
+            "usuario": usuario,
+            "item_id": item_id,
+            "item_nombre": item_nombre,
+            "equipado": False,
+            "fecha_compra": hora_colombia().isoformat()
+        }).execute()
+        
+        # Registrar en historial
+        supabase.table("monedas_historial").insert({
+            "usuario": usuario,
+            "cantidad": -precio,
+            "motivo": f"Compra en tienda: {item_nombre}",
+            "admin": "SISTEMA",
+            "fecha": hora_colombia().isoformat()
+        }).execute()
+        
+        return True, f"¡{item_nombre} comprado exitosamente! 🎉"
+    except Exception as e:
+        return False, f"Error en la compra: {e}"
+
+def mercado_equipar_item(usuario, inv_id, categoria):
+    """Equipa un item (desequipa el anterior de la misma categoría)."""
+    try:
+        # Obtener todos los items del usuario de esa categoría
+        items_cat = supabase.table("inventario_avatar")\
+            .select("id")\
+            .eq("usuario", usuario)\
+            .eq("equipado", True)\
+            .execute()
+        
+        # Desequipar los de la misma categoría
+        for it in (items_cat.data or []):
+            # Verificar si es de la misma categoría
+            det = supabase.table("items_mercado").select("categoria").eq("id", 
+                supabase.table("inventario_avatar").select("item_id").eq("id", it['id']).execute().data[0]['item_id']
+            ).execute()
+            if det.data and det.data[0].get('categoria') == categoria:
+                supabase.table("inventario_avatar").update({"equipado": False}).eq("id", it['id']).execute()
+        
+        # Equipar el nuevo
+        supabase.table("inventario_avatar").update({"equipado": True}).eq("id", inv_id).execute()
+        return True
+    except Exception as e:
+        return False
+
+# ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
+
+def render_avatar_svg(items_equipados):
+    """Genera un SVG del avatar con los items equipados."""
+    
+    # Extraer categorías equipadas
+    equipado = {it.get('categoria', ''): it for it in items_equipados}
+    
+    # Colores base del personaje
+    skin = "#FDBCB4"
+    hair_color = equipado.get('cabello', {}).get('color_hex', '#4A2C0A')
+    hat_shape = equipado.get('sombrero', {}).get('svg_data', '')
+    shirt_color = equipado.get('camisa', {}).get('color_hex', '#1565C0')
+    badge_text = equipado.get('insignia', {}).get('label', '')
+    
+    hat_svg = ""
+    if "corona" in hat_shape.lower() if hat_shape else False:
+        hat_svg = f'<polygon points="100,10 85,40 100,30 115,40" fill="#FFD700" stroke="#FFA000" stroke-width="2"/>'
+    elif "gorra" in hat_shape.lower() if hat_shape else False:
+        hat_svg = f'<ellipse cx="100" cy="42" rx="35" ry="10" fill="{hair_color}"/><rect x="65" y="32" width="70" height="12" rx="6" fill="{hair_color}"/><rect x="95" y="30" width="20" height="5" rx="3" fill="{hair_color}"/>'
+    elif "casco" in hat_shape.lower() if hat_shape else False:
+        hat_svg = f'<ellipse cx="100" cy="45" rx="33" ry="18" fill="#FF6F00"/><rect x="67" y="50" width="66" height="8" rx="4" fill="#FF6F00"/>'
+
+    badge_svg = ""
+    if badge_text:
+        badge_svg = f'<rect x="72" y="118" width="56" height="18" rx="9" fill="#FFD700" stroke="#FFA000" stroke-width="1.5"/><text x="100" y="131" text-anchor="middle" font-size="9" font-family="Arial" font-weight="bold" fill="#333">{badge_text}</text>'
+
+    return f"""
+    <svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" width="200" height="260">
+      <!-- Fondo -->
+      <defs>
+        <radialGradient id="bg" cx="50%" cy="50%" r="60%">
+          <stop offset="0%" style="stop-color:#e3f2fd"/>
+          <stop offset="100%" style="stop-color:#bbdefb"/>
+        </radialGradient>
+      </defs>
+      <rect width="200" height="260" rx="20" fill="url(#bg)"/>
+      
+      <!-- Sombra cuerpo -->
+      <ellipse cx="100" cy="248" rx="45" ry="8" fill="#0D47A1" opacity="0.15"/>
+      
+      <!-- Cuerpo / camisa -->
+      <rect x="62" y="130" width="76" height="80" rx="18" fill="{shirt_color}"/>
+      <!-- Cuello camisa -->
+      <polygon points="88,130 100,148 112,130" fill="{shirt_color}"/>
+      <!-- Botones camisa -->
+      <circle cx="100" cy="155" r="3" fill="white" opacity="0.5"/>
+      <circle cx="100" cy="168" r="3" fill="white" opacity="0.5"/>
+      
+      <!-- Pantalón -->
+      <rect x="62" y="195" width="33" height="55" rx="10" fill="#1A237E"/>
+      <rect x="105" y="195" width="33" height="55" rx="10" fill="#1A237E"/>
+      
+      <!-- Zapatos -->
+      <ellipse cx="78" cy="248" rx="18" ry="7" fill="#212121"/>
+      <ellipse cx="122" cy="248" rx="18" ry="7" fill="#212121"/>
+      
+      <!-- Brazos -->
+      <rect x="32" y="132" width="30" height="60" rx="15" fill="{shirt_color}"/>
+      <rect x="138" y="132" width="30" height="60" rx="15" fill="{shirt_color}"/>
+      <!-- Manos -->
+      <ellipse cx="47" cy="196" rx="13" ry="11" fill="{skin}"/>
+      <ellipse cx="153" cy="196" rx="13" ry="11" fill="{skin}"/>
+      
+      <!-- Cuello -->
+      <rect x="88" y="112" width="24" height="22" rx="8" fill="{skin}"/>
+      
+      <!-- Cabeza -->
+      <ellipse cx="100" cy="80" rx="38" ry="42" fill="{skin}"/>
+      
+      <!-- Cabello -->
+      <ellipse cx="100" cy="45" rx="37" ry="20" fill="{hair_color}"/>
+      <ellipse cx="68" cy="72" rx="10" ry="22" fill="{hair_color}"/>
+      <ellipse cx="132" cy="72" rx="10" ry="22" fill="{hair_color}"/>
+      
+      <!-- Sombrero/accesorio cabeza -->
+      {hat_svg}
+      
+      <!-- Ojos -->
+      <ellipse cx="85" cy="78" rx="7" ry="8" fill="white"/>
+      <ellipse cx="115" cy="78" rx="7" ry="8" fill="white"/>
+      <circle cx="87" cy="79" r="4" fill="#333"/>
+      <circle cx="117" cy="79" r="4" fill="#333"/>
+      <circle cx="88" cy="78" r="1.5" fill="white"/>
+      <circle cx="118" cy="78" r="1.5" fill="white"/>
+      
+      <!-- Cejas -->
+      <path d="M78 69 Q85 65 92 69" stroke="{hair_color}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <path d="M108 69 Q115 65 122 69" stroke="{hair_color}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      
+      <!-- Nariz -->
+      <ellipse cx="100" cy="90" rx="4" ry="3" fill="#E8A090" opacity="0.6"/>
+      
+      <!-- Sonrisa -->
+      <path d="M88 102 Q100 114 112 102" stroke="#C0756A" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      
+      <!-- Insignia/badge -->
+      {badge_svg}
+    </svg>
+    """
+
+# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
+
+if menu == "🛒 Mercado":
+    usuario_actual = st.session_state.get('usuario_actual', '')
+    nombre_actual  = st.session_state.get('nombre_usuario', '')
+    rol_actual     = st.session_state.get('rol', '')
+
+    st.markdown("<div class='title-area'>🛒 MERCADO DE AVATARES — C&B PAPELES</div>", unsafe_allow_html=True)
+
+    coins_usuario = mercado_obtener_coins(usuario_actual)
+
+    # ── BARRA DE COINS ──────────────────────────────────────
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg,#1565C0,#0D47A1); border-radius:16px; 
+                padding:18px 28px; display:flex; align-items:center; gap:16px; margin-bottom:20px;">
+        <span style="font-size:2.5rem;">🪙</span>
+        <div>
+            <div style="color:#FFD700; font-size:1.8rem; font-weight:900; line-height:1;">{coins_usuario}</div>
+            <div style="color:#90CAF9; font-size:0.9rem;">Coins disponibles — {nombre_actual}</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── TABS PRINCIPALES ────────────────────────────────────
+    if rol_actual == 'admin':
+        tab_tienda, tab_avatar, tab_admin, tab_historial = st.tabs(
+            ["🛍️ Tienda", "👤 Mi Avatar", "⚙️ Panel Admin", "📜 Historial Monedas"]
+        )
+    else:
+        tab_tienda, tab_avatar, tab_historial = st.tabs(
+            ["🛍️ Tienda", "👤 Mi Avatar", "📜 Mi Historial"]
+        )
+
+    # ════════════════════════════════════════════════════════
+    # TAB 1 — TIENDA
+    # ════════════════════════════════════════════════════════
+    with tab_tienda:
+        st.markdown("<div class='section-header'>🛍️ ARTÍCULOS DISPONIBLES</div>", unsafe_allow_html=True)
+
+        items_tienda = mercado_obtener_items_tienda()
+        items_poseidos = {it['item_id'] for it in mercado_obtener_items_usuario(usuario_actual)}
+
+        if not items_tienda:
+            st.info("La tienda está vacía. El admin puede agregar items desde el Panel Admin.")
+        else:
+            # Agrupar por categoría
+            categorias = {}
+            for item in items_tienda:
+                cat = item.get('categoria', 'General')
+                categorias.setdefault(cat, []).append(item)
+
+            for cat, items_cat in categorias.items():
+                emoji_cat = {"sombrero": "🎩", "camisa": "👕", "cabello": "💇", "insignia": "🏅", "accesorio": "🎀"}.get(cat.lower(), "🎁")
+                st.markdown(f"#### {emoji_cat} {cat.upper()}")
+                cols = st.columns(min(len(items_cat), 4))
+
+                for i, item in enumerate(items_cat):
+                    with cols[i % 4]:
+                        ya_tiene = item['id'] in items_poseidos
+                        puede_comprar = coins_usuario >= item['precio'] and not ya_tiene
+
+                        color_borde = "#4CAF50" if ya_tiene else ("#1565C0" if puede_comprar else "#9E9E9E")
+                        estado_txt  = "✅ Ya tienes" if ya_tiene else (f"🪙 {item['precio']}" if puede_comprar else f"🔒 {item['precio']} (sin fondos)")
+
+                        # Miniatura de color si aplica
+                        color_swatch = ""
+                        if item.get('color_hex'):
+                            color_swatch = f"<div style='width:32px;height:32px;border-radius:50%;background:{item['color_hex']};border:2px solid #fff;display:inline-block;vertical-align:middle;margin-right:8px;'></div>"
+
+                        st.markdown(f"""
+                        <div style="border:2px solid {color_borde}; border-radius:14px; padding:14px; text-align:center;
+                                    background:#fff; margin-bottom:8px; min-height:140px;">
+                            <div style="font-size:2.2rem;">{item.get('emoji','🎁')}</div>
+                            {color_swatch}
+                            <div style="font-weight:bold; color:#0D47A1; margin:6px 0 2px;">{item['nombre']}</div>
+                            <div style="font-size:0.8rem; color:#666; margin-bottom:8px;">{item.get('descripcion','')}</div>
+                            <div style="font-weight:bold; color:{'#388E3C' if ya_tiene else '#E65100'};">{estado_txt}</div>
+                        </div>
+                        """, unsafe_allow_html=True)
+
+                        if not ya_tiene:
+                            btn_label = f"Comprar" if puede_comprar else "Sin coins"
+                            if st.button(btn_label, key=f"buy_{item['id']}", disabled=not puede_comprar, use_container_width=True):
+                                ok, msg = mercado_comprar_item(usuario_actual, item['id'], item['nombre'], item['precio'])
+                                if ok:
+                                    st.success(msg)
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.error(msg)
+
+    # ════════════════════════════════════════════════════════
+    # TAB 2 — MI AVATAR
+    # ════════════════════════════════════════════════════════
+    with tab_avatar:
+        st.markdown("<div class='section-header'>👤 MI AVATAR</div>", unsafe_allow_html=True)
+
+        inventario = mercado_obtener_items_usuario(usuario_actual)
+
+        col_av, col_inv = st.columns([1, 2])
+
+        with col_av:
+            st.markdown("**Vista Previa**")
+            # Obtener items equipados con su info de la tienda
+            items_equipados_full = []
+            for inv_item in inventario:
+                if inv_item.get('equipado'):
+                    detalle = supabase.table("items_mercado").select("*").eq("id", inv_item['item_id']).execute().data
+                    if detalle:
+                        d = detalle[0]
+                        d['categoria'] = d.get('categoria', '')
+                        items_equipados_full.append(d)
+
+            svg_code = render_avatar_svg(items_equipados_full)
+            st.markdown(svg_code, unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:center;font-weight:bold;color:#0D47A1;'>{nombre_actual}</div>", unsafe_allow_html=True)
+
+        with col_inv:
+            st.markdown("**Mi Inventario — selecciona qué equipar**")
+            if not inventario:
+                st.info("Aún no tienes items. Ve a la tienda y compra algo 🛍️")
+            else:
+                # Agrupar por categoría
+                inv_cats = {}
+                for it in inventario:
+                    det = supabase.table("items_mercado").select("*").eq("id", it['item_id']).execute().data
+                    cat = det[0]['categoria'] if det else 'General'
+                    inv_cats.setdefault(cat, []).append((it, det[0] if det else {}))
+
+                for cat, items_list in inv_cats.items():
+                    st.markdown(f"**{cat.upper()}**")
+                    for inv_it, det_it in items_list:
+                        equipado_now = inv_it.get('equipado', False)
+                        col_i, col_b = st.columns([3, 1])
+                        with col_i:
+                            color_swatch = f"<span style='display:inline-block;width:16px;height:16px;border-radius:50%;background:{det_it.get('color_hex','#ccc')};border:1px solid #999;vertical-align:middle;margin-right:6px;'></span>" if det_it.get('color_hex') else ""
+                            st.markdown(f"{det_it.get('emoji','🎁')} {color_swatch} **{det_it.get('nombre','')}** {'✅ Equipado' if equipado_now else ''}", unsafe_allow_html=True)
+                        with col_b:
+                            if not equipado_now:
+                                if st.button("Equipar", key=f"eq_{inv_it['id']}", use_container_width=True):
+                                    mercado_equipar_item(usuario_actual, inv_it['id'], cat)
+                                    st.rerun()
+                            else:
+                                if st.button("Quitar", key=f"rm_{inv_it['id']}", use_container_width=True):
+                                    supabase.table("inventario_avatar").update({"equipado": False}).eq("id", inv_it['id']).execute()
+                                    st.rerun()
+
+    # ════════════════════════════════════════════════════════
+    # TAB 3 — PANEL ADMIN
+    # ════════════════════════════════════════════════════════
+    if rol_actual == 'admin':
+        with tab_admin:
+            st.markdown("<div class='section-header'>⚙️ ADMINISTRACIÓN DEL MERCADO</div>", unsafe_allow_html=True)
+
+            # ── Asignar / quitar coins ───────────────────────
+            with st.expander("🪙 Asignar o Quitar Coins a Trabajadores", expanded=True):
+                st.info("Puedes dar coins como recompensa por buen desempeño, o descontarlos si es necesario.")
+                
+                try:
+                    todos_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
+                except:
+                    todos_usuarios = []
+
+                opciones_u = {f"{u['nombre']} ({u['usuario']}) — {u['rol']}": u['usuario'] for u in todos_usuarios}
+
+                c1, c2, c3 = st.columns(3)
+                with c1:
+                    sel_u = st.selectbox("Seleccionar Trabajador", list(opciones_u.keys()), key="admin_sel_user")
+                with c2:
+                    cantidad_coins = st.number_input("Cantidad de Coins (+/-)", min_value=-9999, max_value=9999, value=10, step=5, key="admin_coins_amt")
+                with c3:
+                    motivo_coins = st.text_input("Motivo / Descripción", placeholder="Ej: Cumplimiento meta semana", key="admin_coins_mot")
+
+                if sel_u:
+                    u_key = opciones_u[sel_u]
+                    coins_act = mercado_obtener_coins(u_key)
+                    st.caption(f"Coins actuales de {sel_u.split('(')[0].strip()}: **{coins_act} 🪙**")
+
+                if st.button("✅ Confirmar Asignación de Coins", use_container_width=True, key="btn_assign_coins"):
+                    if not motivo_coins.strip():
+                        st.warning("Por favor escribe un motivo antes de asignar coins.")
+                    else:
+                        u_key = opciones_u[sel_u]
+                        nuevos = mercado_ajustar_coins(u_key, cantidad_coins, motivo_coins, st.session_state.get('usuario_actual'))
+                        if nuevos is not None:
+                            accion = "asignaron" if cantidad_coins > 0 else "descontaron"
+                            st.success(f"✅ Se {accion} {abs(cantidad_coins)} coins a {sel_u.split('(')[0].strip()}. Saldo nuevo: {nuevos} 🪙")
+                            time.sleep(1)
+                            st.rerun()
+
+            # ── Ver monederos de todos ───────────────────────
+            with st.expander("💰 Ver Coins de Todos los Trabajadores"):
+                try:
+                    monederos = supabase.table("monedas_usuarios").select("*").order("coins", desc=True).execute().data or []
+                    if monederos:
+                        df_coins = pd.DataFrame(monederos)
+                        # Cruzar con nombres
+                        nombres_map = {u['usuario']: u['nombre'] for u in todos_usuarios}
+                        df_coins['nombre'] = df_coins['usuario'].map(nombres_map).fillna("Desconocido")
+                        df_coins = df_coins[['nombre', 'usuario', 'coins']].rename(columns={
+                            'nombre': 'Nombre', 'usuario': 'Usuario', 'coins': '🪙 Coins'
+                        })
+                        st.dataframe(df_coins, use_container_width=True, hide_index=True)
+                    else:
+                        st.info("Ningún trabajador tiene coins todavía.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+            # ── Gestión de items de la tienda ────────────────
+            with st.expander("🎁 Gestionar Items de la Tienda"):
+                st.markdown("**Agregar nuevo item:**")
+                ic1, ic2, ic3 = st.columns(3)
+                with ic1:
+                    item_nombre = st.text_input("Nombre del item", key="it_nom")
+                    item_emoji  = st.text_input("Emoji", value="🎁", key="it_em")
+                    item_cat    = st.selectbox("Categoría", ["sombrero", "camisa", "cabello", "insignia", "accesorio"], key="it_cat")
+                with ic2:
+                    item_precio = st.number_input("Precio en Coins", min_value=1, value=50, key="it_prec")
+                    item_color  = st.color_picker("Color (si aplica)", value="#1565C0", key="it_col")
+                    item_label  = st.text_input("Etiqueta corta (para insignia)", key="it_lbl", placeholder="Ej: TOP 1")
+                with ic3:
+                    item_desc   = st.text_area("Descripción", key="it_desc", height=80)
+                    item_svg    = st.text_input("Tipo de forma (corona/gorra/casco)", key="it_svg", placeholder="corona")
+
+                if st.button("➕ Agregar Item a la Tienda", use_container_width=True, key="btn_add_item"):
+                    if item_nombre.strip():
+                        try:
+                            supabase.table("items_mercado").insert({
+                                "nombre": item_nombre,
+                                "emoji": item_emoji,
+                                "categoria": item_cat,
+                                "precio": item_precio,
+                                "color_hex": item_color,
+                                "label": item_label,
+                                "descripcion": item_desc,
+                                "svg_data": item_svg,
+                                "activo": True
+                            }).execute()
+                            st.success(f"✅ Item '{item_nombre}' agregado a la tienda.")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
+                    else:
+                        st.warning("El nombre del item no puede estar vacío.")
+
+                st.markdown("**Items actuales en tienda:**")
+                try:
+                    todos_items = supabase.table("items_mercado").select("*").order("categoria").execute().data or []
+                    if todos_items:
+                        df_items = pd.DataFrame(todos_items)[['nombre', 'categoria', 'emoji', 'precio', 'activo']]
+                        df_items.columns = ['Nombre', 'Categoría', 'Emoji', '🪙 Precio', 'Activo']
+                        st.dataframe(df_items, use_container_width=True, hide_index=True)
+                except Exception as e:
+                    st.error(f"Error: {e}")
+
+        # ════════════════════════════════════════════════════
+        # TAB 4 — HISTORIAL (ADMIN ve todo, usuario ve lo suyo)
+        # ════════════════════════════════════════════════════
+        with tab_historial:
+            st.markdown("<div class='section-header'>📜 HISTORIAL DE MOVIMIENTOS DE COINS</div>", unsafe_allow_html=True)
+            try:
+                if rol_actual == 'admin':
+                    hist_data = supabase.table("monedas_historial").select("*").order("fecha", desc=True).limit(200).execute().data or []
+                else:
+                    hist_data = supabase.table("monedas_historial").select("*").eq("usuario", usuario_actual).order("fecha", desc=True).limit(100).execute().data or []
+
+                if hist_data:
+                    df_hist = pd.DataFrame(hist_data)
+                    df_hist['Tipo'] = df_hist['cantidad'].apply(lambda x: "➕ Ingreso" if x > 0 else "➖ Gasto")
+                    cols_show = ['fecha', 'usuario', 'cantidad', 'Tipo', 'motivo', 'admin'] if rol_actual == 'admin' else ['fecha', 'cantidad', 'Tipo', 'motivo']
+                    col_names = {
+                        'fecha': 'Fecha', 'usuario': 'Usuario', 'cantidad': '🪙 Coins',
+                        'motivo': 'Descripción', 'admin': 'Asignado por'
+                    }
+                    df_show = df_hist[[c for c in cols_show if c in df_hist.columns]].rename(columns=col_names)
+                    st.dataframe(df_show, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No hay movimientos registrados aún.")
+            except Exception as e:
+                st.error(f"Error al cargar historial: {e}")
+    else:
+        # Tab historial para no-admin
+        with tab_historial:
+            st.markdown("<div class='section-header'>📜 MI HISTORIAL DE COINS</div>", unsafe_allow_html=True)
+            try:
+                hist_data = supabase.table("monedas_historial").select("*").eq("usuario", usuario_actual).order("fecha", desc=True).limit(100).execute().data or []
+                if hist_data:
+                    df_hist = pd.DataFrame(hist_data)
+                    df_hist['Tipo'] = df_hist['cantidad'].apply(lambda x: "➕ Ingreso" if x > 0 else "➖ Gasto")
+                    df_show = df_hist[['fecha', 'cantidad', 'Tipo', 'motivo']].rename(columns={
+                        'fecha': 'Fecha', 'cantidad': '🪙 Coins', 'motivo': 'Descripción'
+                    })
+                    st.dataframe(df_show, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Aún no tienes movimientos de coins.")
+            except Exception as e:
+                st.error(f"Error: {e}")
