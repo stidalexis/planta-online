@@ -707,7 +707,7 @@ def modal_detalle_op(row):
                 st.markdown(f"""
                 <div class='historial-card'>
                     <div class='historial-header'>
-                        <span>✅ {h['area']} — {h['maquina']}</span>
+                        <span>✅ {h['area']} — {h['maquina']}{' 🔄 ENTREGA PARCIAL' if h.get('tipo') == 'PARCIAL' else ''}</span>
                         <span>📅 {h['fecha']}</span>
                     </div>
                     <div class='historial-tecnico'>
@@ -2317,7 +2317,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['imagenes_corte'] = c1.number_input("Imágenes/Bobina", 0)
                 datos_c['gramos_bobinas'] = c2.number_input("Gramaje de bobina", 0)
                 datos_c['rollos_finales'] = c3.number_input("Total Rollos cortados", 0)
-                
+
                 st.markdown("---")
 
 # CNSUMO DE CAJAS Y CORES
@@ -2365,7 +2365,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 f3 = st.columns(1)[0]
                 datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
-
 ## COLECTORAS
 
             elif area_act == "COLECTORAS":
@@ -2717,3 +2716,4 @@ if st.session_state.get('rol') == 'admin':
                     st.error(f"Error al insertar: {e}")
             else:
                 st.warning("Por favor, completa todos los campos.")
+
