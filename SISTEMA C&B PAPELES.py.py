@@ -2632,7 +2632,27 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             
 #  CAMBIO CLAVE SIMULTANEO 
 
-            n_area_parcial = "CORTE" if area_act == "IMPRESIÓN" else n_area
+            # Calcular siguiente area leyendo la OP directo (no depende de n_area del finalizar)
+            d_op_p = supabase.table("ordenes_planeadas").select("tipo_orden").eq("op", r['op']).single().execute().data
+            tipo_p = d_op_p['tipo_orden'] if d_op_p else ""
+
+            n_area_parcial = "FINALIZADO"
+            if tipo_p in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
+                if area_act == "IMPRESIÓN":
+                    n_area_parcial = "COLECTORAS"
+                elif area_act == "COLECTORAS":
+                    n_area_parcial = "ENCUADERNACIÓN"
+            elif tipo_p == "ROLLOS IMPRESOS":
+                if area_act == "IMPRESIÓN":
+                    n_area_parcial = "CORTE"
+                elif area_act == "CORTE":
+                    n_area_parcial = "FINALIZADO"
+            elif tipo_p == "ROLLOS BLANCOS":
+                if area_act == "CORTE":
+                    n_area_parcial = "FINALIZADO"
+            elif tipo_p == "REBOBINADO":
+                if area_act == "REBOBINADORAS":
+                    n_area_parcial = "FINALIZADO"
 
             try:
                 # 1. OP avanza a siguiente area Y queda visible en area origen
