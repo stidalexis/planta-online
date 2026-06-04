@@ -2343,9 +2343,27 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         datos_c['nombre_caja'] = caja_usada
 
                 st.markdown("---")
-                f1, f2, f3 = st.columns(3)
-                datos_c['varillas_finales'] = f1.number_input("Total varillas", 0)
-                datos_c['cajas_totales'] = f2.number_input("Total Cajas Empacadas", 0, help="Esta cantidad se restará del inventario de la caja seleccionada arriba.")
+
+                # CALCULOS AUTOMATICOS
+                rollos = datos_c.get('rollos_finales', 0)
+                imagenes = datos_c.get('imagenes_corte', 0)
+
+                # Recuperar unidades_caja de la OP activa
+                op_data_corte = supabase.table("ordenes_planeadas").select("unidades_caja").eq("op", r['op']).single().execute().data
+                uds_caja_op = int(op_data_corte.get('unidades_caja', 0)) if op_data_corte else 0
+
+                varillas_auto = int(rollos / imagenes) if imagenes > 0 else 0
+                cajas_auto    = int(rollos / uds_caja_op) if uds_caja_op > 0 else 0
+
+                datos_c['varillas_finales'] = varillas_auto
+                datos_c['cajas_totales']    = cajas_auto
+
+                # Mostrar resultados calculados para que el operario los vea
+                col_r1, col_r2 = st.columns(2)
+                col_r1.info(f"🔩 **Varillas calculadas:** {varillas_auto}  \n_(Rollos {rollos} ÷ Imágenes/Bobina {imagenes})_")
+                col_r2.info(f"📦 **Cajas calculadas:** {cajas_auto}  \n_(Rollos {rollos} ÷ Uds/Caja OP: {uds_caja_op})_")
+
+                f3 = st.columns(1)[0]
                 datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
 
 ## COLECTORAS
