@@ -2746,7 +2746,7 @@ def mercado_obtener_coins(usuario):
         if res.data:
             return res.data[0]['coins']
         # Si no existe, crea registro con 0 coins
-        supabase.table("monedas_usuarios").insert({"usuario": usuario, "coins": 0}).execute()
+        supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": 0}, on_conflict="usuario").execute()
         return 0
     except:
         return 0
@@ -2756,10 +2756,7 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
     try:
         coins_actuales = mercado_obtener_coins(usuario)
         nuevos_coins = max(0, coins_actuales + cantidad)
-        supabase.table("monedas_usuarios").upsert({
-            "usuario": usuario,
-            "coins": nuevos_coins
-        }).execute()
+        supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}, on_conflict="usuario").execute()
         # Registrar movimiento en historial
         supabase.table("monedas_historial").insert({
             "usuario": usuario,
@@ -3251,3 +3248,4 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
+
