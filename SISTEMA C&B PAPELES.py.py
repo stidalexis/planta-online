@@ -2604,10 +2604,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             
 # Preparar el nuevo historial
 
-            hist = r.get('historial_procesos', [])
-            if not hist:
-                hist = []
-                
+            # Preparar el nuevo historial — leer desde ordenes_planeadas, no desde trabajos_activos
+
+            d_op_hist = supabase.table("ordenes_planeadas").select("historial_procesos").eq("op", r['op']).single().execute().data
+            hist = d_op_hist.get('historial_procesos') or [] if d_op_hist else []
+            
             datos_c['cantidad_parcial_entregada'] = cantidad_parcial
             if obs_parcial:
                 datos_c['observacion_parcial'] = obs_parcial
