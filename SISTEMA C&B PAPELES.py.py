@@ -2859,14 +2859,15 @@ import streamlit.components.v1 as components
 def mostrar_creador_avatar_realista():
     """
     Despliega el creador de avatares 3D profesional e hiperrealista.
-    Modificado para enviar los datos de forma segura a Streamlit.
+    Modificado con la URL global de producción para evitar errores de IP/DNS.
     """
-    # Subdominio demo oficial de Ready Player Me
-    rpm_url = "https://demo.readyplayer.me/avatar?frameApi"
+    # Cambiamos a la URL global de Ready Player Me para integraciones libres
+    rpm_url = "https://readyplayer.me/avatar?frameApi=true&clearCache=true"
     
     html_iframe = f"""
     <iframe id="rpm-iframe" src="{rpm_url}" 
-        style="width: 100%; height: 700px; border: none; border-radius: 14px; background: #f8f9fa;">
+        style="width: 100%; height: 700px; border: none; border-radius: 14px; background: #f8f9fa;"
+        allow="camera *; microphone *; clipboard-write">
     </iframe>
 
     <script>
@@ -2880,11 +2881,9 @@ def mostrar_creador_avatar_realista():
                 const avatarUrlGlb = json.data.url; 
                 const avatarUrlPng = avatarUrlGlb.replace('.glb', '.png?camera=portrait');
                 
-                // Buscamos el input de Streamlit en la página padre e inyectamos el resultado
-                // Formato: URL_GLB|URL_PNG
+                // Formato de comunicación seguro para Streamlit: URL_GLB|URL_PNG
                 const datosCombinados = avatarUrlGlb + "|" + avatarUrlPng;
                 
-                // Buscamos todos los textareas/inputs de la página para encontrar el nuestro
                 parent.document.querySelectorAll('input[aria-label="datos_avatar_oculto"]').forEach(el => {{
                     el.value = datosCombinados;
                     el.dispatchEvent(new Event('input', {{ bubbles: true }}));
@@ -2901,14 +2900,7 @@ def mostrar_creador_avatar_realista():
         }}
     </script>
     """
-    # Renderizamos el iframe de manera segura
     components.html(html_iframe, height=720, scrolling=False)
-    
-    st.markdown("##### 📸 Tómate una foto o sube una imagen para inicializar tu clon 3D:")
-    # Renderizamos el componente seguro en Streamlit
-    datos_avatar = components.html(html_iframe, height=720, scrolling=False)
-    return datos_avatar
-
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 
 if menu == "🛒 Mercado":
