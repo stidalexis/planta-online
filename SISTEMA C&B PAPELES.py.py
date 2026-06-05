@@ -2111,7 +2111,7 @@ elif menu == "📆 Cronograma Impresión":
     
     st.markdown("<div class='title-area'>📆 CRONOGRAMA INTERACTIVO DE IMPRESIÓN</div>", unsafe_allow_html=True)
     st.markdown("### 🗓️ Planificación Visual de Producción")
-    st.caption("Arrastra las barras para moverlas de día o estira sus extremos para aumentar o disminuir los días estimados de producción.")
+    st.caption("Arrastra las barras para moverlas en el tiempo o estira sus extremos para ajustar la duración estimada del trabajo.")
 
     
     lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "HR-17", "DIDDE 11", "MULTILYTH 1", "MULTILYTH 2"]
@@ -2148,8 +2148,9 @@ elif menu == "📆 Cronograma Impresión":
             "title": f"OP {op.get('op', 'S/N')} - {op.get('cliente', 'Cliente')[:15]}...",
             "start": op["fecha_inicio_cronograma"],
             "end": op["fecha_fin_cronograma"],
-            "backgroundColor": "#0D47A1" if op.get("estado") == "En Proceso" else "#FFA000",
-            "borderColor": "#0A3578",
+            "backgroundColor": "#9E9E9E" if op.get("proxima_area") == "FINALIZADO" else ("#0D47A1" if op.get("estado") == "En Proceso" else "#FFA000"),
+            "borderColor": "#757575" if op.get("proxima_area") == "FINALIZADO" else "#0A3578",
+            "textColor": "#ffffff",
             "allDay": True
         })
 
@@ -2163,7 +2164,15 @@ elif menu == "📆 Cronograma Impresión":
         },
         "editable": True,            # Permite arrastrar y estirar las barras
         "resourceAreaWidth": "20%",   # Ancho de la columna de máquinas
-        "resourceAreaHeaderContent": "Máquinas de Impresión",
+        "resourceAreaHeaderContent": "🏭 Máquinas",
+        "buttonText": {
+            "today": "Hoy",
+            "month": "Mes",
+            "week": "Semana",
+            "day": "Día"
+        },
+        "allDayText": "Todo el día",
+        "noEventsText": "No hay órdenes programadas",
         "resources": recursos_calendar,
         "locale": "es"               # Idioma Español
     }
@@ -2226,10 +2235,19 @@ elif menu == "📆 Cronograma Impresión":
             # Formulario de inserción inicial rápida
             maquina_destino = st.selectbox("Asignar a Máquina:", lista_maquinas, key="maq_new")
             fecha_ini_input = st.date_input("Fecha de Inicio:", datetime.now())
-            dias_estimados = st.slider("Días estimados de producción:", min_value=1, max_value=15, value=2)
-            
-            fecha_fin_calculada = fecha_ini_input + timedelta(days=dias_estimados)
-            st.caption(f"Se agendará hasta el: **{fecha_fin_calculada.strftime('%Y-%m-%d')}**")
+            col_h1, col_h2 = st.columns(2)
+            with col_h1:
+                dias_estimados = st.number_input("Días estimados:", min_value=0, max_value=60, value=0, step=1)
+            with col_h2:
+                horas_estimadas = st.number_input("Horas adicionales:", min_value=0, max_value=23, value=8, step=1)
+
+            total_horas = dias_estimados * 24 + horas_estimadas
+            if total_horas < 1:
+                total_horas = 1
+                st.warning("⚠️ El mínimo es 1 hora.")
+
+            fecha_fin_calculada = fecha_ini_input + timedelta(hours=total_horas)
+            st.caption(f"📅 Duración: **{dias_estimados}d {horas_estimadas}h** — Finaliza: **{fecha_fin_calculada.strftime('%d/%m/%Y %H:%M')}**")
 
             if st.button("➕ Insertar en Cronograma"):
                 try:
