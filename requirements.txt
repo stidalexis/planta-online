@@ -5,3 +5,4 @@ xlsxwriter
 fpdf2
 qrcode[pil]
 pytz
+streamlit-calendar
