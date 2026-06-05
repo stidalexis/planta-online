@@ -1103,28 +1103,28 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             c1, c2, c3, c4 = st.columns(4)
             with c1:
                 st.markdown("**ADICIONALES ROLLOS**")
-                st.write(f"TINTAS FRENTE: {datos.get('tintas_frente_rollos')}")
-                st.write(f"TINTAS RESPALDO: {datos.get('tintas_respaldo_rollos')}")
-                st.write(f"CANTIDAD SOLICITADA: {datos.get('cantidad_rollos')}")
-                st.write(f"CORE: {datos.get('core')}")
+                st.write(f"**Tintas Frente:** {datos.get('tintas_frente_rollos')}")
+                st.write(f"Tintas Respaldo: {datos.get('tintas_respaldo_rollos')}")
+                st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
+                st.write(f"Core: {datos.get('core')}")
             with c2:
                 st.markdown("**ADICIONALES ROLLOS**")
-                st.write(f"REFERENCIA COMERCIAL: {datos.get('ref_comercial')}")
-                st.write(f"UNIDADES POR BOLSA: {datos.get('unidades_bolsa')}")
-                st.write(f"UNIDADES POR CAJA: {datos.get('unidades_caja')}")
-                st.write(f"REPETICION : {datos.get('tipo_origen')}")
+                st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
+                st.write(f"Unidades Por Bolsa: {datos.get('unidades_bolsa')}")
+                st.write(f"Unidades Por Caja: {datos.get('unidades_caja')}")
+                st.write(f"Repeticion : {datos.get('tipo_origen')}")
             with c3:
                 st.markdown("**ADICIONALES FORMAS**")
-                st.write(f"PERFORACIONES: {datos.get('perforaciones_detalle')}")
-                st.write(f"CODIGO DE BARRAS: {datos.get('codigo_barras_detalle')}")
-                st.write(f"NUMERACION INICIAL: {datos.get('num_id')}")
-                st.write(f"NUMERACION FINAL: {datos.get('num_fd')}")
+                st.write(f"Perforaciones: {datos.get('perforaciones_detalle')}")
+                st.write(f"Codigo De Barras: {datos.get('codigo_barras_detalle')}")
+                st.write(f"Numeracion Inicial: {datos.get('num_id')}")
+                st.write(f"Numeracion Final: {datos.get('num_fd')}")
             
             with c4:
                 st.markdown("**ADICIONAlES DE FORMAS**")
-                st.write(f"PRESENTACION: {datos.get('presentacion')}")
-                st.write(f"ENCOLADA O GRAPADA POR: {datos.get('presentacion2', 0)}")
-                st.write(f"NUMERO DE PARTES: {datos.get('num_partes', 0)}")
+                st.write(f"Presentacion: {datos.get('presentacion')}")
+                st.write(f"Encolada O Grapada Por: {datos.get('presentacion2', 0)}")
+                st.write(f"Numero De Partes: {datos.get('num_partes', 0)}")
 
         c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
@@ -1160,13 +1160,13 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 
                 col_inputs = st.columns(2)
                 with col_inputs[0]:
-                    link_arte = st.text_input("Link del Arte (Drive):", value=datos_op.get('link_diseno', '') or "")
+                    link_arte = st.text_input("LINK DEL ARTE (DRIVE):", value=datos_op.get('link_diseno', '') or "")
                 with col_inputs[1]:
                     
-                    num_ticket = st.number_input("Número de Ticket:", value=int(datos_op.get('num_ticket', 0) or 0), step=1)
+                    num_ticket = st.number_input("NUMERO DEL TICKET:", value=int(datos_op.get('num_ticket', 0) or 0), step=1)
                 
-                obs_dis = st.text_area("✍️ Notas para Pre-Prensa:", value=datos_op.get('observaciones_diseno', '') or "")
-                obs_dise = st.text_area("✍️ ESPESIFICACIONE SPARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "")
+                obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "")
+                obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "")
                 
                 if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
                     if link_arte and num_ticket > 0:
@@ -2104,9 +2104,8 @@ elif menu == "⏱️ Seguimiento Cortadoras":
             except Exception as e:
                 st.error(f"Error al cargar el historial: {e}")
 
-# ==========================================
-# 📆 MÓDULO: CRONOGRAMA DE IMPRESIÓN (ESTILO NOTION)
-# ==========================================
+# 📆  CRONOGRAMA DE IMPRESIÓN ESTILO DE NOTION
+
 elif menu == "📆 Cronograma Impresión":
     from streamlit_calendar import calendar
     
@@ -2114,15 +2113,13 @@ elif menu == "📆 Cronograma Impresión":
     st.markdown("### 🗓️ Planificación Visual de Producción")
     st.caption("Arrastra las barras para moverlas de día o estira sus extremos para aumentar o disminuir los días estimados de producción.")
 
-    # 1. Definición de Recursos (Máquinas que van en el eje vertical)
-    # Puedes ajustar esta lista con los nombres exactos de tus prensas/impresoras
-    lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "PRENSA-04"]
+    
+    lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "HR-17", "DIDDE 11", "MULTILYTH 1", "MULTILYTH 2"]
     
     recursos_calendar = [{"id": maq, "title": f"🏭 Máquina {maq}"} for maq in lista_maquinas]
 
-    # 2. Obtener Datos de Supabase
     try:
-        # Traemos órdenes planeadas o que estén en proceso de impresión
+# Traeer órdenes planeadas o que estén en proceso de impresión
         res_ops = supabase.table("ordenes_planeadas").select("*").execute()
         todas_las_ops = res_ops.data or []
     except Exception as e:
@@ -2134,15 +2131,15 @@ elif menu == "📆 Cronograma Impresión":
     ops_pendientes = []
 
     for op in todas_las_ops:
-        # Validamos si ya tiene registro de fechas en el cronograma
+# Valida si ya tiene registro de fechas en el cronograma
         if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma"):
             ops_agendadas.append(op)
         else:
-            # Si están pendientes por producir o en área de impresión, van a la lista de espera
+# Si están pendientes por producir o en área de impresión, van a la lista de espera
             if op.get("estado") != "Terminado":
                 ops_pendientes.append(op)
 
-    # 3. Formatear los Eventos para el Calendario (Estructura FullCalendar)
+# 3. Formatear los Eventos para el Calendario (Estructura FullCalendar)
     eventos_calendar = []
     for op in ops_agendadas:
         eventos_calendar.append({
@@ -2158,7 +2155,7 @@ elif menu == "📆 Cronograma Impresión":
 
     # 4. Configuración del Componente Visual (Opciones de Vista de Línea de Tiempo)
     opciones_calendario = {
-        "initialView": "resourceTimelineMonth", # Vista de línea de tiempo mensual
+        "initialView": "resourceTimelineMonth", 
         "headerToolbar": {
             "left": "prev,next today",
             "center": "title",
