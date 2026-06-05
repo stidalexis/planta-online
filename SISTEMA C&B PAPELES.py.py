@@ -3119,7 +3119,7 @@ if menu == "🛒 Mercado":
             import streamlit.components.v1 as components
 
             # ── Subdominio Avaturn — cámbialo por el tuyo de developer.avaturn.me ──
-            AVATURN_SUBDOMAIN = "cbpapeles.avaturn.dev" 
+            AVATURN_SUBDOMAIN = "cbpapeles" 
 
             # Obtener GLB guardado de este usuario (si ya creó su avatar)
             glb_guardado = ""
