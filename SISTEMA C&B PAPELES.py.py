@@ -2852,7 +2852,7 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
 def render_avatar_3d(items_equipados, nombre_usuario=""):
-    """Genera el HTML del avatar 3D estilo Snapchat (Bitmoji) con proporciones humanas suaves."""
+    """Genera el HTML del avatar 3D con Three.js según los items equipados."""
     equipado = {it.get('categoria', ''): it for it in items_equipados}
 
     hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
@@ -2864,251 +2864,119 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <div style="text-align:center;">
   <canvas id="av3d" width="260" height="340"
-    style="border-radius:24px; border: 1px solid #e2e8f0; background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%); cursor:grab; display:inline-block; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.05);"></canvas>
-  <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight:600; color:#475569; margin-top:8px; font-size:14px; letter-spacing: 0.3px;">{nombre_usuario}</div>
+    style="border-radius:14px;border:1px solid #e0e0e0;cursor:grab;display:inline-block;"></canvas>
+  <div style="font-weight:bold;color:#0D47A1;margin-top:6px;">{nombre_usuario}</div>
 </div>
-
 <script>
 (function(){{
   const canvas = document.getElementById('av3d');
-  if(!canvas || !window.THREE) return;
-
-  const renderer = new THREE.WebGLRenderer({{canvas: canvas, antialias: true, alpha: true}});
-  renderer.setSize(260, 340);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
+  if(!canvas||!window.THREE)return;
+  const renderer = new THREE.WebGLRenderer({{canvas,antialias:true,alpha:true}});
+  renderer.setSize(260,340); renderer.shadowMap.enabled=true;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 260/340, 0.1, 100);
-  camera.position.set(0, 1.25, 3.8); // Encuadre cercano y estilizado tipo retrato
-  camera.lookAt(0, 1.05, 0);
-
-  // --- ILUMINACIÓN TERSA DE ESTUDIO (LOOK MATE BITMOJI) ---
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.75); // Mayor luz base para suavizar sombras
-  scene.add(ambientLight);
-
-  // Luz principal suave (Simula caja de luz de fotografía)
-  const mainLight = new THREE.DirectionalLight(0xfffbf5, 0.7);
-  mainLight.position.set(2.5, 4, 3);
-  mainLight.castShadow = true;
-  mainLight.shadow.mapSize.width = 1024;
-  mainLight.shadow.mapSize.height = 1024;
-  mainLight.shadow.bias = -0.001;
-  scene.add(mainLight);
-
-  // Luz de relleno para eliminar contrastes duros en el rostro
-  const fillLight = new THREE.DirectionalLight(0xe0e7ff, 0.4);
-  fillLight.position.set(-2.5, 2, 2);
-  scene.add(fillLight);
-
-  // Luz cenital suave para el cabello
-  const topLight = new THREE.DirectionalLight(0xffffff, 0.3);
-  topLight.position.set(0, 5, 0);
-  scene.add(topLight);
-
-  // PALETA DE COLORES
-  const hairColor = parseInt('{hair_hex}', 16);
-  const shirtColor = parseInt('{shirt_hex}', 16);
-  const skinColor = 0xfecdd3; // Tono de piel suave y natural Bitmoji
-  const pantsColor = 0x1e293b;
-  const hatType = '{hat_type}';
+  const camera = new THREE.PerspectiveCamera(42,260/340,0.1,100);
+  camera.position.set(0,1.1,4.8); camera.lookAt(0,0.8,0);
+  scene.add(new THREE.AmbientLight(0xffffff,0.7));
+  const dl=new THREE.DirectionalLight(0xffffff,1.0); dl.position.set(3,6,4); dl.castShadow=true; scene.add(dl);
+  const fl=new THREE.DirectionalLight(0x8ab4f8,0.3); fl.position.set(-3,2,-2); scene.add(fl);
+  const hairColor = parseInt('{hair_hex}',16);
+  const shirtColor= parseInt('{shirt_hex}',16);
+  const skinColor = 0xfdbcb4;
+  const pantsColor= 0x1a237e;
+  const hatType   = '{hat_type}';
   const badgeText = '{badge_text}';
-
-  // MATERIAL BITMOJI: Acabado mayormente mate con textura aterciopelada humana
-  function mat(c, r=0.85, m=0.0){{
-    return new THREE.MeshStandardMaterial({{ color: c, roughness: r, metalness: m }});
+  function mat(c,r=0.7,m=0){{return new THREE.MeshStandardMaterial({{color:c,roughness:r,metalness:m}});}}
+  function box(w,h,d,c,x,y,z){{const ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));ms.position.set(x,y,z);ms.castShadow=true;return ms;}}
+  function sph(r,c,x,y,z,sx=1,sy=1,sz=1){{const ms=new THREE.Mesh(new THREE.SphereGeometry(r,32,32),mat(c));ms.position.set(x,y,z);ms.scale.set(sx,sy,sz);ms.castShadow=true;return ms;}}
+  function cyl(rt,rb,h,c,x,y,z,rx=0){{const ms=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,20),mat(c));ms.position.set(x,y,z);ms.rotation.x=rx;ms.castShadow=true;return ms;}}
+  const g=new THREE.Group(); scene.add(g);
+  // HEAD
+  g.add(sph(0.42,skinColor,0,2.08,0,1,1.05,1));
+  // EYES
+  [-0.15,0.15].forEach(xo=>{{
+    const ew=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),mat(0xffffff,0.9));ew.position.set(xo,2.1,0.36);ew.scale.set(1,1.1,0.5);g.add(ew);
+    const ep=new THREE.Mesh(new THREE.SphereGeometry(0.062,12,12),mat(0x1a1a2e,1));ep.position.set(xo,2.1,0.40);ep.scale.set(1,1,0.5);g.add(ep);
+    const es=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),mat(0xffffff,0.1,0.8));es.position.set(xo+0.025,2.13,0.43);g.add(es);
+  }});
+  // BROWS
+  [-0.15,0.15].forEach(xo=>{{const b=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.03,0.04),mat(hairColor,0.9));b.position.set(xo,2.23,0.36);b.rotation.z=xo<0?0.12:-0.12;g.add(b);}});
+  // NOSE
+  const ns=sph(0.055,0xe8a090,0,1.99,0.40);ns.scale.set(1,0.7,1);g.add(ns);
+  // MOUTH
+  const mo=new THREE.Mesh(new THREE.TorusGeometry(0.10,0.025,8,16,Math.PI),mat(0xc07060,0.9));mo.position.set(0,1.90,0.39);mo.rotation.x=Math.PI;g.add(mo);
+  // EARS
+  [-0.43,0.43].forEach(xo=>{{g.add(sph(0.10,skinColor,xo,2.06,0,0.6,1,0.5));}});
+  // HAIR
+  g.add(sph(0.44,hairColor,0,2.28,0,1,0.65,1));
+  [-0.35,0.35].forEach(xo=>{{g.add(sph(0.22,hairColor,xo,2.05,-0.05,0.7,1.2,0.7));}});
+  // NECK
+  g.add(cyl(0.14,0.16,0.22,skinColor,0,1.62,0));
+  // TORSO
+  g.add(box(0.88,0.88,0.5,shirtColor,0,1.05,0));
+  const cm=mat(shirtColor,0.8);
+  const c1=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.28,0.06),cm);c1.position.set(-0.06,1.39,0.26);c1.rotation.z=0.35;g.add(c1);
+  const c2=c1.clone();c2.position.set(0.06,1.39,0.26);c2.rotation.z=-0.35;g.add(c2);
+  [1.22,1.07,0.92].forEach(y=>{{const bt=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.04,10),mat(0xffffff,0.5,0.3));bt.position.set(0,y,0.26);bt.rotation.x=Math.PI/2;g.add(bt);}});
+  // ARMS
+  [-0.58,0.58].forEach(xo=>{{
+    const ua=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.12,0.52,16),mat(shirtColor,0.8));ua.position.set(xo,1.1,0);ua.rotation.z=xo<0?0.25:-0.25;g.add(ua);
+    const fa=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.09,0.42,16),mat(skinColor,0.7));fa.position.set(xo<0?-0.64:0.64,0.74,0);fa.rotation.z=xo<0?0.18:-0.18;g.add(fa);
+    g.add(sph(0.115,skinColor,xo<0?-0.70:0.70,0.50,0,1,1.1,0.9));
+  }});
+  // LOWER
+  g.add(box(0.82,0.22,0.46,pantsColor,0,0.57,0));
+  g.add(box(0.84,0.08,0.48,0x1a1a1a,0,0.69,0));
+  const bk=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.07,0.05),mat(0xd4a017,0.3,0.9));bk.position.set(0,0.69,0.26);g.add(bk);
+  [-0.21,0.21].forEach(xo=>{{
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.165,0.14,0.66,16),mat(pantsColor,0.8)));
+    g.children[g.children.length-1].position.set(xo,0.15,0);
+    const sh=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.12,0.42),mat(0x111111,0.9));sh.position.set(xo,-0.21,0.06);sh.rotation.x=-0.12;g.add(sh);
+    g.add(sph(0.12,0x111111,xo,-0.20,0.22,1,0.7,0.7));
+  }});
+  // BADGE
+  if(badgeText!=='none'){{
+    const bc={{'TOP 1':0xffd700,'MVP':0xe91e63,'PRO':0x2196f3,'ROOKIE':0x4caf50}}[badgeText]||0xffd700;
+    const bdg=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.10,0.04),mat(bc,0.4,0.5));bdg.position.set(0.26,1.18,0.27);g.add(bdg);
   }}
-  
-  function sph(r, c, x, y, z, sx=1, sy=1, sz=1, rough=0.85){{
-    const ms = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 32), mat(c, rough));
-    ms.position.set(x, y, z); ms.scale.set(sx, sy, sz); ms.castShadow = true; ms.receiveShadow = true; return ms;
+  // HAT
+  if(hatType==='corona'){{
+    const bm=mat(0xffd700,0.3,0.9);
+    const base=cyl(0.40,0.38,0.18,0xffd700,0,2.56,0);base.material=bm;g.add(base);
+    [-0.28,0,0.28].forEach((xo,i)=>{{const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.07,0.22+i*0.06,8),bm);sp.position.set(xo,2.72+(i===1?0.04:0),0.22);g.add(sp);}});
+    const gm=sph(0.055,0xe91e63,0,2.82,0.22);gm.material=mat(0xe91e63,0.1,0.9);g.add(gm);
+  }} else if(hatType==='gorra'){{
+    const cm2=mat(0x1565c0,0.8);
+    const cap=cyl(0.40,0.38,0.24,0x1565c0,0,2.58,0);cap.material=cm2;g.add(cap);
+    const br=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.05,24,1,false,Math.PI*0.1,Math.PI*0.8),cm2);br.position.set(0,2.46,0.30);br.rotation.x=0.3;g.add(br);
+    const tp=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.06,24),cm2);tp.position.set(0,2.70,0);g.add(tp);
+  }} else if(hatType==='casco'){{
+    const hm=mat(0xff6f00,0.5,0.4);
+    const hh=sph(0.48,0xff6f00,0,2.22,0,1.0,0.85,1.0);hh.material=hm;g.add(hh);
+    const hb=new THREE.Mesh(new THREE.CylinderGeometry(0.50,0.46,0.07,24),hm);hb.position.set(0,1.92,0);g.add(hb);
+    const hs=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.52,0.06),mat(0xffffff,0.7));hs.position.set(0,2.26,0.44);g.add(hs);
+  }} else if(hatType==='sombrero'){{
+    const sm=mat(0x4a2c0a,0.9);
+    const sbr=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.70,0.07,32),sm);sbr.position.set(0,2.48,0);g.add(sbr);
+    const scr=cyl(0.30,0.32,0.44,0x4a2c0a,0,2.72,0);scr.material=sm;g.add(scr);
+    const sbd=new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.31,0.10,32),mat(0xb8860b,0.5,0.3));sbd.position.set(0,2.50,0);g.add(sbd);
   }}
-  
-  function cyl(rt, rb, h, c, x, y, z, rx=0, r=0.85){{
-    const ms = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 32), mat(c, r));
-    ms.position.set(x, y, z); ms.rotation.x = rx; ms.castShadow = true; ms.receiveShadow = true; return ms;
-  }}
-
-  const g = new THREE.Group(); 
-  scene.add(g);
-
-  // --- ESCULTURA ANATÓMICA HUMANA (ESTILO SNAPCHAT) ---
-
-  // CABEZA HUMANA (Estructura de mandíbula y pómulos con esferas fusionadas)
-  const headGroup = new THREE.Group();
-  headGroup.position.set(0, 2.15, 0);
-  
-  const cranium = sph(0.35, skinColor, 0, 0.08, 0, 1, 1.05, 1); // Cráneo superior
-  const jaw = sph(0.26, skinColor, 0, -0.12, 0.04, 0.9, 1.1, 0.9); // Mandíbula estilizada hacia adelante
-  const chin = sph(0.12, skinColor, 0, -0.24, 0.12, 0.8, 0.8, 0.8); // Mentón definido
-  const cheekL = sph(0.14, skinColor, -0.18, -0.06, 0.08, 1, 1, 1); // Pómulo Izquierdo
-  const cheekR = sph(0.14, skinColor, 0.18, -0.06, 0.08, 1, 1, 1); // Pómulo Derecho
-  
-  headGroup.add(cranium, jaw, chin, cheekL, cheekR);
-  g.add(headGroup);
-
-  // OJOS BITMOJI NATURALES (Con párpados expresivos)
-  [-0.12, 0.12].forEach(xo => {{
-    // Globo ocular
-    const eyeball = sph(0.08, 0xffffff, xo, 2.16, 0.22, 1, 1, 0.4, 0.2);
-    g.add(eyeball);
-    // Iris + Pupila Humana
-    const iris = sph(0.048, 0x475569, xo, 2.16, 0.25, 1, 1, 0.3, 0.3); // Ojos avellana/gris azulado
-    const pupil = sph(0.025, 0x0f172a, xo, 2.16, 0.26, 1, 1, 0.3, 0.3);
-    const reflex = sph(0.012, 0xffffff, xo + 0.02, 2.19, 0.27);
-    g.add(iris, pupil, reflex);
-
-    // Sombra de pestañas/párpado superior (Aporta la mirada humana relajada)
-    const eyelid = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.02, 0.04), mat(0x334155, 0.9));
-    eyelid.position.set(xo, 2.23, 0.24);
-    eyelid.rotation.z = xo < 0 ? 0.05 : -0.05;
-    g.add(eyelid);
-  }});
-
-  // CEJAS ANATÓMICAS (Curvas y orgánicas)
-  [-0.12, 0.12].forEach(xo => {{
-    const brow = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.015, 6, 16, Math.PI * 0.7), mat(hairColor, 0.9));
-    brow.position.set(xo, 2.28, 0.22);
-    brow.rotation.z = xo < 0 ? Math.PI - 0.2 : 0.2;
-    g.add(brow);
-  }});
-
-  // NARIZ HUMANA ESTILIZADA (Puente y base redondeada)
-  const noseBridge = cyl(0.018, 0.028, 0.14, skinColor, 0, 2.08, 0.25, -0.15);
-  const noseTip = sph(0.038, skinColor, 0, 2.02, 0.28, 1.1, 0.9, 1.1);
-  g.add(noseBridge, noseTip);
-
-  // BOCA CON LABIOS DEFINIDOS
-  const topLip = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.016, 8, 16, Math.PI), mat(0xe11d48, 0.7)); // Labio superior
-  topLip.position.set(0, 1.93, 0.24); topLip.rotation.x = Math.PI; g.add(topLip);
-  const bottomLip = sph(0.06, 0xf43f5e, 0, 1.91, 0.24, 1.3, 0.6, 0.8); // Labio inferior carnoso
-  g.add(bottomLip);
-
-  // OREJAS HUMANAS
-  [-0.34, 0.34].forEach(xo => {{ g.add(sph(0.07, skinColor, xo, 2.12, -0.04, 0.5, 1, 0.7)); }});
-
-  // CABELLO CASUAL CON VOLUMEN NATURAL (Estilo peinado Bitmoji)
-  g.add(sph(0.37, hairColor, 0, 2.32, -0.05, 1.05, 0.9, 1.08, 0.9)); // Base
-  g.add(sph(0.24, hairColor, -0.12, 2.44, 0.12, 1, 0.9, 1.1, 0.9)); // Copete/Volumen izquierdo
-  g.add(sph(0.22, hairColor, 0.14, 2.45, 0.10, 0.9, 0.9, 1.1, 0.9)); // Flequillo derecho caído
-  [-0.28, 0.28].forEach(xo => {{ g.add(sph(0.16, hairColor, xo, 2.14, 0.08, 0.8, 1.4, 0.8, 0.9)); }}); // Patillas integradas
-
-  // CUELLO Y HOMBRE SUTIL ANATÓMICO (Estructura de Ropa Orgánica)
-  g.add(cyl(0.09, 0.11, 0.26, skinColor, 0, 1.68, 0)); // Cuello más esbelto humano
-
-  // TORSO HUMANO (Hombros curvos caídos en arco, cintura delgada)
-  const shoulders = sph(0.38, shirtColor, 0, 1.24, -0.02, 1.2, 0.9, 0.65); // Clavícula y hombros orgánicos
-  const chest = sph(0.36, shirtColor, 0, 1.05, 0, 0.95, 1.1, 0.62); // Caja torácica suave
-  const waist = cyl(0.31, 0.28, 0.44, shirtColor, 0, 0.85, 0); // Cintura entallada
-  g.add(shoulders, chest, waist);
-
-  // Cuello de prenda moderna (Remera/Camisa casual)
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.018, 8, 24), mat(shirtColor, 0.8));
-  collar.position.set(0, 1.54, 0.06); collar.rotation.x = Math.PI / 2.2; g.add(collar);
-
-  // DETALLES ELEGANTES DE LA PRENDA
-  [1.24, 1.10, 0.96].forEach(y => {{
-    const button = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.02, 12), mat(0xffffff, 0.5));
-    button.position.set(0, y, 0.25); button.rotation.x = Math.PI / 2; g.add(button);
-  }});
-
-  // BRAZOS ANATÓMICOS (Articulación y caída relajada natural)
-  [-0.48, 0.48].forEach(xo => {{
-    const upperArm = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.46, 24), mat(shirtColor, 0.85));
-    upperArm.position.set(xo, 1.18, 0); upperArm.rotation.z = xo < 0 ? 0.32 : -0.32; g.add(upperArm);
-    
-    const foreArm = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.065, 0.38, 24), mat(skinColor, 0.85));
-    foreArm.position.set(xo < 0 ? -0.55 : 0.55, 0.84, 0.04); 
-    foreArm.rotation.z = xo < 0 ? 0.20 : -0.20;
-    foreArm.rotation.x = 0.15; // Ligeramente hacia adelante
-    g.add(foreArm);
-    
-    g.add(sph(0.075, skinColor, xo < 0 ? -0.60 : 0.60, 0.64, 0.06)); // Manos suaves estilizadas
-  }});
-
-  // PANTALONES JEANS Y ADIDAS SNEAKERS CASUALES
-  g.add(sph(0.32, pantsColor, 0, 0.62, 0, 1.05, 0.7, 0.95)); // Pelvis curva
-  [-0.16, 0.16].forEach(xo => {{
-    g.add(cyl(0.11, 0.09, 0.68, pantsColor, xo, 0.26, 0.02)); // Piernas humanas delgadas
-    
-    // Sneakers Estilo Snapchat Urbano
-    const shoe = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.11, 0.34), mat(0xffffff, 0.4));
-    shoe.position.set(xo, -0.12, 0.08); g.add(shoe);
-    g.add(sph(0.08, 0xffffff, xo, -0.11, 0.21, 1, 0.7, 0.8));
-    
-    // Suela de goma
-    const shoeSole = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.03, 0.36), mat(0x475569, 0.6));
-    shoeSole.position.set(xo, -0.18, 0.08); g.add(shoeSole);
-  }});
-
-  // INSIGNIA FLOTANTE DE RECONOCIMIENTO (Look Pines Modernos)
-  if(badgeText !== 'none'){{
-    let bc = 0xffd700;
-    if(badgeText === 'MVP') bc = 0xf43f5e;
-    if(badgeText === 'PRO') bc = 0x3b82f6;
-    if(badgeText === 'ROOKIE') bc = 0x10b981;
-    
-    const pin = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.03, 24), mat(bc, 0.3, 0.6));
-    pin.position.set(0.18, 1.26, 0.22); pin.rotation.x = Math.PI / 2; pin.rotation.y = -0.15; g.add(pin);
-  }}
-
-  // ACCESORIOS ADAPTADOS AL NUEVO CRÁNEO HUMANO
-  if(hatType === 'corona'){{
-    const bm = mat(0xffd700, 0.2, 0.9);
-    const base = cyl(0.30, 0.28, 0.12, 0xffd700, 0, 2.56, -0.04, 0.05); base.material = bm; g.add(base);
-  }} else if(hatType === 'gorra'){{
-    const capMat = mat(0x1e293b, 0.8);
-    g.add(sph(0.33, 0x1e293b, 0, 2.54, -0.04, 1.02, 0.8, 1.02)); // Visera base de tela humana
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.02, 0.26), capMat);
-    visor.position.set(0, 2.45, 0.18); visor.rotation.x = 0.18; g.add(visor);
-  }} else if(hatType === 'sombrero'){{
-    const sm = mat(0x451a03, 0.95);
-    const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.56, 0.02, 32), sm); brim.position.set(0, 2.48, -0.02); g.add(brim);
-    const topHat = cyl(0.24, 0.26, 0.32, 0x451a03, 0, 2.64, -0.02); topHat.material = sm; g.add(topHat);
-  }}
-
-  // PLANO RECEPTOR DE SOMBRA TERSA DE PISO
-  const shadowPlane = new THREE.Mesh(
-    new THREE.PlaneGeometry(6, 6),
-    new THREE.ShadowMaterial({{ opacity: 0.12 }}) // Sombras tenues idénticas a Bitmoji
-  );
-  shadowPlane.rotation.x = -Math.PI / 2;
-  shadowPlane.position.y = -0.20;
-  shadowPlane.receiveShadow = true;
-  scene.add(shadowPlane);
-
-  // INTERACCIÓN CONTROLADA POR USUARIO (MOUSE / TOUCH TACTIL)
-  let drag = false, prevX = 0, rotY = 0.2;
-  canvas.addEventListener('mousedown', e => {{ drag = true; prevX = e.clientX; }});
-  canvas.addEventListener('touchstart', e => {{ drag = true; prevX = e.touches[0].clientX; }});
-  window.addEventListener('mouseup', () => drag = false);
-  window.addEventListener('touchend', () => drag = false);
-  
-  canvas.addEventListener('mousemove', e => {{
-    if(!drag) return;
-    rotY += (e.clientX - prevX) * 0.007;
-    prevX = e.clientX; g.rotation.y = rotY;
-  }});
-  canvas.addEventListener('touchmove', e => {{
-    if(!drag) return;
-    rotY += (e.touches[0].clientX - prevX) * 0.007;
-    prevX = e.touches[0].clientX; g.rotation.y = rotY;
-  }});
-
-  // LOOP INFINITO DE ANIMACIÓN (ROTACIÓN PASIVA Y BALANCEO HUMANO)
-  let t = 0;
-  (function anim(){{
-    requestAnimationFrame(anim);
-    t += 0.012;
-    if(!drag) g.rotation.y += 0.0025; // Rotación automática de vitrina súper suave
-    g.position.y = Math.sin(t) * 0.018; // Flotación orgánica apenas perceptible
-    renderer.render(scene, camera);
-  }})();
+  // SHADOW DISC
+  const sd=new THREE.Mesh(new THREE.CircleGeometry(0.65,32),new THREE.MeshBasicMaterial({{color:0x000000,transparent:true,opacity:0.10}}));
+  sd.rotation.x=-Math.PI/2; sd.position.y=-0.285; scene.add(sd);
+  // DRAG
+  let drag=false,prevX=0,rotY=0.3;
+  canvas.addEventListener('mousedown',e=>{{drag=true;prevX=e.clientX;}});
+  canvas.addEventListener('touchstart',e=>{{drag=true;prevX=e.touches[0].clientX;}});
+  window.addEventListener('mouseup',()=>drag=false);
+  window.addEventListener('touchend',()=>drag=false);
+  canvas.addEventListener('mousemove',e=>{{if(!drag)return;rotY+=(e.clientX-prevX)*0.012;prevX=e.clientX;g.rotation.y=rotY;}});
+  canvas.addEventListener('touchmove',e=>{{if(!drag)return;rotY+=(e.touches[0].clientX-prevX)*0.012;prevX=e.touches[0].clientX;g.rotation.y=rotY;}});
+  let t=0;
+  (function anim(){{requestAnimationFrame(anim);t+=0.018;if(!drag)g.rotation.y+=0.004;g.position.y=Math.sin(t)*0.04;renderer.render(scene,camera);}})();
 }})();
 </script>
 """
-    
 
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
