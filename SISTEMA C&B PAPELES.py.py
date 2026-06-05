@@ -2150,31 +2150,32 @@ elif menu == "📆 Cronograma Impresión":
             "end": op["fecha_fin_cronograma"],
             "backgroundColor": "#9E9E9E" if op.get("proxima_area") == "FINALIZADO" else ("#0D47A1" if op.get("estado") == "En Proceso" else "#FFA000"),
             "borderColor": "#757575" if op.get("proxima_area") == "FINALIZADO" else "#0A3578",
-            "textColor": "#ffffff",
-            "allDay": True
+            "textColor": "#ffffff"
         })
 
     # 4. Configuración del Componente Visual (Opciones de Vista de Línea de Tiempo)
     opciones_calendario = {
-        "initialView": "resourceTimelineMonth", 
+        "initialView": "resourceTimelineDay",       # Vista por defecto: DIA (muestra horas)
         "headerToolbar": {
             "left": "prev,next today",
             "center": "title",
             "right": "resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth"
         },
-        "editable": True,            # Permite arrastrar y estirar las barras
-        "resourceAreaWidth": "20%",   # Ancho de la columna de máquinas
+        "editable": True,
+        "resourceAreaWidth": "20%",
         "resourceAreaHeaderContent": "🏭 Máquinas",
+        "slotDuration": "01:00:00",                 # Cada celda = 1 hora
+        "slotLabelFormat": {"hour": "2-digit", "minute": "2-digit", "hour12": False},
+        "scrollTime": "06:00:00",                   # Al abrir, empieza mostrando desde las 6am
         "buttonText": {
             "today": "Hoy",
             "month": "Mes",
             "week": "Semana",
             "day": "Día"
         },
-        "allDayText": "Todo el día",
         "noEventsText": "No hay órdenes programadas",
         "resources": recursos_calendar,
-        "locale": "es"               # Idioma Español
+        "locale": "es"
     }
 
     # Creación de dos columnas: Izquierda (Calendario) | Derecha (Panel de asignación rápida)
