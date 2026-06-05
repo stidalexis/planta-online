@@ -1199,8 +1199,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 c1.link_button("🎨 ABRIR ARTE", datos_op_2.get('link_diseno', '#'), use_container_width=True)
                 c2.metric("🎫 TICKET ASIGNADO", datos_op_2.get('num_ticket', 0))
 
-                def radiografia_completa_op(datos_op_2):
-                    st.table(datos_op_2.get('detalles_partes_json'))
+            if datos_op:
+                radiografia_completa_op(datos_op)
+                st.divider()
                 
                 if st.button("🚀 ENVIAR A REVISIÓN FINAL", use_container_width=True):
                     supabase.table("ordenes_planeadas").update({"proxima_area": "REVISION_FINAL"}).eq("op", op_id_2).execute()
