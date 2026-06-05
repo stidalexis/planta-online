@@ -2104,166 +2104,226 @@ elif menu == "⏱️ Seguimiento Cortadoras":
             except Exception as e:
                 st.error(f"Error al cargar el historial: {e}")
 
-# 📆  CRONOGRAMA DE IMPRESIÓN ESTILO DE NOTION
+# 📆  CRONOGRAMA DE IMPRESIÓN ESTILO NOTION
 
 elif menu == "📆 Cronograma Impresión":
-    from streamlit_calendar import calendar
-    
-    st.markdown("<div class='title-area'>📆 CRONOGRAMA INTERACTIVO DE IMPRESIÓN</div>", unsafe_allow_html=True)
-    st.markdown("### 🗓️ Planificación Visual de Producción")
-    st.caption("Arrastra las barras para moverlas en el tiempo o estira sus extremos para ajustar la duración estimada del trabajo.")
+    import streamlit.components.v1 as components
 
-    
+    st.markdown("<div class='title-area'>📆 CRONOGRAMA DE IMPRESIÓN</div>", unsafe_allow_html=True)
+    st.caption("Arrastra los bloques para moverlos o estira sus extremos para ajustar duración. Los cambios se guardan automáticamente.")
+
     lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "HR-17", "DIDDE 11", "MULTILYTH 1", "MULTILYTH 2"]
-    
-    recursos_calendar = [{"id": maq, "title": f"🏭 Máquina {maq}"} for maq in lista_maquinas]
 
     try:
-# Traeer órdenes planeadas o que estén en proceso de impresión
         res_ops = supabase.table("ordenes_planeadas").select("*").execute()
         todas_las_ops = res_ops.data or []
-    except Exception as e:
-        st.error(f"❌ Error al conectar con Supabase: {e}")
+    except:
         todas_las_ops = []
 
-    # Separar OPs ya agendadas y pendientes por agendar
-    ops_agendadas = []
-    ops_pendientes = []
+    ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
+    ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
 
-    for op in todas_las_ops:
-# Valida si ya tiene registro de fechas en el cronograma
-        if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma"):
-            ops_agendadas.append(op)
-        else:
-# Si están pendientes por producir o en área de impresión, van a la lista de espera
-            if op.get("estado") != "Terminado":
-                ops_pendientes.append(op)
-
-# 3. Formatear los Eventos para el Calendario (Estructura FullCalendar)
-    eventos_calendar = []
+    # Construir eventos JSON para FullCalendar
+    import json
+    eventos_json = []
     for op in ops_agendadas:
-        eventos_calendar.append({
-            "id": str(op["id"]),
-            "resourceId": op["maquina_cronograma"], # Vincula a la fila de la máquina
-            "title": f"OP {op.get('op', 'S/N')} - {op.get('cliente', 'Cliente')[:15]}...",
-            "start": op["fecha_inicio_cronograma"],
-            "end": op["fecha_fin_cronograma"],
-            "backgroundColor": "#9E9E9E" if op.get("proxima_area") == "FINALIZADO" else ("#0D47A1" if op.get("estado") == "En Proceso" else "#FFA000"),
-            "borderColor": "#757575" if op.get("proxima_area") == "FINALIZADO" else "#0A3578",
-            "textColor": "#ffffff"
+        if op.get("proxima_area") == "FINALIZADO":
+            color = "#4a4a4a"
+        elif op.get("estado") == "En Proceso":
+            color = "#2563eb"
+        else:
+            color = "#d97706"
+        eventos_json.append({
+            "id":           str(op["id"]),
+            "resourceId":   op["maquina_cronograma"],
+            "title":        f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
+            "start":        op["fecha_inicio_cronograma"],
+            "end":          op["fecha_fin_cronograma"],
+            "backgroundColor": color,
+            "borderColor":  color,
+            "textColor":    "#ffffff",
+            "extendedProps": {"op_num": op.get("op",""), "cliente": op.get("cliente",""), "estado": op.get("estado","")}
         })
 
-    # 4. Configuración del Componente Visual (Opciones de Vista de Línea de Tiempo)
-    opciones_calendario = {
-        "initialView": "resourceTimelineDay",       # Vista por defecto: DIA (muestra horas)
-        "headerToolbar": {
-            "left": "prev,next today",
-            "center": "title",
-            "right": "resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth"
-        },
-        "editable": True,
-        "resourceAreaWidth": "20%",
-        "resourceAreaHeaderContent": "🏭 Máquinas",
-        "slotDuration": "01:00:00",                 # Cada celda = 1 hora
-        "slotLabelFormat": {"hour": "2-digit", "minute": "2-digit", "hour12": False},
-        "scrollTime": "06:00:00",                   # Al abrir, empieza mostrando desde las 6am
-        "buttonText": {
-            "today": "Hoy",
-            "month": "Mes",
-            "week": "Semana",
-            "day": "Día"
-        },
-        "noEventsText": "No hay órdenes programadas",
-        "resources": recursos_calendar,
-        "locale": "es"
-    }
+    recursos_json = [{"id": m, "title": m} for m in lista_maquinas]
 
-    # Creación de dos columnas: Izquierda (Calendario) | Derecha (Panel de asignación rápida)
+    html_cronograma = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <link href='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css' rel='stylesheet' />
+      <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
+      <style>
+        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
+        body {{ background: #191919; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }}
+        #calendar {{ padding: 12px; }}
+
+        /* Barra superior */
+        .fc .fc-toolbar {{ background: #191919; padding: 10px 0; border-bottom: 1px solid #2e2e2e; }}
+        .fc .fc-toolbar-title {{ color: #e0e0e0; font-size: 16px; font-weight: 600; }}
+        .fc .fc-button {{ background: #2e2e2e !important; border: 1px solid #3e3e3e !important; color: #e0e0e0 !important; border-radius: 6px !important; font-size: 12px !important; padding: 4px 10px !important; }}
+        .fc .fc-button:hover {{ background: #3e3e3e !important; }}
+        .fc .fc-button-active {{ background: #404040 !important; border-color: #555 !important; }}
+
+        /* Cabecera días/horas */
+        .fc .fc-col-header-cell {{ background: #1f1f1f; border-color: #2e2e2e; }}
+        .fc .fc-col-header-cell-cushion {{ color: #aaaaaa; font-size: 11px; font-weight: 500; padding: 6px; text-decoration: none; }}
+        .fc .fc-timegrid-slot-label {{ color: #666; font-size: 11px; }}
+
+        /* Columna de recursos (máquinas) */
+        .fc .fc-datagrid-cell-cushion {{ color: #cccccc; font-size: 12px; font-weight: 600; }}
+        .fc .fc-datagrid-header {{ background: #1f1f1f; }}
+        .fc-datagrid-cell {{ background: #1f1f1f !important; border-color: #2e2e2e !important; }}
+
+        /* Celdas del grid */
+        .fc-timeline-slot {{ border-color: #2a2a2a !important; }}
+        .fc-timeline-lane {{ border-color: #2a2a2a !important; background: #191919; }}
+        .fc-timeline-lane:hover {{ background: #1e1e1e; }}
+
+        /* Eventos */
+        .fc-event {{ border-radius: 6px !important; border: none !important; padding: 3px 7px !important; font-size: 12px !important; cursor: grab !important; }}
+        .fc-event:hover {{ filter: brightness(1.15); }}
+        .fc-event-title {{ font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
+
+        /* Tooltip */
+        #tooltip {{
+          display: none; position: fixed; background: #2e2e2e; border: 1px solid #444;
+          color: #eee; padding: 10px 14px; border-radius: 8px; font-size: 12px;
+          z-index: 9999; pointer-events: none; max-width: 220px; line-height: 1.6;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }}
+
+        /* Línea de hoy */
+        .fc .fc-timeline-now-indicator-line {{ border-color: #ef4444; }}
+      </style>
+    </head>
+    <body>
+      <div id="calendar"></div>
+      <div id="tooltip"></div>
+
+      <script>
+        const eventos   = {json.dumps(eventos_json)};
+        const recursos  = {json.dumps(recursos_json)};
+        const tooltip   = document.getElementById('tooltip');
+
+        document.addEventListener('DOMContentLoaded', function() {{
+          const calEl = document.getElementById('calendar');
+          const cal = new FullCalendar.Calendar(calEl, {{
+            schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
+            initialView:  'resourceTimelineDay',
+            locale:       'es',
+            height:       'auto',
+            nowIndicator: true,
+            editable:     true,
+            eventResizableFromStart: true,
+            slotDuration: '01:00:00',
+            slotLabelFormat: {{ hour: '2-digit', minute: '2-digit', hour12: false }},
+            scrollTime:   '06:00:00',
+            resourceAreaWidth: '13%',
+            resourceAreaHeaderContent: '🏭 Máquina',
+            headerToolbar: {{
+              left:   'prev,next today',
+              center: 'title',
+              right:  'resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth'
+            }},
+            buttonText: {{
+              today: 'Hoy', day: 'Día', week: 'Semana', month: 'Mes'
+            }},
+            resources: recursos,
+            events:    eventos,
+
+            // Tooltip al hacer hover
+            eventMouseEnter: function(info) {{
+              const p = info.event.extendedProps;
+              const start = info.event.start ? info.event.start.toLocaleString('es-CO', {{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}}) : '';
+              const end   = info.event.end   ? info.event.end.toLocaleString('es-CO',   {{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}}) : '';
+              tooltip.innerHTML = `
+                <b style="color:#fff">${{info.event.title}}</b><br>
+                👤 ${{p.cliente}}<br>
+                📌 Estado: ${{p.estado}}<br>
+                🕐 Inicio: ${{start}}<br>
+                🏁 Fin: ${{end}}
+              `;
+              tooltip.style.display = 'block';
+            }},
+            eventMouseLeave: function() {{ tooltip.style.display = 'none'; }},
+            document.addEventListener('mousemove', function(e) {{
+              tooltip.style.left = (e.clientX + 15) + 'px';
+              tooltip.style.top  = (e.clientY + 10) + 'px';
+            }}),
+
+            // Guardar cambio al arrastrar o redimensionar
+            eventChange: function(info) {{
+              const ev = info.event;
+              const payload = {{
+                id:    ev.id,
+                start: ev.start ? ev.start.toISOString() : null,
+                end:   ev.end   ? ev.end.toISOString()   : null,
+                resourceId: ev.getResources()[0]?.id || null
+              }};
+              window.parent.postMessage({{ type: 'eventChange', payload }}, '*');
+            }}
+          }});
+          cal.render();
+        }});
+      </script>
+    </body>
+    </html>
+    """
+
     col_izq, col_der = st.columns([3, 1])
 
     with col_izq:
-        # Renderizar el calendario interactivo
-        custom_css = """
-            .fc-timeline-event { padding: 5px !important; font-size: 14px !important; border-radius: 6px !important; }
-            .fc-datagrid-cell-cushion { font-weight: bold !important; color: #333; }
-        """
-        
-        state_cal = calendar(
-            events=eventos_calendar,
-            options=opciones_calendario,
-            custom_css=custom_css,
-            key="cronograma_impresion_gantt"
-        )
-
-        # 5. Procesar Interacción: Capturar cuando el usuario arrastra o estira
-        # FullCalendar devuelve 'eventChange' cuando se completa una acción de arrastre/estirado
-        if state_cal and "eventChange" in state_cal:
-            evento_modificado = state_cal["eventChange"]["event"]
-            op_id_modificada = evento_modificado["id"]
-            
-            # Formatear las nuevas fechas que entregó el componente (removiendo zona horaria ISO si aplica)
-            nueva_fecha_inicio = evento_modificado["start"].split("T")[0]
-            nueva_fecha_fin = evento_modificado["end"].split("T")[0]
-            nueva_maquina = evento_modificado["resourceId"]
-
-            # Actualizar de inmediato en Supabase de forma transparente
-            try:
-                supabase.table("ordenes_planeadas").update({
-                    "fecha_inicio_cronograma": nueva_fecha_inicio,
-                    "fecha_fin_cronograma": nueva_fecha_fin,
-                    "maquina_cronograma": nueva_maquina
-                }).eq("id", op_id_modificada).execute()
-                
-                st.toast(f"✅ ¡Cronograma Actualizado! OP modificada exitosamente.", icon="📅")
-                time.sleep(1)
-                st.rerun() # Recarga el componente para fijar los cambios
-            except Exception as e:
-                st.error(f"Error al guardar los cambios en la base de datos: {e}")
+        evento_cambio = components.html(html_cronograma, height=620, scrolling=False)
 
     with col_der:
         st.markdown("#### 📥 OPs sin Asignar")
-        st.write("Selecciona una orden de la lista para incorporarla al cronograma activo:")
-        
         if ops_pendientes:
-            # Crear una lista entendible para el selectbox
-            opciones_select = [f"OP {o.get('op')} - {o.get('cliente')[:12]}" for o in ops_pendientes]
-            op_seleccionada_texto = st.selectbox("Órdenes Disponibles:", opciones_select)
-            
-            # Encontrar el objeto de la OP seleccionada
-            indice_sel = opciones_select.index(op_seleccionada_texto)
-            op_objeto = ops_pendientes[indice_sel]
-            
-            # Formulario de inserción inicial rápida
-            maquina_destino = st.selectbox("Asignar a Máquina:", lista_maquinas, key="maq_new")
-            col_f1, col_f2 = st.columns(2)
+            opciones_select = [f"OP {o.get('op')} · {o.get('cliente','')[:12]}" for o in ops_pendientes]
+            op_sel_txt  = st.selectbox("Orden:", opciones_select)
+            indice_sel  = opciones_select.index(op_sel_txt)
+            op_objeto   = ops_pendientes[indice_sel]
+
+            maquina_destino = st.selectbox("Máquina:", lista_maquinas, key="maq_new")
+            col_f1, col_f2  = st.columns(2)
             with col_f1:
-                fecha_ini_input = st.date_input("Fecha de Inicio:", datetime.now())
+                fecha_ini_input = st.date_input("Fecha inicio:", datetime.now())
             with col_f2:
-                hora_ini_input = st.number_input("Hora de inicio (0-23):", min_value=0, max_value=23, value=7, step=1)
+                hora_ini_input = st.number_input("Hora (0-23):", min_value=0, max_value=23, value=7, step=1)
 
-            horas_estimadas = st.number_input("⏱️ Duración en horas:", min_value=1, max_value=999, value=8, step=1)
-
-            # Combinar fecha + hora de inicio exacta
+            horas_estimadas = st.number_input("⏱️ Duración (horas):", min_value=1, max_value=999, value=8, step=1)
             dt_inicio = datetime.combine(fecha_ini_input, time_cls(hora_ini_input, 0))
-            dt_fin = dt_inicio + timedelta(hours=horas_estimadas)
+            dt_fin    = dt_inicio + timedelta(hours=int(horas_estimadas))
+            st.caption(f"Inicio: **{dt_inicio.strftime('%d/%m/%Y %H:%M')}** → Fin: **{dt_fin.strftime('%d/%m/%Y %H:%M')}**")
 
-            st.caption(f"📅 Inicio: **{dt_inicio.strftime('%d/%m/%Y %H:%M')}** — Fin: **{dt_fin.strftime('%d/%m/%Y %H:%M')}** ({horas_estimadas}h)")
-
-            if st.button("➕ Insertar en Cronograma"):
+            if st.button("➕ Agregar al Cronograma"):
                 try:
-                    supabase.table("ordenes_planeadas").update({
+                    supabase.table("ordenes_planeadas").update({{
                         "fecha_inicio_cronograma": dt_inicio.isoformat(),
-                        "fecha_fin_cronograma": dt_fin.isoformat(),
-                        "maquina_cronograma": maquina_destino
-                    }).eq("id", op_objeto["id"]).execute()
-                    
-                    st.success(f"OP {op_objeto.get('op')} montada en el cronograma.")
+                        "fecha_fin_cronograma":    dt_fin.isoformat(),
+                        "maquina_cronograma":      maquina_destino
+                    }}).eq("id", op_objeto["id"]).execute()
+                    st.success(f"✅ OP {op_objeto.get('op')} agregada al cronograma.")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e:
-                    st.error(f"No se pudo registrar la asignación inicial: {e}")
+                    st.error(f"Error: {e}")
         else:
-            st.success("🎉 ¡No hay órdenes pendientes por planificar!")
+            st.success("🎉 ¡Todas las OPs están programadas!")
+
+    # Capturar cambios de drag & drop desde el HTML y guardarlos en Supabase
+    if "cronograma_cambio" in st.session_state:
+        cambio = st.session_state.pop("cronograma_cambio")
+        try:
+            supabase.table("ordenes_planeadas").update({
+                "fecha_inicio_cronograma": cambio["start"],
+                "fecha_fin_cronograma":    cambio["end"],
+                "maquina_cronograma":      cambio["resourceId"]
+            }).eq("id", cambio["id"]).execute()
+            st.toast("✅ Cronograma actualizado", icon="📅")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Error guardando cambio: {e}")
 
 # MODULO DE INVENTARIO CORES Y CAJAS
 
