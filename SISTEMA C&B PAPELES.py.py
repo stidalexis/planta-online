@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from datetime import datetime, timedelta  
+from datetime import datetime, timedelta, time as time_cls 
 import time
 import io
 from fpdf import FPDF
@@ -2243,7 +2243,7 @@ elif menu == "📆 Cronograma Impresión":
             horas_estimadas = st.number_input("⏱️ Duración en horas:", min_value=1, max_value=999, value=8, step=1)
 
             # Combinar fecha + hora de inicio exacta
-            dt_inicio = datetime.combine(fecha_ini_input, time(hora_ini_input, 0))
+            dt_inicio = datetime.combine(fecha_ini_input, time_cls(hora_ini_input, 0))
             dt_fin = dt_inicio + timedelta(hours=horas_estimadas)
 
             st.caption(f"📅 Inicio: **{dt_inicio.strftime('%d/%m/%Y %H:%M')}** — Fin: **{dt_fin.strftime('%d/%m/%Y %H:%M')}** ({horas_estimadas}h)")
