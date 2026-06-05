@@ -2852,194 +2852,189 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
 def render_avatar_3d(items_equipados, nombre_usuario=""):
-    """Genera el HTML del avatar 3D mejorado con Three.js (estilo estilizado y realista)."""
+    """Genera el HTML del avatar 3D mejorado con máxima compatibilidad en Three.js."""
     equipado = {it.get('categoria', ''): it for it in items_equipados}
 
     hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
     shirt_hex  = equipado.get('camisa',   {}).get('color_hex', '#1565c0').lstrip('#')
-    hat_type   = equipado.get('sombrero', {}.get('svg_data',  'none').lower().strip() or 'none')
+    hat_type   = equipado.get('sombrero', {}).get('svg_data',  'none').lower().strip() or 'none')
     badge_text = equipado.get('insignia', {}).get('label', 'none') or 'none'
 
     return f"""
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <div style="text-align:center;">
   <canvas id="av3d" width="260" height="340"
-    style="border-radius:16px; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); cursor:grab; display:inline-block; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);"></canvas>
-  <div style="font-family: system-ui, sans-serif; font-weight:600; color:#1e293b; margin-top:10px; font-size:14px; letter-spacing: 0.5px;">{nombre_usuario}</div>
+    style="border-radius:16px; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); cursor:grab; display:inline-block; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);"></canvas>
+  <div style="font-family: system-ui, -apple-system, sans-serif; font-weight:600; color:#1e293b; margin-top:10px; font-size:14px; letter-spacing: 0.5px;">{nombre_usuario}</div>
 </div>
 
 <script>
 (function(){{
   const canvas = document.getElementById('av3d');
-  if(!canvas||!window.THREE)return;
+  if(!canvas || !window.THREE) return;
 
-  // 1. RENDERER CON ANTIALIAS Y MEJOR COLOR
+  // RENDERER CONTROLADO
   const renderer = new THREE.WebGLRenderer({{canvas, antialias:true, alpha:true}});
-  renderer.setSize(260,340);
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Sombras mucho más suaves
+  renderer.setSize(260, 340);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.outputEncoding = THREE.sRGBEncoding; // Colores más realistas
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 260/340, 0.1, 100);
-  camera.position.set(0, 1.1, 4.5);
+  
+  // CÁMARA (Ajustada para asegurar que encuadre perfectamente el cuerpo entero)
+  const camera = new THREE.PerspectiveCamera(40, 260/340, 0.1, 100);
+  camera.position.set(0, 1.1, 4.2);
   camera.lookAt(0, 0.9, 0);
 
-  // 2. ILUMINACIÓN ESTUDIO (Clave para el realismo)
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+  // ILUMINACIÓN COMPATIBLE Y CONFIGURADA
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
   scene.add(ambientLight);
 
-  // Luz principal (Sol / Foco principal)
-  const dirLight = new THREE.DirectionalLight(0xfff8f0, 1.2); // Tono cálido
-  dirLight.position.set(4, 5, 4);
+  const dirLight = new THREE.DirectionalLight(0xfffaf0, 0.8);
+  dirLight.position.set(3, 5, 3);
   dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 1024;
-  dirLight.shadow.mapSize.height = 1024;
-  dirLight.shadow.camera.near = 0.5;
-  dirLight.shadow.camera.far = 15;
-  dirLight.shadow.bias = -0.001;
+  dirLight.shadow.mapSize.width = 512; // Resolución optimizada para evitar crasheos
+  dirLight.shadow.mapSize.height = 512;
+  dirLight.shadow.bias = -0.002;
   scene.add(dirLight);
 
-  // Luz de relleno (Evita sombras negras duras)
-  const fillLight = new THREE.DirectionalLight(0x8ab4f8, 0.4); // Tono azulado para contraste
-  fillLight.position.set(-4, 2, 2);
+  const fillLight = new THREE.DirectionalLight(0x8ab4f8, 0.4);
+  fillLight.position.set(-3, 2, 2);
   scene.add(fillLight);
 
-  // Luz de contra (Separa al personaje del fondo)
-  const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
-  rimLight.position.set(0, 4, -4);
-  scene.add(rimLight);
-
-  // 3. VARIABLES DE COLOR Y MATERIALES PBR (Physical Based Rendering)
+  // COLORES INTERNOS
   const hairColor = parseInt('{hair_hex}', 16);
   const shirtColor= parseInt('{shirt_hex}', 16);
-  const skinColor = 0xffcdc1; // Tono de piel corregido para sRGB
-  const pantsColor= 0x1e265c;
+  const skinColor = 0xfdbcb4; 
+  const pantsColor= 0x1a237e;
 
-  // Funciones helper con materiales más avanzados (Roughness/Metalness balanceados)
+  // HELPERS DE MATERIALES ESTÁNDAR REALISTAS (Evitamos fallos de texturas ausentes)
   function mat(c, r=0.6, m=0.0){{
-    return new THREE.MeshStandardMaterial({{color:c, roughness:r, metalness:m, envMapIntensity: 1.0}});
+    return new THREE.MeshStandardMaterial({{ color: c, roughness: r, metalness: m }});
   }}
-  function box(w,h,d,c,x,y,z, r=0.5){{
-    const ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat(c,r));
-    ms.position.set(x,y,z); ms.castShadow=true; ms.receiveShadow=true; return ms;
+  
+  function box(w, h, d, c, x, y, z, r=0.6){{
+    const ms = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c, r));
+    ms.position.set(x, y, z); ms.castShadow = true; ms.receiveShadow = true; return ms;
   }}
-  function sph(r,c,x,y,z,sx=1,sy=1,sz=1, rough=0.5){{
-    const ms=new THREE.Mesh(new THREE.SphereGeometry(r,32,32), mat(c,rough));
-    ms.position.set(x,y,z); ms.scale.set(sx,sy,sz); ms.castShadow=true; ms.receiveShadow=true; return ms;
+  
+  function sph(r, c, x, y, z, sx=1, sy=1, sz=1, rough=0.6){{
+    const ms = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 32), mat(c, rough));
+    ms.position.set(x, y, z); ms.scale.set(sx, sy, sz); ms.castShadow = true; ms.receiveShadow = true; return ms;
   }}
-  function cyl(rt,rb,h,c,x,y,z,rx=0){{
-    const ms=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,32), mat(c,0.5));
-    ms.position.set(x,y,z); ms.rotation.x=rx; ms.castShadow=true; ms.receiveShadow=true; return ms;
+  
+  function cyl(rt, rb, h, c, x, y, z, rx=0){{
+    const ms = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 24), mat(c, 0.6));
+    ms.position.set(x, y, z); ms.rotation.x = rx; ms.castShadow = true; ms.receiveShadow = true; return ms;
   }}
 
+  // GRUPO PRINCIPAL
   const g = new THREE.Group(); 
   scene.add(g);
 
-  // --- MODELADO DEL AVATAR ---
-  // CABEZA (Un poco más estilizada)
-  g.add(sph(0.40, skinColor, 0, 2.08, 0, 1, 1.05, 0.95, 0.6));
+  // --- MODELADO DEL PERSONAJE ---
+  
+  // Cabeza estilizada
+  g.add(sph(0.40, skinColor, 0, 2.08, 0, 1, 1.05, 1));
 
-  // OJOS (Material brillante/espejo para simular humedad real)
+  // Ojos brillantes profesionales
   [-0.14, 0.14].forEach(xo => {{
-    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.09, 32, 32), mat(0xffffff, 0.1, 0.1)); // Ojo brillante
-    ew.position.set(xo, 2.1, 0.34); ew.scale.set(1, 1.1, 0.5); g.add(ew);
+    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), mat(0xffffff, 0.1));
+    ew.position.set(xo, 2.1, 0.35); ew.scale.set(1, 1.1, 0.5); g.add(ew);
     
-    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.055, 32, 32), mat(0x111625, 0.2));
-    ep.position.set(xo, 2.1, 0.38); ep.scale.set(1, 1, 0.4); g.add(ep);
+    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16), mat(0x1a1a2e, 0.3));
+    ep.position.set(xo, 2.1, 0.39); ep.scale.set(1, 1, 0.5); g.add(ep);
     
-    const es = new THREE.Mesh(new THREE.SphereGeometry(0.02, 16, 16), mat(0xffffff, 0.0, 0.9)); // Brillo de ojo
-    es.position.set(xo + 0.03, 2.14, 0.41); g.add(es);
+    const es = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), mat(0xffffff, 0.0));
+    es.position.set(xo + 0.025, 2.14, 0.42); g.add(es);
   }});
 
-  // CEJAS Y NARIZ
+  // Cejas y Nariz
   [-0.14, 0.14].forEach(xo => {{
     const b = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.03, 0.04), mat(hairColor, 0.8));
-    b.position.set(xo, 2.24, 0.34); b.rotation.z = xo < 0 ? 0.08 : -0.08; g.add(b);
+    b.position.set(xo, 2.24, 0.35); b.rotation.z = xo < 0 ? 0.1 : -0.1; g.add(b);
   }});
-  const ns = sph(0.05, 0xf0a799, 0, 2.01, 0.38, 1, 0.8, 0.9, 0.6); g.add(ns);
+  g.add(sph(0.05, 0xe8a090, 0, 1.99, 0.39, 1, 0.7, 1));
 
-  // BOCA (Sonrisa más natural)
-  const mo = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 8, 24, Math.PI), mat(0xd47666, 0.5));
-  mo.position.set(0, 1.92, 0.36); mo.rotation.x = Math.PI; g.add(mo);
+  // Boca (Sonrisa)
+  const mo = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 8, 16, Math.PI), mat(0xc07060, 0.6));
+  mo.position.set(0, 1.92, 0.37); mo.rotation.x = Math.PI; g.add(mo);
 
-  // OREJAS Y CABELLO
-  [-0.41, 0.41].forEach(xo => {{ g.add(sph(0.09, skinColor, xo, 2.06, 0, 0.6, 1, 0.5, 0.6)); }});
-  g.add(sph(0.42, hairColor, 0, 2.26, -0.02, 1.02, 0.75, 1.02, 0.8)); // Pelo Base
-  [-0.32, 0.32].forEach(xo => {{ g.add(sph(0.20, hairColor, xo, 2.08, 0.1, 0.8, 1.1, 0.8, 0.8)); }}); // Patillas
+  // Orejas y Cabello
+  [-0.42, 0.42].forEach(xo => {{ g.add(sph(0.09, skinColor, xo, 2.06, 0, 0.6, 1, 0.5)); }});
+  g.add(sph(0.42, hairColor, 0, 2.26, -0.02, 1, 0.7, 1)); // Capa base pelo
+  [-0.34, 0.34].forEach(xo => {{ g.add(sph(0.20, hairColor, xo, 2.06, 0.05, 0.7, 1.2, 0.7)); }}); // Detalles laterales
 
-  // CUELLO Y TORSO (Ropa menos rígida)
+  // Cuello y Torso Suavizado (Cuerpo orgánico moderna)
   g.add(cyl(0.13, 0.15, 0.22, skinColor, 0, 1.62, 0));
-  
-  // Torso redondeado usando una esfera estirada combinada con un cubo para simular hombros caídos
-  const torso = sph(0.46, shirtColor, 0, 1.1, 0, 1, 1.1, 0.6, 0.5);
-  g.add(torso);
+  g.add(sph(0.45, shirtColor, 0, 1.12, 0, 0.95, 1.1, 0.55)); // Pecho estilizado redondo
+  g.add(box(0.78, 0.40, 0.46, shirtColor, 0, 0.90, 0, 0.5)); // Base del abdomen
 
-  // DETALLES DE LA CAMISA
-  [1.30, 1.15, 1.0].forEach(y => {{
-    const bt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 16), mat(0xffffff, 0.3, 0.4));
-    bt.position.set(0, y, 0.28); bt.rotation.x = Math.PI/2; g.add(bt);
+  // Botones de la camisa
+  [1.25, 1.10, 0.95].forEach(y => {{
+    const bt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 10), mat(0xffffff, 0.4, 0.2));
+    bt.position.set(0, y, 0.26); bt.rotation.x = Math.PI/2; g.add(bt);
   }});
 
-  // BRAZOS (Suavizados)
-  [-0.54, 0.54].forEach(xo => {{
-    const ua = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.10, 0.50, 24), mat(shirtColor, 0.6));
-    ua.position.set(xo, 1.15, 0); ua.rotation.z = xo < 0 ? 0.20 : -0.20; g.add(ua);
+  // Brazos redondeados
+  [-0.55, 0.55].forEach(xo => {{
+    const ua = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.10, 0.50, 16), mat(shirtColor, 0.6));
+    ua.position.set(xo, 1.12, 0); ua.rotation.z = xo < 0 ? 0.22 : -0.22; g.add(ua);
     
-    const fa = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.40, 24), mat(skinColor, 0.6));
-    fa.position.set(xo < 0 ? -0.59 : 0.59, 0.80, 0); fa.rotation.z = xo < 0 ? 0.12 : -0.12; g.add(fa);
+    const fa = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.40, 16), mat(skinColor, 0.6));
+    fa.position.set(xo < 0 ? -0.60 : 0.60, 0.76, 0); fa.rotation.z = xo < 0 ? 0.15 : -0.15; g.add(fa);
     
-    g.add(sph(0.10, skinColor, xo < 0 ? -0.64 : 0.64, 0.58, 0, 1, 1, 1, 0.5)); // Manos
+    g.add(sph(0.10, skinColor, xo < 0 ? -0.65 : 0.65, 0.54, 0));
   }});
 
-  // PANTALONES Y ZAPATOS
-  g.add(box(0.76, 0.20, 0.42, pantsColor, 0, 0.58, 0, 0.7)); // Cadera
-  [-0.19, 0.19].forEach(xo => {{
-    g.add(cyl(0.14, 0.12, 0.60, pantsColor, xo, 0.20, 0));
-    // Zapatos más anatómicos
-    const sh = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.12, 0.38), mat(0x1a1a1a, 0.8));
+  // Pantalones y Zapatos
+  g.add(box(0.78, 0.20, 0.44, pantsColor, 0, 0.58, 0));
+  [-0.20, 0.20].forEach(xo => {{
+    g.add(cyl(0.14, 0.12, 0.62, pantsColor, xo, 0.20, 0));
+    
+    const sh = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.11, 0.38), mat(0x1a1a1a, 0.8));
     sh.position.set(xo, -0.16, 0.06); g.add(sh);
-    g.add(sph(0.10, 0x1a1a1a, xo, -0.15, 0.22, 1, 0.7, 0.8, 0.8));
+    g.add(sph(0.10, 0x1a1a1a, xo, -0.15, 0.22, 1, 0.7, 0.8));
   }});
 
-  // ACCESORIO: INSIGNIA (Metálica y reflectante)
+  // Insignia (Si aplica)
   if('{badge_text}' !== 'none'){{
-    const bc = {{'TOP 1':0xffd700, 'MVP':0xff0055, 'PRO':0x00a2ff, 'ROOKIE':0x00e676}}['{badge_text}'] || 0xffd700;
-    const bdg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.09, 0.03), mat(bc, 0.2, 0.8)); // Mucho metalizado
-    bdg.position.set(0.22, 1.25, 0.26); bdg.rotation.y = -0.2; g.add(bdg);
+    const bc = {{'TOP 1':0xffd700, 'MVP':0xe91e63, 'PRO':0x2196f3, 'ROOKIE':0x4caf50}}['{badge_text}'] || 0xffd700;
+    const bdg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.09, 0.03), mat(bc, 0.3, 0.7));
+    bdg.position.set(0.22, 1.22, 0.24); g.add(bdg);
   }}
 
-  // ACCESORIOS: SOMBREROS MEJORADOS
+  // Sombreros actualizados con geometrías cerradas seguras
   if(hatType==='corona'){{
-    const bm=mat(0xffd700, 0.15, 0.95); // Oro pulido
-    const base=cyl(0.36, 0.34, 0.14, 0xffd700, 0, 2.54, 0); base.material=bm; g.add(base);
+    const bm = mat(0xffd700, 0.2, 0.9);
+    const base = cyl(0.36, 0.34, 0.14, 0xffd700, 0, 2.54, 0); base.material = bm; g.add(base);
     [-0.24, 0, 0.24].forEach((xo, i)=>{{
-      const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.06, 0.20+i*0.05, 16), bm);
-      sp.position.set(xo, 2.68+(i===1?0.02:0), 0.18); g.add(sp);
+      const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.06, 0.20+i*0.05, 12), bm);
+      sp.position.set(xo, 2.66+(i===1?0.02:0), 0.16); g.add(sp);
     }});
   }} else if(hatType==='gorra'){{
-    const cm2=mat(0x1565c0, 0.7);
-    g.add(sph(0.38, 0x1565c0, 0, 2.54, -0.02, 1, 0.8, 1, 0.7)); // Gorra más esférica y realista
-    const br=new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.02, 0.32), cm2);
-    br.position.set(0, 2.44, 0.24); br.rotation.x = 0.1; g.add(br);
+    const cm2 = mat(0x1565c0, 0.7);
+    g.add(sph(0.38, 0x1565c0, 0, 2.52, -0.02, 1, 0.8, 1)); 
+    const br = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.30), cm2);
+    br.position.set(0, 2.42, 0.22); br.rotation.x = 0.1; g.add(br);
   }} else if(hatType==='sombrero'){{
-    const sm=mat(0x3e2723, 0.9);
-    const sbr=new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.66, 0.03, 32), sm); sbr.position.set(0, 2.48, 0); g.add(sbr);
-    const scr=cyl(0.28, 0.30, 0.38, 0x3e2723, 0, 2.68, 0); scr.material=sm; g.add(scr);
+    const sm = mat(0x4a2c0a, 0.9);
+    const sbr = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.64, 0.03, 24), sm); sbr.position.set(0, 2.46, 0); g.add(sbr);
+    const scr = cyl(0.28, 0.30, 0.38, 0x4a2c0a, 0, 2.66, 0); scr.material = sm; g.add(scr);
   }}
 
-  // 4. PISO RECEPTOR DE SOMBRAS REALES (En lugar del disco negro transparente)
+  // PLANO INVISIBLE RECEPTOR DE SOMBRAS REALES
   const shadowPlane = new THREE.Mesh(
-    new THREE.PlaneGeometry(4, 4),
-    new THREE.ShadowMaterial({{ opacity: 0.15 }}) // Solo renderiza la sombra proyectada
+    new THREE.PlaneGeometry(5, 5),
+    new THREE.ShadowMaterial({{ opacity: 0.18 }})
   );
   shadowPlane.rotation.x = -Math.PI / 2;
   shadowPlane.position.y = -0.24;
   shadowPlane.receiveShadow = true;
   scene.add(shadowPlane);
 
-  // INTERACCIÓN MOUSE / TOUCH
+  // CONTROL ARRASTRE (MOUSE/TACTIL)
   let drag=false, prevX=0, rotY=0.3;
   canvas.addEventListener('mousedown', e=>{{drag=true; prevX=e.clientX;}});
   canvas.addEventListener('touchstart', e=>{{drag=true; prevX=e.touches[0].clientX;}});
@@ -3049,24 +3044,22 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
   canvas.addEventListener('mousemove', e=>{{
     if(!drag) return;
     rotY += (e.clientX - prevX) * 0.008;
-    prevX = e.clientX;
-    g.rotation.y = rotY;
+    prevX = e.clientX; g.rotation.y = rotY;
   }});
   canvas.addEventListener('touchmove', e=>{{
     if(!drag) return;
     rotY += (e.touches[0].clientX - prevX) * 0.008;
-    prevX = e.touches[0].clientX;
-    g.rotation.y = rotY;
+    prevX = e.touches[0].clientX; g.rotation.y = rotY;
   }});
 
-  // ANIMACIÓN EN BUCLE
+  // LOOP DE ANIMACIÓN CONSTANTE
   let t=0;
   (function anim(){{
     requestAnimationFrame(anim);
-    t += 0.012;
-    if(!drag) g.rotation.y += 0.003; // Rotación automática suave
-    g.position.y = Math.sin(t) * 0.025; // Flotación sutil
-    renderer.render(scene,camera);
+    t += 0.015;
+    if(!drag) g.rotation.y += 0.004;
+    g.position.y = Math.sin(t) * 0.025; 
+    renderer.render(scene, camera);
   }})();
 }})();
 </script>
