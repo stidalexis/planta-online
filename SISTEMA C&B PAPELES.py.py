@@ -2852,17 +2852,16 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
 # ══════════════════════════════════════════════════════════════
-#   NUEVO SISTEMA DE AVATARES REALISTAS (READY PLAYER ME)
+#   SISTEMA DE AVATARES REALISTAS (CORREGIDO SIN ERRORES)
 # ══════════════════════════════════════════════════════════════
 import streamlit.components.v1 as components
 
-def mostrar_creador_avatar_realista(usuario_id):
+def mostrar_creador_avatar_realista():
     """
     Despliega el creador de avatares 3D profesional e hiperrealista.
-    Permite crear el avatar a partir de una foto de la cámara o galería.
+    Modificado para enviar los datos de forma segura a Streamlit.
     """
-    # Subdominio demo de Ready Player Me optimizado para creadores independientes
-    # Nota: Puedes registrarte gratis en readyplayer.me para obtener tu propia SUBDOMAIN_URL personalizada.
+    # Subdominio demo oficial de Ready Player Me
     rpm_url = "https://demo.readyplayer.me/avatar?frameApi"
     
     html_iframe = f"""
@@ -2873,21 +2872,23 @@ def mostrar_creador_avatar_realista(usuario_id):
     <script>
         const iframe = document.getElementById('rpm-iframe');
         
-        // Escuchar los eventos del creador de avatares cuando el usuario termina
         window.addEventListener('message', function(event) {{
             const json = parseMessage(event);
             
-            // Cuando el avatar está listo y guardado por el usuario
+            // Cuando el operario termina y exporta el avatar
             if (json && json.source === 'readyplayerme' && json.eventName === 'v1.avatar.exported') {{
-                const avatarUrlGlb = json.data.url; // Enlace al modelo 3D (.glb)
-                // Generar una foto fija 2D del avatar automáticamente para mostrar en el perfil
+                const avatarUrlGlb = json.data.url; 
                 const avatarUrlPng = avatarUrlGlb.replace('.glb', '.png?camera=portrait');
                 
-                // Enviar la información de regreso a Streamlit mediante un input oculto
-                window.parent.postMessage({{
-                    type: 'streamlit:setComponentValue',
-                    value: {{ glb: avatarUrlGlb, png: avatarUrlPng }}
-                }}, '*');
+                // Buscamos el input de Streamlit en la página padre e inyectamos el resultado
+                // Formato: URL_GLB|URL_PNG
+                const datosCombinados = avatarUrlGlb + "|" + avatarUrlPng;
+                
+                // Buscamos todos los textareas/inputs de la página para encontrar el nuestro
+                parent.document.querySelectorAll('input[aria-label="datos_avatar_oculto"]').forEach(el => {{
+                    el.value = datosCombinados;
+                    el.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                }});
             }}
         }});
 
@@ -2900,6 +2901,8 @@ def mostrar_creador_avatar_realista(usuario_id):
         }}
     </script>
     """
+    # Renderizamos el iframe de manera segura
+    components.html(html_iframe, height=720, scrolling=False)
     
     st.markdown("##### 📸 Tómate una foto o sube una imagen para inicializar tu clon 3D:")
     # Renderizamos el componente seguro en Streamlit
@@ -2998,13 +3001,21 @@ if menu == "🛒 Mercado":
                                     st.error(msg)
 
     # ════════════════════════════════════════════════════════
-    # TAB 2 — MI AVATAR (ACTUALIZADO A 3D REALISTA)
+    # TAB 2 — MI AVATAR (VERSIÓN CORREGIDA DE DATOS)
     # ════════════════════════════════════════════════════════
     with tab_avatar:
         st.markdown("<div class='section-header'>👤 CONFIGURACIÓN DE MI IDENTIDAD 3D</div>", unsafe_allow_html=True)
         
-        # Consultar si el usuario ya guardó un avatar previo en Supabase
-        # (Para esto, asumimos que puedes guardar la URL en una propiedad del usuario o metadato)
+        # 1. Puente de comunicación invisible entre JS y Python
+        # Usamos un contenedor vacío para esconder visualmente el input pero mantenerlo funcional
+        with st.container():
+            avatar_bridge = st.text_input(
+                "datos_avatar_oculto", 
+                label_visibility="collapsed", 
+                key="bridge_avatar_input"
+            )
+        
+        # Consultar si el usuario ya tiene avatar en Supabase
         avatar_actual_png = None
         try:
             res_user = supabase.table("usuarios").select("avatar_url").eq("usuario", usuario_actual).execute()
@@ -3025,24 +3036,28 @@ if menu == "🛒 Mercado":
         with col_crear:
             st.markdown("##### 🛠️ Creador de Avatar con Inteligencia Artificial")
             
-            # Llamamos a la nueva función del iframe interactivo
-            resultado_avatar = mostrar_creador_avatar_realista(usuario_id=usuario_actual)
+            # Llamamos a la función corregida (ya no requiere asignarse a una variable)
+            mostrar_creador_avatar_realista()
             
-            # Si el componente detecta que el operario terminó de diseñar y guardó su foto
-            if resultado_avatar:
-                url_glb = resultado_avatar.get("glb")
-                url_png = resultado_avatar.get("png")
-                
-                st.success("¡Avatar generado con éxito a partir de tu foto! 🎉")
-                if st.button("💾 Guardar y Vincular a C&B Papeles", type="primary", use_container_width=True):
-                    try:
-                        # Guardamos de forma segura la URL de la foto del avatar en la tabla de usuarios
-                        supabase.table("usuarios").update({"avatar_url": url_png}).eq("usuario", usuario_actual).execute()
-                        st.toast("Avatar actualizado correctamente en el sistema global.")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Error al guardar en Base de Datos: {e}")
+            # Si el puente de JavaScript capturó datos del nuevo avatar
+            if avatar_bridge:
+                try:
+                    # Separamos el GLB y el PNG que enviamos desde JavaScript
+                    url_glb, url_png = avatar_bridge.split("|")
+                    
+                    st.success("¡Avatar generado con éxito a partir de tu foto! 🎉")
+                    if st.button("💾 Guardar y Vincular a C&B Papeles", type="primary", use_container_width=True):
+                        try:
+                            # Guardamos la URL en la columna avatar_url de Supabase
+                            supabase.table("usuarios").update({"avatar_url": url_png}).eq("usuario", usuario_actual).execute()
+                            st.toast("¡Avatar guardado con éxito!")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as db_err:
+                            st.error(f"Error al guardar en Base de Datos: {db_err}")
+                except Exception as parse_err:
+                    # Previene cualquier fallo visual si el string no viene completo en el primer milisegundo
+                    pass
                         
     # ════════════════════════════════════════════════════════
     # TAB 3 — PANEL ADMIN
