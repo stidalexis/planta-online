@@ -2852,7 +2852,7 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
 def render_avatar_3d(items_equipados, nombre_usuario=""):
-    """Genera el HTML del avatar 3D mejorado con Three.js con look estilizado e interactivo."""
+    """Genera el HTML del avatar 3D estilo Samsung Galaxy AR Emoji con Three.js."""
     equipado = {it.get('categoria', ''): it for it in items_equipados}
 
     hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
@@ -2864,8 +2864,8 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <div style="text-align:center;">
   <canvas id="av3d" width="260" height="340"
-    style="border-radius:16px; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); cursor:grab; display:inline-block; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);"></canvas>
-  <div style="font-family: system-ui, -apple-system, sans-serif; font-weight:600; color:#0d47a1; margin-top:8px; font-size:14px; letter-spacing: 0.5px;">{nombre_usuario}</div>
+    style="border-radius:24px; border: 1px solid rgba(255,255,255,0.4); background: linear-gradient(180deg, #eef2f3 0%, #8e9eab 100%); cursor:grab; display:inline-block; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);"></canvas>
+  <div style="font-family: 'Segoe UI', system-ui, sans-serif; font-weight:700; color:#1e3a8a; margin-top:10px; font-size:15px; letter-spacing: 0.5px;">{nombre_usuario}</div>
 </div>
 
 <script>
@@ -2877,162 +2877,203 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
   renderer.setSize(260, 340);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(40, 260/340, 0.1, 100);
-  camera.position.set(0, 1.1, 4.2);
-  camera.lookAt(0, 0.9, 0);
+  const camera = new THREE.PerspectiveCamera(36, 260/340, 0.1, 100);
+  camera.position.set(0, 1.15, 4.0); // Cámara un poco más cerca para notar detalles
+  camera.lookAt(0, 0.95, 0);
 
-  // ILUMINACIÓN AVANZADA DE ESTUDIO
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.65);
+  // --- ILUMINACIÓN ESTILO SAMSUNG (ESTUDIO DE GAMA ALTA) ---
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
   scene.add(ambientLight);
 
-  const dirLight = new THREE.DirectionalLight(0xfffaf0, 0.85);
-  dirLight.position.set(3, 5, 3);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 512;
-  dirLight.shadow.mapSize.height = 512;
-  scene.add(dirLight);
+  // Luz Key (Principal - Cálida)
+  const keyLight = new THREE.DirectionalLight(0xfff5ea, 1.1);
+  keyLight.position.set(4, 6, 4);
+  keyLight.castShadow = true;
+  keyLight.shadow.mapSize.width = 1024;
+  keyLight.shadow.mapSize.height = 1024;
+  keyLight.shadow.bias = -0.001;
+  scene.add(keyLight);
 
-  const fillLight = new THREE.DirectionalLight(0x8ab4f8, 0.35);
-  fillLight.position.set(-3, 2, 2);
+  // Luz Fill (Relleno - Azulada fría para sombras suaves)
+  const fillLight = new THREE.DirectionalLight(0xcce0ff, 0.5);
+  fillLight.position.set(-4, 3, 2);
   scene.add(fillLight);
 
-  // PARSEO SEGURO DE COLORES DESDE PYTHON
+  // Luz Rim (Contorno - Clave en los avatares de Samsung para dar brillo en los bordes)
+  const rimLight = new THREE.DirectionalLight(0xffffff, 1.3);
+  rimLight.position.set(-2, 5, -4);
+  scene.add(rimLight);
+
+  const rimLight2 = new THREE.DirectionalLight(0xffebee, 0.8);
+  rimLight2.position.set(3, 4, -3);
+  scene.add(rimLight2);
+
+  // REPARSEO DE DATOS DE PYTHON
   const hairColor = parseInt('{hair_hex}', 16);
   const shirtColor = parseInt('{shirt_hex}', 16);
-  const skinColor = 0xfdbcb4; 
-  const pantsColor = 0x1a237e;
+  const skinColor = 0xffd1c4; // Tono de piel más vivo y estilizado
+  const pantsColor = 0x232b54;
   const hatType = '{hat_type}';
   const badgeText = '{badge_text}';
 
-  function mat(c, r=0.6, m=0.0){{
+  // MATERIAL SAMSUNG: Goma/Vinilo semi-brillante (roughness bajo y metalness sutil)
+  function mat(c, r=0.35, m=0.05){{
     return new THREE.MeshStandardMaterial({{ color: c, roughness: r, metalness: m }});
   }}
   
-  function box(w, h, d, c, x, y, z){{
-    const ms = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c));
+  function box(w, h, d, c, x, y, z, r=0.35){{
+    const ms = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c, r));
     ms.position.set(x, y, z); ms.castShadow = true; ms.receiveShadow = true; return ms;
   }}
   
-  function sph(r, c, x, y, z, sx=1, sy=1, sz=1){{
-    const ms = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 32), mat(c));
+  function sph(r, c, x, y, z, sx=1, sy=1, sz=1, rough=0.35){{
+    const ms = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 32), mat(c, rough));
     ms.position.set(x, y, z); ms.scale.set(sx, sy, sz); ms.castShadow = true; ms.receiveShadow = true; return ms;
   }}
   
-  function cyl(rt, rb, h, c, x, y, z, rx=0){{
-    const ms = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 24), mat(c));
+  function cyl(rt, rb, h, c, x, y, z, rx=0, r=0.35){{
+    const ms = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 32), mat(c, r));
     ms.position.set(x, y, z); ms.rotation.x = rx; ms.castShadow = true; ms.receiveShadow = true; return ms;
   }}
 
   const g = new THREE.Group(); 
   scene.add(g);
 
-  // --- MODELADO CON LOOK ORGÁNICO Y ESTILIZADO ---
-  // Cabeza redondeada
-  g.add(sph(0.40, skinColor, 0, 2.08, 0, 1, 1.05, 1));
+  // --- MODELADO DEL AVATAR ESTILO GALAXY AR ---
+  
+  // CABEZA (Mentón más estilizado, no tan esférica)
+  g.add(sph(0.38, skinColor, 0, 2.12, 0, 1, 1.1, 0.95));
 
-  // Ojos brillantes profesionales con reflejo
-  [-0.14, 0.14].forEach(xo => {{
-    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), mat(0xffffff, 0.1));
-    ew.position.set(xo, 2.1, 0.35); ew.scale.set(1, 1.1, 0.5); g.add(ew);
+  // OJOS ESTILO ANIME/SAMSUNG (Grandes, expresivos y de cristal pulido)
+  [-0.13, 0.13].forEach(xo => {{
+    // Esclerótica (Fondo blanco brillante)
+    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.10, 32, 32), mat(0xffffff, 0.1));
+    ew.position.set(xo, 2.14, 0.32); ew.scale.set(1, 1.1, 0.4); g.add(ew);
     
-    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16), mat(0x1a1a2e, 0.3));
-    ep.position.set(xo, 2.1, 0.39); ep.scale.set(1, 1, 0.5); g.add(ep);
+    // Pupila Grande estilizada
+    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.065, 32, 32), mat(0x1a237e, 0.2)); // Ojos azul oscuro Galaxy
+    ep.position.set(xo, 2.14, 0.35); ep.scale.set(1, 1, 0.4); g.add(ep);
     
-    const es = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), mat(0xffffff, 0.0));
-    es.position.set(xo + 0.025, 2.14, 0.42); g.add(es);
+    // Iris Centro
+    const ec = new THREE.Mesh(new THREE.SphereGeometry(0.035, 16, 16), mat(0x0b0f19, 0.1));
+    ec.position.set(xo, 2.14, 0.37); ec.scale.set(1, 1, 0.4); g.add(ec);
+    
+    // Destello de Luz (Aporta el toque tierno/moderno)
+    const es = new THREE.Mesh(new THREE.SphereGeometry(0.022, 16, 16), mat(0xffffff, 0.0));
+    es.position.set(xo + 0.03, 2.18, 0.38); g.add(es);
   }});
 
-  // Cejas y Nariz
-  [-0.14, 0.14].forEach(xo => {{
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.03, 0.04), mat(hairColor, 0.8));
-    b.position.set(xo, 2.24, 0.35); b.rotation.z = xo < 0 ? 0.1 : -0.1; g.add(b);
-  }});
-  g.add(sph(0.05, 0xe8a090, 0, 1.99, 0.39, 1, 0.7, 1));
-
-  // Boca estilizada (Sonrisa)
-  const mo = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 8, 16, Math.PI), mat(0xc07060, 0.6));
-  mo.position.set(0, 1.92, 0.37); mo.rotation.x = Math.PI; g.add(mo);
-
-  // Orejas y Pelo
-  [-0.42, 0.42].forEach(xo => {{ g.add(sph(0.09, skinColor, xo, 2.06, 0, 0.6, 1, 0.5)); }});
-  g.add(sph(0.42, hairColor, 0, 2.26, -0.02, 1, 0.7, 1));
-  [-0.34, 0.34].forEach(xo => {{ g.add(sph(0.20, hairColor, xo, 2.06, 0.05, 0.7, 1.2, 0.7)); }});
-
-  // Torso ergonómico (Remueve el bloque rígido estilo Minecraft y le da curvas suaves)
-  g.add(cyl(0.13, 0.15, 0.22, skinColor, 0, 1.62, 0));
-  g.add(sph(0.44, shirtColor, 0, 1.12, 0, 0.95, 1.1, 0.55)); // Pecho anatómico
-  g.add(box(0.78, 0.40, 0.46, shirtColor, 0, 0.90, 0)); // Cintura de la camisa
-
-  // Botones
-  [1.25, 1.10, 0.95].forEach(y => {{
-    const bt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 10), mat(0xffffff, 0.4, 0.2));
-    bt.position.set(0, y, 0.26); bt.rotation.x = Math.PI/2; g.add(bt);
+  // CEJAS ESTILIZADAS
+  [-0.13, 0.13].forEach(xo => {{
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.04), mat(hairColor, 0.7));
+    b.position.set(xo, 2.29, 0.31); b.rotation.z = xo < 0 ? 0.05 : -0.05; g.add(b);
   }});
 
-  // Brazos y manos redondeadas
-  [-0.55, 0.55].forEach(xo => {{
-    const ua = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.10, 0.50, 16), mat(shirtColor, 0.6));
-    ua.position.set(xo, 1.12, 0); ua.rotation.z = xo < 0 ? 0.22 : -0.22; g.add(ua);
+  // NARIZ PEQUEÑA (Anatómica)
+  g.add(sph(0.042, 0xe29385, 0, 2.04, 0.36, 1, 0.8, 1));
+
+  // BOCA EXPRESIVA
+  const mo = new THREE.Mesh(new THREE.TorusGeometry(0.07, 0.018, 8, 24, Math.PI), mat(0xd46a55, 0.4));
+  mo.position.set(0, 1.95, 0.35); mo.rotation.x = Math.PI; g.add(mo);
+
+  // OREJAS
+  [-0.39, 0.39].forEach(xo => {{ g.add(sph(0.08, skinColor, xo, 2.10, -0.02, 0.6, 1, 0.6)); }});
+
+  // CABELLO CON VOLUMEN (Formas curvas entrelazadas)
+  g.add(sph(0.41, hairColor, 0, 2.30, -0.04, 1.02, 0.8, 1.02, 0.5)); // Casco base
+  // Mechones frontales tipo flequillo coreano (Clásico de Samsung AR)
+  g.add(sph(0.22, hairColor, -0.15, 2.42, 0.20, 1, 0.8, 1, 0.5));
+  g.add(sph(0.22, hairColor, 0.15, 2.42, 0.20, 1, 0.8, 1, 0.5));
+  [-0.32, 0.32].forEach(xo => {{ g.add(sph(0.18, hairColor, xo, 2.10, 0.08, 0.8, 1.3, 0.8, 0.5)); }});
+
+  // CUELLO Y TORSO ESTILIZADO (Hombros caídos y silueta orgánica de resina)
+  g.add(cyl(0.11, 0.13, 0.24, skinColor, 0, 1.64, 0));
+  
+  // Pecho estarcido (Look "Disney/Samsung")
+  const torsoTop = sph(0.42, shirtColor, 0, 1.16, 0, 0.95, 1.1, 0.6);
+  g.add(torsoTop);
+  const torsoBottom = box(0.74, 0.42, 0.46, shirtColor, 0, 0.92, 0);
+  g.add(torsoBottom);
+
+  // Cuello de la camisa en V estilizado
+  const neckV = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.02, 8, 24, Math.PI), mat(shirtColor, 0.4));
+  neckV.position.set(0, 1.46, 0.18); neckV.rotation.x = Math.PI / 2.5; g.add(neckV);
+
+  // Detalle botones pulidos
+  [1.22, 1.08, 0.94].forEach(y => {{
+    const bt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.02, 12), mat(0xffffff, 0.1, 0.6));
+    bt.position.set(0, y, 0.29); bt.rotation.x = Math.PI/2; g.add(bt);
+  }});
+
+  // BRAZOS SUAVES (Cilindros con articulaciones ocultas)
+  [-0.52, 0.52].forEach(xo => {{
+    const ua = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.09, 0.48, 24), mat(shirtColor, 0.4));
+    ua.position.set(xo, 1.15, 0); ua.rotation.z = xo < 0 ? 0.25 : -0.25; g.add(ua);
     
-    const fa = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.40, 16), mat(skinColor, 0.6));
-    fa.position.set(xo < 0 ? -0.60 : 0.60, 0.76, 0); fa.rotation.z = xo < 0 ? 0.15 : -0.15; g.add(fa);
+    const fa = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.38, 24), mat(skinColor, 0.4));
+    fa.position.set(xo < 0 ? -0.58 : 0.58, 0.80, 0); fa.rotation.z = xo < 0 ? 0.18 : -0.18; g.add(fa);
     
-    g.add(sph(0.10, skinColor, xo < 0 ? -0.65 : 0.65, 0.54, 0));
+    g.add(sph(0.09, skinColor, xo < 0 ? -0.63 : 0.63, 0.59, 0)); // Manos tipo guante liso
   }});
 
-  // Pantalón y Zapatos
-  g.add(box(0.78, 0.20, 0.44, pantsColor, 0, 0.58, 0));
-  [-0.20, 0.20].forEach(xo => {{
-    g.add(cyl(0.14, 0.12, 0.62, pantsColor, xo, 0.20, 0));
+  // PANTALONES Y ZAPATOS
+  g.add(box(0.74, 0.18, 0.44, pantsColor, 0, 0.60, 0));
+  [-0.18, 0.18].forEach(xo => {{
+    g.add(cyl(0.13, 0.11, 0.64, pantsColor, xo, 0.22, 0));
     
-    const sh = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.11, 0.38), mat(0x1a1a1a, 0.8));
-    sh.position.set(xo, -0.16, 0.06); g.add(sh);
-    g.add(sph(0.10, 0x1a1a1a, xo, -0.15, 0.22, 1, 0.7, 0.8));
+    // Zapatos deportivos modernos (Look Sneakers)
+    const sh = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.12, 0.36), mat(0xf8fafc, 0.3)); // Tenis Blancos modernos
+    sh.position.set(xo, -0.14, 0.06); g.add(sh);
+    g.add(sph(0.09, 0xf8fafc, xo, -0.13, 0.20, 1, 0.7, 0.8));
+    // Suela de color contrastante
+    const sole = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.03, 0.38), mat(0x1e3a8a, 0.4));
+    sole.position.set(xo, -0.20, 0.06); g.add(sole);
   }});
 
-  // LÓGICA DE INSIGNIAS RE-ESTRUCTURADA SIN LLAVES CONFLICTIVAS
+  // INSIGNIAS METÁLICAS POP-OUT
   if(badgeText !== 'none'){{
     let bc = 0xffd700;
-    if(badgeText === 'MVP') bc = 0xe91e63;
-    if(badgeText === 'PRO') bc = 0x2196f3;
-    if(badgeText === 'ROOKIE') bc = 0x4caf50;
+    if(badgeText === 'MVP') bc = 0xff007f;
+    if(badgeText === 'PRO') bc = 0x00d2ff;
+    if(badgeText === 'ROOKIE') bc = 0x00e676;
     
-    const bdg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.09, 0.03), mat(bc, 0.3, 0.7));
-    bdg.position.set(0.22, 1.22, 0.24); g.add(bdg);
+    const bdg = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.08, 0.04), mat(bc, 0.15, 0.8)); // Muy reflectante
+    bdg.position.set(0.20, 1.25, 0.26); bdg.rotation.y = -0.15; g.add(bdg);
   }}
 
-  // SOMBREROS MEJORADOS CON GEOMETRÍAS REBORDEDADAS
+  // ACCESORIOS SUPERIORES PREMIUM
   if(hatType === 'corona'){{
-    const bm = mat(0xffd700, 0.2, 0.9);
-    const base = cyl(0.36, 0.34, 0.14, 0xffd700, 0, 2.54, 0); base.material = bm; g.add(base);
-    [-0.24, 0, 0.24].forEach((xo, i)=>{{
-      const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.06, 0.20+i*0.05, 12), bm);
-      sp.position.set(xo, 2.66+(i===1?0.02:0), 0.16); g.add(sp);
+    const bm = mat(0xffd700, 0.1, 0.95); // Oro espejo pulido
+    const base = cyl(0.34, 0.32, 0.12, 0xffd700, 0, 2.58, 0, 0, 0.1); base.material = bm; g.add(base);
+    [-0.22, 0, 0.22].forEach((xo, i)=>{{
+      const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.05, 0.18+i*0.05, 16), bm);
+      sp.position.set(xo, 2.68+(i===1?0.02:0), 0.14); g.add(sp);
     }});
   }} else if(hatType === 'gorra'){{
-    const cm2 = mat(0x1565c0, 0.7);
-    g.add(sph(0.38, 0x1565c0, 0, 2.52, -0.02, 1, 0.8, 1)); 
-    const br = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.30), cm2);
-    br.position.set(0, 2.42, 0.22); br.rotation.x = 0.1; g.add(br);
+    const cm2 = mat(0x1e3a8a, 0.5); // Gorra deportiva a juego
+    g.add(sph(0.36, 0x1e3a8a, 0, 2.56, -0.02, 1.01, 0.75, 1.01)); 
+    const br = new THREE.Mesh(new THREE.BoxGeometry(0.44, 0.02, 0.28), cm2);
+    br.position.set(0, 2.45, 0.22); br.rotation.x = 0.12; g.add(br);
   }} else if(hatType === 'sombrero'){{
-    const sm = mat(0x4a2c0a, 0.9);
-    const sbr = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.64, 0.03, 24), sm); sbr.position.set(0, 2.46, 0); g.add(sbr);
-    const scr = cyl(0.28, 0.30, 0.38, 0x4a2c0a, 0, 2.66, 0); scr.material = sm; g.add(scr);
+    const sm = mat(0x3e2723, 0.8);
+    const sbr = new THREE.Mesh(new THREE.CylinderGeometry(0.64, 0.62, 0.03, 32), sm); sbr.position.set(0, 2.50, 0); g.add(sbr);
+    const scr = cyl(0.26, 0.28, 0.36, 0x3e2723, 0, 2.70, 0); scr.material = sm; g.add(scr);
   }}
 
-  // SOMBRA FÍSICA PROYECTADA EN EL SUELO
+  // PLANO RECEPTOR DE SOMBRA ULTRA SUAVE
   const shadowPlane = new THREE.Mesh(
-    new THREE.PlaneGeometry(5, 5),
-    new THREE.ShadowMaterial({{ opacity: 0.18 }})
+    new THREE.PlaneGeometry(6, 6),
+    new THREE.ShadowMaterial({{ opacity: 0.14 }})
   );
   shadowPlane.rotation.x = -Math.PI / 2;
-  shadowPlane.position.y = -0.24;
+  shadowPlane.position.y = -0.22;
   shadowPlane.receiveShadow = true;
   scene.add(shadowPlane);
 
-  // INTERACCIÓN MOUSE / TOUCH ARRASTRE SIN FALLOS
+  // INTERACCIÓN CONTROLADA SIN ERRORES (MOUSE Y TACTIL)
   let drag = false, prevX = 0, rotY = 0.3;
   canvas.addEventListener('mousedown', e => {{ drag = true; prevX = e.clientX; }});
   canvas.addEventListener('touchstart', e => {{ drag = true; prevX = e.touches[0].clientX; }});
@@ -3041,22 +3082,22 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
   
   canvas.addEventListener('mousemove', e => {{
     if(!drag) return;
-    rotY += (e.clientX - prevX) * 0.008;
+    rotY += (e.clientX - prevX) * 0.007;
     prevX = e.clientX; g.rotation.y = rotY;
   }});
   canvas.addEventListener('touchmove', e => {{
     if(!drag) return;
-    rotY += (e.touches[0].clientX - prevX) * 0.008;
+    rotY += (e.touches[0].clientX - prevX) * 0.007;
     prevX = e.touches[0].clientX; g.rotation.y = rotY;
   }});
 
-  // LOOP DE ANIMACIÓN Y ROTACIÓN FLOTANTE SUAVE
+  // LOOP DE ANIMACIÓN CONSTANTE (FLOTACIÓN Y ROTACIÓN PASIVA)
   let t = 0;
   (function anim(){{
     requestAnimationFrame(anim);
-    t += 0.015;
-    if(!drag) g.rotation.y += 0.004;
-    g.position.y = Math.sin(t) * 0.025; 
+    t += 0.014;
+    if(!drag) g.rotation.y += 0.003; // Rotación automática fina
+    g.position.y = Math.sin(t) * 0.02; // Efecto de flotación sutil
     renderer.render(scene, camera);
   }})();
 }})();
