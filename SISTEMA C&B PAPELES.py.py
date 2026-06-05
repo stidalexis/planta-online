@@ -771,7 +771,7 @@ with st.sidebar:
 # DEFINICION DE PERMISOS SEGUN ROL
 
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
+        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🛒 Mercado"]
     elif rol == 'jefe_log':
@@ -2103,6 +2103,152 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     st.info("No hay registros previos para esta máquina.")
             except Exception as e:
                 st.error(f"Error al cargar el historial: {e}")
+
+# ==========================================
+# 📆 MÓDULO: CRONOGRAMA DE IMPRESIÓN (ESTILO NOTION)
+# ==========================================
+elif menu == "📆 Cronograma Impresión":
+    from streamlit_calendar import calendar
+    
+    st.markdown("<div class='title-area'>📆 CRONOGRAMA INTERACTIVO DE IMPRESIÓN</div>", unsafe_allow_html=True)
+    st.markdown("### 🗓️ Planificación Visual de Producción")
+    st.caption("Arrastra las barras para moverlas de día o estira sus extremos para aumentar o disminuir los días estimados de producción.")
+
+    # 1. Definición de Recursos (Máquinas que van en el eje vertical)
+    # Puedes ajustar esta lista con los nombres exactos de tus prensas/impresoras
+    lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "PRENSA-04"]
+    
+    recursos_calendar = [{"id": maq, "title": f"🏭 Máquina {maq}"} for maq in lista_maquinas]
+
+    # 2. Obtener Datos de Supabase
+    try:
+        # Traemos órdenes planeadas o que estén en proceso de impresión
+        res_ops = supabase.table("ordenes_planeadas").select("*").execute()
+        todas_las_ops = res_ops.data or []
+    except Exception as e:
+        st.error(f"❌ Error al conectar con Supabase: {e}")
+        todas_las_ops = []
+
+    # Separar OPs ya agendadas y pendientes por agendar
+    ops_agendadas = []
+    ops_pendientes = []
+
+    for op in todas_las_ops:
+        # Validamos si ya tiene registro de fechas en el cronograma
+        if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma"):
+            ops_agendadas.append(op)
+        else:
+            # Si están pendientes por producir o en área de impresión, van a la lista de espera
+            if op.get("estado") != "Terminado":
+                ops_pendientes.append(op)
+
+    # 3. Formatear los Eventos para el Calendario (Estructura FullCalendar)
+    eventos_calendar = []
+    for op in ops_agendadas:
+        eventos_calendar.append({
+            "id": str(op["id"]),
+            "resourceId": op["maquina_cronograma"], # Vincula a la fila de la máquina
+            "title": f"OP {op.get('op', 'S/N')} - {op.get('cliente', 'Cliente')[:15]}...",
+            "start": op["fecha_inicio_cronograma"],
+            "end": op["fecha_fin_cronograma"],
+            "backgroundColor": "#0D47A1" if op.get("estado") == "En Proceso" else "#FFA000",
+            "borderColor": "#0A3578",
+            "allDay": True
+        })
+
+    # 4. Configuración del Componente Visual (Opciones de Vista de Línea de Tiempo)
+    opciones_calendario = {
+        "initialView": "resourceTimelineMonth", # Vista de línea de tiempo mensual
+        "headerToolbar": {
+            "left": "prev,next today",
+            "center": "title",
+            "right": "resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth"
+        },
+        "editable": True,            # Permite arrastrar y estirar las barras
+        "resourceAreaWidth": "20%",   # Ancho de la columna de máquinas
+        "resourceAreaHeaderContent": "Máquinas de Impresión",
+        "resources": recursos_calendar,
+        "locale": "es"               # Idioma Español
+    }
+
+    # Creación de dos columnas: Izquierda (Calendario) | Derecha (Panel de asignación rápida)
+    col_izq, col_der = st.columns([3, 1])
+
+    with col_izq:
+        # Renderizar el calendario interactivo
+        custom_css = """
+            .fc-timeline-event { padding: 5px !important; font-size: 14px !important; border-radius: 6px !important; }
+            .fc-datagrid-cell-cushion { font-weight: bold !important; color: #333; }
+        """
+        
+        state_cal = calendar(
+            events=eventos_calendar,
+            options=opciones_calendario,
+            custom_css=custom_css,
+            key="cronograma_impresion_gantt"
+        )
+
+        # 5. Procesar Interacción: Capturar cuando el usuario arrastra o estira
+        # FullCalendar devuelve 'eventChange' cuando se completa una acción de arrastre/estirado
+        if state_cal and "eventChange" in state_cal:
+            evento_modificado = state_cal["eventChange"]["event"]
+            op_id_modificada = evento_modificado["id"]
+            
+            # Formatear las nuevas fechas que entregó el componente (removiendo zona horaria ISO si aplica)
+            nueva_fecha_inicio = evento_modificado["start"].split("T")[0]
+            nueva_fecha_fin = evento_modificado["end"].split("T")[0]
+            nueva_maquina = evento_modificado["resourceId"]
+
+            # Actualizar de inmediato en Supabase de forma transparente
+            try:
+                supabase.table("ordenes_planeadas").update({
+                    "fecha_inicio_cronograma": nueva_fecha_inicio,
+                    "fecha_fin_cronograma": nueva_fecha_fin,
+                    "maquina_cronograma": nueva_maquina
+                }).eq("id", op_id_modificada).execute()
+                
+                st.toast(f"✅ ¡Cronograma Actualizado! OP modificada exitosamente.", icon="📅")
+                time.sleep(1)
+                st.rerun() # Recarga el componente para fijar los cambios
+            except Exception as e:
+                st.error(f"Error al guardar los cambios en la base de datos: {e}")
+
+    with col_der:
+        st.markdown("#### 📥 OPs sin Asignar")
+        st.write("Selecciona una orden de la lista para incorporarla al cronograma activo:")
+        
+        if ops_pendientes:
+            # Crear una lista entendible para el selectbox
+            opciones_select = [f"OP {o.get('op')} - {o.get('cliente')[:12]}" for o in ops_pendientes]
+            op_seleccionada_texto = st.selectbox("Órdenes Disponibles:", opciones_select)
+            
+            # Encontrar el objeto de la OP seleccionada
+            indice_sel = opciones_select.index(op_seleccionada_texto)
+            op_objeto = ops_pendientes[indice_sel]
+            
+            # Formulario de inserción inicial rápida
+            maquina_destino = st.selectbox("Asignar a Máquina:", lista_maquinas, key="maq_new")
+            fecha_ini_input = st.date_input("Fecha de Inicio:", datetime.now())
+            dias_estimados = st.slider("Días estimados de producción:", min_value=1, max_value=15, value=2)
+            
+            fecha_fin_calculada = fecha_ini_input + timedelta(days=dias_estimados)
+            st.caption(f"Se agendará hasta el: **{fecha_fin_calculada.strftime('%Y-%m-%d')}**")
+
+            if st.button("➕ Insertar en Cronograma"):
+                try:
+                    supabase.table("ordenes_planeadas").update({
+                        "fecha_inicio_cronograma": str(fecha_ini_input),
+                        "fecha_fin_cronograma": str(fecha_fin_calculada),
+                        "maquina_cronograma": maquina_destino
+                    }).eq("id", op_objeto["id"]).execute()
+                    
+                    st.success(f"OP {op_objeto.get('op')} montada en el cronograma.")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"No se pudo registrar la asignación inicial: {e}")
+        else:
+            st.success("🎉 ¡No hay órdenes pendientes por planificar!")
 
 # MODULO DE INVENTARIO CORES Y CAJAS
 
