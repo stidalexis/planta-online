@@ -2852,7 +2852,7 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
 def render_avatar_3d(items_equipados, nombre_usuario=""):
-    """Genera el HTML del avatar 3D mejorado con máxima compatibilidad en Three.js."""
+    """Genera el HTML del avatar 3D con Three.js según los items equipados."""
     equipado = {it.get('categoria', ''): it for it in items_equipados}
 
     hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
@@ -2864,203 +2864,116 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <div style="text-align:center;">
   <canvas id="av3d" width="260" height="340"
-    style="border-radius:16px; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #f1f5f9 0%, #cbd5e1 100%); cursor:grab; display:inline-block; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);"></canvas>
-  <div style="font-family: system-ui, -apple-system, sans-serif; font-weight:600; color:#1e293b; margin-top:10px; font-size:14px; letter-spacing: 0.5px;">{nombre_usuario}</div>
+    style="border-radius:14px;border:1px solid #e0e0e0;cursor:grab;display:inline-block;"></canvas>
+  <div style="font-weight:bold;color:#0D47A1;margin-top:6px;">{nombre_usuario}</div>
 </div>
-
 <script>
 (function(){{
   const canvas = document.getElementById('av3d');
-  if(!canvas || !window.THREE) return;
-
-  // RENDERER CONTROLADO
-  const renderer = new THREE.WebGLRenderer({{canvas, antialias:true, alpha:true}});
-  renderer.setSize(260, 340);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
-
+  if(!canvas||!window.THREE)return;
+  const renderer = new THREE.WebGLRenderer({{canvas,antialias:true,alpha:true}});
+  renderer.setSize(260,340); renderer.shadowMap.enabled=true;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
   const scene = new THREE.Scene();
-  
-  // CÁMARA (Ajustada para asegurar que encuadre perfectamente el cuerpo entero)
-  const camera = new THREE.PerspectiveCamera(40, 260/340, 0.1, 100);
-  camera.position.set(0, 1.1, 4.2);
-  camera.lookAt(0, 0.9, 0);
-
-  // ILUMINACIÓN COMPATIBLE Y CONFIGURADA
-  const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
-  scene.add(ambientLight);
-
-  const dirLight = new THREE.DirectionalLight(0xfffaf0, 0.8);
-  dirLight.position.set(3, 5, 3);
-  dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 512; // Resolución optimizada para evitar crasheos
-  dirLight.shadow.mapSize.height = 512;
-  dirLight.shadow.bias = -0.002;
-  scene.add(dirLight);
-
-  const fillLight = new THREE.DirectionalLight(0x8ab4f8, 0.4);
-  fillLight.position.set(-3, 2, 2);
-  scene.add(fillLight);
-
-  // COLORES INTERNOS
-  const hairColor = parseInt('{hair_hex}', 16);
-  const shirtColor= parseInt('{shirt_hex}', 16);
-  const skinColor = 0xfdbcb4; 
+  const camera = new THREE.PerspectiveCamera(42,260/340,0.1,100);
+  camera.position.set(0,1.1,4.8); camera.lookAt(0,0.8,0);
+  scene.add(new THREE.AmbientLight(0xffffff,0.7));
+  const dl=new THREE.DirectionalLight(0xffffff,1.0); dl.position.set(3,6,4); dl.castShadow=true; scene.add(dl);
+  const fl=new THREE.DirectionalLight(0x8ab4f8,0.3); fl.position.set(-3,2,-2); scene.add(fl);
+  const hairColor = parseInt('{hair_hex}',16);
+  const shirtColor= parseInt('{shirt_hex}',16);
+  const skinColor = 0xfdbcb4;
   const pantsColor= 0x1a237e;
-
-  // HELPERS DE MATERIALES ESTÁNDAR REALISTAS (Evitamos fallos de texturas ausentes)
-  function mat(c, r=0.6, m=0.0){{
-    return new THREE.MeshStandardMaterial({{ color: c, roughness: r, metalness: m }});
-  }}
-  
-  function box(w, h, d, c, x, y, z, r=0.6){{
-    const ms = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(c, r));
-    ms.position.set(x, y, z); ms.castShadow = true; ms.receiveShadow = true; return ms;
-  }}
-  
-  function sph(r, c, x, y, z, sx=1, sy=1, sz=1, rough=0.6){{
-    const ms = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 32), mat(c, rough));
-    ms.position.set(x, y, z); ms.scale.set(sx, sy, sz); ms.castShadow = true; ms.receiveShadow = true; return ms;
-  }}
-  
-  function cyl(rt, rb, h, c, x, y, z, rx=0){{
-    const ms = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, 24), mat(c, 0.6));
-    ms.position.set(x, y, z); ms.rotation.x = rx; ms.castShadow = true; ms.receiveShadow = true; return ms;
-  }}
-
-  // GRUPO PRINCIPAL
-  const g = new THREE.Group(); 
-  scene.add(g);
-
-  // --- MODELADO DEL PERSONAJE ---
-  
-  // Cabeza estilizada
-  g.add(sph(0.40, skinColor, 0, 2.08, 0, 1, 1.05, 1));
-
-  // Ojos brillantes profesionales
-  [-0.14, 0.14].forEach(xo => {{
-    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.09, 16, 16), mat(0xffffff, 0.1));
-    ew.position.set(xo, 2.1, 0.35); ew.scale.set(1, 1.1, 0.5); g.add(ew);
-    
-    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16), mat(0x1a1a2e, 0.3));
-    ep.position.set(xo, 2.1, 0.39); ep.scale.set(1, 1, 0.5); g.add(ep);
-    
-    const es = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 8), mat(0xffffff, 0.0));
-    es.position.set(xo + 0.025, 2.14, 0.42); g.add(es);
+  const hatType   = '{hat_type}';
+  const badgeText = '{badge_text}';
+  function mat(c,r=0.7,m=0){{return new THREE.MeshStandardMaterial({{color:c,roughness:r,metalness:m}});}}
+  function box(w,h,d,c,x,y,z){{const ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));ms.position.set(x,y,z);ms.castShadow=true;return ms;}}
+  function sph(r,c,x,y,z,sx=1,sy=1,sz=1){{const ms=new THREE.Mesh(new THREE.SphereGeometry(r,32,32),mat(c));ms.position.set(x,y,z);ms.scale.set(sx,sy,sz);ms.castShadow=true;return ms;}}
+  function cyl(rt,rb,h,c,x,y,z,rx=0){{const ms=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,20),mat(c));ms.position.set(x,y,z);ms.rotation.x=rx;ms.castShadow=true;return ms;}}
+  const g=new THREE.Group(); scene.add(g);
+  // HEAD
+  g.add(sph(0.42,skinColor,0,2.08,0,1,1.05,1));
+  // EYES
+  [-0.15,0.15].forEach(xo=>{{
+    const ew=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),mat(0xffffff,0.9));ew.position.set(xo,2.1,0.36);ew.scale.set(1,1.1,0.5);g.add(ew);
+    const ep=new THREE.Mesh(new THREE.SphereGeometry(0.062,12,12),mat(0x1a1a2e,1));ep.position.set(xo,2.1,0.40);ep.scale.set(1,1,0.5);g.add(ep);
+    const es=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),mat(0xffffff,0.1,0.8));es.position.set(xo+0.025,2.13,0.43);g.add(es);
   }});
-
-  // Cejas y Nariz
-  [-0.14, 0.14].forEach(xo => {{
-    const b = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.03, 0.04), mat(hairColor, 0.8));
-    b.position.set(xo, 2.24, 0.35); b.rotation.z = xo < 0 ? 0.1 : -0.1; g.add(b);
+  // BROWS
+  [-0.15,0.15].forEach(xo=>{{const b=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.03,0.04),mat(hairColor,0.9));b.position.set(xo,2.23,0.36);b.rotation.z=xo<0?0.12:-0.12;g.add(b);}});
+  // NOSE
+  const ns=sph(0.055,0xe8a090,0,1.99,0.40);ns.scale.set(1,0.7,1);g.add(ns);
+  // MOUTH
+  const mo=new THREE.Mesh(new THREE.TorusGeometry(0.10,0.025,8,16,Math.PI),mat(0xc07060,0.9));mo.position.set(0,1.90,0.39);mo.rotation.x=Math.PI;g.add(mo);
+  // EARS
+  [-0.43,0.43].forEach(xo=>{{g.add(sph(0.10,skinColor,xo,2.06,0,0.6,1,0.5));}});
+  // HAIR
+  g.add(sph(0.44,hairColor,0,2.28,0,1,0.65,1));
+  [-0.35,0.35].forEach(xo=>{{g.add(sph(0.22,hairColor,xo,2.05,-0.05,0.7,1.2,0.7));}});
+  // NECK
+  g.add(cyl(0.14,0.16,0.22,skinColor,0,1.62,0));
+  // TORSO
+  g.add(box(0.88,0.88,0.5,shirtColor,0,1.05,0));
+  const cm=mat(shirtColor,0.8);
+  const c1=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.28,0.06),cm);c1.position.set(-0.06,1.39,0.26);c1.rotation.z=0.35;g.add(c1);
+  const c2=c1.clone();c2.position.set(0.06,1.39,0.26);c2.rotation.z=-0.35;g.add(c2);
+  [1.22,1.07,0.92].forEach(y=>{{const bt=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.04,10),mat(0xffffff,0.5,0.3));bt.position.set(0,y,0.26);bt.rotation.x=Math.PI/2;g.add(bt);}});
+  // ARMS
+  [-0.58,0.58].forEach(xo=>{{
+    const ua=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.12,0.52,16),mat(shirtColor,0.8));ua.position.set(xo,1.1,0);ua.rotation.z=xo<0?0.25:-0.25;g.add(ua);
+    const fa=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.09,0.42,16),mat(skinColor,0.7));fa.position.set(xo<0?-0.64:0.64,0.74,0);fa.rotation.z=xo<0?0.18:-0.18;g.add(fa);
+    g.add(sph(0.115,skinColor,xo<0?-0.70:0.70,0.50,0,1,1.1,0.9));
   }});
-  g.add(sph(0.05, 0xe8a090, 0, 1.99, 0.39, 1, 0.7, 1));
-
-  // Boca (Sonrisa)
-  const mo = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.02, 8, 16, Math.PI), mat(0xc07060, 0.6));
-  mo.position.set(0, 1.92, 0.37); mo.rotation.x = Math.PI; g.add(mo);
-
-  // Orejas y Cabello
-  [-0.42, 0.42].forEach(xo => {{ g.add(sph(0.09, skinColor, xo, 2.06, 0, 0.6, 1, 0.5)); }});
-  g.add(sph(0.42, hairColor, 0, 2.26, -0.02, 1, 0.7, 1)); // Capa base pelo
-  [-0.34, 0.34].forEach(xo => {{ g.add(sph(0.20, hairColor, xo, 2.06, 0.05, 0.7, 1.2, 0.7)); }}); // Detalles laterales
-
-  // Cuello y Torso Suavizado (Cuerpo orgánico moderna)
-  g.add(cyl(0.13, 0.15, 0.22, skinColor, 0, 1.62, 0));
-  g.add(sph(0.45, shirtColor, 0, 1.12, 0, 0.95, 1.1, 0.55)); // Pecho estilizado redondo
-  g.add(box(0.78, 0.40, 0.46, shirtColor, 0, 0.90, 0, 0.5)); // Base del abdomen
-
-  // Botones de la camisa
-  [1.25, 1.10, 0.95].forEach(y => {{
-    const bt = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.03, 10), mat(0xffffff, 0.4, 0.2));
-    bt.position.set(0, y, 0.26); bt.rotation.x = Math.PI/2; g.add(bt);
+  // LOWER
+  g.add(box(0.82,0.22,0.46,pantsColor,0,0.57,0));
+  g.add(box(0.84,0.08,0.48,0x1a1a1a,0,0.69,0));
+  const bk=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.07,0.05),mat(0xd4a017,0.3,0.9));bk.position.set(0,0.69,0.26);g.add(bk);
+  [-0.21,0.21].forEach(xo=>{{
+    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.165,0.14,0.66,16),mat(pantsColor,0.8)));
+    g.children[g.children.length-1].position.set(xo,0.15,0);
+    const sh=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.12,0.42),mat(0x111111,0.9));sh.position.set(xo,-0.21,0.06);sh.rotation.x=-0.12;g.add(sh);
+    g.add(sph(0.12,0x111111,xo,-0.20,0.22,1,0.7,0.7));
   }});
-
-  // Brazos redondeados
-  [-0.55, 0.55].forEach(xo => {{
-    const ua = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.10, 0.50, 16), mat(shirtColor, 0.6));
-    ua.position.set(xo, 1.12, 0); ua.rotation.z = xo < 0 ? 0.22 : -0.22; g.add(ua);
-    
-    const fa = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.40, 16), mat(skinColor, 0.6));
-    fa.position.set(xo < 0 ? -0.60 : 0.60, 0.76, 0); fa.rotation.z = xo < 0 ? 0.15 : -0.15; g.add(fa);
-    
-    g.add(sph(0.10, skinColor, xo < 0 ? -0.65 : 0.65, 0.54, 0));
-  }});
-
-  // Pantalones y Zapatos
-  g.add(box(0.78, 0.20, 0.44, pantsColor, 0, 0.58, 0));
-  [-0.20, 0.20].forEach(xo => {{
-    g.add(cyl(0.14, 0.12, 0.62, pantsColor, xo, 0.20, 0));
-    
-    const sh = new THREE.Mesh(new THREE.BoxGeometry(0.20, 0.11, 0.38), mat(0x1a1a1a, 0.8));
-    sh.position.set(xo, -0.16, 0.06); g.add(sh);
-    g.add(sph(0.10, 0x1a1a1a, xo, -0.15, 0.22, 1, 0.7, 0.8));
-  }});
-
-  // Insignia (Si aplica)
-  if('{badge_text}' !== 'none'){{
-    const bc = {{'TOP 1':0xffd700, 'MVP':0xe91e63, 'PRO':0x2196f3, 'ROOKIE':0x4caf50}}['{badge_text}'] || 0xffd700;
-    const bdg = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.09, 0.03), mat(bc, 0.3, 0.7));
-    bdg.position.set(0.22, 1.22, 0.24); g.add(bdg);
+  // BADGE
+  if(badgeText!=='none'){{
+    const bc={{'TOP 1':0xffd700,'MVP':0xe91e63,'PRO':0x2196f3,'ROOKIE':0x4caf50}}[badgeText]||0xffd700;
+    const bdg=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.10,0.04),mat(bc,0.4,0.5));bdg.position.set(0.26,1.18,0.27);g.add(bdg);
   }}
-
-  // Sombreros actualizados con geometrías cerradas seguras
+  // HAT
   if(hatType==='corona'){{
-    const bm = mat(0xffd700, 0.2, 0.9);
-    const base = cyl(0.36, 0.34, 0.14, 0xffd700, 0, 2.54, 0); base.material = bm; g.add(base);
-    [-0.24, 0, 0.24].forEach((xo, i)=>{{
-      const sp = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.06, 0.20+i*0.05, 12), bm);
-      sp.position.set(xo, 2.66+(i===1?0.02:0), 0.16); g.add(sp);
-    }});
+    const bm=mat(0xffd700,0.3,0.9);
+    const base=cyl(0.40,0.38,0.18,0xffd700,0,2.56,0);base.material=bm;g.add(base);
+    [-0.28,0,0.28].forEach((xo,i)=>{{const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.07,0.22+i*0.06,8),bm);sp.position.set(xo,2.72+(i===1?0.04:0),0.22);g.add(sp);}});
+    const gm=sph(0.055,0xe91e63,0,2.82,0.22);gm.material=mat(0xe91e63,0.1,0.9);g.add(gm);
   }} else if(hatType==='gorra'){{
-    const cm2 = mat(0x1565c0, 0.7);
-    g.add(sph(0.38, 0x1565c0, 0, 2.52, -0.02, 1, 0.8, 1)); 
-    const br = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.02, 0.30), cm2);
-    br.position.set(0, 2.42, 0.22); br.rotation.x = 0.1; g.add(br);
+    const cm2=mat(0x1565c0,0.8);
+    const cap=cyl(0.40,0.38,0.24,0x1565c0,0,2.58,0);cap.material=cm2;g.add(cap);
+    const br=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.05,24,1,false,Math.PI*0.1,Math.PI*0.8),cm2);br.position.set(0,2.46,0.30);br.rotation.x=0.3;g.add(br);
+    const tp=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.06,24),cm2);tp.position.set(0,2.70,0);g.add(tp);
+  }} else if(hatType==='casco'){{
+    const hm=mat(0xff6f00,0.5,0.4);
+    const hh=sph(0.48,0xff6f00,0,2.22,0,1.0,0.85,1.0);hh.material=hm;g.add(hh);
+    const hb=new THREE.Mesh(new THREE.CylinderGeometry(0.50,0.46,0.07,24),hm);hb.position.set(0,1.92,0);g.add(hb);
+    const hs=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.52,0.06),mat(0xffffff,0.7));hs.position.set(0,2.26,0.44);g.add(hs);
   }} else if(hatType==='sombrero'){{
-    const sm = mat(0x4a2c0a, 0.9);
-    const sbr = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.64, 0.03, 24), sm); sbr.position.set(0, 2.46, 0); g.add(sbr);
-    const scr = cyl(0.28, 0.30, 0.38, 0x4a2c0a, 0, 2.66, 0); scr.material = sm; g.add(scr);
+    const sm=mat(0x4a2c0a,0.9);
+    const sbr=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.70,0.07,32),sm);sbr.position.set(0,2.48,0);g.add(sbr);
+    const scr=cyl(0.30,0.32,0.44,0x4a2c0a,0,2.72,0);scr.material=sm;g.add(scr);
+    const sbd=new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.31,0.10,32),mat(0xb8860b,0.5,0.3));sbd.position.set(0,2.50,0);g.add(sbd);
   }}
-
-  // PLANO INVISIBLE RECEPTOR DE SOMBRAS REALES
-  const shadowPlane = new THREE.Mesh(
-    new THREE.PlaneGeometry(5, 5),
-    new THREE.ShadowMaterial({{ opacity: 0.18 }})
-  );
-  shadowPlane.rotation.x = -Math.PI / 2;
-  shadowPlane.position.y = -0.24;
-  shadowPlane.receiveShadow = true;
-  scene.add(shadowPlane);
-
-  // CONTROL ARRASTRE (MOUSE/TACTIL)
-  let drag=false, prevX=0, rotY=0.3;
-  canvas.addEventListener('mousedown', e=>{{drag=true; prevX=e.clientX;}});
-  canvas.addEventListener('touchstart', e=>{{drag=true; prevX=e.touches[0].clientX;}});
-  window.addEventListener('mouseup', ()=>drag=false);
-  window.addEventListener('touchend', ()=>drag=false);
-  
-  canvas.addEventListener('mousemove', e=>{{
-    if(!drag) return;
-    rotY += (e.clientX - prevX) * 0.008;
-    prevX = e.clientX; g.rotation.y = rotY;
-  }});
-  canvas.addEventListener('touchmove', e=>{{
-    if(!drag) return;
-    rotY += (e.touches[0].clientX - prevX) * 0.008;
-    prevX = e.touches[0].clientX; g.rotation.y = rotY;
-  }});
-
-  // LOOP DE ANIMACIÓN CONSTANTE
+  // SHADOW DISC
+  const sd=new THREE.Mesh(new THREE.CircleGeometry(0.65,32),new THREE.MeshBasicMaterial({{color:0x000000,transparent:true,opacity:0.10}}));
+  sd.rotation.x=-Math.PI/2; sd.position.y=-0.285; scene.add(sd);
+  // DRAG
+  let drag=false,prevX=0,rotY=0.3;
+  canvas.addEventListener('mousedown',e=>{{drag=true;prevX=e.clientX;}});
+  canvas.addEventListener('touchstart',e=>{{drag=true;prevX=e.touches[0].clientX;}});
+  window.addEventListener('mouseup',()=>drag=false);
+  window.addEventListener('touchend',()=>drag=false);
+  canvas.addEventListener('mousemove',e=>{{if(!drag)return;rotY+=(e.clientX-prevX)*0.012;prevX=e.clientX;g.rotation.y=rotY;}});
+  canvas.addEventListener('touchmove',e=>{{if(!drag)return;rotY+=(e.touches[0].clientX-prevX)*0.012;prevX=e.touches[0].clientX;g.rotation.y=rotY;}});
   let t=0;
-  (function anim(){{
-    requestAnimationFrame(anim);
-    t += 0.015;
-    if(!drag) g.rotation.y += 0.004;
-    g.position.y = Math.sin(t) * 0.025; 
-    renderer.render(scene, camera);
-  }})();
+  (function anim(){{requestAnimationFrame(anim);t+=0.018;if(!drag)g.rotation.y+=0.004;g.position.y=Math.sin(t)*0.04;renderer.render(scene,camera);}})();
 }})();
 </script>
 """
@@ -3364,3 +3277,4 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
+
