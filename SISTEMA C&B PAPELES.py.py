@@ -2234,26 +2234,25 @@ elif menu == "📆 Cronograma Impresión":
             
             # Formulario de inserción inicial rápida
             maquina_destino = st.selectbox("Asignar a Máquina:", lista_maquinas, key="maq_new")
-            fecha_ini_input = st.date_input("Fecha de Inicio:", datetime.now())
-            col_h1, col_h2 = st.columns(2)
-            with col_h1:
-                dias_estimados = st.number_input("Días estimados:", min_value=0, max_value=60, value=0, step=1)
-            with col_h2:
-                horas_estimadas = st.number_input("Horas adicionales:", min_value=0, max_value=23, value=8, step=1)
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                fecha_ini_input = st.date_input("Fecha de Inicio:", datetime.now())
+            with col_f2:
+                hora_ini_input = st.number_input("Hora de inicio (0-23):", min_value=0, max_value=23, value=7, step=1)
 
-            total_horas = dias_estimados * 24 + horas_estimadas
-            if total_horas < 1:
-                total_horas = 1
-                st.warning("⚠️ El mínimo es 1 hora.")
+            horas_estimadas = st.number_input("⏱️ Duración en horas:", min_value=1, max_value=999, value=8, step=1)
 
-            fecha_fin_calculada = fecha_ini_input + timedelta(hours=total_horas)
-            st.caption(f"📅 Duración: **{dias_estimados}d {horas_estimadas}h** — Finaliza: **{fecha_fin_calculada.strftime('%d/%m/%Y %H:%M')}**")
+            # Combinar fecha + hora de inicio exacta
+            dt_inicio = datetime.combine(fecha_ini_input, time(hora_ini_input, 0))
+            dt_fin = dt_inicio + timedelta(hours=horas_estimadas)
+
+            st.caption(f"📅 Inicio: **{dt_inicio.strftime('%d/%m/%Y %H:%M')}** — Fin: **{dt_fin.strftime('%d/%m/%Y %H:%M')}** ({horas_estimadas}h)")
 
             if st.button("➕ Insertar en Cronograma"):
                 try:
                     supabase.table("ordenes_planeadas").update({
-                        "fecha_inicio_cronograma": str(fecha_ini_input),
-                        "fecha_fin_cronograma": str(fecha_fin_calculada),
+                        "fecha_inicio_cronograma": dt_inicio.isoformat(),
+                        "fecha_fin_cronograma": dt_fin.isoformat(),
                         "maquina_cronograma": maquina_destino
                     }).eq("id", op_objeto["id"]).execute()
                     
