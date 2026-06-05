@@ -2857,7 +2857,7 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
 
     hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
     shirt_hex  = equipado.get('camisa',   {}).get('color_hex', '#1565c0').lstrip('#')
-    hat_type   = equipado.get('sombrero', {}).get('svg_data',  'none').lower().strip() or 'none')
+    hat_type   = equipado.get('sombrero', {}).get('svg_data',  'none').lower().strip() or 'none'
     badge_text = equipado.get('insignia', {}).get('label', 'none') or 'none'
 
     return f"""
