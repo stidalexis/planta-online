@@ -2851,134 +2851,61 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
-def render_avatar_3d(items_equipados, nombre_usuario=""):
-    """Genera el HTML del avatar 3D con Three.js según los items equipados."""
-    equipado = {it.get('categoria', ''): it for it in items_equipados}
+# ══════════════════════════════════════════════════════════════
+#   NUEVO SISTEMA DE AVATARES REALISTAS (READY PLAYER ME)
+# ══════════════════════════════════════════════════════════════
+import streamlit.components.v1 as components
 
-    hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
-    shirt_hex  = equipado.get('camisa',   {}).get('color_hex', '#1565c0').lstrip('#')
-    hat_type   = equipado.get('sombrero', {}).get('svg_data',  'none').lower().strip() or 'none'
-    badge_text = equipado.get('insignia', {}).get('label', 'none') or 'none'
+def mostrar_creador_avatar_realista(usuario_id):
+    """
+    Despliega el creador de avatares 3D profesional e hiperrealista.
+    Permite crear el avatar a partir de una foto de la cámara o galería.
+    """
+    # Subdominio demo de Ready Player Me optimizado para creadores independientes
+    # Nota: Puedes registrarte gratis en readyplayer.me para obtener tu propia SUBDOMAIN_URL personalizada.
+    rpm_url = "https://demo.readyplayer.me/avatar?frameApi"
+    
+    html_iframe = f"""
+    <iframe id="rpm-iframe" src="{rpm_url}" 
+        style="width: 100%; height: 700px; border: none; border-radius: 14px; background: #f8f9fa;">
+    </iframe>
 
-    return f"""
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<div style="text-align:center;">
-  <canvas id="av3d" width="260" height="340"
-    style="border-radius:14px;border:1px solid #e0e0e0;cursor:grab;display:inline-block;"></canvas>
-  <div style="font-weight:bold;color:#0D47A1;margin-top:6px;">{nombre_usuario}</div>
-</div>
-<script>
-(function(){{
-  const canvas = document.getElementById('av3d');
-  if(!canvas||!window.THREE)return;
-  const renderer = new THREE.WebGLRenderer({{canvas,antialias:true,alpha:true}});
-  renderer.setSize(260,340); renderer.shadowMap.enabled=true;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(42,260/340,0.1,100);
-  camera.position.set(0,1.1,4.8); camera.lookAt(0,0.8,0);
-  scene.add(new THREE.AmbientLight(0xffffff,0.7));
-  const dl=new THREE.DirectionalLight(0xffffff,1.0); dl.position.set(3,6,4); dl.castShadow=true; scene.add(dl);
-  const fl=new THREE.DirectionalLight(0x8ab4f8,0.3); fl.position.set(-3,2,-2); scene.add(fl);
-  const hairColor = parseInt('{hair_hex}',16);
-  const shirtColor= parseInt('{shirt_hex}',16);
-  const skinColor = 0xfdbcb4;
-  const pantsColor= 0x1a237e;
-  const hatType   = '{hat_type}';
-  const badgeText = '{badge_text}';
-  function mat(c,r=0.7,m=0){{return new THREE.MeshStandardMaterial({{color:c,roughness:r,metalness:m}});}}
-  function box(w,h,d,c,x,y,z){{const ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));ms.position.set(x,y,z);ms.castShadow=true;return ms;}}
-  function sph(r,c,x,y,z,sx=1,sy=1,sz=1){{const ms=new THREE.Mesh(new THREE.SphereGeometry(r,32,32),mat(c));ms.position.set(x,y,z);ms.scale.set(sx,sy,sz);ms.castShadow=true;return ms;}}
-  function cyl(rt,rb,h,c,x,y,z,rx=0){{const ms=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,20),mat(c));ms.position.set(x,y,z);ms.rotation.x=rx;ms.castShadow=true;return ms;}}
-  const g=new THREE.Group(); scene.add(g);
-  // HEAD
-  g.add(sph(0.42,skinColor,0,2.08,0,1,1.05,1));
-  // EYES
-  [-0.15,0.15].forEach(xo=>{{
-    const ew=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),mat(0xffffff,0.9));ew.position.set(xo,2.1,0.36);ew.scale.set(1,1.1,0.5);g.add(ew);
-    const ep=new THREE.Mesh(new THREE.SphereGeometry(0.062,12,12),mat(0x1a1a2e,1));ep.position.set(xo,2.1,0.40);ep.scale.set(1,1,0.5);g.add(ep);
-    const es=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),mat(0xffffff,0.1,0.8));es.position.set(xo+0.025,2.13,0.43);g.add(es);
-  }});
-  // BROWS
-  [-0.15,0.15].forEach(xo=>{{const b=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.03,0.04),mat(hairColor,0.9));b.position.set(xo,2.23,0.36);b.rotation.z=xo<0?0.12:-0.12;g.add(b);}});
-  // NOSE
-  const ns=sph(0.055,0xe8a090,0,1.99,0.40);ns.scale.set(1,0.7,1);g.add(ns);
-  // MOUTH
-  const mo=new THREE.Mesh(new THREE.TorusGeometry(0.10,0.025,8,16,Math.PI),mat(0xc07060,0.9));mo.position.set(0,1.90,0.39);mo.rotation.x=Math.PI;g.add(mo);
-  // EARS
-  [-0.43,0.43].forEach(xo=>{{g.add(sph(0.10,skinColor,xo,2.06,0,0.6,1,0.5));}});
-  // HAIR
-  g.add(sph(0.44,hairColor,0,2.28,0,1,0.65,1));
-  [-0.35,0.35].forEach(xo=>{{g.add(sph(0.22,hairColor,xo,2.05,-0.05,0.7,1.2,0.7));}});
-  // NECK
-  g.add(cyl(0.14,0.16,0.22,skinColor,0,1.62,0));
-  // TORSO
-  g.add(box(0.88,0.88,0.5,shirtColor,0,1.05,0));
-  const cm=mat(shirtColor,0.8);
-  const c1=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.28,0.06),cm);c1.position.set(-0.06,1.39,0.26);c1.rotation.z=0.35;g.add(c1);
-  const c2=c1.clone();c2.position.set(0.06,1.39,0.26);c2.rotation.z=-0.35;g.add(c2);
-  [1.22,1.07,0.92].forEach(y=>{{const bt=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.04,10),mat(0xffffff,0.5,0.3));bt.position.set(0,y,0.26);bt.rotation.x=Math.PI/2;g.add(bt);}});
-  // ARMS
-  [-0.58,0.58].forEach(xo=>{{
-    const ua=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.12,0.52,16),mat(shirtColor,0.8));ua.position.set(xo,1.1,0);ua.rotation.z=xo<0?0.25:-0.25;g.add(ua);
-    const fa=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.09,0.42,16),mat(skinColor,0.7));fa.position.set(xo<0?-0.64:0.64,0.74,0);fa.rotation.z=xo<0?0.18:-0.18;g.add(fa);
-    g.add(sph(0.115,skinColor,xo<0?-0.70:0.70,0.50,0,1,1.1,0.9));
-  }});
-  // LOWER
-  g.add(box(0.82,0.22,0.46,pantsColor,0,0.57,0));
-  g.add(box(0.84,0.08,0.48,0x1a1a1a,0,0.69,0));
-  const bk=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.07,0.05),mat(0xd4a017,0.3,0.9));bk.position.set(0,0.69,0.26);g.add(bk);
-  [-0.21,0.21].forEach(xo=>{{
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.165,0.14,0.66,16),mat(pantsColor,0.8)));
-    g.children[g.children.length-1].position.set(xo,0.15,0);
-    const sh=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.12,0.42),mat(0x111111,0.9));sh.position.set(xo,-0.21,0.06);sh.rotation.x=-0.12;g.add(sh);
-    g.add(sph(0.12,0x111111,xo,-0.20,0.22,1,0.7,0.7));
-  }});
-  // BADGE
-  if(badgeText!=='none'){{
-    const bc={{'TOP 1':0xffd700,'MVP':0xe91e63,'PRO':0x2196f3,'ROOKIE':0x4caf50}}[badgeText]||0xffd700;
-    const bdg=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.10,0.04),mat(bc,0.4,0.5));bdg.position.set(0.26,1.18,0.27);g.add(bdg);
-  }}
-  // HAT
-  if(hatType==='corona'){{
-    const bm=mat(0xffd700,0.3,0.9);
-    const base=cyl(0.40,0.38,0.18,0xffd700,0,2.56,0);base.material=bm;g.add(base);
-    [-0.28,0,0.28].forEach((xo,i)=>{{const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.07,0.22+i*0.06,8),bm);sp.position.set(xo,2.72+(i===1?0.04:0),0.22);g.add(sp);}});
-    const gm=sph(0.055,0xe91e63,0,2.82,0.22);gm.material=mat(0xe91e63,0.1,0.9);g.add(gm);
-  }} else if(hatType==='gorra'){{
-    const cm2=mat(0x1565c0,0.8);
-    const cap=cyl(0.40,0.38,0.24,0x1565c0,0,2.58,0);cap.material=cm2;g.add(cap);
-    const br=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.05,24,1,false,Math.PI*0.1,Math.PI*0.8),cm2);br.position.set(0,2.46,0.30);br.rotation.x=0.3;g.add(br);
-    const tp=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.06,24),cm2);tp.position.set(0,2.70,0);g.add(tp);
-  }} else if(hatType==='casco'){{
-    const hm=mat(0xff6f00,0.5,0.4);
-    const hh=sph(0.48,0xff6f00,0,2.22,0,1.0,0.85,1.0);hh.material=hm;g.add(hh);
-    const hb=new THREE.Mesh(new THREE.CylinderGeometry(0.50,0.46,0.07,24),hm);hb.position.set(0,1.92,0);g.add(hb);
-    const hs=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.52,0.06),mat(0xffffff,0.7));hs.position.set(0,2.26,0.44);g.add(hs);
-  }} else if(hatType==='sombrero'){{
-    const sm=mat(0x4a2c0a,0.9);
-    const sbr=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.70,0.07,32),sm);sbr.position.set(0,2.48,0);g.add(sbr);
-    const scr=cyl(0.30,0.32,0.44,0x4a2c0a,0,2.72,0);scr.material=sm;g.add(scr);
-    const sbd=new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.31,0.10,32),mat(0xb8860b,0.5,0.3));sbd.position.set(0,2.50,0);g.add(sbd);
-  }}
-  // SHADOW DISC
-  const sd=new THREE.Mesh(new THREE.CircleGeometry(0.65,32),new THREE.MeshBasicMaterial({{color:0x000000,transparent:true,opacity:0.10}}));
-  sd.rotation.x=-Math.PI/2; sd.position.y=-0.285; scene.add(sd);
-  // DRAG
-  let drag=false,prevX=0,rotY=0.3;
-  canvas.addEventListener('mousedown',e=>{{drag=true;prevX=e.clientX;}});
-  canvas.addEventListener('touchstart',e=>{{drag=true;prevX=e.touches[0].clientX;}});
-  window.addEventListener('mouseup',()=>drag=false);
-  window.addEventListener('touchend',()=>drag=false);
-  canvas.addEventListener('mousemove',e=>{{if(!drag)return;rotY+=(e.clientX-prevX)*0.012;prevX=e.clientX;g.rotation.y=rotY;}});
-  canvas.addEventListener('touchmove',e=>{{if(!drag)return;rotY+=(e.touches[0].clientX-prevX)*0.012;prevX=e.touches[0].clientX;g.rotation.y=rotY;}});
-  let t=0;
-  (function anim(){{requestAnimationFrame(anim);t+=0.018;if(!drag)g.rotation.y+=0.004;g.position.y=Math.sin(t)*0.04;renderer.render(scene,camera);}})();
-}})();
-</script>
-"""
+    <script>
+        const iframe = document.getElementById('rpm-iframe');
+        
+        // Escuchar los eventos del creador de avatares cuando el usuario termina
+        window.addEventListener('message', function(event) {{
+            const json = parseMessage(event);
+            
+            // Cuando el avatar está listo y guardado por el usuario
+            if (json && json.source === 'readyplayerme' && json.eventName === 'v1.avatar.exported') {{
+                const avatarUrlGlb = json.data.url; // Enlace al modelo 3D (.glb)
+                // Generar una foto fija 2D del avatar automáticamente para mostrar en el perfil
+                const avatarUrlPng = avatarUrlGlb.replace('.glb', '.png?camera=portrait');
+                
+                // Enviar la información de regreso a Streamlit mediante un input oculto
+                window.parent.postMessage({{
+                    type: 'streamlit:setComponentValue',
+                    value: {{ glb: avatarUrlGlb, png: avatarUrlPng }}
+                }}, '*');
+            }}
+        }});
 
-# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
+        function parseMessage(event) {{
+            try {{
+                return typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+            }} catch(e) {{
+                return null;
+            }}
+        }}
+    </script>
+    """
+    
+    st.markdown("##### 📸 Tómate una foto o sube una imagen para inicializar tu clon 3D:")
+    # Renderizamos el componente seguro en Streamlit
+    datos_avatar = components.html(html_iframe, height=720, scrolling=False)
+    return datos_avatar
+
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 
 if menu == "🛒 Mercado":
@@ -3071,61 +2998,52 @@ if menu == "🛒 Mercado":
                                     st.error(msg)
 
     # ════════════════════════════════════════════════════════
-    # TAB 2 — MI AVATAR
+    # TAB 2 — MI AVATAR (ACTUALIZADO A 3D REALISTA)
     # ════════════════════════════════════════════════════════
     with tab_avatar:
-        st.markdown("<div class='section-header'>👤 MI AVATAR</div>", unsafe_allow_html=True)
+        st.markdown("<div class='section-header'>👤 CONFIGURACIÓN DE MI IDENTIDAD 3D</div>", unsafe_allow_html=True)
+        
+        # Consultar si el usuario ya guardó un avatar previo en Supabase
+        # (Para esto, asumimos que puedes guardar la URL en una propiedad del usuario o metadato)
+        avatar_actual_png = None
+        try:
+            res_user = supabase.table("usuarios").select("avatar_url").eq("usuario", usuario_actual).execute()
+            if res_user.data and res_user.data[0].get("avatar_url"):
+                avatar_actual_png = res_user.data[0]["avatar_url"]
+        except:
+            pass
 
-        inventario = mercado_obtener_items_usuario(usuario_actual)
-
-        col_av, col_inv = st.columns([1, 2])
-
-        with col_av:
-            st.markdown("**Vista Previa**")
-            # Obtener items equipados con su info de la tienda
-            items_equipados_full = []
-            for inv_item in inventario:
-                if inv_item.get('equipado'):
-                    detalle = supabase.table("items_mercado").select("*").eq("id", inv_item['item_id']).execute().data
-                    if detalle:
-                        d = detalle[0]
-                        d['categoria'] = d.get('categoria', '')
-                        items_equipados_full.append(d)
-
-            html_3d = render_avatar_3d(items_equipados_full, nombre_actual)
-            import streamlit.components.v1 as components
-            components.html(html_3d, height=380, scrolling=False)
-
-        with col_inv:
-            st.markdown("**Mi Inventario — selecciona qué equipar**")
-            if not inventario:
-                st.info("Aún no tienes items. Ve a la tienda y compra algo 🛍️")
+        col_ver, col_crear = st.columns([1, 2])
+        
+        with col_ver:
+            st.markdown("##### 🎭 Tu Identidad Actual")
+            if avatar_actual_png:
+                st.image(avatar_actual_png, caption=f"Avatar de {nombre_actual}", use_container_width=True)
             else:
-                # Agrupar por categoría
-                inv_cats = {}
-                for it in inventario:
-                    det = supabase.table("items_mercado").select("*").eq("id", it['item_id']).execute().data
-                    cat = det[0]['categoria'] if det else 'General'
-                    inv_cats.setdefault(cat, []).append((it, det[0] if det else {}))
+                st.info("⚠️ Aún no has creado tu avatar realista. ¡Usa el panel de la derecha para escanear tu rostro!")
 
-                for cat, items_list in inv_cats.items():
-                    st.markdown(f"**{cat.upper()}**")
-                    for inv_it, det_it in items_list:
-                        equipado_now = inv_it.get('equipado', False)
-                        col_i, col_b = st.columns([3, 1])
-                        with col_i:
-                            color_swatch = f"<span style='display:inline-block;width:16px;height:16px;border-radius:50%;background:{det_it.get('color_hex','#ccc')};border:1px solid #999;vertical-align:middle;margin-right:6px;'></span>" if det_it.get('color_hex') else ""
-                            st.markdown(f"{det_it.get('emoji','🎁')} {color_swatch} **{det_it.get('nombre','')}** {'✅ Equipado' if equipado_now else ''}", unsafe_allow_html=True)
-                        with col_b:
-                            if not equipado_now:
-                                if st.button("Equipar", key=f"eq_{inv_it['id']}", use_container_width=True):
-                                    mercado_equipar_item(usuario_actual, inv_it['id'], cat)
-                                    st.rerun()
-                            else:
-                                if st.button("Quitar", key=f"rm_{inv_it['id']}", use_container_width=True):
-                                    supabase.table("inventario_avatar").update({"equipado": False}).eq("id", inv_it['id']).execute()
-                                    st.rerun()
-
+        with col_crear:
+            st.markdown("##### 🛠️ Creador de Avatar con Inteligencia Artificial")
+            
+            # Llamamos a la nueva función del iframe interactivo
+            resultado_avatar = mostrar_creador_avatar_realista(usuario_id=usuario_actual)
+            
+            # Si el componente detecta que el operario terminó de diseñar y guardó su foto
+            if resultado_avatar:
+                url_glb = resultado_avatar.get("glb")
+                url_png = resultado_avatar.get("png")
+                
+                st.success("¡Avatar generado con éxito a partir de tu foto! 🎉")
+                if st.button("💾 Guardar y Vincular a C&B Papeles", type="primary", use_container_width=True):
+                    try:
+                        # Guardamos de forma segura la URL de la foto del avatar en la tabla de usuarios
+                        supabase.table("usuarios").update({"avatar_url": url_png}).eq("usuario", usuario_actual).execute()
+                        st.toast("Avatar actualizado correctamente en el sistema global.")
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error al guardar en Base de Datos: {e}")
+                        
     # ════════════════════════════════════════════════════════
     # TAB 3 — PANEL ADMIN
     # ════════════════════════════════════════════════════════
