@@ -940,8 +940,20 @@ if menu == "🖥️ Monitor":
 
 #  REFRESCO AUTOMATICO 
 
-    time.sleep(30)
-    st.rerun()
+    try:
+        from streamlit_autorefresh import st_autorefresh
+        intervalo = st.select_slider(
+            "🔄 Auto-refresco cada:",
+            options=[15, 30, 60, 120],
+            value=30,
+            format_func=lambda x: f"{x} segundos"
+        )
+        st_autorefresh(interval=intervalo * 1000, key="monitor_refresh")
+    except:
+        # Si no está instalado, usar el método simple pero con menos tiempo
+        col_ref = st.columns([3,1])[1]
+        if col_ref.button("🔄 Actualizar ahora"):
+            st.rerun()
 
 # MODULO SEGUIMIENTO
 
