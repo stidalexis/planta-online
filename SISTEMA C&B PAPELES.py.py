@@ -779,27 +779,27 @@ with st.sidebar:
     if rol == 'admin':
         opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
     elif rol == 'ventas':
-        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación", "🛒 Mercado"]
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'jefe_log':
-        opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos", "🛒 Mercado"]
+        opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos"]
     elif rol == 'patinador_log':
-        opciones_menu = ["📦 Almacen/Despachos", "🛒 Mercado"]
+        opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'aux_log':
-        opciones_menu = ["📦 Almacen/Despachos", "🛒 Mercado"]
+        opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'supervisor_imp':
-        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📥 Colectoras", "📕 Encuadernación", "🛒 Mercado"]
+        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📥 Colectoras", "📕 Encuadernación"]
     elif rol == 'supervisor_cor':
-        opciones_menu = ["🖥️ Monitor", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "🛒 Mercado"]
+        opciones_menu = ["🖥️ Monitor", "✂️ Corte", "⏱️ Seguimiento Cortadoras"]
     elif rol == 'supervisor_enc':
-        opciones_menu = ["🖥️ Monitor", "📕 Encuadernación", "🛒 Mercado"]
+        opciones_menu = ["🖥️ Monitor", "📕 Encuadernación"]
     elif rol == 'supervisor_reb':
-        opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras", "🛒 Mercado"]
+        opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
     elif rol == 'patinador_roll':
-        opciones_menu = ["📦 salida produccion P1", "🛒 Mercado"]
+        opciones_menu = ["📦 salida produccion P1"]
     elif rol == 'almacen':
-        opciones_menu = ["📦 Almacen/Despachos", "🛒 Mercado"]
+        opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'diseño':
-        opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento", "🛒 Mercado"]
+        opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
     else:
 
 # OPERARIOS Y OTROS ROLES SI LOS DEJA DENTRAR
