@@ -2169,7 +2169,9 @@ elif menu == "📆 Cronograma Impresión":
 
     # URL base para el puente query_params
     try:
-        base_url = st.secrets.get("APP_URL", "https://planta-online.streamlit.app")
+        base_url   = "https://planta-online.streamlit.app"
+        supa_url   = URL
+        supa_key   = KEY
     except:
         base_url = "https://planta-online.streamlit.app"
 
@@ -2230,12 +2232,20 @@ elif menu == "📆 Cronograma Impresión":
         <div id="lista-pendientes"></div>
       </div>
       <div id="toast">✅ Guardado</div>
+      <button id="btn-guardar" onclick="ejecutarGuardado()" style="
+        display:none; position:fixed; bottom:18px; right:18px;
+        background:#2563eb; color:#fff; border:none; border-radius:10px;
+        padding:10px 20px; font-size:13px; font-weight:700; cursor:pointer;
+        z-index:9999; box-shadow:0 4px 15px rgba(0,0,0,0.4);
+      ">💾 Guardar cambios</button>
       <div id="tooltip"></div>
       <script>
         var eventos    = """ + eventos_str    + """;
         var recursos   = """ + recursos_str   + """;
         var pendientes = """ + pendientes_str + """;
         var BASE_URL   = """ + json.dumps(base_url) + """;
+        var SUPA_URL   = """ + json.dumps(supa_url) + """;
+        var SUPA_KEY   = """ + json.dumps(supa_key) + """;
         var tooltip    = document.getElementById('tooltip');
         var toast      = document.getElementById('toast');
 
@@ -2246,14 +2256,67 @@ elif menu == "📆 Cronograma Impresión":
           setTimeout(function() { toast.style.display = 'none'; }, 2000);
         }
 
-        // Guardar cambio en Supabase via query_params (recarga Streamlit)
+        // Cambios pendientes por guardar
+        var cambiosPendientes = {};
+
+        // Guardar directamente en Supabase via REST API
         function guardarEnSupabase(db_id, start, end, maquina) {
-          var url = BASE_URL + '?crono_id=' + encodeURIComponent(db_id)
-                             + '&crono_start=' + encodeURIComponent(start)
-                             + '&crono_end='   + encodeURIComponent(end)
-                             + '&crono_maq='   + encodeURIComponent(maquina);
-          showToast('💾 Guardando...');
-          window.parent.location.href = url;
+          cambiosPendientes[db_id] = { start: start, end: end, maquina: maquina };
+          actualizarBotonGuardar();
+        }
+
+        function actualizarBotonGuardar() {
+          var n = Object.keys(cambiosPendientes).length;
+          var btn = document.getElementById('btn-guardar');
+          if (n > 0) {
+            btn.style.display = 'block';
+            btn.textContent = '💾 Guardar cambios (' + n + ')';
+          } else {
+            btn.style.display = 'none';
+          }
+        }
+
+        async function ejecutarGuardado() {
+          var ids = Object.keys(cambiosPendientes);
+          var btn = document.getElementById('btn-guardar');
+          btn.textContent = '⏳ Guardando...';
+          btn.disabled = true;
+          var errores = 0;
+          for (var i = 0; i < ids.length; i++) {
+            var id  = ids[i];
+            var cam = cambiosPendientes[id];
+            try {
+              var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(id), {
+                method:  'PATCH',
+                headers: {
+                  'Content-Type':  'application/json',
+                  'apikey':        SUPA_KEY,
+                  'Authorization': 'Bearer ' + SUPA_KEY,
+                  'Prefer':        'return=minimal'
+                },
+                body: JSON.stringify({
+                  fecha_inicio_cronograma: cam.start,
+                  fecha_fin_cronograma:    cam.end,
+                  maquina_cronograma:      cam.maquina
+                })
+              });
+              if (resp.ok) {
+                delete cambiosPendientes[id];
+              } else {
+                errores++;
+              }
+            } catch(e) {
+              errores++;
+            }
+          }
+          btn.disabled = false;
+          if (errores === 0) {
+            showToast('✅ ¡Todo guardado correctamente!');
+            btn.style.display = 'none';
+          } else {
+            showToast('⚠️ ' + errores + ' cambio(s) no se pudieron guardar');
+            actualizarBotonGuardar();
+          }
         }
 
         document.addEventListener('mousemove', function(e) {
