@@ -2369,6 +2369,20 @@ elif menu == "📆 Cronograma Impresión":
               right:  'resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth'
             },
             buttonText: { today: 'Hoy', day: 'Día', week: 'Semana', month: 'Mes' },
+            views: {
+              resourceTimelineDay: {
+                slotDuration: '01:00:00',
+                slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
+              },
+              resourceTimelineWeek: {
+                slotDuration: { days: 1 },
+                slotLabelFormat: { weekday: 'long', day: '2-digit', month: 'short' }
+              },
+              resourceTimelineMonth: {
+                slotDuration: { days: 7 },
+                slotLabelFormat: { day: '2-digit', month: 'short' }
+              }
+            },
             resources: recursos,
             events:    eventos,
 
