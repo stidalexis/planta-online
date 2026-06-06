@@ -2913,28 +2913,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             finalizar = col_f1.form_submit_button("🏁 FINALIZAR Y MOVER")
             parcial = col_f2.form_submit_button("📦 ENTREGA PARCIAL")
 
-            if finalizar:
-                if op_name:
-                    inicio = datetime.fromisoformat(r['hora_inicio'].replace("Z", "+00:00")) if isinstance(r['hora_inicio'], str) else r['hora_inicio']
-                    fin = hora_colombia()
-                    duracion = calcular_duracion_laboral(inicio, fin)
-
-                    # RUTAS DINÁMICAS
-                    d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
-                    tipo = d_op['tipo_orden']
-                    n_area = "FINALIZADO"
-
-                    if tipo in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
-                        if area_act == "IMPRESIÓN":
-                            n_area = "COLECTORAS"
-                        elif area_act == "COLECTORAS":
-                            # AQUÍ SE USA LA NUEVA LÓGICA
-                            if datos_c.get('destino_final') == "Finalizar en Colectora":
-                                n_area = "FINALIZADO"
-                            else:
-                                n_area = "ENCUADERNACIÓN"
-                        elif area_act == "ENCUADERNACIÓN":
-                            n_area = "FINALIZADO"
 #  FINALIZAR TRABAJO ( LOGICA)
 
             if finalizar:
