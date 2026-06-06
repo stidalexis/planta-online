@@ -3297,21 +3297,39 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
-def render_avatar_3d(usuario_info, items_equipados=[]):
+def render_avatar_3d(items_equipados, usuario_nombre=""):
     """
-    Renderiza el avatar 3D usando Three.js cargando modelos reales .glb/.gltf 
-    almacenados de forma externa en Supabase Storage.
+    Renderiza el avatar 3D cargando modelos .glb/.gltf desde Supabase Storage.
+    Resistente a fallos si los ítems vienen como strings o nombres.
     """
-    # Definir URLs de los archivos .glb basados en lo que tiene equipado
-    # Si no tiene nada equipado, podemos usar modelos base por defecto
+    # 1. Configurar URL base fija por si no hay nada equipado
+    # REEMPLAZA CON TU SUBDOMINIO REAL DE SUPABASE
     url_base_cuerpo = "https://tu-proyecto-supabase.supabase.co/storage/v1/object/public/avatar-assets/cuerpo_base.glb"
     
     urls_items = []
-    for item in items_equipados:
-        if item.get('archivo_glb_url'):
-            urls_items.append(item['archivo_glb_url'])
-            
-    # Convertir la lista de URLs a un array de JavaScript para el script
+    
+    # 2. Procesar los ítems equipados de forma segura
+    if isinstance(items_equipados, list):
+        for item in items_equipados:
+            if not item:
+                continue
+                
+            # Si el ítem ya es un diccionario con la URL directa
+            if isinstance(item, dict) and item.get('archivo_glb_url'):
+                urls_items.append(item['archivo_glb_url'])
+                
+            # Si el ítem es un String (el nombre del accesorio, ej: 'Casco Amarillo')
+            elif isinstance(item, str):
+                try:
+                    # Buscamos en la base de datos el ítem por su nombre para extraer su URL .glb
+                    res = supabase.table("items_mercado").select("archivo_glb_url").eq("nombre", item).execute()
+                    if res.data and res.data[0].get('archivo_glb_url'):
+                        urls_items.append(res.data[0]['archivo_glb_url'])
+                except Exception as e:
+                    # Si falla la consulta, no rompe la app, solo continúa sin ese accesorio
+                    print(f"Error buscando URL de {item}: {e}")
+
+    # Convertir la lista de URLs finales a formato compatible con JavaScript Array
     js_urls_items = str(urls_items)
 
     html_code = f"""
@@ -3328,11 +3346,9 @@ def render_avatar_3d(usuario_info, items_equipados=[]):
             const container = document.getElementById('canvas-container-avatar');
             if(!container) return;
 
-            // 1. ESCENA, CÁMARA Y RENDERIZADOR
             const scene = new THREE.Scene();
             scene.background = new THREE.Color(0x111a2e);
             
-            // Añadir una rejilla industrial sutil de fondo
             const gridHelper = new THREE.GridHelper(10, 20, 0x00d2ff, 0x334155);
             gridHelper.position.y = -1;
             scene.add(gridHelper);
@@ -3347,7 +3363,6 @@ def render_avatar_3d(usuario_info, items_equipados=[]):
             renderer.outputEncoding = THREE.sRGBEncoding;
             container.appendChild(renderer.domElement);
 
-            // 2. ILUMINACIÓN ESTUDIO / INDUSTRIAL
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
             scene.add(ambientLight);
 
@@ -3356,67 +3371,55 @@ def render_avatar_3d(usuario_info, items_equipados=[]):
             dirLight.castShadow = true;
             scene.add(dirLight);
 
-            const fillLight = new THREE.DirectionalLight(0x00d2ff, 0.3); // Luz azul secundaria de contraste
+            const fillLight = new THREE.DirectionalLight(0x00d2ff, 0.3);
             fillLight.position.set(-5, 2, -2);
             scene.add(fillLight);
 
-            // CONTROLES DE ÓRBITA (Para que el usuario pueda rotar el avatar con el dedo o mouse)
             const controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2 + 0.1; // No dejar que la cámara baje del suelo
+            controls.maxPolarAngle = Math.PI / 2 + 0.1;
             controls.minDistance = 1.5;
             controls.maxDistance = 6;
             controls.target.set(0, 0.8, 0);
 
-            // 3. CARGADOR DE MODELOS GLTF/.GLB
             const loader = new THREE.GLTFLoader();
             
-            // Función auxiliar para cargar un modelo y añadirlo a la escena
-            function cargarModelo(url, esBase = false) {{
+            function cargarModelo(url) {{
+                if(!url || url.trim() === "" || url.includes("tu-proyecto-supabase")) return; 
+                
                 loader.load(
                     url,
                     function (gltf) {{
                         const model = gltf.scene;
-                        
-                        // Configurar sombras para cada parte del modelo
                         model.traverse(function (node) {{
                             if (node.isMesh) {{
                                 node.castShadow = true;
                                 node.receiveShadow = true;
-                                // Asegurar que los materiales se vean vivos y correctos
-                                if(node.material) {{
-                                    node.material.depthWrite = true;
-                                }}
+                                if(node.material) node.material.depthWrite = true;
                             }}
                         }});
-
-                        // Ajustar escala y posición central por defecto
                         model.position.set(0, -1, 0); 
                         scene.add(model);
-                        console.log("Modelo cargado exitosamente: " + url);
                     }},
-                    function (xhr) {{
-                        // Progreso de carga opcional
-                    }},
+                    undefined,
                     function (error) {{
-                        console.error("Error cargando el modelo (" + url + "):", error);
+                        console.error("Error cargando modelo:", error);
                     }}
                 );
             }}
 
-            // Cargar cuerpo base del avatar
-            cargarModelo("{url_base_cuerpo}", true);
+            // Solo intenta cargar el cuerpo base si la URL no es la por defecto de ejemplo
+            if (!"{url_base_cuerpo}".includes("tu-proyecto-supabase")) {{
+                cargarModelo("{url_base_cuerpo}");
+            }}
 
-            // Cargar dinámicamente todos los ítems que tiene equipados el usuario
+            // Cargar accesorios equipados válidos
             const itemsEquipados = {js_urls_items};
             itemsEquipados.forEach(url_item => {{
-                if(url_item && url_item.trim() !== "") {{
-                    cargarModelo(url_item, false);
-                }}
+                cargarModelo(url_item);
             }});
 
-            // 4. ANIMACIÓN AUTOMÁTICA (Rotación leve de presentación)
             function animate() {{
                 requestAnimationFrame(animate);
                 controls.update();
@@ -3424,19 +3427,16 @@ def render_avatar_3d(usuario_info, items_equipados=[]):
             }}
             animate();
 
-            // Manejo de redimensionamiento de pantalla táctil o monitor
             window.addEventListener('resize', onWindowResize, false);
             function onWindowResize() {{
                 camera.aspect = container.clientWidth / container.clientHeight;
                 camera.updateProjectionMatrix();
                 renderer.setSize(container.clientWidth, container.clientHeight);
             }}
-
         }})();
     </script>
     """
     st.components.v1.html(html_code, height=480)
-
 
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
