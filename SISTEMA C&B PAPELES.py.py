@@ -3215,9 +3215,7 @@ def mercado_obtener_coins(usuario):
         res = supabase.table("monedas_usuarios").select("coins").eq("usuario", usuario).execute()
         if res.data:
             return res.data[0]['coins']
-        
-# Si no existe, crea registro con 0 coins
-
+        # Si no existe, crea registro con 0 coins
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": 0}, on_conflict="usuario").execute()
         return 0
     except:
@@ -3229,9 +3227,7 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
         coins_actuales = mercado_obtener_coins(usuario)
         nuevos_coins = max(0, coins_actuales + cantidad)
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}, on_conflict="usuario").execute()
-
-# Registrar movimiento en historial
-
+        # Registrar movimiento en historial
         supabase.table("monedas_historial").insert({
             "usuario": usuario,
             "cantidad": cantidad,
@@ -3267,19 +3263,16 @@ def mercado_comprar_item(usuario, item_id, item_nombre, precio):
         if coins_actuales < precio:
             return False, "No tienes suficientes coins 💸"
         
-# Verificar si ya lo tiene
-
+        # Verificar si ya lo tiene
         tiene = supabase.table("inventario_avatar").select("id").eq("usuario", usuario).eq("item_id", item_id).execute()
         if tiene.data:
             return False, "Ya tienes este item ✋"
         
-# Descontar coins
-
+        # Descontar coins
         nuevos_coins = coins_actuales - precio
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}, on_conflict="usuario").execute()
         
-# Agregar al inventario del avatar
-
+        # Agregar al inventario del avatar
         supabase.table("inventario_avatar").insert({
             "usuario": usuario,
             "item_id": item_id,
@@ -3288,8 +3281,7 @@ def mercado_comprar_item(usuario, item_id, item_nombre, precio):
             "fecha_compra": hora_colombia().isoformat()
         }).execute()
         
-# Registrar en historial
-
+        # Registrar en historial
         supabase.table("monedas_historial").insert({
             "usuario": usuario,
             "cantidad": -precio,
@@ -3305,35 +3297,29 @@ def mercado_comprar_item(usuario, item_id, item_nombre, precio):
 def mercado_equipar_item(usuario, inv_id, categoria):
     """Equipa un item (desequipa el anterior de la misma categoría)."""
     try:
-
-# Obtener todos los items del usuario de esa categoría
-
+        # Obtener todos los items del usuario de esa categoría
         items_cat = supabase.table("inventario_avatar")\
             .select("id")\
             .eq("usuario", usuario)\
             .eq("equipado", True)\
             .execute()
         
-# Desequipar los de la misma categoría
-
+        # Desequipar los de la misma categoría
         for it in (items_cat.data or []):
-
-# Verificar si es de la misma categoría
-
+            # Verificar si es de la misma categoría
             det = supabase.table("items_mercado").select("categoria").eq("id", 
                 supabase.table("inventario_avatar").select("item_id").eq("id", it['id']).execute().data[0]['item_id']
             ).execute()
             if det.data and det.data[0].get('categoria') == categoria:
                 supabase.table("inventario_avatar").update({"equipado": False}).eq("id", it['id']).execute()
         
-# Equipar el nuevo
-
+        # Equipar el nuevo
         supabase.table("inventario_avatar").update({"equipado": True}).eq("id", inv_id).execute()
         return True
     except Exception as e:
         return False
 
-#  RENDERIZADOR DE AVATAR SVG  ES FEO DE COJONES PERO VISUAL
+# ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
 def render_avatar_3d(items_equipados, nombre_usuario=""):
     """Genera el HTML del avatar 3D con Three.js según los items equipados."""
@@ -3462,7 +3448,8 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
 </script>
 """
 
-#  MÓDULO MERCADO PRINCIPAL 
+# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
+# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 
 if menu == "🛒 Mercado":
     usuario_actual = st.session_state.get('usuario_actual', '')
@@ -3473,8 +3460,7 @@ if menu == "🛒 Mercado":
 
     coins_usuario = mercado_obtener_coins(usuario_actual)
 
-#  BARRA DE COINS 
-
+    # ── BARRA DE COINS ──────────────────────────────────────
     st.markdown(f"""
     <div style="background: linear-gradient(135deg,#1565C0,#0D47A1); border-radius:16px; 
                 padding:18px 28px; display:flex; align-items:center; gap:16px; margin-bottom:20px;">
@@ -3486,19 +3472,19 @@ if menu == "🛒 Mercado":
     </div>
     """, unsafe_allow_html=True)
 
-# TABS PRINCIPALES 
-
+    # ── TABS PRINCIPALES ────────────────────────────────────
     if rol_actual == 'admin':
         tab_tienda, tab_avatar, tab_admin, tab_historial = st.tabs(
             ["🛍️ Tienda", "👤 Mi Avatar", "⚙️ Panel Admin", "📜 Historial Monedas"]
         )
     else:
         tab_tienda, tab_avatar, tab_historial = st.tabs(
-            ["🛍️ Tienda", "📜 Mi Historial"]
+            ["🛍️ Tienda", "👤 Mi Avatar", "📜 Mi Historial"]
         )
 
-# TAB  — TIENDA
-    
+    # ════════════════════════════════════════════════════════
+    # TAB 1 — TIENDA
+    # ════════════════════════════════════════════════════════
     with tab_tienda:
         st.markdown("<div class='section-header'>🛍️ ARTÍCULOS DISPONIBLES</div>", unsafe_allow_html=True)
 
@@ -3508,9 +3494,7 @@ if menu == "🛒 Mercado":
         if not items_tienda:
             st.info("La tienda está vacía. El admin puede agregar items desde el Panel Admin.")
         else:
-
-# Agrupar por categoría
-
+            # Agrupar por categoría
             categorias = {}
             for item in items_tienda:
                 cat = item.get('categoria', 'General')
@@ -3529,8 +3513,7 @@ if menu == "🛒 Mercado":
                         color_borde = "#4CAF50" if ya_tiene else ("#1565C0" if puede_comprar else "#9E9E9E")
                         estado_txt  = "✅ Ya tienes" if ya_tiene else (f"🪙 {item['precio']}" if puede_comprar else f"🔒 {item['precio']} (sin fondos)")
 
-# Miniatura de color si aplica
-
+                        # Miniatura de color si aplica
                         color_swatch = ""
                         if item.get('color_hex'):
                             color_swatch = f"<div style='width:32px;height:32px;border-radius:50%;background:{item['color_hex']};border:2px solid #fff;display:inline-block;vertical-align:middle;margin-right:8px;'></div>"
@@ -3557,8 +3540,9 @@ if menu == "🛒 Mercado":
                                 else:
                                     st.error(msg)
 
-# TAB — MI AVATAR
-
+    # ════════════════════════════════════════════════════════
+    # TAB 2 — MI AVATAR
+    # ════════════════════════════════════════════════════════
     with tab_avatar:
         st.markdown("<div class='section-header'>👤 MI AVATAR</div>", unsafe_allow_html=True)
 
@@ -3568,9 +3552,7 @@ if menu == "🛒 Mercado":
 
         with col_av:
             st.markdown("**Vista Previa**")
-
-# Obtener items equipados con su info de la tienda
-
+            # Obtener items equipados con su info de la tienda
             items_equipados_full = []
             for inv_item in inventario:
                 if inv_item.get('equipado'):
@@ -3589,9 +3571,7 @@ if menu == "🛒 Mercado":
             if not inventario:
                 st.info("Aún no tienes items. Ve a la tienda y compra algo 🛍️")
             else:
-
-# Agrupar por categoría
-
+                # Agrupar por categoría
                 inv_cats = {}
                 for it in inventario:
                     det = supabase.table("items_mercado").select("*").eq("id", it['item_id']).execute().data
@@ -3616,14 +3596,14 @@ if menu == "🛒 Mercado":
                                     supabase.table("inventario_avatar").update({"equipado": False}).eq("id", inv_it['id']).execute()
                                     st.rerun()
 
-# TAB  — PANEL ADMIN
-   
+    # ════════════════════════════════════════════════════════
+    # TAB 3 — PANEL ADMIN
+    # ════════════════════════════════════════════════════════
     if rol_actual == 'admin':
         with tab_admin:
             st.markdown("<div class='section-header'>⚙️ ADMINISTRACIÓN DEL MERCADO</div>", unsafe_allow_html=True)
 
-#  Asignar / quitar coins 
-
+            # ── Asignar / quitar coins ───────────────────────
             with st.expander("🪙 Asignar o Quitar Coins a Trabajadores", expanded=True):
                 st.info("Puedes dar coins como recompensa por buen desempeño, o descontarlos si es necesario.")
                 
@@ -3659,8 +3639,7 @@ if menu == "🛒 Mercado":
                             time.sleep(1)
                             st.rerun()
 
-#  Ver monederos de todos 
-
+            # ── Ver monederos de todos ───────────────────────
             with st.expander("💰 Ver Coins de Todos los Trabajadores"):
                 try:
                     monederos = supabase.table("monedas_usuarios").select("*").order("coins", desc=True).execute().data or []
@@ -3678,8 +3657,7 @@ if menu == "🛒 Mercado":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-#  Gestion de items de la tienda
-
+            # ── Gestión de items de la tienda ────────────────
             with st.expander("🎁 Gestionar Items de la Tienda"):
                 st.markdown("**Agregar nuevo item:**")
                 ic1, ic2, ic3 = st.columns(3)
@@ -3727,8 +3705,9 @@ if menu == "🛒 Mercado":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-# TAB  HISTORIAL (ADMIN ve todo, 
-    
+        # ════════════════════════════════════════════════════
+        # TAB 4 — HISTORIAL (ADMIN ve todo, usuario ve lo suyo)
+        # ════════════════════════════════════════════════════
         with tab_historial:
             st.markdown("<div class='section-header'>📜 HISTORIAL DE MOVIMIENTOS DE COINS</div>", unsafe_allow_html=True)
             try:
@@ -3768,3 +3747,4 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
+
