@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from datetime import datetime, timedelta, time as time_cls 
+from datetime import datetime, timedelta  
 import time
 import io
 from fpdf import FPDF
@@ -2108,23 +2108,21 @@ elif menu == "⏱️ Seguimiento Cortadoras":
 
 elif menu == "📆 Cronograma Impresión":
     import streamlit.components.v1 as components
+    import json
 
     st.markdown("<div class='title-area'>📆 CRONOGRAMA DE IMPRESIÓN</div>", unsafe_allow_html=True)
-    st.caption("Arrastra los bloques para moverlos o estira sus extremos para ajustar duración. Los cambios se guardan automáticamente.")
+    st.caption("Arrastra los bloques para moverlos o estira sus extremos para ajustar duración.")
 
     lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "HR-17", "DIDDE 11", "MULTILYTH 1", "MULTILYTH 2"]
 
     try:
-        res_ops = supabase.table("ordenes_planeadas").select("*").execute()
-        todas_las_ops = res_ops.data or []
+        todas_las_ops = supabase.table("ordenes_planeadas").select("*").execute().data or []
     except:
         todas_las_ops = []
 
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
     ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
 
-    # Construir eventos JSON para FullCalendar
-    import json
     eventos_json = []
     for op in ops_agendadas:
         if op.get("proxima_area") == "FINALIZADO":
@@ -2134,138 +2132,107 @@ elif menu == "📆 Cronograma Impresión":
         else:
             color = "#d97706"
         eventos_json.append({
-            "id":           str(op["id"]),
-            "resourceId":   op["maquina_cronograma"],
-            "title":        f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
-            "start":        op["fecha_inicio_cronograma"],
-            "end":          op["fecha_fin_cronograma"],
+            "id":              str(op["id"]),
+            "resourceId":      op["maquina_cronograma"],
+            "title":           f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
+            "start":           op["fecha_inicio_cronograma"],
+            "end":             op["fecha_fin_cronograma"],
             "backgroundColor": color,
-            "borderColor":  color,
-            "textColor":    "#ffffff",
-            "extendedProps": {"op_num": op.get("op",""), "cliente": op.get("cliente",""), "estado": op.get("estado","")}
+            "borderColor":     color,
+            "textColor":       "#ffffff",
+            "extendedProps": {
+                "cliente": op.get("cliente", ""),
+                "estado":  op.get("estado", ""),
+                "op_num":  op.get("op", "")
+            }
         })
 
     recursos_json = [{"id": m, "title": m} for m in lista_maquinas]
 
-    html_cronograma = f"""
+    eventos_str  = json.dumps(eventos_json,  ensure_ascii=False)
+    recursos_str = json.dumps(recursos_json, ensure_ascii=False)
+
+    html_cronograma = """
     <!DOCTYPE html>
     <html>
     <head>
-      <link href='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css' rel='stylesheet' />
+      <link href='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css' rel='stylesheet'/>
       <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
       <style>
-        * {{ box-sizing: border-box; margin: 0; padding: 0; }}
-        body {{ background: #191919; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }}
-        #calendar {{ padding: 12px; }}
-
-        /* Barra superior */
-        .fc .fc-toolbar {{ background: #191919; padding: 10px 0; border-bottom: 1px solid #2e2e2e; }}
-        .fc .fc-toolbar-title {{ color: #e0e0e0; font-size: 16px; font-weight: 600; }}
-        .fc .fc-button {{ background: #2e2e2e !important; border: 1px solid #3e3e3e !important; color: #e0e0e0 !important; border-radius: 6px !important; font-size: 12px !important; padding: 4px 10px !important; }}
-        .fc .fc-button:hover {{ background: #3e3e3e !important; }}
-        .fc .fc-button-active {{ background: #404040 !important; border-color: #555 !important; }}
-
-        /* Cabecera días/horas */
-        .fc .fc-col-header-cell {{ background: #1f1f1f; border-color: #2e2e2e; }}
-        .fc .fc-col-header-cell-cushion {{ color: #aaaaaa; font-size: 11px; font-weight: 500; padding: 6px; text-decoration: none; }}
-        .fc .fc-timegrid-slot-label {{ color: #666; font-size: 11px; }}
-
-        /* Columna de recursos (máquinas) */
-        .fc .fc-datagrid-cell-cushion {{ color: #cccccc; font-size: 12px; font-weight: 600; }}
-        .fc .fc-datagrid-header {{ background: #1f1f1f; }}
-        .fc-datagrid-cell {{ background: #1f1f1f !important; border-color: #2e2e2e !important; }}
-
-        /* Celdas del grid */
-        .fc-timeline-slot {{ border-color: #2a2a2a !important; }}
-        .fc-timeline-lane {{ border-color: #2a2a2a !important; background: #191919; }}
-        .fc-timeline-lane:hover {{ background: #1e1e1e; }}
-
-        /* Eventos */
-        .fc-event {{ border-radius: 6px !important; border: none !important; padding: 3px 7px !important; font-size: 12px !important; cursor: grab !important; }}
-        .fc-event:hover {{ filter: brightness(1.15); }}
-        .fc-event-title {{ font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }}
-
-        /* Tooltip */
-        #tooltip {{
-          display: none; position: fixed; background: #2e2e2e; border: 1px solid #444;
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: #191919; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; }
+        #wrap { padding: 10px; }
+        .fc .fc-toolbar { background: #191919; padding: 8px 0; border-bottom: 1px solid #2e2e2e; }
+        .fc .fc-toolbar-title { color: #e0e0e0; font-size: 15px; font-weight: 600; }
+        .fc .fc-button { background: #2e2e2e !important; border: 1px solid #3e3e3e !important; color: #ccc !important; border-radius: 6px !important; font-size: 12px !important; padding: 4px 10px !important; }
+        .fc .fc-button:hover { background: #3a3a3a !important; }
+        .fc .fc-button-active { background: #444 !important; }
+        .fc .fc-col-header-cell { background: #1f1f1f; border-color: #2e2e2e; }
+        .fc .fc-col-header-cell-cushion { color: #aaa; font-size: 11px; text-decoration: none; padding: 5px; }
+        .fc .fc-timegrid-slot-label-cushion { color: #666; font-size: 11px; }
+        .fc-datagrid-cell { background: #1f1f1f !important; border-color: #2a2a2a !important; }
+        .fc .fc-datagrid-cell-cushion { color: #ccc; font-size: 12px; font-weight: 600; }
+        .fc-timeline-slot { border-color: #2a2a2a !important; }
+        .fc-timeline-lane { border-color: #2a2a2a !important; background: #191919; }
+        .fc-event { border-radius: 6px !important; border: none !important; padding: 3px 7px !important; font-size: 12px !important; cursor: grab !important; }
+        .fc-event:hover { filter: brightness(1.2); }
+        .fc .fc-timeline-now-indicator-line { border-color: #ef4444; }
+        #tooltip {
+          display: none; position: fixed; background: #2a2a2a; border: 1px solid #444;
           color: #eee; padding: 10px 14px; border-radius: 8px; font-size: 12px;
-          z-index: 9999; pointer-events: none; max-width: 220px; line-height: 1.6;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.5);
-        }}
-
-        /* Línea de hoy */
-        .fc .fc-timeline-now-indicator-line {{ border-color: #ef4444; }}
+          z-index: 9999; pointer-events: none; max-width: 230px; line-height: 1.7;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+        }
       </style>
     </head>
     <body>
-      <div id="calendar"></div>
+      <div id="wrap"><div id="calendar"></div></div>
       <div id="tooltip"></div>
-
       <script>
-        const eventos   = {json.dumps(eventos_json)};
-        const recursos  = {json.dumps(recursos_json)};
-        const tooltip   = document.getElementById('tooltip');
+        var eventos  = """ + eventos_str + """;
+        var recursos = """ + recursos_str + """;
+        var tooltip  = document.getElementById('tooltip');
 
-        document.addEventListener('DOMContentLoaded', function() {{
-          const calEl = document.getElementById('calendar');
-          const cal = new FullCalendar.Calendar(calEl, {{
+        document.addEventListener('mousemove', function(e) {
+          tooltip.style.left = (e.clientX + 15) + 'px';
+          tooltip.style.top  = (e.clientY + 10) + 'px';
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+          var calEl = document.getElementById('calendar');
+          var cal = new FullCalendar.Calendar(calEl, {
             schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
             initialView:  'resourceTimelineDay',
             locale:       'es',
-            height:       'auto',
+            height:       560,
             nowIndicator: true,
             editable:     true,
             eventResizableFromStart: true,
             slotDuration: '01:00:00',
-            slotLabelFormat: {{ hour: '2-digit', minute: '2-digit', hour12: false }},
+            slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
             scrollTime:   '06:00:00',
             resourceAreaWidth: '13%',
-            resourceAreaHeaderContent: '🏭 Máquina',
-            headerToolbar: {{
+            resourceAreaHeaderContent: 'Máquina',
+            headerToolbar: {
               left:   'prev,next today',
               center: 'title',
               right:  'resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth'
-            }},
-            buttonText: {{
-              today: 'Hoy', day: 'Día', week: 'Semana', month: 'Mes'
-            }},
+            },
+            buttonText: { today: 'Hoy', day: 'Día', week: 'Semana', month: 'Mes' },
             resources: recursos,
             events:    eventos,
 
-            // Tooltip al hacer hover
-            eventMouseEnter: function(info) {{
-              const p = info.event.extendedProps;
-              const start = info.event.start ? info.event.start.toLocaleString('es-CO', {{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}}) : '';
-              const end   = info.event.end   ? info.event.end.toLocaleString('es-CO',   {{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}}) : '';
-              tooltip.innerHTML = `
-                <b style="color:#fff">${{info.event.title}}</b><br>
-                👤 ${{p.cliente}}<br>
-                📌 Estado: ${{p.estado}}<br>
-                🕐 Inicio: ${{start}}<br>
-                🏁 Fin: ${{end}}
-              `;
+            eventMouseEnter: function(info) {
+              var p = info.event.extendedProps;
+              var s = info.event.start ? info.event.start.toLocaleString('es-CO', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'}) : '';
+              var e = info.event.end   ? info.event.end.toLocaleString('es-CO',   {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'}) : '';
+              tooltip.innerHTML = '<b style="color:#fff">' + info.event.title + '</b><br>👤 ' + p.cliente + '<br>📌 ' + p.estado + '<br>🕐 ' + s + '<br>🏁 ' + e;
               tooltip.style.display = 'block';
-            }},
-            eventMouseLeave: function() {{ tooltip.style.display = 'none'; }},
-            document.addEventListener('mousemove', function(e) {{
-              tooltip.style.left = (e.clientX + 15) + 'px';
-              tooltip.style.top  = (e.clientY + 10) + 'px';
-            }}),
-
-            // Guardar cambio al arrastrar o redimensionar
-            eventChange: function(info) {{
-              const ev = info.event;
-              const payload = {{
-                id:    ev.id,
-                start: ev.start ? ev.start.toISOString() : null,
-                end:   ev.end   ? ev.end.toISOString()   : null,
-                resourceId: ev.getResources()[0]?.id || null
-              }};
-              window.parent.postMessage({{ type: 'eventChange', payload }}, '*');
-            }}
-          }});
+            },
+            eventMouseLeave: function() { tooltip.style.display = 'none'; }
+          });
           cal.render();
-        }});
+        });
       </script>
     </body>
     </html>
@@ -2274,7 +2241,7 @@ elif menu == "📆 Cronograma Impresión":
     col_izq, col_der = st.columns([3, 1])
 
     with col_izq:
-        evento_cambio = components.html(html_cronograma, height=620, scrolling=False)
+        components.html(html_cronograma, height=600, scrolling=False)
 
     with col_der:
         st.markdown("#### 📥 OPs sin Asignar")
@@ -2298,32 +2265,18 @@ elif menu == "📆 Cronograma Impresión":
 
             if st.button("➕ Agregar al Cronograma"):
                 try:
-                    supabase.table("ordenes_planeadas").update({{
+                    supabase.table("ordenes_planeadas").update({
                         "fecha_inicio_cronograma": dt_inicio.isoformat(),
                         "fecha_fin_cronograma":    dt_fin.isoformat(),
                         "maquina_cronograma":      maquina_destino
-                    }}).eq("id", op_objeto["id"]).execute()
-                    st.success(f"✅ OP {op_objeto.get('op')} agregada al cronograma.")
+                    }).eq("id", op_objeto["id"]).execute()
+                    st.success(f"✅ OP {op_objeto.get('op')} agregada.")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error: {e}")
         else:
             st.success("🎉 ¡Todas las OPs están programadas!")
-
-    # Capturar cambios de drag & drop desde el HTML y guardarlos en Supabase
-    if "cronograma_cambio" in st.session_state:
-        cambio = st.session_state.pop("cronograma_cambio")
-        try:
-            supabase.table("ordenes_planeadas").update({
-                "fecha_inicio_cronograma": cambio["start"],
-                "fecha_fin_cronograma":    cambio["end"],
-                "maquina_cronograma":      cambio["resourceId"]
-            }).eq("id", cambio["id"]).execute()
-            st.toast("✅ Cronograma actualizado", icon="📅")
-            st.rerun()
-        except Exception as e:
-            st.error(f"Error guardando cambio: {e}")
 
 # MODULO DE INVENTARIO CORES Y CAJAS
 
