@@ -80,9 +80,12 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
 #  USUARIOS ORGANIZADOS POR ROL 
+
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     try:
+
 # CONSULTA EN TABLA DE USUARIOS FILTRADAS POR EL NOMBRE DE USUSRIO
+
         respuesta = supabase.table("usuarios")\
             .select("*")\
             .eq("usuario", usuario_ingresado)\
@@ -100,7 +103,6 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
         return None
 
 #  FUNCIONES AUXILIARES 
-
 
 def cell_fit(pdf, w, h, text, border=1):
 
@@ -364,6 +366,7 @@ def generar_op_rollos(row):
     pdf.multi_cell(0, 7, f"Observaciones: {row.get('observaciones_rollos','')}", 1)
 
 # FIRMAS O SELLOS
+
     pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
     pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
@@ -552,7 +555,9 @@ def generar_op_rebobinado(row):
     pdf.add_page()
     
     tipo_op = row.get('tipo_origen', '').upper()
-    # --- ENCABEZADO ---
+
+# ENCABEZADO 
+
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # VERDE
     elif "CAMBIOS" in tipo_op:
@@ -601,6 +606,7 @@ def generar_op_rebobinado(row):
     pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
 
 # CANTIDADES
+
     pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
     pdf.cell(95,7,f"Tipo de Creacion: {row.get('tipo_creacion','NUEVA')}",1,1)
 
@@ -835,16 +841,15 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
         }).execute()
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
+
 # MODULO MONITOR 
 
 if menu == "🖥️ Monitor":
     st.markdown("<div class='title-area'>🖥️ MONITOR DE PRODUCCIÓN EN TIEMPO REAL</div>", unsafe_allow_html=True)
     
-#  OPTIMIZACION: TRAER ESTADOS DE MAQUINAS DE UN SOLO GOLPE 
+#  TRAER ESTADOS DE MAQUINAS DE UN SOLO GOLPE 
     try:
         estados_db = supabase.table("estado_maquinas").select("maquina, estado").execute().data
-
-# Diccionario rápido: {'MAQ1': True, 'MAQ2': False}
 
         diccionario_estados = {item['maquina']: item['estado'] for item in estados_db}
     except Exception as e:
@@ -856,7 +861,6 @@ if menu == "🖥️ Monitor":
     act_data = supabase.table("trabajos_activos").select("*").execute().data
 
 # ALERTAS DE OP ESTANCADAS (Filtrando por ON/OFF)
-
     alertas = []
     for a in act_data:
         try:
@@ -868,7 +872,7 @@ if menu == "🖥️ Monitor":
             
             inicio = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
 
-# PASAMOS EL ESTADO ACTUAL ALA FUNCION 
+# PASA EL ESTADO ACTUAL ALA FUNCION 
 
             tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'])
             
@@ -923,7 +927,7 @@ if menu == "🖥️ Monitor":
                     )
                 elif m in act:
 
-# TARJETA AZUL/VIBRANTE: En produccion
+# TARJETA  produccion
 
                     st.markdown(
                         f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
@@ -931,7 +935,7 @@ if menu == "🖥️ Monitor":
                     )
                 else:
 
-# TARJETA VERDE: Libre
+# TARJETA Libre
 
                     st.markdown(
                         f"<div class='card-vacia'>{m}<br>LIBRE</div>",
@@ -950,7 +954,7 @@ if menu == "🖥️ Monitor":
         )
         st_autorefresh(interval=intervalo * 1000, key="monitor_refresh")
     except:
-        # Si no está instalado, usar el método simple pero con menos tiempo
+      
         col_ref = st.columns([3,1])[1]
         if col_ref.button("🔄 Actualizar ahora"):
             st.rerun()
@@ -1002,7 +1006,6 @@ elif menu == "🔍 Seguimiento":
                     b not in area_destino.lower() and 
                     b not in vendedor.lower()):
                     continue
-
 
 # LOGICA DE ESTATUS MEJORADA
 
@@ -1094,6 +1097,8 @@ elif menu == "🔍 Seguimiento":
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
 
+# MODULO DE DISEÑO
+
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
@@ -1149,7 +1154,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.table(datos_op.get('detalles_partes_json'))
             else:
                 st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
-
 
 #  DEFINICION DE VENTANAS
 
@@ -1230,8 +1234,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
             if datos_op_3:
                 st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **DATOS DE PLANCHAS A REVELAR:** {datos_op_3.get('observaciones_diseno2')}")
-                
-# Aqui agregar campos especificos de planchas  ########################################################################33
+
                 num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:")
                 
                 radiografia_completa_op(datos_op_3)
@@ -1411,7 +1414,7 @@ elif menu == "📅 Planificación":
 
                 for i in range(1, partes + 1):
 
-# INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION ( NO TODOS )
+# INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION 
 
                     p_data = rec_partes[i-1] if i <= len(rec_partes) else {}
                     
@@ -1523,7 +1526,6 @@ elif menu == "📅 Planificación":
                     st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
                     st.stop()
 
-                
 # DEFINIR AREA INICIAL SEGUN TIPO
 
                 if t == "FORMAS IMPRESAS":
@@ -1874,6 +1876,7 @@ elif menu == "📦 Almacen/Despachos":
                 col1, col2 = st.columns(2)
                 
                 with col1:
+
 #  SI ES INGRESO SEJA CREAR SI ES SALIDA SOLO SELECCIONA DE LO YA EXISTENTE
 
                     if "ENTRADA" in tipo_accion:
@@ -2094,10 +2097,10 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                 if respuesta.data:
                     df_h = pd.DataFrame(respuesta.data)
                     
-                    # CORREGIDO: 'peso_desperdicio' con D
                     columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
                     
-                    # Renombrar las columnas para que se vea estético en pantalla
+# Renombrar las columnas para que se vea estético en pantalla
+
                     df_mostrar = df_h[columnas_visibles].rename(columns={
                         "fecha": "Fecha",
                         "hora_registro": "Hora",
@@ -2116,7 +2119,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
             except Exception as e:
                 st.error(f"Error al cargar el historial: {e}")
 
-# 📆  CRONOGRAMA DE IMPRESIÓN ESTILO NOTION
+#  CRONOGRAMA DE IMPRESIÓN ESTILO NOTION
 
 elif menu == "📆 Cronograma Impresión":
     import streamlit.components.v1 as components
@@ -2127,7 +2130,8 @@ elif menu == "📆 Cronograma Impresión":
 
     lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "HR-17", "DIDDE 11", "MULTILYTH 1", "MULTILYTH 2"]
 
-    # Capturar cambios enviados desde el HTML via query_params
+# Capturar cambios enviados desde el HTML via query_params
+
     qp = st.query_params
     if "crono_id" in qp:
         try:
@@ -2145,13 +2149,17 @@ elif menu == "📆 Cronograma Impresión":
         todas_las_ops = supabase.table("ordenes_planeadas").select("*").execute().data or []
     except:
         todas_las_ops = []
-    # ALERTAS — OPs con fecha fin ya vencida o llevan más de 3 días sin finalizar
+
+# ALERTAS — OPs con fecha fin ya vencida o llevan más de 3 días sin finalizar
+
     ahora_col = hora_colombia()
     alertas = []
     for op in todas_las_ops:
         if op.get("estado") == "Terminado" or op.get("proxima_area") == "FINALIZADO":
             continue
-        # Alerta 1: fecha fin del cronograma ya pasó y sigue sin finalizar
+        
+# Alerta 1: fecha fin del cronograma ya pasó y sigue sin finalizar
+
         fecha_fin_crono = op.get("fecha_fin_cronograma")
         if fecha_fin_crono:
             try:
@@ -2162,7 +2170,9 @@ elif menu == "📆 Cronograma Impresión":
                     alertas.append(f"⏰ **OP {op.get('op')}** ({op.get('cliente','')}) — lleva **{horas_retraso}h de retraso** vs cronograma en {op.get('maquina_cronograma','?')}")
             except:
                 pass
-        # Alerta 2: OP planeada hace más de 5 días y nunca se ha asignado al cronograma
+            
+# Alerta 2: OP planeada hace más de 5 días y nunca se ha asignado al cronograma
+
         fecha_creacion = op.get("fecha_creacion") or op.get("created_at")
         if fecha_creacion and not op.get("maquina_cronograma"):
             try:
@@ -2183,7 +2193,8 @@ elif menu == "📆 Cronograma Impresión":
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
     ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
 
-    # Eventos agendados para el calendario
+# Eventos agendados para el calendario
+
     eventos_json = []
     for op in ops_agendadas:
         color = "#4a4a4a" if op.get("proxima_area") == "FINALIZADO" else ("#2563eb" if op.get("estado") == "En Proceso" else "#d97706")
@@ -2199,7 +2210,8 @@ elif menu == "📆 Cronograma Impresión":
             "extendedProps":   {"cliente": op.get("cliente",""), "estado": op.get("estado",""), "db_id": str(op["id"])}
         })
 
-    # OPs pendientes como tarjetas arrastrables (eventos externos)
+# OPs pendientes como tarjetas arrastrables (eventos externos)
+
     pendientes_json = []
     for op in ops_pendientes:
         pendientes_json.append({
@@ -2824,7 +2836,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 st.markdown("---")
 
-                # CALCULOS AUTOMATICOS
+# CALCULOS AUTOMATICOS
+
                 rollos = datos_c.get('rollos_finales', 0)
                 imagenes = datos_c.get('imagenes_corte', 0)
 
@@ -2845,7 +2858,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
                 f3 = st.columns(1)[0]
                 datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
-## COLECTORAS
+
+# COLECTORAS
 
             elif area_act == "COLECTORAS":
                 c1, c2, c3 = st.columns(3) 
@@ -2860,6 +2874,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     index=0
                 )
 # CONSUMO DE CAJAS EN COLECTORAS
+
                 st.markdown("---")
                 col_inv_col = st.columns(2)
                 with col_inv_col[0]:
@@ -2884,6 +2899,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['unidades_caja'] = c2.number_input("cantidad por caja", 0)
                 
 #  CONSUMO DE CAJAS EN ENCUADERNACION
+
                 st.markdown("---")
                 col_inv_enc = st.columns(2)
                 with col_inv_enc[0]:
@@ -3037,13 +3053,14 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.rerun()
 
 #  ENTREGAS PARCIALES 
+
         if parcial:
             # 1. Validaciones de la cantidad
             if cantidad_parcial <= 0:
                 st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
                 st.stop()
                 
-# Captura de tiempos (Tu logica nativa de conversion)
+# Captura de tiempos
 
             inicio_raw = r['hora_inicio']
             if isinstance(inicio_raw, str):
@@ -3059,10 +3076,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 
             fin = hora_colombia()
             duracion = calcular_duracion_laboral(inicio, fin, r['maquina'])
-            
-# Preparar el nuevo historial
 
-            # Preparar el nuevo historial — leer desde ordenes_planeadas, no desde trabajos_activos
+# Preparar el nuevo historial — leer desde ordenes_planeadas, no desde trabajos_activos
 
             d_op_hist = supabase.table("ordenes_planeadas").select("historial_procesos").eq("op", r['op']).single().execute().data
             hist = d_op_hist.get('historial_procesos') or [] if d_op_hist else []
@@ -3076,7 +3091,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             operario_actual = r.get('operario', 'Operario Planta')
             auxiliar_actual = r.get('auxiliar', '')
                 
-# Agregamos al historial de forma segura
+# Agrega al historial de forma segura
 
             hist.append({
                 "area": area_act,
@@ -3092,7 +3107,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             
 #  CAMBIO CLAVE SIMULTANEO 
 
-            # Calcular siguiente area leyendo la OP directo (no depende de n_area del finalizar)
             d_op_p = supabase.table("ordenes_planeadas").select("tipo_orden").eq("op", r['op']).single().execute().data
             tipo_p = d_op_p['tipo_orden'] if d_op_p else ""
 
@@ -3115,14 +3129,17 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     n_area_parcial = "FINALIZADO"
 
             try:
-                # 1. OP avanza a siguiente area Y queda visible en area origen
+
+# OP avanza a siguiente area Y queda visible en area origen
+
                 supabase.table("ordenes_planeadas").update({
                     "proxima_area": n_area_parcial,
                     "estado_parcial": f"ACTIVO EN {area_act}",
                     "historial_procesos": hist
                 }).eq("op", r['op']).execute()
 
-                # 2. Maquina queda LIBRE
+# Maquina queda LIBRE
+
                 supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
 
                 st.success(f"✅ Parcial enviado a {n_area_parcial}. La máquina {r['maquina']} quedó libre y la OP sigue activa en {area_act}.")
@@ -3135,7 +3152,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 if st.session_state.get('rol') == 'admin':
 
-#  BLOQUE INTERRUPTORES DE MAQUINAS
+# BLOQUE INTERRUPTORES DE MAQUINAS
 
     with st.expander("⚙️ INTERRUPTORES DE MÁQUINAS (ON/OFF)"):
         st.warning("Si apagas una máquina, el sistema no contará tiempos laborados para ella.")
@@ -3160,7 +3177,7 @@ if st.session_state.get('rol') == 'admin':
 
     st.divider()
 
-#  BLOQUE 2: ADMINISTRACION DE USUARIOS 
+#  BLOQUE ADMINISTRACION DE USUARIOS 
 
     with st.expander("➕ Panel de Administración de Usuarios"):
         st.info("Desde aquí se puede dar de alta nuevos operarios en la base de datos de Supabase.")
@@ -3190,12 +3207,7 @@ if st.session_state.get('rol') == 'admin':
             else:
                 st.warning("Por favor, completa todos los campos.")
 
-
-# ══════════════════════════════════════════════════════════════
-#   MÓDULO: 🛒 MERCADO DE AVATARES C&B PAPELES
-# ══════════════════════════════════════════════════════════════
-
-# ── FUNCIONES DE MERCADO ──────────────────────────────────────
+#  FUNCIONES DE MERCADO DE AVATARES C&B  
 
 def mercado_obtener_coins(usuario):
     """Retorna los coins actuales de un usuario."""
@@ -3203,7 +3215,9 @@ def mercado_obtener_coins(usuario):
         res = supabase.table("monedas_usuarios").select("coins").eq("usuario", usuario).execute()
         if res.data:
             return res.data[0]['coins']
-        # Si no existe, crea registro con 0 coins
+        
+# Si no existe, crea registro con 0 coins
+
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": 0}, on_conflict="usuario").execute()
         return 0
     except:
@@ -3215,7 +3229,9 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
         coins_actuales = mercado_obtener_coins(usuario)
         nuevos_coins = max(0, coins_actuales + cantidad)
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}, on_conflict="usuario").execute()
-        # Registrar movimiento en historial
+
+# Registrar movimiento en historial
+
         supabase.table("monedas_historial").insert({
             "usuario": usuario,
             "cantidad": cantidad,
@@ -3251,16 +3267,19 @@ def mercado_comprar_item(usuario, item_id, item_nombre, precio):
         if coins_actuales < precio:
             return False, "No tienes suficientes coins 💸"
         
-        # Verificar si ya lo tiene
+# Verificar si ya lo tiene
+
         tiene = supabase.table("inventario_avatar").select("id").eq("usuario", usuario).eq("item_id", item_id).execute()
         if tiene.data:
             return False, "Ya tienes este item ✋"
         
-        # Descontar coins
+# Descontar coins
+
         nuevos_coins = coins_actuales - precio
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}, on_conflict="usuario").execute()
         
-        # Agregar al inventario del avatar
+# Agregar al inventario del avatar
+
         supabase.table("inventario_avatar").insert({
             "usuario": usuario,
             "item_id": item_id,
@@ -3269,7 +3288,8 @@ def mercado_comprar_item(usuario, item_id, item_nombre, precio):
             "fecha_compra": hora_colombia().isoformat()
         }).execute()
         
-        # Registrar en historial
+# Registrar en historial
+
         supabase.table("monedas_historial").insert({
             "usuario": usuario,
             "cantidad": -precio,
@@ -3285,29 +3305,35 @@ def mercado_comprar_item(usuario, item_id, item_nombre, precio):
 def mercado_equipar_item(usuario, inv_id, categoria):
     """Equipa un item (desequipa el anterior de la misma categoría)."""
     try:
-        # Obtener todos los items del usuario de esa categoría
+
+# Obtener todos los items del usuario de esa categoría
+
         items_cat = supabase.table("inventario_avatar")\
             .select("id")\
             .eq("usuario", usuario)\
             .eq("equipado", True)\
             .execute()
         
-        # Desequipar los de la misma categoría
+# Desequipar los de la misma categoría
+
         for it in (items_cat.data or []):
-            # Verificar si es de la misma categoría
+
+# Verificar si es de la misma categoría
+
             det = supabase.table("items_mercado").select("categoria").eq("id", 
                 supabase.table("inventario_avatar").select("item_id").eq("id", it['id']).execute().data[0]['item_id']
             ).execute()
             if det.data and det.data[0].get('categoria') == categoria:
                 supabase.table("inventario_avatar").update({"equipado": False}).eq("id", it['id']).execute()
         
-        # Equipar el nuevo
+# Equipar el nuevo
+
         supabase.table("inventario_avatar").update({"equipado": True}).eq("id", inv_id).execute()
         return True
     except Exception as e:
         return False
 
-# ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
+#  RENDERIZADOR DE AVATAR SVG  ES FEO DE COJONES PERO VISUAL
 
 def render_avatar_3d(items_equipados, nombre_usuario=""):
     """Genera el HTML del avatar 3D con Three.js según los items equipados."""
@@ -3436,8 +3462,7 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
 </script>
 """
 
-# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
-# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
+#  MÓDULO MERCADO PRINCIPAL 
 
 if menu == "🛒 Mercado":
     usuario_actual = st.session_state.get('usuario_actual', '')
@@ -3448,7 +3473,8 @@ if menu == "🛒 Mercado":
 
     coins_usuario = mercado_obtener_coins(usuario_actual)
 
-    # ── BARRA DE COINS ──────────────────────────────────────
+#  BARRA DE COINS 
+
     st.markdown(f"""
     <div style="background: linear-gradient(135deg,#1565C0,#0D47A1); border-radius:16px; 
                 padding:18px 28px; display:flex; align-items:center; gap:16px; margin-bottom:20px;">
@@ -3460,19 +3486,19 @@ if menu == "🛒 Mercado":
     </div>
     """, unsafe_allow_html=True)
 
-    # ── TABS PRINCIPALES ────────────────────────────────────
+# TABS PRINCIPALES 
+
     if rol_actual == 'admin':
         tab_tienda, tab_avatar, tab_admin, tab_historial = st.tabs(
             ["🛍️ Tienda", "👤 Mi Avatar", "⚙️ Panel Admin", "📜 Historial Monedas"]
         )
     else:
         tab_tienda, tab_avatar, tab_historial = st.tabs(
-            ["🛍️ Tienda", "👤 Mi Avatar", "📜 Mi Historial"]
+            ["🛍️ Tienda", "📜 Mi Historial"]
         )
 
-    # ════════════════════════════════════════════════════════
-    # TAB 1 — TIENDA
-    # ════════════════════════════════════════════════════════
+# TAB  — TIENDA
+    
     with tab_tienda:
         st.markdown("<div class='section-header'>🛍️ ARTÍCULOS DISPONIBLES</div>", unsafe_allow_html=True)
 
@@ -3482,7 +3508,9 @@ if menu == "🛒 Mercado":
         if not items_tienda:
             st.info("La tienda está vacía. El admin puede agregar items desde el Panel Admin.")
         else:
-            # Agrupar por categoría
+
+# Agrupar por categoría
+
             categorias = {}
             for item in items_tienda:
                 cat = item.get('categoria', 'General')
@@ -3501,7 +3529,8 @@ if menu == "🛒 Mercado":
                         color_borde = "#4CAF50" if ya_tiene else ("#1565C0" if puede_comprar else "#9E9E9E")
                         estado_txt  = "✅ Ya tienes" if ya_tiene else (f"🪙 {item['precio']}" if puede_comprar else f"🔒 {item['precio']} (sin fondos)")
 
-                        # Miniatura de color si aplica
+# Miniatura de color si aplica
+
                         color_swatch = ""
                         if item.get('color_hex'):
                             color_swatch = f"<div style='width:32px;height:32px;border-radius:50%;background:{item['color_hex']};border:2px solid #fff;display:inline-block;vertical-align:middle;margin-right:8px;'></div>"
@@ -3528,9 +3557,8 @@ if menu == "🛒 Mercado":
                                 else:
                                     st.error(msg)
 
-    # ════════════════════════════════════════════════════════
-    # TAB 2 — MI AVATAR
-    # ════════════════════════════════════════════════════════
+# TAB — MI AVATAR
+
     with tab_avatar:
         st.markdown("<div class='section-header'>👤 MI AVATAR</div>", unsafe_allow_html=True)
 
@@ -3540,7 +3568,9 @@ if menu == "🛒 Mercado":
 
         with col_av:
             st.markdown("**Vista Previa**")
-            # Obtener items equipados con su info de la tienda
+
+# Obtener items equipados con su info de la tienda
+
             items_equipados_full = []
             for inv_item in inventario:
                 if inv_item.get('equipado'):
@@ -3559,7 +3589,9 @@ if menu == "🛒 Mercado":
             if not inventario:
                 st.info("Aún no tienes items. Ve a la tienda y compra algo 🛍️")
             else:
-                # Agrupar por categoría
+
+# Agrupar por categoría
+
                 inv_cats = {}
                 for it in inventario:
                     det = supabase.table("items_mercado").select("*").eq("id", it['item_id']).execute().data
@@ -3584,14 +3616,14 @@ if menu == "🛒 Mercado":
                                     supabase.table("inventario_avatar").update({"equipado": False}).eq("id", inv_it['id']).execute()
                                     st.rerun()
 
-    # ════════════════════════════════════════════════════════
-    # TAB 3 — PANEL ADMIN
-    # ════════════════════════════════════════════════════════
+# TAB  — PANEL ADMIN
+   
     if rol_actual == 'admin':
         with tab_admin:
             st.markdown("<div class='section-header'>⚙️ ADMINISTRACIÓN DEL MERCADO</div>", unsafe_allow_html=True)
 
-            # ── Asignar / quitar coins ───────────────────────
+#  Asignar / quitar coins 
+
             with st.expander("🪙 Asignar o Quitar Coins a Trabajadores", expanded=True):
                 st.info("Puedes dar coins como recompensa por buen desempeño, o descontarlos si es necesario.")
                 
@@ -3627,7 +3659,8 @@ if menu == "🛒 Mercado":
                             time.sleep(1)
                             st.rerun()
 
-            # ── Ver monederos de todos ───────────────────────
+#  Ver monederos de todos 
+
             with st.expander("💰 Ver Coins de Todos los Trabajadores"):
                 try:
                     monederos = supabase.table("monedas_usuarios").select("*").order("coins", desc=True).execute().data or []
@@ -3645,7 +3678,8 @@ if menu == "🛒 Mercado":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-            # ── Gestión de items de la tienda ────────────────
+#  Gestion de items de la tienda
+
             with st.expander("🎁 Gestionar Items de la Tienda"):
                 st.markdown("**Agregar nuevo item:**")
                 ic1, ic2, ic3 = st.columns(3)
@@ -3693,9 +3727,8 @@ if menu == "🛒 Mercado":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-        # ════════════════════════════════════════════════════
-        # TAB 4 — HISTORIAL (ADMIN ve todo, usuario ve lo suyo)
-        # ════════════════════════════════════════════════════
+# TAB  HISTORIAL (ADMIN ve todo, 
+    
         with tab_historial:
             st.markdown("<div class='section-header'>📜 HISTORIAL DE MOVIMIENTOS DE COINS</div>", unsafe_allow_html=True)
             try:
@@ -3735,4 +3768,3 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
-
