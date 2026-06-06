@@ -2167,7 +2167,7 @@ elif menu == "📆 Cronograma Impresión":
                 st.warning(a)
     else:
         st.success("✅ Todo en orden — sin retrasos ni OPs sin asignar")
-        
+
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
     ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
 
@@ -2273,6 +2273,33 @@ elif menu == "📆 Cronograma Impresión":
         z-index:9999; box-shadow:0 4px 15px rgba(0,0,0,0.4);
       ">💾 Guardar cambios</button>
       <div id="tooltip"></div>
+
+      <!-- Popup confirmación quitar OP -->
+      <div id="popup-quitar" style="
+        display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
+        z-index:10000; align-items:center; justify-content:center;
+      ">
+        <div style="background:#2a2a2a; border:1px solid #444; border-radius:12px;
+                    padding:24px 28px; max-width:320px; text-align:center; color:#eee;">
+          <div style="font-size:22px; margin-bottom:8px;">🗑️</div>
+          <div style="font-weight:700; font-size:14px; margin-bottom:6px;">¿Quitar del cronograma?</div>
+          <div id="popup-titulo" style="color:#d97706; font-size:13px; margin-bottom:16px;"></div>
+          <div style="color:#aaa; font-size:12px; margin-bottom:20px;">Volverá a la lista de pendientes sin asignar.</div>
+          <div style="display:flex; gap:10px; justify-content:center;">
+            <button id="btn-cancelar-quitar" style="
+              background:#3a3a3a; color:#ccc; border:1px solid #555;
+              border-radius:8px; padding:8px 18px; cursor:pointer; font-size:13px;">
+              Cancelar
+            </button>
+            <button id="btn-confirmar-quitar" style="
+              background:#ef4444; color:#fff; border:none;
+              border-radius:8px; padding:8px 18px; cursor:pointer; font-size:13px; font-weight:700;">
+              Sí, quitar
+            </button>
+          </div>
+        </div>
+      </div>
+      
       <script>
         var eventos    = """ + eventos_str    + """;
         var recursos   = """ + recursos_str   + """;
@@ -2501,13 +2528,20 @@ elif menu == "📆 Cronograma Impresión":
 
             // Tooltip hover
             // Clic en evento — mostrar popup con opción de quitar
+            // Clic en evento — mostrar popup propio (confirm() no funciona en iframe)
             eventClick: function(info) {
               var ev    = info.event;
               var db_id = ev.extendedProps.db_id || ev.id;
-              var confirmado = confirm('¿Quitar "' + ev.title + '" del cronograma?\nVolverá a la lista de pendientes.');
-              if (confirmado) {
+              var popup = document.getElementById('popup-quitar');
+              document.getElementById('popup-titulo').textContent = ev.title;
+              popup.style.display = 'flex';
+              document.getElementById('btn-confirmar-quitar').onclick = function() {
+                popup.style.display = 'none';
                 quitarDelCronograma(db_id, ev);
-              }
+              };
+              document.getElementById('btn-cancelar-quitar').onclick = function() {
+                popup.style.display = 'none';
+              };
             },
 
             // Tooltip hover
