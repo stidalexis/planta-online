@@ -3319,7 +3319,7 @@ def mercado_equipar_item(usuario, inv_id, categoria):
     except Exception as e:
         return False
 
-# ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
+# RENDERIZADOR DE AVATAR SVG FEO RE FEO PERO VISIBLE
 
 def render_avatar_3d(items_equipados, nombre_usuario=""):
     """Genera el HTML del avatar 3D con Three.js según los items equipados."""
@@ -3447,9 +3447,7 @@ def render_avatar_3d(items_equipados, nombre_usuario=""):
 }})();
 </script>
 """
-
-# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
-# ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
+#  MÓDULO MERCADO PRINCIPAL 
 
 if menu == "🛒 Mercado":
     usuario_actual = st.session_state.get('usuario_actual', '')
@@ -3460,7 +3458,8 @@ if menu == "🛒 Mercado":
 
     coins_usuario = mercado_obtener_coins(usuario_actual)
 
-    # ── BARRA DE COINS ──────────────────────────────────────
+#  BARRA DE COINS 
+    
     st.markdown(f"""
     <div style="background: linear-gradient(135deg,#1565C0,#0D47A1); border-radius:16px; 
                 padding:18px 28px; display:flex; align-items:center; gap:16px; margin-bottom:20px;">
@@ -3472,19 +3471,19 @@ if menu == "🛒 Mercado":
     </div>
     """, unsafe_allow_html=True)
 
-    # ── TABS PRINCIPALES ────────────────────────────────────
+# TABS PRINCIPALES 
+    
     if rol_actual == 'admin':
         tab_tienda, tab_avatar, tab_admin, tab_historial = st.tabs(
             ["🛍️ Tienda", "👤 Mi Avatar", "⚙️ Panel Admin", "📜 Historial Monedas"]
         )
     else:
         tab_tienda, tab_avatar, tab_historial = st.tabs(
-            ["🛍️ Tienda", "📜 Mi Historial"]
+            ["🛍️ Tienda", "👤 Mi Avatar", "📜 Mi Historial"]
         )
 
-    # ════════════════════════════════════════════════════════
-    # TAB 1 — TIENDA
-    # ════════════════════════════════════════════════════════
+# TAB 1 — TIENDA
+    
     with tab_tienda:
         st.markdown("<div class='section-header'>🛍️ ARTÍCULOS DISPONIBLES</div>", unsafe_allow_html=True)
 
@@ -3540,9 +3539,8 @@ if menu == "🛒 Mercado":
                                 else:
                                     st.error(msg)
 
-    # ════════════════════════════════════════════════════════
-    # TAB 2 — MI AVATAR
-    # ════════════════════════════════════════════════════════
+# TAB 2 — MI AVATAR
+    
     with tab_avatar:
         st.markdown("<div class='section-header'>👤 MI AVATAR</div>", unsafe_allow_html=True)
 
@@ -3596,9 +3594,9 @@ if menu == "🛒 Mercado":
                                     supabase.table("inventario_avatar").update({"equipado": False}).eq("id", inv_it['id']).execute()
                                     st.rerun()
 
-    # ════════════════════════════════════════════════════════
-    # TAB 3 — PANEL ADMIN
-    # ════════════════════════════════════════════════════════
+
+# TAB 3 — PANEL ADMIN
+   
     if rol_actual == 'admin':
         with tab_admin:
             st.markdown("<div class='section-header'>⚙️ ADMINISTRACIÓN DEL MERCADO</div>", unsafe_allow_html=True)
@@ -3639,7 +3637,8 @@ if menu == "🛒 Mercado":
                             time.sleep(1)
                             st.rerun()
 
-            # ── Ver monederos de todos ───────────────────────
+#  Ver monederos de todos
+            
             with st.expander("💰 Ver Coins de Todos los Trabajadores"):
                 try:
                     monederos = supabase.table("monedas_usuarios").select("*").order("coins", desc=True).execute().data or []
@@ -3657,7 +3656,8 @@ if menu == "🛒 Mercado":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-            # ── Gestión de items de la tienda ────────────────
+#  Gestión de items de la tienda 
+            
             with st.expander("🎁 Gestionar Items de la Tienda"):
                 st.markdown("**Agregar nuevo item:**")
                 ic1, ic2, ic3 = st.columns(3)
@@ -3705,9 +3705,8 @@ if menu == "🛒 Mercado":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-        # ════════════════════════════════════════════════════
-        # TAB 4 — HISTORIAL (ADMIN ve todo, usuario ve lo suyo)
-        # ════════════════════════════════════════════════════
+# TAB 4 — HISTORIAL (ADMIN ve todo, usuario ve lo suyo)
+       
         with tab_historial:
             st.markdown("<div class='section-header'>📜 HISTORIAL DE MOVIMIENTOS DE COINS</div>", unsafe_allow_html=True)
             try:
