@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from datetime import datetime, timedelta  
+from datetime import datetime, timedelta, time as time_cls
 import time
 import io
 from fpdf import FPDF
