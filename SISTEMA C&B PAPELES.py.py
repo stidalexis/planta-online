@@ -3297,132 +3297,146 @@ def mercado_equipar_item(usuario, inv_id, categoria):
 
 # ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
 
-def render_avatar_3d(items_equipados, nombre_usuario=""):
-    """Genera el HTML del avatar 3D con Three.js según los items equipados."""
-    equipado = {it.get('categoria', ''): it for it in items_equipados}
+def render_avatar_3d(usuario_info, items_equipados=[]):
+    """
+    Renderiza el avatar 3D usando Three.js cargando modelos reales .glb/.gltf 
+    almacenados de forma externa en Supabase Storage.
+    """
+    # Definir URLs de los archivos .glb basados en lo que tiene equipado
+    # Si no tiene nada equipado, podemos usar modelos base por defecto
+    url_base_cuerpo = "https://tu-proyecto-supabase.supabase.co/storage/v1/object/public/avatar-assets/cuerpo_base.glb"
+    
+    urls_items = []
+    for item in items_equipados:
+        if item.get('archivo_glb_url'):
+            urls_items.append(item['archivo_glb_url'])
+            
+    # Convertir la lista de URLs a un array de JavaScript para el script
+    js_urls_items = str(urls_items)
 
-    hair_hex   = equipado.get('cabello',  {}).get('color_hex', '#3b1f0a').lstrip('#')
-    shirt_hex  = equipado.get('camisa',   {}).get('color_hex', '#1565c0').lstrip('#')
-    hat_type   = equipado.get('sombrero', {}).get('svg_data',  'none').lower().strip() or 'none'
-    badge_text = equipado.get('insignia', {}).get('label', 'none') or 'none'
+    html_code = f"""
+    <div style="background: #111a2e; border-radius: 15px; padding: 15px; box-shadow: 0px 4px 15px rgba(0,0,0,0.5);">
+        <div id="canvas-container-avatar" style="width: 100%; height: 450px; position: relative;"></div>
+    </div>
 
-    return f"""
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<div style="text-align:center;">
-  <canvas id="av3d" width="260" height="340"
-    style="border-radius:14px;border:1px solid #e0e0e0;cursor:grab;display:inline-block;"></canvas>
-  <div style="font-weight:bold;color:#0D47A1;margin-top:6px;">{nombre_usuario}</div>
-</div>
-<script>
-(function(){{
-  const canvas = document.getElementById('av3d');
-  if(!canvas||!window.THREE)return;
-  const renderer = new THREE.WebGLRenderer({{canvas,antialias:true,alpha:true}});
-  renderer.setSize(260,340); renderer.shadowMap.enabled=true;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(42,260/340,0.1,100);
-  camera.position.set(0,1.1,4.8); camera.lookAt(0,0.8,0);
-  scene.add(new THREE.AmbientLight(0xffffff,0.7));
-  const dl=new THREE.DirectionalLight(0xffffff,1.0); dl.position.set(3,6,4); dl.castShadow=true; scene.add(dl);
-  const fl=new THREE.DirectionalLight(0x8ab4f8,0.3); fl.position.set(-3,2,-2); scene.add(fl);
-  const hairColor = parseInt('{hair_hex}',16);
-  const shirtColor= parseInt('{shirt_hex}',16);
-  const skinColor = 0xfdbcb4;
-  const pantsColor= 0x1a237e;
-  const hatType   = '{hat_type}';
-  const badgeText = '{badge_text}';
-  function mat(c,r=0.7,m=0){{return new THREE.MeshStandardMaterial({{color:c,roughness:r,metalness:m}});}}
-  function box(w,h,d,c,x,y,z){{const ms=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c));ms.position.set(x,y,z);ms.castShadow=true;return ms;}}
-  function sph(r,c,x,y,z,sx=1,sy=1,sz=1){{const ms=new THREE.Mesh(new THREE.SphereGeometry(r,32,32),mat(c));ms.position.set(x,y,z);ms.scale.set(sx,sy,sz);ms.castShadow=true;return ms;}}
-  function cyl(rt,rb,h,c,x,y,z,rx=0){{const ms=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,20),mat(c));ms.position.set(x,y,z);ms.rotation.x=rx;ms.castShadow=true;return ms;}}
-  const g=new THREE.Group(); scene.add(g);
-  // HEAD
-  g.add(sph(0.42,skinColor,0,2.08,0,1,1.05,1));
-  // EYES
-  [-0.15,0.15].forEach(xo=>{{
-    const ew=new THREE.Mesh(new THREE.SphereGeometry(0.10,16,16),mat(0xffffff,0.9));ew.position.set(xo,2.1,0.36);ew.scale.set(1,1.1,0.5);g.add(ew);
-    const ep=new THREE.Mesh(new THREE.SphereGeometry(0.062,12,12),mat(0x1a1a2e,1));ep.position.set(xo,2.1,0.40);ep.scale.set(1,1,0.5);g.add(ep);
-    const es=new THREE.Mesh(new THREE.SphereGeometry(0.022,8,8),mat(0xffffff,0.1,0.8));es.position.set(xo+0.025,2.13,0.43);g.add(es);
-  }});
-  // BROWS
-  [-0.15,0.15].forEach(xo=>{{const b=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.03,0.04),mat(hairColor,0.9));b.position.set(xo,2.23,0.36);b.rotation.z=xo<0?0.12:-0.12;g.add(b);}});
-  // NOSE
-  const ns=sph(0.055,0xe8a090,0,1.99,0.40);ns.scale.set(1,0.7,1);g.add(ns);
-  // MOUTH
-  const mo=new THREE.Mesh(new THREE.TorusGeometry(0.10,0.025,8,16,Math.PI),mat(0xc07060,0.9));mo.position.set(0,1.90,0.39);mo.rotation.x=Math.PI;g.add(mo);
-  // EARS
-  [-0.43,0.43].forEach(xo=>{{g.add(sph(0.10,skinColor,xo,2.06,0,0.6,1,0.5));}});
-  // HAIR
-  g.add(sph(0.44,hairColor,0,2.28,0,1,0.65,1));
-  [-0.35,0.35].forEach(xo=>{{g.add(sph(0.22,hairColor,xo,2.05,-0.05,0.7,1.2,0.7));}});
-  // NECK
-  g.add(cyl(0.14,0.16,0.22,skinColor,0,1.62,0));
-  // TORSO
-  g.add(box(0.88,0.88,0.5,shirtColor,0,1.05,0));
-  const cm=mat(shirtColor,0.8);
-  const c1=new THREE.Mesh(new THREE.BoxGeometry(0.14,0.28,0.06),cm);c1.position.set(-0.06,1.39,0.26);c1.rotation.z=0.35;g.add(c1);
-  const c2=c1.clone();c2.position.set(0.06,1.39,0.26);c2.rotation.z=-0.35;g.add(c2);
-  [1.22,1.07,0.92].forEach(y=>{{const bt=new THREE.Mesh(new THREE.CylinderGeometry(0.022,0.022,0.04,10),mat(0xffffff,0.5,0.3));bt.position.set(0,y,0.26);bt.rotation.x=Math.PI/2;g.add(bt);}});
-  // ARMS
-  [-0.58,0.58].forEach(xo=>{{
-    const ua=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.12,0.52,16),mat(shirtColor,0.8));ua.position.set(xo,1.1,0);ua.rotation.z=xo<0?0.25:-0.25;g.add(ua);
-    const fa=new THREE.Mesh(new THREE.CylinderGeometry(0.10,0.09,0.42,16),mat(skinColor,0.7));fa.position.set(xo<0?-0.64:0.64,0.74,0);fa.rotation.z=xo<0?0.18:-0.18;g.add(fa);
-    g.add(sph(0.115,skinColor,xo<0?-0.70:0.70,0.50,0,1,1.1,0.9));
-  }});
-  // LOWER
-  g.add(box(0.82,0.22,0.46,pantsColor,0,0.57,0));
-  g.add(box(0.84,0.08,0.48,0x1a1a1a,0,0.69,0));
-  const bk=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.07,0.05),mat(0xd4a017,0.3,0.9));bk.position.set(0,0.69,0.26);g.add(bk);
-  [-0.21,0.21].forEach(xo=>{{
-    g.add(new THREE.Mesh(new THREE.CylinderGeometry(0.165,0.14,0.66,16),mat(pantsColor,0.8)));
-    g.children[g.children.length-1].position.set(xo,0.15,0);
-    const sh=new THREE.Mesh(new THREE.BoxGeometry(0.24,0.12,0.42),mat(0x111111,0.9));sh.position.set(xo,-0.21,0.06);sh.rotation.x=-0.12;g.add(sh);
-    g.add(sph(0.12,0x111111,xo,-0.20,0.22,1,0.7,0.7));
-  }});
-  // BADGE
-  if(badgeText!=='none'){{
-    const bc={{'TOP 1':0xffd700,'MVP':0xe91e63,'PRO':0x2196f3,'ROOKIE':0x4caf50}}[badgeText]||0xffd700;
-    const bdg=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.10,0.04),mat(bc,0.4,0.5));bdg.position.set(0.26,1.18,0.27);g.add(bdg);
-  }}
-  // HAT
-  if(hatType==='corona'){{
-    const bm=mat(0xffd700,0.3,0.9);
-    const base=cyl(0.40,0.38,0.18,0xffd700,0,2.56,0);base.material=bm;g.add(base);
-    [-0.28,0,0.28].forEach((xo,i)=>{{const sp=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.07,0.22+i*0.06,8),bm);sp.position.set(xo,2.72+(i===1?0.04:0),0.22);g.add(sp);}});
-    const gm=sph(0.055,0xe91e63,0,2.82,0.22);gm.material=mat(0xe91e63,0.1,0.9);g.add(gm);
-  }} else if(hatType==='gorra'){{
-    const cm2=mat(0x1565c0,0.8);
-    const cap=cyl(0.40,0.38,0.24,0x1565c0,0,2.58,0);cap.material=cm2;g.add(cap);
-    const br=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.05,24,1,false,Math.PI*0.1,Math.PI*0.8),cm2);br.position.set(0,2.46,0.30);br.rotation.x=0.3;g.add(br);
-    const tp=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.06,24),cm2);tp.position.set(0,2.70,0);g.add(tp);
-  }} else if(hatType==='casco'){{
-    const hm=mat(0xff6f00,0.5,0.4);
-    const hh=sph(0.48,0xff6f00,0,2.22,0,1.0,0.85,1.0);hh.material=hm;g.add(hh);
-    const hb=new THREE.Mesh(new THREE.CylinderGeometry(0.50,0.46,0.07,24),hm);hb.position.set(0,1.92,0);g.add(hb);
-    const hs=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.52,0.06),mat(0xffffff,0.7));hs.position.set(0,2.26,0.44);g.add(hs);
-  }} else if(hatType==='sombrero'){{
-    const sm=mat(0x4a2c0a,0.9);
-    const sbr=new THREE.Mesh(new THREE.CylinderGeometry(0.72,0.70,0.07,32),sm);sbr.position.set(0,2.48,0);g.add(sbr);
-    const scr=cyl(0.30,0.32,0.44,0x4a2c0a,0,2.72,0);scr.material=sm;g.add(scr);
-    const sbd=new THREE.Mesh(new THREE.CylinderGeometry(0.31,0.31,0.10,32),mat(0xb8860b,0.5,0.3));sbd.position.set(0,2.50,0);g.add(sbd);
-  }}
-  // SHADOW DISC
-  const sd=new THREE.Mesh(new THREE.CircleGeometry(0.65,32),new THREE.MeshBasicMaterial({{color:0x000000,transparent:true,opacity:0.10}}));
-  sd.rotation.x=-Math.PI/2; sd.position.y=-0.285; scene.add(sd);
-  // DRAG
-  let drag=false,prevX=0,rotY=0.3;
-  canvas.addEventListener('mousedown',e=>{{drag=true;prevX=e.clientX;}});
-  canvas.addEventListener('touchstart',e=>{{drag=true;prevX=e.touches[0].clientX;}});
-  window.addEventListener('mouseup',()=>drag=false);
-  window.addEventListener('touchend',()=>drag=false);
-  canvas.addEventListener('mousemove',e=>{{if(!drag)return;rotY+=(e.clientX-prevX)*0.012;prevX=e.clientX;g.rotation.y=rotY;}});
-  canvas.addEventListener('touchmove',e=>{{if(!drag)return;rotY+=(e.touches[0].clientX-prevX)*0.012;prevX=e.touches[0].clientX;g.rotation.y=rotY;}});
-  let t=0;
-  (function anim(){{requestAnimationFrame(anim);t+=0.018;if(!drag)g.rotation.y+=0.004;g.position.y=Math.sin(t)*0.04;renderer.render(scene,camera);}})();
-}})();
-</script>
-"""
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        (function() {{
+            const container = document.getElementById('canvas-container-avatar');
+            if(!container) return;
+
+            // 1. ESCENA, CÁMARA Y RENDERIZADOR
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x111a2e);
+            
+            // Añadir una rejilla industrial sutil de fondo
+            const gridHelper = new THREE.GridHelper(10, 20, 0x00d2ff, 0x334155);
+            gridHelper.position.y = -1;
+            scene.add(gridHelper);
+
+            const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 1.2, 3.5);
+
+            const renderer = new THREE.WebGLRenderer({{ antialias: true, alpha: true }});
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.shadowMap.enabled = true;
+            renderer.outputEncoding = THREE.sRGBEncoding;
+            container.appendChild(renderer.domElement);
+
+            // 2. ILUMINACIÓN ESTUDIO / INDUSTRIAL
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(5, 10, 7);
+            dirLight.castShadow = true;
+            scene.add(dirLight);
+
+            const fillLight = new THREE.DirectionalLight(0x00d2ff, 0.3); // Luz azul secundaria de contraste
+            fillLight.position.set(-5, 2, -2);
+            scene.add(fillLight);
+
+            // CONTROLES DE ÓRBITA (Para que el usuario pueda rotar el avatar con el dedo o mouse)
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 + 0.1; // No dejar que la cámara baje del suelo
+            controls.minDistance = 1.5;
+            controls.maxDistance = 6;
+            controls.target.set(0, 0.8, 0);
+
+            // 3. CARGADOR DE MODELOS GLTF/.GLB
+            const loader = new THREE.GLTFLoader();
+            
+            // Función auxiliar para cargar un modelo y añadirlo a la escena
+            function cargarModelo(url, esBase = false) {{
+                loader.load(
+                    url,
+                    function (gltf) {{
+                        const model = gltf.scene;
+                        
+                        // Configurar sombras para cada parte del modelo
+                        model.traverse(function (node) {{
+                            if (node.isMesh) {{
+                                node.castShadow = true;
+                                node.receiveShadow = true;
+                                // Asegurar que los materiales se vean vivos y correctos
+                                if(node.material) {{
+                                    node.material.depthWrite = true;
+                                }}
+                            }}
+                        }});
+
+                        // Ajustar escala y posición central por defecto
+                        model.position.set(0, -1, 0); 
+                        scene.add(model);
+                        console.log("Modelo cargado exitosamente: " + url);
+                    }},
+                    function (xhr) {{
+                        // Progreso de carga opcional
+                    }},
+                    function (error) {{
+                        console.error("Error cargando el modelo (" + url + "):", error);
+                    }}
+                );
+            }}
+
+            // Cargar cuerpo base del avatar
+            cargarModelo("{url_base_cuerpo}", true);
+
+            // Cargar dinámicamente todos los ítems que tiene equipados el usuario
+            const itemsEquipados = {js_urls_items};
+            itemsEquipados.forEach(url_item => {{
+                if(url_item && url_item.trim() !== "") {{
+                    cargarModelo(url_item, false);
+                }}
+            }});
+
+            // 4. ANIMACIÓN AUTOMÁTICA (Rotación leve de presentación)
+            function animate() {{
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }}
+            animate();
+
+            // Manejo de redimensionamiento de pantalla táctil o monitor
+            window.addEventListener('resize', onWindowResize, false);
+            function onWindowResize() {{
+                camera.aspect = container.clientWidth / container.clientHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(container.clientWidth, container.clientHeight);
+            }}
+
+        }})();
+    </script>
+    """
+    st.components.v1.html(html_code, height=480)
+
 
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
 # ── MÓDULO MERCADO PRINCIPAL ──────────────────────────────────
@@ -3582,7 +3596,61 @@ if menu == "🛒 Mercado":
             # ── Asignar / quitar coins ───────────────────────
             with st.expander("🪙 Asignar o Quitar Coins a Trabajadores", expanded=True):
                 st.info("Puedes dar coins como recompensa por buen desempeño, o descontarlos si es necesario.")
-                
+
+            # Colocar esta pestaña en la sección reservada para el rol de Administrador
+with tab_admin_tienda:
+    st.markdown("<div class='title-area'>📦 SUBIR NUEVO ÍTEM 3D A LA TIENDA</div>", unsafe_allow_html=True)
+    
+    with st.form("form_nuevo_item_3d", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            nombre_item = st.text_input("Nombre del Ítem (Ej: Casco Pro de Seguridad)", placeholder="Escribe el nombre...")
+            precio_item = st.number_input("Precio en Coins 🪙", min_value=0, value=100, step=10)
+            categoria_item = st.selectbox("Categoría del Accesorio", ["casco", "chaleco", "herramienta", "gafas", "cuerpo"])
+        
+        with col2:
+            descripcion_item = st.text_area("Descripción de Ventaja/Estilo", placeholder="Ej: Casco dorado otorgado por cero accidentes en el mes...")
+            # Componente nativo para cargar el archivo .glb o .gltf creado en Blender/Internet
+            archivo_3d = st.file_uploader("Selecciona el archivo 3D (.glb)", type=["glb", "gltf"])
+            
+        submit_btn = st.form_submit_button("🚀 Publicar Ítem en la Tienda")
+        
+        if submit_btn:
+            if nombre_item and archivo_3d and precio_item:
+                try:
+                    # 1. Sanitizar el nombre del archivo para evitar problemas de URL
+                    nombre_archivo_limpio = f"{int(time.time())}_{archivo_3d.name.replace(' ', '_')}"
+                    
+                    # 2. Subir el binario del archivo directamente al Bucket público de Supabase
+                    archivo_bytes = archivo_3d.getvalue()
+                    storage_response = supabase.storage.from_("avatar-assets").upload(
+                        path=nombre_archivo_limpio,
+                        file=archivo_bytes,
+                        file_options={"content-type": "model/gltf-binary"}
+                    )
+                    
+                    # 3. Construir la URL pública de descarga directa
+                    # Reemplaza 'tu-proyecto-supabase' por tu subdominio real de Supabase
+                    url_publica_glb = f"https://tu-proyecto-supabase.supabase.co/storage/v1/object/public/avatar-assets/{nombre_archivo_limpio}"
+                    
+                    # 4. Insertar los datos completos del ítem en tu base de datos existente
+                    nuevo_item_data = {
+                        "nombre": nombre_item,
+                        "precio": precio_item,
+                        "descripcion": descripcion_item,
+                        "categoria": categoria_item,
+                        "archivo_glb_url": url_publica_glb,
+                        "activo": True
+                    }
+                    
+                    supabase.table("items_mercado").insert(nuevo_item_data).execute()
+                    st.success(f"🎉 ¡Éxito! El ítem '{nombre_item}' ha sido cargado y está disponible en la tienda.")
+                    st.balloons()
+                    
+                except Exception as e:
+                    st.error(f"Error al procesar el archivo o la base de datos: {e}")
+            else:
+                st.warning("Por favor rellena el nombre, el precio y carga un archivo válido.")   
                 try:
                     todos_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
                 except:
@@ -3597,6 +3665,7 @@ if menu == "🛒 Mercado":
                     cantidad_coins = st.number_input("Cantidad de Coins (+/-)", min_value=-9999, max_value=9999, value=10, step=5, key="admin_coins_amt")
                 with c3:
                     motivo_coins = st.text_input("Motivo / Descripción", placeholder="Ej: Cumplimiento meta semana", key="admin_coins_mot")
+                        
 
                 if sel_u:
                     u_key = opciones_u[sel_u]
@@ -3706,21 +3775,21 @@ if menu == "🛒 Mercado":
                     st.info("No hay movimientos registrados aún.")
             except Exception as e:
                 st.error(f"Error al cargar historial: {e}")
-    else:
-        # Tab historial para no-admin
-        with tab_historial:
-            st.markdown("<div class='section-header'>📜 MI HISTORIAL DE COINS</div>", unsafe_allow_html=True)
-            try:
-                hist_data = supabase.table("monedas_historial").select("*").eq("usuario", usuario_actual).order("fecha", desc=True).limit(100).execute().data or []
-                if hist_data:
-                    df_hist = pd.DataFrame(hist_data)
-                    df_hist['Tipo'] = df_hist['cantidad'].apply(lambda x: "➕ Ingreso" if x > 0 else "➖ Gasto")
-                    df_show = df_hist[['fecha', 'cantidad', 'Tipo', 'motivo']].rename(columns={
-                        'fecha': 'Fecha', 'cantidad': '🪙 Coins', 'motivo': 'Descripción'
-                    })
-                    st.dataframe(df_show, use_container_width=True, hide_index=True)
-                else:
-                    st.info("Aún no tienes movimientos de coins.")
-            except Exception as e:
-                st.error(f"Error: {e}")
+            else:
+                # Tab historial para no-admin
+                with tab_historial:
+                    st.markdown("<div class='section-header'>📜 MI HISTORIAL DE COINS</div>", unsafe_allow_html=True)
+                    try:
+                        hist_data = supabase.table("monedas_historial").select("*").eq("usuario", usuario_actual).order("fecha", desc=True).limit(100).execute().data or []
+                        if hist_data:
+                            df_hist = pd.DataFrame(hist_data)
+                            df_hist['Tipo'] = df_hist['cantidad'].apply(lambda x: "➕ Ingreso" if x > 0 else "➖ Gasto")
+                            df_show = df_hist[['fecha', 'cantidad', 'Tipo', 'motivo']].rename(columns={
+                                'fecha': 'Fecha', 'cantidad': '🪙 Coins', 'motivo': 'Descripción'
+                            })
+                            st.dataframe(df_show, use_container_width=True, hide_index=True)
+                        else:
+                            st.info("Aún no tienes movimientos de coins.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 
