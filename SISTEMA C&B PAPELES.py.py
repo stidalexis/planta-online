@@ -3479,7 +3479,7 @@ if menu == "🛒 Mercado":
         )
     else:
         tab_tienda, tab_avatar, tab_historial = st.tabs(
-            ["🛍️ Tienda", "👤 Mi Avatar", "📜 Mi Historial"]
+            ["🛍️ Tienda", "📜 Mi Historial"]
         )
 
     # ════════════════════════════════════════════════════════
