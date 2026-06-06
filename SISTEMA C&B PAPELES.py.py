@@ -2133,7 +2133,41 @@ elif menu == "📆 Cronograma Impresión":
         todas_las_ops = supabase.table("ordenes_planeadas").select("*").execute().data or []
     except:
         todas_las_ops = []
+    # ALERTAS — OPs con fecha fin ya vencida o llevan más de 3 días sin finalizar
+    ahora_col = hora_colombia()
+    alertas = []
+    for op in todas_las_ops:
+        if op.get("estado") == "Terminado" or op.get("proxima_area") == "FINALIZADO":
+            continue
+        # Alerta 1: fecha fin del cronograma ya pasó y sigue sin finalizar
+        fecha_fin_crono = op.get("fecha_fin_cronograma")
+        if fecha_fin_crono:
+            try:
+                dt_fin_crono = datetime.fromisoformat(str(fecha_fin_crono).replace("Z","")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
+                if ahora_col > dt_fin_crono:
+                    retraso = ahora_col - dt_fin_crono
+                    horas_retraso = int(retraso.total_seconds() // 3600)
+                    alertas.append(f"⏰ **OP {op.get('op')}** ({op.get('cliente','')}) — lleva **{horas_retraso}h de retraso** vs cronograma en {op.get('maquina_cronograma','?')}")
+            except:
+                pass
+        # Alerta 2: OP planeada hace más de 5 días y nunca se ha asignado al cronograma
+        fecha_creacion = op.get("fecha_creacion") or op.get("created_at")
+        if fecha_creacion and not op.get("maquina_cronograma"):
+            try:
+                dt_creacion = datetime.fromisoformat(str(fecha_creacion).replace("Z","")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
+                dias_sin_asignar = (ahora_col - dt_creacion).days
+                if dias_sin_asignar >= 3:
+                    alertas.append(f"📋 **OP {op.get('op')}** ({op.get('cliente','')}) — lleva **{dias_sin_asignar} días sin asignar** al cronograma")
+            except:
+                pass
 
+    if alertas:
+        with st.expander(f"🚨 {len(alertas)} ALERTA(S) DE PRODUCCIÓN — haz clic para ver", expanded=True):
+            for a in alertas:
+                st.warning(a)
+    else:
+        st.success("✅ Todo en orden — sin retrasos ni OPs sin asignar")
+        
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
     ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
 
@@ -2318,6 +2352,57 @@ elif menu == "📆 Cronograma Impresión":
             actualizarBotonGuardar();
           }
         }
+        // Quitar OP del cronograma — limpia fechas y máquina en Supabase
+        async function quitarDelCronograma(db_id, ev) {
+          showToast('⏳ Quitando...');
+          try {
+            var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(db_id), {
+              method:  'PATCH',
+              headers: {
+                'Content-Type':  'application/json',
+                'apikey':        SUPA_KEY,
+                'Authorization': 'Bearer ' + SUPA_KEY,
+                'Prefer':        'return=minimal'
+              },
+              body: JSON.stringify({
+                fecha_inicio_cronograma: null,
+                fecha_fin_cronograma:    null,
+                maquina_cronograma:      null
+              })
+            });
+            if (resp.ok) {
+              ev.remove();
+              // Agregar tarjeta de vuelta al sidebar
+              var lista = document.getElementById('lista-pendientes');
+              var sinMsg = lista.querySelector('.no-pending');
+              if (sinMsg) sinMsg.remove();
+              var div = document.createElement('div');
+              div.className = 'tarjeta';
+              div.setAttribute('data-event', JSON.stringify({
+                id: db_id,
+                title: ev.title,
+                duration: '02:00',
+                backgroundColor: '#d97706',
+                borderColor: '#d97706',
+                textColor: '#fff',
+                extendedProps: { cliente: ev.extendedProps.cliente, db_id: db_id }
+              }));
+              div.innerHTML = '<div class="op-num">' + ev.title.split('·')[0].trim() + '</div>'
+                            + '<div class="cli">👤 ' + ev.extendedProps.cliente + '</div>';
+              lista.appendChild(div);
+              // Reactivar drag en la tarjeta nueva
+              new FullCalendar.ThirdPartyDraggable(lista, {
+                itemSelector: '.tarjeta',
+                eventData: function(el) { return JSON.parse(el.getAttribute('data-event')); }
+              });
+              showToast('↩️ OP devuelta a pendientes');
+            } else {
+              showToast('⚠️ Error al quitar la OP');
+            }
+          } catch(e) {
+            showToast('⚠️ Error de conexión');
+          }
+        }
 
         document.addEventListener('mousemove', function(e) {
           tooltip.style.left = (e.clientX + 15) + 'px';
@@ -2415,7 +2500,19 @@ elif menu == "📆 Cronograma Impresión":
             },
 
             // Tooltip hover
+            // Clic en evento — mostrar popup con opción de quitar
+            eventClick: function(info) {
+              var ev    = info.event;
+              var db_id = ev.extendedProps.db_id || ev.id;
+              var confirmado = confirm('¿Quitar "' + ev.title + '" del cronograma?\nVolverá a la lista de pendientes.');
+              if (confirmado) {
+                quitarDelCronograma(db_id, ev);
+              }
+            },
+
+            // Tooltip hover
             eventMouseEnter: function(info) {
+
               var p = info.event.extendedProps;
               var s = info.event.start ? info.event.start.toLocaleString('es-CO', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'}) : '';
               var e = info.event.end   ? info.event.end.toLocaleString('es-CO',   {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'}) : '';
