@@ -3232,71 +3232,6 @@ def mercado_obtener_items_usuario(usuario):
     except:
         return []
 
-def mercado_comprar_item(usuario, item_id, item_nombre, precio):
-    """Procesa la compra de un item."""
-    try:
-        coins_actuales = mercado_obtener_coins(usuario)
-        if coins_actuales < precio:
-            return False, "No tienes suficientes coins 💸"
-        
-        # Verificar si ya lo tiene
-        tiene = supabase.table("inventario_avatar").select("id").eq("usuario", usuario).eq("item_id", item_id).execute()
-        if tiene.data:
-            return False, "Ya tienes este item ✋"
-        
-        # Descontar coins
-        nuevos_coins = coins_actuales - precio
-        supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": nuevos_coins}, on_conflict="usuario").execute()
-        
-        # Agregar al inventario del avatar
-        supabase.table("inventario_avatar").insert({
-            "usuario": usuario,
-            "item_id": item_id,
-            "item_nombre": item_nombre,
-            "equipado": False,
-            "fecha_compra": hora_colombia().isoformat()
-        }).execute()
-        
-        # Registrar en historial
-        supabase.table("monedas_historial").insert({
-            "usuario": usuario,
-            "cantidad": -precio,
-            "motivo": f"Compra en tienda: {item_nombre}",
-            "admin": "SISTEMA",
-            "fecha": hora_colombia().isoformat()
-        }).execute()
-        
-        return True, f"¡{item_nombre} comprado exitosamente! 🎉"
-    except Exception as e:
-        return False, f"Error en la compra: {e}"
-
-def mercado_equipar_item(usuario, inv_id, categoria):
-    """Equipa un item (desequipa el anterior de la misma categoría)."""
-    try:
-        # Obtener todos los items del usuario de esa categoría
-        items_cat = supabase.table("inventario_avatar")\
-            .select("id")\
-            .eq("usuario", usuario)\
-            .eq("equipado", True)\
-            .execute()
-        
-        # Desequipar los de la misma categoría
-        for it in (items_cat.data or []):
-            # Verificar si es de la misma categoría
-            det = supabase.table("items_mercado").select("categoria").eq("id", 
-                supabase.table("inventario_avatar").select("item_id").eq("id", it['id']).execute().data[0]['item_id']
-            ).execute()
-            if det.data and det.data[0].get('categoria') == categoria:
-                supabase.table("inventario_avatar").update({"equipado": False}).eq("id", it['id']).execute()
-        
-        # Equipar el nuevo
-        supabase.table("inventario_avatar").update({"equipado": True}).eq("id", inv_id).execute()
-        return True
-    except Exception as e:
-        return False
-
-# ── RENDERIZADOR DE AVATAR SVG ────────────────────────────────
-
 def render_avatar_3d(items_equipados, usuario_nombre=""):
     """
     Renderiza el avatar 3D cargando modelos .glb/.gltf desde Supabase Storage.
@@ -3465,7 +3400,7 @@ if menu == "🛒 Mercado":
     # ── TABS PRINCIPALES ────────────────────────────────────
     if rol_actual == 'admin':
         tab_tienda, tab_avatar, tab_admin, tab_historial = st.tabs(
-            ["🛍️ Tienda", "👤 Mi Avatar", "⚙️ Panel Admin", "📜 Historial Monedas"]
+            ["🛍️ Tienda", "👤 Mi Avatar", "⚙️ Panel Admin", "📜 Historial Monedas", "📦 Administrar Tienda 3D"]
         )
     else:
         tab_tienda, tab_avatar, tab_historial = st.tabs(
@@ -3475,60 +3410,55 @@ if menu == "🛒 Mercado":
     # ════════════════════════════════════════════════════════
     # TAB 1 — TIENDA
     # ════════════════════════════════════════════════════════
-    with tab_tienda:
-        st.markdown("<div class='section-header'>🛍️ ARTÍCULOS DISPONIBLES</div>", unsafe_allow_html=True)
-
-        items_tienda = mercado_obtener_items_tienda()
-        items_poseidos = {it['item_id'] for it in mercado_obtener_items_usuario(usuario_actual)}
-
-        if not items_tienda:
-            st.info("La tienda está vacía. El admin puede agregar items desde el Panel Admin.")
-        else:
-            # Agrupar por categoría
-            categorias = {}
-            for item in items_tienda:
-                cat = item.get('categoria', 'General')
-                categorias.setdefault(cat, []).append(item)
-
-            for cat, items_cat in categorias.items():
-                emoji_cat = {"sombrero": "🎩", "camisa": "👕", "cabello": "💇", "insignia": "🏅", "accesorio": "🎀"}.get(cat.lower(), "🎁")
-                st.markdown(f"#### {emoji_cat} {cat.upper()}")
-                cols = st.columns(min(len(items_cat), 4))
-
-                for i, item in enumerate(items_cat):
-                    with cols[i % 4]:
-                        ya_tiene = item['id'] in items_poseidos
-                        puede_comprar = coins_usuario >= item['precio'] and not ya_tiene
-
-                        color_borde = "#4CAF50" if ya_tiene else ("#1565C0" if puede_comprar else "#9E9E9E")
-                        estado_txt  = "✅ Ya tienes" if ya_tiene else (f"🪙 {item['precio']}" if puede_comprar else f"🔒 {item['precio']} (sin fondos)")
-
-                        # Miniatura de color si aplica
-                        color_swatch = ""
-                        if item.get('color_hex'):
-                            color_swatch = f"<div style='width:32px;height:32px;border-radius:50%;background:{item['color_hex']};border:2px solid #fff;display:inline-block;vertical-align:middle;margin-right:8px;'></div>"
-
-                        st.markdown(f"""
-                        <div style="border:2px solid {color_borde}; border-radius:14px; padding:14px; text-align:center;
-                                    background:#fff; margin-bottom:8px; min-height:140px;">
-                            <div style="font-size:2.2rem;">{item.get('emoji','🎁')}</div>
-                            {color_swatch}
-                            <div style="font-weight:bold; color:#0D47A1; margin:6px 0 2px;">{item['nombre']}</div>
-                            <div style="font-size:0.8rem; color:#666; margin-bottom:8px;">{item.get('descripcion','')}</div>
-                            <div style="font-weight:bold; color:{'#388E3C' if ya_tiene else '#E65100'};">{estado_txt}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
-                        if not ya_tiene:
-                            btn_label = f"Comprar" if puede_comprar else "Sin coins"
-                            if st.button(btn_label, key=f"buy_{item['id']}", disabled=not puede_comprar, use_container_width=True):
-                                ok, msg = mercado_comprar_item(usuario_actual, item['id'], item['nombre'], item['precio'])
-                                if ok:
-                                    st.success(msg)
-                                    time.sleep(1)
-                                    st.rerun()
-                                else:
-                                    st.error(msg)
+    with tab_admin_tienda:
+            st.markdown("<div class='title-area'>📦 SUBIR NUEVO ÍTEM 3D A LA TIENDA</div>", unsafe_allow_html=True)
+            
+            with st.form("form_nuevo_item_3d", clear_on_submit=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    nombre_item = st.text_input("Nombre del Ítem (Ej: Casco Pro de Seguridad)", placeholder="Escribe el nombre...")
+                    precio_item = st.number_input("Precio en Coins 🪙", min_value=0, value=100, step=10)
+                    categoria_item = st.selectbox("Categoría del Accesorio", ["casco", "chaleco", "herramienta", "gafas", "cuerpo"])
+                
+                with col2:
+                    descripcion_item = st.text_area("Descripción de Ventaja/Estilo", placeholder="Ej: Casco dorado otorgado por cero accidentes en el mes...")
+                    archivo_3d = st.file_uploader("Selecciona el archivo 3D (.glb)", type=["glb", "gltf"])
+                    
+                submit_btn = st.form_submit_button("🚀 Publicar Ítem en la Tienda")
+                
+                if submit_btn:
+                    if nombre_item and archivo_3d and precio_item:
+                        try:
+                            nombre_archivo_limpio = f"{int(time.time())}_{archivo_3d.name.replace(' ', '_')}"
+                            archivo_bytes = archivo_3d.getvalue()
+                            
+                            # Subida a Supabase Storage
+                            supabase.storage.from_("avatar-assets").upload(
+                                path=nombre_archivo_limpio,
+                                file=archivo_bytes,
+                                file_options={"content-type": "model/gltf-binary"}
+                            )
+                            
+                            # Cambia 'tu-proyecto-supabase' por tu ID real de Supabase
+                            url_publica_glb = f"https://tu-proyecto-supabase.supabase.co/storage/v1/object/public/avatar-assets/{nombre_archivo_limpio}"
+                            
+                            nuevo_item_data = {
+                                "nombre": nombre_item,
+                                "precio": precio_item,
+                                "descripcion": descripcion_item,
+                                "categoria": categoria_item,
+                                "archivo_glb_url": url_publica_glb,
+                                "activo": True
+                            }
+                            
+                            supabase.table("items_mercado").insert(nuevo_item_data).execute()
+                            st.success(f"🎉 ¡Éxito! El ítem '{nombre_item}' ha sido cargado en la tienda.")
+                            st.balloons()
+                            
+                        except Exception as e:
+                            st.error(f"Error al procesar el archivo o la base de datos: {e}")
+                    else:
+                        st.warning("Por favor rellena el nombre, el precio y carga un archivo válido.")
 
     # ════════════════════════════════════════════════════════
     # TAB 2 — MI AVATAR
