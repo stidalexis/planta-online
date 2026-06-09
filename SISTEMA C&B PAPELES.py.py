@@ -113,10 +113,6 @@ def cell_fit(pdf, w, h, text, border=1):
 
     pdf.cell(w, h, text, border)
 
-def hora_colombia():
-    tz = pytz.timezone("America/Bogota")
-    return datetime.now(tz)
-
 # FUNCION DE HORARIOS
 
 def hora_colombia():
@@ -155,8 +151,8 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
 
 # FUNCION DE DURACION — Ya no depende de horario fijo, respeta estado de planta
 
-def calcular_duracion_laboral(inicio, fin, nombre_maquina=None):
-    """Calcula tiempo trabajado. Si la planta está inactiva o la máquina apagada, retorna 0."""
+def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_segundos=0):
+    """Calcula tiempo trabajado descontando pausas individuales y respetando estado de planta."""
     if nombre_maquina:
         if not obtener_estado_maquina(nombre_maquina):
             return "0:00:00"
@@ -165,7 +161,9 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None):
     total = fin - inicio
     if total.total_seconds() < 0:
         return "0:00:00"
-    return str(total).split('.')[0]
+    # Descontar pausas acumuladas (fallas, descansos, etc.)
+    total_segundos = max(0, total.total_seconds() - tiempo_pausa_segundos)
+    return str(timedelta(seconds=int(total_segundos)))
     
 #  PDF DE CERTIFICADO 
 
@@ -923,7 +921,7 @@ if menu == "🖥️ Monitor":
 
 # PASA EL ESTADO ACTUAL ALA FUNCION 
 
-            tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'])
+            tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'], a.get('tiempo_pausa', 0))
             
             h, m, s = map(int, tiempo_texto.split(':'))
             horas_laborales = h + m/60 + s/3600
@@ -3020,7 +3018,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 #  CALCULAR DURACION
 
-                    duracion = calcular_duracion_laboral(inicio, fin)
+                    duracion = calcular_duracion_laboral(inicio, fin, r.get('maquina'), r.get('tiempo_pausa', 0))
 
 #  LOGICA DE DESCUENTO DE INVENTARIO
 
@@ -3124,7 +3122,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 inicio = inicio.astimezone(tz)
                 
             fin = hora_colombia()
-            duracion = calcular_duracion_laboral(inicio, fin, r['maquina'])
+            duracion = calcular_duracion_laboral(inicio, fin, r['maquina'], r.get('tiempo_pausa', 0))
 
 # Preparar el nuevo historial — leer desde ordenes_planeadas, no desde trabajos_activos
 
