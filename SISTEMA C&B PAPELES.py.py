@@ -119,36 +119,52 @@ def hora_colombia():
 
 # FUNCION DE HORARIOS
 
+def hora_colombia():
+    tz = pytz.timezone("America/Bogota")
+    return datetime.now(tz)
+
+def get_planta_activa() -> bool:
+    """Consulta si la planta está activa en Supabase. Cache 10 segundos."""
+    cache_key = '_planta_activa_cache'
+    cache_ts   = '_planta_activa_ts'
+    ahora      = hora_colombia().timestamp()
+    if cache_key in st.session_state and ahora - st.session_state.get(cache_ts, 0) < 10:
+        return st.session_state[cache_key]
+    try:
+        res = supabase.table("configuracion_sistema").select("valor")\
+              .eq("clave", "planta_activa").single().execute()
+        activa = str(res.data.get("valor", "true")).lower() == "true"
+    except:
+        activa = True  # Si falla la consulta, asume activa para no bloquear producción
+    st.session_state[cache_key] = activa
+    st.session_state[cache_ts]  = ahora
+    return activa
+
+def set_planta_activa(estado: bool, usuario: str = "admin"):
+    """Activa o desactiva la planta globalmente. Usa upsert por si la fila no existe."""
+    supabase.table("configuracion_sistema").upsert({
+        "id":         1,
+        "clave":      "planta_activa",
+        "valor":      "true" if estado else "false",
+        "updated_at": hora_colombia().isoformat(),
+        "updated_by": usuario
+    }).execute()
+    # Limpiar cache
+    st.session_state.pop('_planta_activa_cache', None)
+    st.session_state.pop('_planta_activa_ts', None)
+
+# FUNCION DE DURACION — Ya no depende de horario fijo, respeta estado de planta
+
 def calcular_duracion_laboral(inicio, fin, nombre_maquina=None):
-    jornada_inicio = 6
-    jornada_fin = 22
-    actual = inicio
-    total = timedelta()
-
-    esta_on = True
+    """Calcula tiempo trabajado. Si la planta está inactiva o la máquina apagada, retorna 0."""
     if nombre_maquina:
-        esta_on = obtener_estado_maquina(nombre_maquina)
-
-# SI LA MAQUINA ESTA APAGANA NO CUENTA NADA
-
-    if not esta_on:
+        if not obtener_estado_maquina(nombre_maquina):
+            return "0:00:00"
+    if not get_planta_activa():
         return "0:00:00"
-
-    while actual.date() <= fin.date():
-        dia_inicio = actual.replace(hour=jornada_inicio, minute=0, second=0, tzinfo=actual.tzinfo)
-        dia_fin = actual.replace(hour=jornada_fin, minute=0, second=0, tzinfo=actual.tzinfo)
-
-        if actual.date() == inicio.date():
-            dia_inicio = max(inicio, dia_inicio)
-
-        if actual.date() == fin.date():
-            dia_fin = min(fin, dia_fin)
-
-        if dia_inicio < dia_fin:
-            total += (dia_fin - dia_inicio)
-
-        actual = (actual + timedelta(days=1)).replace(hour=0, minute=0, second=0, tzinfo=actual.tzinfo)
-
+    total = fin - inicio
+    if total.total_seconds() < 0:
+        return "0:00:00"
     return str(total).split('.')[0]
     
 #  PDF DE CERTIFICADO 
@@ -846,6 +862,39 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
 
 if menu == "🖥️ Monitor":
     st.markdown("<div class='title-area'>🖥️ MONITOR DE PRODUCCIÓN EN TIEMPO REAL</div>", unsafe_allow_html=True)
+
+# ── INTERRUPTOR GLOBAL DE PLANTA (solo admin) ──────────────────
+    if st.session_state.get('rol','').lower() == 'admin':
+        planta_on = get_planta_activa()
+        col_sw1, col_sw2, col_sw3 = st.columns([1, 2, 3])
+        with col_sw1:
+            nuevo_estado = st.toggle(
+                "🏭 PLANTA ACTIVA" if planta_on else "⏸️ PLANTA DETENIDA",
+                value=planta_on,
+                key="toggle_planta"
+            )
+            if nuevo_estado != planta_on:
+                set_planta_activa(nuevo_estado, st.session_state.get('nombre_usuario','admin'))
+                accion = "▶️ PLANTA ACTIVADA" if nuevo_estado else "⏸️ PLANTA DETENIDA"
+                st.toast(f"{accion} — todos los contadores {'corriendo' if nuevo_estado else 'congelados'}", icon="🏭")
+                time.sleep(0.5)
+                st.rerun()
+        with col_sw2:
+            if planta_on:
+                st.success("✅ Planta activa — contadores corriendo")
+            else:
+                st.error("⏸️ Planta detenida — contadores congelados")
+                try:
+                    res_cfg = supabase.table("configuracion_sistema").select("updated_at,updated_by")\
+                              .eq("clave","planta_activa").single().execute().data
+                    if res_cfg:
+                        st.caption(f"Detenida por **{res_cfg['updated_by']}** a las {str(res_cfg['updated_at'])[:16]}")
+                except:
+                    pass
+    else:
+        # Operarios solo ven el estado, no pueden cambiarlo
+        if not get_planta_activa():
+            st.error("⏸️ Planta detenida por administración — los contadores están en pausa")
     
 #  TRAER ESTADOS DE MAQUINAS DE UN SOLO GOLPE 
     try:
