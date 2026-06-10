@@ -1299,361 +1299,521 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
+
+    # Estados donde la OP aún no ha sido procesada por ningún área
+    ESTADOS_EDITABLES = [
+        "DISEÑO (AUDITORIA)", "IMPRESIÓN", "CORTE", "REBOBINADORAS",
+        "ESPERA DE AUDITORIA", "ESPERA DE CORTE", "ESPERA DE IMPRESIÓN"
+    ]
+
+    tab_nueva, tab_editar = st.tabs(["➕ Nueva / Repetición", "✏️ Editar OP Existente"])
+
+    with tab_editar:
+        st.markdown("<div class='section-header'>✏️ EDITAR ORDEN DE PRODUCCIÓN</div>", unsafe_allow_html=True)
+        st.caption("Solo puedes editar OPs que aún no han sido tomadas por ningún área de producción.")
+
+        col_b1, col_b2 = st.columns([3, 1])
+        op_buscar_edit = col_b1.text_input("Número de OP a editar (Ej: FRI-101):", key="op_edit_buscar")
+
+        if col_b2.button("🔍 Buscar", key="btn_buscar_edit"):
+            if op_buscar_edit:
+                res_edit = supabase.table("ordenes_planeadas").select("*")\
+                    .eq("op", op_buscar_edit.upper().strip()).execute()
+                if res_edit.data:
+                    st.session_state['op_editar_data'] = res_edit.data[0]
+                else:
+                    st.error("❌ No se encontró esa OP.")
+                    st.session_state.pop('op_editar_data', None)
+            else:
+                st.warning("Ingresa el número de OP.")
+
+        op_edit = st.session_state.get('op_editar_data')
+
+        if op_edit:
+            estado_actual = op_edit.get('proxima_area', '')
+            rol_actual    = st.session_state.get('rol', '').lower()
+
+            # Verificar si es editable
+            es_editable = estado_actual in ESTADOS_EDITABLES
+            es_admin    = rol_actual == 'admin'
+
+            # Mostrar estado actual
+            st.markdown(f"""
+            <div class='metric-box'>
+              <b>📋 OP:</b> {op_edit.get('op')} &nbsp;&nbsp;
+              <b>👤 Cliente:</b> {op_edit.get('cliente')} &nbsp;&nbsp;
+              <b>🏷️ Tipo:</b> {op_edit.get('tipo_orden')} &nbsp;&nbsp;
+              <b>📍 Estado actual:</b> <code>{estado_actual}</code>
+            </div>
+            """, unsafe_allow_html=True)
+
+            if not es_editable and not es_admin:
+                st.error(f"🔒 Esta OP ya fue tomada por producción ({estado_actual}) y no se puede editar.")
+                st.caption("Si necesitas hacer un cambio urgente, contacta al administrador.")
+
+            else:
+                if not es_editable and es_admin:
+                    st.warning("⚠️ Esta OP ya está en producción. Como admin puedes editarla igualmente.")
+
+                st.markdown("---")
+                st.markdown("**Edita los campos que necesitas corregir:**")
+
+                with st.form("form_editar_op"):
+                    ec1, ec2, ec3 = st.columns(3)
+                    nuevo_cliente = ec1.text_input("Cliente:", value=op_edit.get('cliente', ''))
+                    nuevo_vendedor= ec2.text_input("Vendedor:", value=op_edit.get('vendedor', ''))
+                    nuevo_trabajo = ec3.text_input("Nombre del Trabajo:", value=op_edit.get('nombre_trabajo', ''))
+
+                    # Campos según tipo de OP
+                    tipo_op = op_edit.get('tipo_orden', '')
+
+                    if "FORMAS" in tipo_op:
+                        ef1, ef2, ef3 = st.columns(3)
+                        nueva_cant   = ef1.number_input("Cantidad Formas:", value=int(op_edit.get('cantidad_formas', 0) or 0), min_value=0)
+                        nueva_pres   = ef2.selectbox("Presentación:", PRESENTACIONES,
+                                        index=PRESENTACIONES.index(op_edit['presentacion']) if op_edit.get('presentacion') in PRESENTACIONES else 0)
+                        nuevas_obs   = ef3.text_area("Observaciones:", value=op_edit.get('observaciones_formas', '') or '')
+                        nueva_trans  = st.selectbox("¿Transportadora?", ["NO", "SI"],
+                                        index=1 if op_edit.get('transportadora_formas') else 0)
+                        nuevo_dest   = st.text_input("Ciudad destino:", value=op_edit.get('destino_formas', '') or '') if nueva_trans == "SI" else "NO"
+
+                    elif tipo_op in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS"]:
+                        er1, er2, er3, er4 = st.columns(4)
+                        nueva_cant_r = er1.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
+                        nueva_uds_b  = er2.number_input("Unidades x Bolsa:", value=int(op_edit.get('unidades_bolsa', 0) or 0), min_value=0)
+                        nueva_uds_c  = er3.number_input("Unidades x Caja:", value=int(op_edit.get('unidades_caja', 0) or 0), min_value=0)
+                        nuevas_obs   = er4.text_area("Observaciones:", value=op_edit.get('observaciones_rollos', '') or '')
+                        nueva_trans  = st.selectbox("¿Transportadora?", ["NO", "SI"],
+                                        index=1 if op_edit.get('transportadora_rollos') else 0)
+                        nuevo_dest   = st.text_input("Ciudad destino:", value=op_edit.get('destino_rollos', '') or '') if nueva_trans == "SI" else "NO"
+
+                    elif tipo_op == "REBOBINADO":
+                        eb1, eb2 = st.columns(2)
+                        nueva_cant_r = eb1.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
+                        nuevas_obs   = eb2.text_area("Observaciones:", value=op_edit.get('observaciones_rollos', '') or '')
+
+                    nueva_obs_gral = st.text_area("📝 Motivo del cambio (queda registrado):",
+                                        placeholder="Ej: Cliente solicitó cambio de cantidad...", key="motivo_edit")
+
+                    btn_guardar_edit = st.form_submit_button("💾 GUARDAR CAMBIOS", use_container_width=True)
+
+                    if btn_guardar_edit:
+                        if not nueva_obs_gral.strip():
+                            st.error("⚠️ Debes escribir el motivo del cambio.")
+                        else:
+                            try:
+                                update_payload = {
+                                    "cliente":         nuevo_cliente,
+                                    "vendedor":        nuevo_vendedor,
+                                    "nombre_trabajo":  nuevo_trabajo,
+                                }
+
+                                if "FORMAS" in tipo_op:
+                                    update_payload.update({
+                                        "cantidad_formas":       nueva_cant,
+                                        "presentacion":          nueva_pres,
+                                        "observaciones_formas":  nuevas_obs,
+                                        "transportadora_formas": True if nueva_trans == "SI" else None,
+                                        "destino_formas":        nuevo_dest if nueva_trans == "SI" else None,
+                                    })
+                                elif tipo_op in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS"]:
+                                    update_payload.update({
+                                        "cantidad_rollos":    nueva_cant_r,
+                                        "unidades_bolsa":     nueva_uds_b,
+                                        "unidades_caja":      nueva_uds_c,
+                                        "observaciones_rollos": nuevas_obs,
+                                        "transportadora_rollos": True if nueva_trans == "SI" else None,
+                                        "destino_rollos":     nuevo_dest if nueva_trans == "SI" else None,
+                                    })
+                                elif tipo_op == "REBOBINADO":
+                                    update_payload.update({
+                                        "cantidad_rollos":      nueva_cant_r,
+                                        "observaciones_rollos": nuevas_obs,
+                                    })
+
+                                # Guardar en Supabase
+                                supabase.table("ordenes_planeadas").update(update_payload)\
+                                    .eq("op", op_edit['op']).execute()
+
+                                # Registrar en historial de la OP
+                                hist = op_edit.get('historial_procesos') or []
+                                hist.append({
+                                    "area":    "EDICIÓN",
+                                    "maquina": "—",
+                                    "tipo":    "EDICIÓN",
+                                    "inicio":  hora_colombia().isoformat(),
+                                    "fin":     hora_colombia().isoformat(),
+                                    "duracion":"0:00:00",
+                                    "usuario": st.session_state.get('nombre_usuario','?'),
+                                    "nota":    f"Editado: {nueva_obs_gral}"
+                                })
+                                supabase.table("ordenes_planeadas").update({
+                                    "historial_procesos": hist
+                                }).eq("op", op_edit['op']).execute()
+
+                                st.success(f"✅ OP {op_edit['op']} actualizada correctamente.")
+                                st.session_state.pop('op_editar_data', None)
+                                time.sleep(1.2)
+                                st.rerun()
+
+                            except Exception as e:
+                                st.error(f"Error al guardar: {e}")
+
+    with tab_nueva:
     
 #  SELECTOR OTIGEN DE OP
 
-    st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
-    origen = st.radio("¿Cómo desea ingresar la orden?", 
-                      ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
-                      horizontal=True)
+        st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
+        origen = st.radio("¿Cómo desea ingresar la orden?", 
+                        ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
+                        horizontal=True)
     
 # VARIABLE PARA ALMACENAR DATOS RECUPERADOS
 
-    datos_rec = {}
-    
-    if "Repetición" in origen:
-        col_busq1, col_busq2 = st.columns([3, 1])
-        op_a_buscar = col_busq1.text_input("Ingrese el número de OP Anterior para buscar (Ej: FRI-100):")
-        if col_busq2.button("🔍 Buscar y Cargar"):
-            if op_a_buscar:
-                try:
-                    res_busq = supabase.table("ordenes_planeadas").select("*").eq("op", op_a_buscar.upper()).execute()
-                    if res_busq.data:
-                        datos_rec = res_busq.data[0]
-                        st.success(f"✅ Datos de '{datos_rec['nombre_trabajo']}' cargados correctamente.")
-                    else:
-                        st.error("No se encontró la OP. Verifique el prefijo y número.")
-                except Exception as e:
-                    st.error(f"Error en la base de datos: {e}")
+        datos_rec = {}
+        
+        if "Repetición" in origen:
+            col_busq1, col_busq2 = st.columns([3, 1])
+            op_a_buscar = col_busq1.text_input("Ingrese el número de OP Anterior para buscar (Ej: FRI-100):")
+            if col_busq2.button("🔍 Buscar y Cargar"):
+                if op_a_buscar:
+                    try:
+                        res_busq = supabase.table("ordenes_planeadas").select("*").eq("op", op_a_buscar.upper()).execute()
+                        if res_busq.data:
+                            datos_rec = res_busq.data[0]
+                            st.success(f"✅ Datos de '{datos_rec['nombre_trabajo']}' cargados correctamente.")
+                        else:
+                            st.error("No se encontró la OP. Verifique el prefijo y número.")
+                    except Exception as e:
+                        st.error(f"Error en la base de datos: {e}")
+                else:
+                    st.warning("Por favor ingrese un número de OP.")
+
+        st.divider()
+
+    # SELECTOR DE TIPO DE PRODUCTO
+
+        c1, c2, c3, c4, c5 = st.columns(5)
+        if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
+        if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
+        if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
+        if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
+        if c5.button("🌀 REBOBINADO"):st.session_state.sel_tipo = "REBOBINADO"
+
+        if st.session_state.sel_tipo:
+            t = st.session_state.sel_tipo
+            prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-"}.get(t, "")
+            p1, p2, p3, p4 = st.columns(4)
+
+    #  PERFORACIONES TODOS
+
+            t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
+
+            if t_perf == "SI":
+                perf_d = p1.text_area("Detalle Perforación", key="perf_det")
             else:
-                st.warning("Por favor ingrese un número de OP.")
+                perf_d = "NO"
 
-    st.divider()
-
-# SELECTOR DE TIPO DE PRODUCTO
-
-    c1, c2, c3, c4, c5 = st.columns(5)
-    if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
-    if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
-    if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
-    if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
-    if c5.button("🌀 REBOBINADO"):st.session_state.sel_tipo = "REBOBINADO"
-
-    if st.session_state.sel_tipo:
-        t = st.session_state.sel_tipo
-        prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-"}.get(t, "")
-        p1, p2, p3, p4 = st.columns(4)
-
-#  PERFORACIONES TODOS
-
-        t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
-
-        if t_perf == "SI":
-            perf_d = p1.text_area("Detalle Perforación", key="perf_det")
-        else:
-            perf_d = "NO"
-
- #  SOLO PARA FORMAS   
-
-        if "FORMAS" in t:
-
-
-            if "partes_sel" not in st.session_state:
-                val_partes = int(datos_rec.get('num_partes', 1))
-                st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
-
-            g1, g2, g3, g4 = st.columns(4)
-
-            cant_f = g1.number_input(
-                "Cantidad Formas",
-                0,
-                value=int(datos_rec.get('cantidad_formas', 0))
-            )
-
-            st.session_state.partes_sel = g2.selectbox(
-                "Número de Partes",
-                [1,2,3,4,5,6],
-                index=st.session_state.partes_sel - 1
-            )
-
-            partes = st.session_state.partes_sel
-
-            idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
-            pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
-
-            pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
-
-            t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
-
-            if t_barr == "SI":
-                barr_d = p2.text_area("Detalle Barras", key="barr_det")
-            else:
-                barr_d = "NO"
-
-
-            t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], key="num_select")
-
-            if t_num == "SI":
-                num_id = p3.text_input("Desde", key="num_desde")
-                num_fd = p3.text_input("Hasta", key="num_hasta")
-            else:
-                num_id = "NO"
-                num_fd = "NO"
-        else:
-            barr_d = "NO"
-            num_id = "NO"
-            num_fd = "NO"
-
-#  TRANSPORTADORA (TODOS) 
-
-        t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
-
-        if t_trans_f == "SI":
-            dest_f = p4.text_area("Ciudad destino", key="dest_trans")
-        else:
-            dest_f = "NO"
-        partes = st.session_state.get("partes_sel", 1)
-
-# BOTON COPIAR PARTE 1 A TODAS
-
-        if "FORMAS" in t and partes > 1:
-            if st.button("📋 Copiar Parte 1 a todas las partes"):
-
-                for i in range(2, partes + 1):
-
-                    st.session_state[f"a_{i}"] = st.session_state.get("a_1", "")
-                    st.session_state[f"l_{i}"] = st.session_state.get("l_1", "")
-                    st.session_state[f"p_{i}"] = st.session_state.get("p_1", "")
-                    st.session_state[f"f_{i}"] = st.session_state.get("f_1", "")
-                    st.session_state[f"g_{i}"] = st.session_state.get("g_1", "")
-                    st.session_state[f"t_{i}"] = st.session_state.get("t_1", "")
-
-                    st.session_state[f"tf_{i}"] = st.session_state.get("tf_1", "")
-                    st.session_state[f"tr_{i}"] = st.session_state.get("tr_1", "")
-                    st.session_state[f"obe_{i}"] = st.session_state.get("obe_1", "")
-
-                st.success("Partes copiadas correctamente")
-                st.rerun()
-                
-
-        with st.form("form_plan", clear_on_submit=True):
-            st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
-            
-# SECCION: DATOS GENERALES 
-
-            f1, f2, f3 = st.columns(3)
-            op_input = f1.text_input("Número de Nueva OP (Solo número) *")
-            
-# SI ES REPETICION SUGERIR LA OP ANTERIOR BUSCADA
-
-            val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
-            op_a = f2.text_input("OP Anterior", value=val_op_ant)
-            
-            cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
-            
-            f4, f5 = st.columns(2)
-            vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
-            trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
+    #  SOLO PARA FORMAS   
 
             if "FORMAS" in t:
-                lista_p = []
-                rec_partes = datos_rec.get('detalles_partes_json', [])
 
-                for i in range(1, partes + 1):
 
-# INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION 
+                if "partes_sel" not in st.session_state:
+                    val_partes = int(datos_rec.get('num_partes', 1))
+                    st.session_state.partes_sel = val_partes if 1 <= val_partes <= 6 else 1
 
-                    p_data = rec_partes[i-1] if i <= len(rec_partes) else {}
+                g1, g2, g3, g4 = st.columns(4)
+
+                cant_f = g1.number_input(
+                    "Cantidad Formas",
+                    0,
+                    value=int(datos_rec.get('cantidad_formas', 0))
+                )
+
+                st.session_state.partes_sel = g2.selectbox(
+                    "Número de Partes",
+                    [1,2,3,4,5,6],
+                    index=st.session_state.partes_sel - 1
+                )
+
+                partes = st.session_state.partes_sel
+
+                idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
+                pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
+
+                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
+
+                t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
+
+                if t_barr == "SI":
+                    barr_d = p2.text_area("Detalle Barras", key="barr_det")
+                else:
+                    barr_d = "NO"
+
+
+                t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], key="num_select")
+
+                if t_num == "SI":
+                    num_id = p3.text_input("Desde", key="num_desde")
+                    num_fd = p3.text_input("Hasta", key="num_hasta")
+                else:
+                    num_id = "NO"
+                    num_fd = "NO"
+            else:
+                barr_d = "NO"
+                num_id = "NO"
+                num_fd = "NO"
+
+    #  TRANSPORTADORA (TODOS) 
+
+            t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
+
+            if t_trans_f == "SI":
+                dest_f = p4.text_area("Ciudad destino", key="dest_trans")
+            else:
+                dest_f = "NO"
+            partes = st.session_state.get("partes_sel", 1)
+
+    # BOTON COPIAR PARTE 1 A TODAS
+
+            if "FORMAS" in t and partes > 1:
+                if st.button("📋 Copiar Parte 1 a todas las partes"):
+
+                    for i in range(2, partes + 1):
+
+                        st.session_state[f"a_{i}"] = st.session_state.get("a_1", "")
+                        st.session_state[f"l_{i}"] = st.session_state.get("l_1", "")
+                        st.session_state[f"p_{i}"] = st.session_state.get("p_1", "")
+                        st.session_state[f"f_{i}"] = st.session_state.get("f_1", "")
+                        st.session_state[f"g_{i}"] = st.session_state.get("g_1", "")
+                        st.session_state[f"t_{i}"] = st.session_state.get("t_1", "")
+
+                        st.session_state[f"tf_{i}"] = st.session_state.get("tf_1", "")
+                        st.session_state[f"tr_{i}"] = st.session_state.get("tr_1", "")
+                        st.session_state[f"obe_{i}"] = st.session_state.get("obe_1", "")
+
+                    st.success("Partes copiadas correctamente")
+                    st.rerun()
                     
-                    st.markdown(f"**PARTE {i}**")
-                    d1, d2, d3, d4, d5, d6 = st.columns(6)
-                    anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}", value=p_data.get('anc', ""))
-                    lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', ""))
-                    pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', ""))
-                    fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) 
-                    gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', ""))
-                    tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
-                    
-                    tf, tr = "N/A", "N/A"
-                    obe = ""
-                    if t == "FORMAS IMPRESAS":
-                        t1, t2, t3 = st.columns(3)
-                        tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', ""))
-                        tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', ""))
-                        obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}", value=p_data.get('obs_parte',""))
-                    
-                    lista_p.append({
-                        "p": i,
-                        "anc": anc,
-                        "lar": lar,
-                        "papel": pap,
-                        "color_fondo": fon,
-                        "gramos": gra,
-                        "tf": tf,
-                        "tr": tr,
-                        "trafico": tra,
-                        "obs_parte": obe
-                    })
+
+            with st.form("form_plan", clear_on_submit=True):
+                st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
                 
-                obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
-            elif t == "REBOBINADO":
+    # SECCION: DATOS GENERALES 
 
-                r1, r2, r3 = st.columns(3)
-
-                mat = r1.text_input("Material / Papel")
-                gram = r2.number_input("Gramaje", 0)
-                ancho = r3.text_input("Referencia Comercial",)
-
-                r4, r5 = st.columns(2)
-
-                cant_r = r4.number_input("Cantidad Rollos Solicitada", 0)
-                objetivo = r5.text_input("Objetivo del Rebobinado")
-
-                obs = st.text_area("Observaciones Rebobinado")
+                f1, f2, f3 = st.columns(3)
+                op_input = f1.text_input("Número de Nueva OP (Solo número) *")
                 
-            else: 
+    # SI ES REPETICION SUGERIR LA OP ANTERIOR BUSCADA
 
-#  SECCION: ROLLOS 
-
-                r1, r2, r3 = st.columns(3)
-                mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
-                gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
-                ref_c = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
+                val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
+                op_a = f2.text_input("OP Anterior", value=val_op_ant)
                 
-                r4, r5, r6 = st.columns(3)
-                cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
+                cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
                 
-                cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS", " NINGUNO"]
-                idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
-                core = r5.selectbox("Core / Centro", cores, index=idx_core)
-                                
-                tf_r, tr_r = "N/A", "N/A"
-                if t == "ROLLOS IMPRESOS":
-                    ct1, ct2 = st.columns(2)
-                    tf_r = ct1.text_input("Tintas Frente", value=datos_rec.get('tintas_frente_rollos', ""))
-                    tr_r = ct2.text_input("Tintas Respaldo", value=datos_rec.get('tintas_respaldo_rollos', ""))
-                
-                r7, r8 = st.columns(2)
-                ub = r7.number_input("Unidades x Bolsa", 0, value=int(datos_rec.get('unidades_bolsa', 0)))
-                uc = r8.number_input("Unidades x Caja", 0, value=int(datos_rec.get('unidades_caja', 0)))
-                obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
-
-#  ERROR SI TIENE CAMPOS SIN LLENAR 
-
-            if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
-
-                campos_faltantes = []
-
-                if not op_input:
-                    campos_faltantes.append("Número OP")
-
-                if not cli:
-                    campos_faltantes.append("Cliente")
-
-                if not vend:
-                    campos_faltantes.append("Vendedor")
-
-                if not trab:
-                    campos_faltantes.append("Nombre del Trabajo")
-
-                if campos_faltantes:
-                    st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
-                    st.stop()
-
-                op_final = f"{prefijo}{op_input.upper()}"
-
-#  VALIDAR OP DUPLICADA
-
-                existe_op = supabase.table("ordenes_planeadas") \
-                   .select("op") \
-                   .eq("op", op_final) \
-                   .execute()
-
-                if existe_op.data:
-                    st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
-                    st.stop()
-
-# DEFINIR AREA INICIAL SEGUN TIPO
-
-                if t == "FORMAS IMPRESAS":
-                    ruta_inicial = "DISEÑO (AUDITORIA)"
-
-                elif t == "FORMAS BLANCAS":
-                    ruta_inicial = "IMPRESIÓN"
-
-                elif t == "ROLLOS IMPRESOS":
-                    ruta_inicial = "DISEÑO (AUDITORIA)"
-
-                elif t == "ROLLOS BLANCOS":
-                    ruta_inicial = "CORTE"
-                    
-                elif t == "REBOBINADO":
-                    ruta_inicial = "REBOBINADORAS"  
-
-                payload = {
-                    "op": op_final,
-                    "op_anterior": op_a,
-                    "cliente": cli,
-                    "vendedor": vend,
-                    "nombre_trabajo": trab,
-                    "tipo_orden": t,
-                    "tipo_origen": origen,
-                    "proxima_area": ruta_inicial,
-                    "historial_procesos": []
-                }
+                f4, f5 = st.columns(2)
+                vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
+                trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
 
                 if "FORMAS" in t:
-                    payload.update({
-                        "cantidad_formas": int(cant_f),
-                        "num_partes": partes,
-                        "perforaciones_detalle": perf_d,
-                        "codigo_barras_detalle": barr_d,
-                        "num_id": num_id,    
-                        "num_fd": num_fd, 
-                        "tipo_origen": origen,   
-                        "presentacion2": pres_peg, 
-                        "transportadora_formas": True if t_trans_f == "SI" else None,
-                        "destino_formas": dest_f if t_trans_f == "SI" else None,
-                        "detalles_partes_json": lista_p,
-                        "presentacion": pres,
-                        "observaciones_formas": obs
-                    })
+                    lista_p = []
+                    rec_partes = datos_rec.get('detalles_partes_json', [])
 
+                    for i in range(1, partes + 1):
+
+    # INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION 
+
+                        p_data = rec_partes[i-1] if i <= len(rec_partes) else {}
+                        
+                        st.markdown(f"**PARTE {i}**")
+                        d1, d2, d3, d4, d5, d6 = st.columns(6)
+                        anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}", value=p_data.get('anc', ""))
+                        lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', ""))
+                        pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', ""))
+                        fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) 
+                        gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', ""))
+                        tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
+                        
+                        tf, tr = "N/A", "N/A"
+                        obe = ""
+                        if t == "FORMAS IMPRESAS":
+                            t1, t2, t3 = st.columns(3)
+                            tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', ""))
+                            tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', ""))
+                            obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}", value=p_data.get('obs_parte',""))
+                        
+                        lista_p.append({
+                            "p": i,
+                            "anc": anc,
+                            "lar": lar,
+                            "papel": pap,
+                            "color_fondo": fon,
+                            "gramos": gra,
+                            "tf": tf,
+                            "tr": tr,
+                            "trafico": tra,
+                            "obs_parte": obe
+                        })
+                    
+                    obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
                 elif t == "REBOBINADO":
-                    payload.update({
-                        "material": mat,
-                        "gramaje_rollos": gram,
-                        "ancho_base": ancho,
-                        "tipo_origen": origen,
-                        "cantidad_rollos": int(cant_r),
-                        "objetivo_rebobinado": objetivo,
-                        "observaciones_rollos": obs
-                })
 
-                else:
-                    payload.update({
-                        "material": mat,
-                        "gramaje_rollos": gram,
-                        "cantidad_rollos": int(cant_r),
-                        "core": core,
-                        "tintas_frente_rollos": tf_r,
-                        "tintas_respaldo_rollos": tr_r,
-                        "unidades_bolsa": int(ub),
-                        "unidades_caja": int(uc),
-                        "observaciones_rollos": obs,
-                        "ref_comercial": ref_c,
-                        "transportadora_rollos": True if t_trans_f == "SI" else None,
-                        "destino_rollos": dest_f if t_trans_f == "SI" else None,
+                    r1, r2, r3 = st.columns(3)
+
+                    mat = r1.text_input("Material / Papel")
+                    gram = r2.number_input("Gramaje", 0)
+                    ancho = r3.text_input("Referencia Comercial",)
+
+                    r4, r5 = st.columns(2)
+
+                    cant_r = r4.number_input("Cantidad Rollos Solicitada", 0)
+                    objetivo = r5.text_input("Objetivo del Rebobinado")
+
+                    obs = st.text_area("Observaciones Rebobinado")
+                    
+                else: 
+
+    #  SECCION: ROLLOS 
+
+                    r1, r2, r3 = st.columns(3)
+                    mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
+                    gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
+                    ref_c = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
+                    
+                    r4, r5, r6 = st.columns(3)
+                    cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
+                    
+                    cores = ["13MM", "19MM", "1 PULGADA", "40 MM", "2 PULGADAS", "3 PULGADAS", " NINGUNO"]
+                    idx_core = cores.index(datos_rec['core']) if datos_rec.get('core') in cores else 0
+                    core = r5.selectbox("Core / Centro", cores, index=idx_core)
+                                    
+                    tf_r, tr_r = "N/A", "N/A"
+                    if t == "ROLLOS IMPRESOS":
+                        ct1, ct2 = st.columns(2)
+                        tf_r = ct1.text_input("Tintas Frente", value=datos_rec.get('tintas_frente_rollos', ""))
+                        tr_r = ct2.text_input("Tintas Respaldo", value=datos_rec.get('tintas_respaldo_rollos', ""))
+                    
+                    r7, r8 = st.columns(2)
+                    ub = r7.number_input("Unidades x Bolsa", 0, value=int(datos_rec.get('unidades_bolsa', 0)))
+                    uc = r8.number_input("Unidades x Caja", 0, value=int(datos_rec.get('unidades_caja', 0)))
+                    obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
+
+    #  ERROR SI TIENE CAMPOS SIN LLENAR 
+
+                if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
+
+                    campos_faltantes = []
+
+                    if not op_input:
+                        campos_faltantes.append("Número OP")
+
+                    if not cli:
+                        campos_faltantes.append("Cliente")
+
+                    if not vend:
+                        campos_faltantes.append("Vendedor")
+
+                    if not trab:
+                        campos_faltantes.append("Nombre del Trabajo")
+
+                    if campos_faltantes:
+                        st.error("Faltan campos obligatorios: " + ", ".join(campos_faltantes))
+                        st.stop()
+
+                    op_final = f"{prefijo}{op_input.upper()}"
+
+    #  VALIDAR OP DUPLICADA
+
+                    existe_op = supabase.table("ordenes_planeadas") \
+                    .select("op") \
+                    .eq("op", op_final) \
+                    .execute()
+
+                    if existe_op.data:
+                        st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
+                        st.stop()
+
+    # DEFINIR AREA INICIAL SEGUN TIPO
+
+                    if t == "FORMAS IMPRESAS":
+                        ruta_inicial = "DISEÑO (AUDITORIA)"
+
+                    elif t == "FORMAS BLANCAS":
+                        ruta_inicial = "IMPRESIÓN"
+
+                    elif t == "ROLLOS IMPRESOS":
+                        ruta_inicial = "DISEÑO (AUDITORIA)"
+
+                    elif t == "ROLLOS BLANCOS":
+                        ruta_inicial = "CORTE"
+                        
+                    elif t == "REBOBINADO":
+                        ruta_inicial = "REBOBINADORAS"  
+
+                    payload = {
+                        "op": op_final,
+                        "op_anterior": op_a,
+                        "cliente": cli,
+                        "vendedor": vend,
+                        "nombre_trabajo": trab,
+                        "tipo_orden": t,
+                        "tipo_origen": origen,
+                        "proxima_area": ruta_inicial,
+                        "historial_procesos": []
+                    }
+
+                    if "FORMAS" in t:
+                        payload.update({
+                            "cantidad_formas": int(cant_f),
+                            "num_partes": partes,
+                            "perforaciones_detalle": perf_d,
+                            "codigo_barras_detalle": barr_d,
+                            "num_id": num_id,    
+                            "num_fd": num_fd, 
+                            "tipo_origen": origen,   
+                            "presentacion2": pres_peg, 
+                            "transportadora_formas": True if t_trans_f == "SI" else None,
+                            "destino_formas": dest_f if t_trans_f == "SI" else None,
+                            "detalles_partes_json": lista_p,
+                            "presentacion": pres,
+                            "observaciones_formas": obs
+                        })
+
+                    elif t == "REBOBINADO":
+                        payload.update({
+                            "material": mat,
+                            "gramaje_rollos": gram,
+                            "ancho_base": ancho,
+                            "tipo_origen": origen,
+                            "cantidad_rollos": int(cant_r),
+                            "objetivo_rebobinado": objetivo,
+                            "observaciones_rollos": obs
                     })
 
-                supabase.table("ordenes_planeadas").insert(payload).execute()
+                    else:
+                        payload.update({
+                            "material": mat,
+                            "gramaje_rollos": gram,
+                            "cantidad_rollos": int(cant_r),
+                            "core": core,
+                            "tintas_frente_rollos": tf_r,
+                            "tintas_respaldo_rollos": tr_r,
+                            "unidades_bolsa": int(ub),
+                            "unidades_caja": int(uc),
+                            "observaciones_rollos": obs,
+                            "ref_comercial": ref_c,
+                            "transportadora_rollos": True if t_trans_f == "SI" else None,
+                            "destino_rollos": dest_f if t_trans_f == "SI" else None,
+                        })
 
-                st.success(f"Orden {op_final} registrada.")
-                st.session_state.sel_tipo = None
+                    supabase.table("ordenes_planeadas").insert(payload).execute()
 
-                time.sleep(1.5)
-                st.rerun()
+                    st.success(f"Orden {op_final} registrada.")
+                    st.session_state.sel_tipo = None
 
+                    time.sleep(1.5)
+                    st.rerun()
 # MODULO: BODEGA PRODUCTO TERMINADO 
 
 elif menu == "📦 salida produccion P1":
