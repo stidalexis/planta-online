@@ -2407,11 +2407,9 @@ elif menu == "📆 Cronograma Impresión":
     import json
 
     st.markdown("<div class='title-area'>📆 CRONOGRAMA DE IMPRESIÓN</div>", unsafe_allow_html=True)
-    st.caption("Arrastra las tarjetas de la derecha al cronograma. Mueve o estira los bloques para ajustar. Todo se guarda solo.")
+    st.caption("Arrastra las tarjetas al cronograma. Mueve o estira los bloques para ajustar. Todo se guarda solo.")
 
     lista_maquinas = ["ATF-22", "HR-22", "HAMILTON", "HR-17", "DIDDE 11", "MULTILYTH 1", "MULTILYTH 2"]
-
-# Capturar cambios enviados desde el HTML via query_params
 
     qp = st.query_params
     if "crono_id" in qp:
@@ -2431,45 +2429,36 @@ elif menu == "📆 Cronograma Impresión":
     except:
         todas_las_ops = []
 
-# ALERTAS — OPs con fecha fin ya vencida o llevan más de 3 días sin finalizar
-
+    # ALERTAS
     ahora_col = hora_colombia()
     alertas = []
     for op in todas_las_ops:
         if op.get("estado") == "Terminado" or op.get("proxima_area") == "FINALIZADO":
             continue
-        
-# Alerta 1: fecha fin del cronograma ya pasó y sigue sin finalizar
-
         fecha_fin_crono = op.get("fecha_fin_cronograma")
         if fecha_fin_crono:
             try:
                 dt_fin_crono = datetime.fromisoformat(str(fecha_fin_crono).replace("Z","")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
                 if ahora_col > dt_fin_crono:
-                    retraso = ahora_col - dt_fin_crono
-                    horas_retraso = int(retraso.total_seconds() // 3600)
-                    alertas.append(f"⏰ **OP {op.get('op')}** ({op.get('cliente','')}) — lleva **{horas_retraso}h de retraso** vs cronograma en {op.get('maquina_cronograma','?')}")
+                    horas_retraso = int((ahora_col - dt_fin_crono).total_seconds() // 3600)
+                    alertas.append(f"⏰ **OP {op.get('op')}** ({op.get('cliente','')}) — lleva **{horas_retraso}h de retraso**")
             except:
                 pass
-            
-# Alerta 2: OP planeada hace más de 5 días y nunca se ha asignado al cronograma
-
         fecha_creacion = op.get("fecha_creacion") or op.get("created_at")
         if fecha_creacion and not op.get("maquina_cronograma"):
             try:
                 dt_creacion = datetime.fromisoformat(str(fecha_creacion).replace("Z","")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
-                dias_sin_asignar = (ahora_col - dt_creacion).days
-                if dias_sin_asignar >= 3:
-                    alertas.append(f"📋 **OP {op.get('op')}** ({op.get('cliente','')}) — lleva **{dias_sin_asignar} días sin asignar** al cronograma")
+                if (ahora_col - dt_creacion).days >= 3:
+                    alertas.append(f"📋 **OP {op.get('op')}** — lleva **{(ahora_col - dt_creacion).days} dias sin asignar**")
             except:
                 pass
 
     if alertas:
-        with st.expander(f"🚨 {len(alertas)} ALERTA(S) DE PRODUCCIÓN — haz clic para ver", expanded=True):
+        with st.expander(f"🚨 {len(alertas)} ALERTA(S) — haz clic para ver", expanded=True):
             for a in alertas:
                 st.warning(a)
     else:
-        st.success("✅ Todo en orden — sin retrasos ni OPs sin asignar")
+        st.success("✅ Todo en orden")
 
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
     ops_pendientes = [op for op in todas_las_ops if
@@ -2478,444 +2467,191 @@ elif menu == "📆 Cronograma Impresión":
                       and op.get("estado") != "Terminado"
                       and not op.get("excluir_cronograma")]
 
-# Eventos agendados para el calendario
-
     eventos_json = []
     for op in ops_agendadas:
         if op.get("proxima_area") == "FINALIZADO":
-            color, etiqueta = "#4a4a4a", "✅ FINALIZADA"
+            color, etiqueta = "#4a4a4a", "FINALIZADA"
         elif op.get("estado") == "En Proceso":
-            color, etiqueta = "#2563eb", "🔵 EN PROCESO"
+            color, etiqueta = "#2563eb", "EN PROCESO"
         else:
-            color, etiqueta = "#d97706", "🟠 PROGRAMADA"
+            color, etiqueta = "#d97706", "PROGRAMADA"
+        op_num    = str(op.get("op", "?")).replace('"', '').replace("'", "")
+        cliente   = str(op.get("cliente", ""))[:14].replace('"', '').replace("'", "")
+        titulo    = "OP " + op_num + " - " + cliente
         eventos_json.append({
             "id":              str(op["id"]),
             "resourceId":      op["maquina_cronograma"],
-            "title":           f"OP {op.get('op','?')} - {op.get('cliente','')[:14]}",
-            "start":           op["fecha_inicio_cronograma"],
-            "end":             op["fecha_fin_cronograma"],
+            "title":           titulo,
+            "start":           str(op["fecha_inicio_cronograma"]),
+            "end":             str(op["fecha_fin_cronograma"]),
             "backgroundColor": color,
             "borderColor":     color,
             "textColor":       "#ffffff",
-            "extendedProps":   {"cliente": op.get("cliente",""), "estado": etiqueta, "db_id": str(op["id"])}
+            "extendedProps": {
+                "cliente": cliente,
+                "estado":  etiqueta,
+                "db_id":   str(op["id"])
+            }
         })
-
-# OPs pendientes como tarjetas arrastrables (eventos externos)
 
     pendientes_json = []
     for op in ops_pendientes:
         card_color = "#2563eb" if op.get("estado") == "En Proceso" else "#d97706"
+        op_num   = str(op.get("op", "?")).replace('"', '').replace("'", "")
+        cliente  = str(op.get("cliente", ""))[:14].replace('"', '').replace("'", "")
+        titulo   = "OP " + op_num + " - " + cliente
         pendientes_json.append({
             "id":    str(op["id"]),
-            "title": f"OP {op.get('op','?')} - {op.get('cliente','')[:14]}",
+            "title": titulo,
             "color": card_color,
-            "extendedProps": {"cliente": op.get("cliente",""), "db_id": str(op["id"])}
+            "extendedProps": {"cliente": cliente, "db_id": str(op["id"])}
         })
 
     recursos_json  = [{"id": m, "title": m} for m in lista_maquinas]
-    eventos_str    = json.dumps(eventos_json,    ensure_ascii=True)
-    recursos_str   = json.dumps(recursos_json,   ensure_ascii=True)
-    pendientes_str = json.dumps(pendientes_json,  ensure_ascii=True)
-    # URL base para el puente query_params
-    try:
-        base_url = "https://planta-online.streamlit.app"
-        supa_url = URL
-        supa_key = KEY
-    except:
-        base_url = "https://planta-online.streamlit.app"
-        supa_url = ""
-        supa_key = ""
+    eventos_str    = json.dumps(eventos_json,   ensure_ascii=True)
+    recursos_str   = json.dumps(recursos_json,  ensure_ascii=True)
+    pendientes_str = json.dumps(pendientes_json, ensure_ascii=True)
+    supa_url = str(URL)
+    supa_key = str(KEY)
 
-    html_cronograma = """
-    <!DOCTYPE html><html>
-    <head>
-      <link href='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css' rel='stylesheet'/>
-      <script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #191919; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; gap: 10px; padding: 10px; }
-        #calendar-wrap { flex: 1; min-width: 0; }
-        #sidebar {
-          width: 190px; flex-shrink: 0; background: #1f1f1f;
-          border: 1px solid #2e2e2e; border-radius: 10px; padding: 10px;
-          display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 560px;
-        }
-        #sidebar h3 { color: #aaa; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-        .tarjeta {
-          background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 8px;
-          padding: 8px 10px; font-size: 12px; cursor: grab; color: #e0e0e0;
-          transition: background 0.15s;
-        }
-        .tarjeta:hover { background: #333; border-color: #d97706; }
-        .tarjeta .op-num { font-weight: 700; color: #d97706; font-size: 13px; }
-        .tarjeta .cli { color: #aaa; font-size: 11px; margin-top: 2px; }
-        .no-pending { color: #555; font-size: 12px; text-align: center; margin-top: 20px; }
-        .fc .fc-toolbar { background: #191919; padding: 8px 0; border-bottom: 1px solid #2e2e2e; }
-        .fc .fc-toolbar-title { color: #e0e0e0; font-size: 15px; font-weight: 600; }
-        .fc .fc-button { background: #2e2e2e !important; border: 1px solid #3e3e3e !important; color: #ccc !important; border-radius: 6px !important; font-size: 12px !important; padding: 4px 10px !important; }
-        .fc .fc-button:hover { background: #3a3a3a !important; }
-        .fc .fc-button-active { background: #444 !important; }
-        .fc .fc-col-header-cell { background: #1f1f1f; border-color: #2e2e2e; }
-        .fc .fc-col-header-cell-cushion { color: #aaa; font-size: 11px; text-decoration: none; padding: 5px; }
-        .fc-datagrid-cell { background: #1f1f1f !important; border-color: #2a2a2a !important; }
-        .fc .fc-datagrid-cell-cushion { color: #ccc; font-size: 12px; font-weight: 600; }
-        .fc-timeline-slot { border-color: #2a2a2a !important; }
-        .fc-timeline-lane { border-color: #2a2a2a !important; background: #191919; }
-        .fc-event { border-radius: 6px !important; border: none !important; padding: 3px 7px !important; font-size: 12px !important; cursor: grab !important; }
-        .fc-event:hover { filter: brightness(1.2); }
-        .fc .fc-timeline-now-indicator-line { border-color: #ef4444; }
-        #toast {
-          display: none; position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%);
-          background: #22c55e; color: #fff; padding: 8px 20px; border-radius: 20px;
-          font-size: 13px; font-weight: 600; z-index: 9999; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-        }
-        #tooltip {
-          display: none; position: fixed; background: #2a2a2a; border: 1px solid #444;
-          color: #eee; padding: 10px 14px; border-radius: 8px; font-size: 12px;
-          z-index: 9998; pointer-events: none; max-width: 220px; line-height: 1.7;
-        }
-      </style>
-    </head>
-    <body>
-      <div id="calendar-wrap"><div id="calendar"></div></div>
-      <div id="sidebar">
-        <h3>📋 Sin asignar</h3>
-        <div id="lista-pendientes"></div>
-      </div>
-      <div id="toast">✅ Guardado</div>
-      <button id="btn-guardar" onclick="ejecutarGuardado()" style="
-        display:none; position:fixed; bottom:18px; right:18px;
-        background:#2563eb; color:#fff; border:none; border-radius:10px;
-        padding:10px 20px; font-size:13px; font-weight:700; cursor:pointer;
-        z-index:9999; box-shadow:0 4px 15px rgba(0,0,0,0.4);
-      ">💾 Guardar cambios</button>
-      <div id="tooltip"></div>
+    html_cal = (
+        "<!DOCTYPE html><html><head>"
+        "<link href='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css' rel='stylesheet'/>"
+        "<script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>"
+        "<style>"
+        "* { box-sizing: border-box; margin: 0; padding: 0; }"
+        "body { background: #191919; color: #e0e0e0; font-family: Segoe UI, sans-serif; display: flex; gap: 10px; padding: 10px; }"
+        "#calendar-wrap { flex: 1; min-width: 0; }"
+        "#sidebar { width: 185px; flex-shrink: 0; background: #1f1f1f; border: 1px solid #2e2e2e; border-radius: 10px; padding: 10px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; max-height: 560px; }"
+        "#sidebar h3 { color: #aaa; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }"
+        ".tarjeta { background: #2a2a2a; border: 1px solid #3a3a3a; border-radius: 8px; padding: 8px 10px; font-size: 12px; cursor: grab; color: #e0e0e0; transition: background 0.15s; margin-bottom: 4px; }"
+        ".tarjeta:hover { background: #333; }"
+        ".op-num { font-weight: 700; font-size: 12px; }"
+        ".cli { color: #aaa; font-size: 11px; margin-top: 2px; }"
+        ".est { font-size: 10px; color: #666; margin-top: 2px; }"
+        ".no-pending { color: #555; font-size: 12px; text-align: center; margin-top: 20px; }"
+        ".fc .fc-toolbar { background: #191919; padding: 8px 0; border-bottom: 1px solid #2e2e2e; }"
+        ".fc .fc-toolbar-title { color: #e0e0e0; font-size: 15px; font-weight: 600; }"
+        ".fc .fc-button { background: #2e2e2e !important; border: 1px solid #3e3e3e !important; color: #ccc !important; border-radius: 6px !important; font-size: 12px !important; padding: 4px 10px !important; }"
+        ".fc .fc-button:hover { background: #3a3a3a !important; }"
+        ".fc .fc-button-active { background: #444 !important; }"
+        ".fc .fc-col-header-cell { background: #1f1f1f; border-color: #2e2e2e; }"
+        ".fc .fc-col-header-cell-cushion { color: #aaa; font-size: 11px; text-decoration: none; padding: 5px; }"
+        ".fc-datagrid-cell { background: #1f1f1f !important; border-color: #2a2a2a !important; }"
+        ".fc .fc-datagrid-cell-cushion { color: #ccc; font-size: 12px; font-weight: 600; }"
+        ".fc-timeline-slot { border-color: #2a2a2a !important; }"
+        ".fc-timeline-lane { border-color: #2a2a2a !important; background: #191919; }"
+        ".fc-event { border-radius: 6px !important; border: none !important; padding: 3px 7px !important; font-size: 12px !important; cursor: grab !important; }"
+        ".fc .fc-timeline-now-indicator-line { border-color: #ef4444; }"
+        "#toast { display: none; position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: #22c55e; color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; z-index: 9999; }"
+        "#btn-guardar { display: none; position: fixed; bottom: 18px; right: 18px; background: #2563eb; color: #fff; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 700; cursor: pointer; z-index: 9999; }"
+        "#popup-quitar { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10000; align-items: center; justify-content: center; }"
+        "#tooltip { display: none; position: fixed; background: #2a2a2a; border: 1px solid #444; color: #eee; padding: 10px 14px; border-radius: 8px; font-size: 12px; z-index: 9998; pointer-events: none; max-width: 220px; line-height: 1.7; }"
+        "</style></head><body>"
+        "<div id='calendar-wrap'><div id='calendar'></div></div>"
+        "<div id='sidebar'><h3>Sin asignar</h3><div id='lista-pendientes'></div></div>"
+        "<div id='toast'></div>"
+        "<button id='btn-guardar' onclick='ejecutarGuardado()'>Guardar cambios</button>"
+        "<div id='popup-quitar'><div style='background:#2a2a2a;border:1px solid #444;border-radius:12px;padding:24px;max-width:300px;text-align:center;color:#eee;'>"
+        "<div style='font-size:22px;margin-bottom:8px;'>🗑</div>"
+        "<div style='font-weight:700;margin-bottom:6px;'>Quitar del cronograma?</div>"
+        "<div id='popup-titulo' style='color:#d97706;font-size:13px;margin-bottom:16px;'></div>"
+        "<div style='display:flex;gap:10px;justify-content:center;'>"
+        "<button id='btn-cancelar-quitar' style='background:#3a3a3a;color:#ccc;border:1px solid #555;border-radius:8px;padding:8px 18px;cursor:pointer;'>Cancelar</button>"
+        "<button id='btn-confirmar-quitar' style='background:#ef4444;color:#fff;border:none;border-radius:8px;padding:8px 18px;cursor:pointer;font-weight:700;'>Si, quitar</button>"
+        "</div></div></div>"
+        "<div id='tooltip'></div>"
+        "<script>"
+        "var eventos    = " + eventos_str + ";"
+        "var recursos   = " + recursos_str + ";"
+        "var pendientes = " + pendientes_str + ";"
+        "var SUPA_URL   = '" + supa_url + "';"
+        "var SUPA_KEY   = '" + supa_key + "';"
+        "var tooltip    = document.getElementById('tooltip');"
+        "var toast      = document.getElementById('toast');"
+        "var cambiosPendientes = {};"
+        "function showToast(msg) { toast.textContent = msg; toast.style.display = 'block'; setTimeout(function(){ toast.style.display = 'none'; }, 2500); }"
+        "function actualizarBotonGuardar() { var n = Object.keys(cambiosPendientes).length; var btn = document.getElementById('btn-guardar'); if(n>0){ btn.style.display='block'; btn.textContent='Guardar cambios ('+n+')'; } else { btn.style.display='none'; } }"
+        "function guardarEnSupabase(db_id, start, end, maquina) { cambiosPendientes[db_id] = {start:start, end:end, maquina:maquina}; actualizarBotonGuardar(); }"
+        "async function ejecutarGuardado() { var ids = Object.keys(cambiosPendientes); var btn = document.getElementById('btn-guardar'); btn.textContent = 'Guardando...'; btn.disabled = true; var errores = 0; for(var i=0;i<ids.length;i++){ var id=ids[i]; var cam=cambiosPendientes[id]; try { var resp = await fetch(SUPA_URL+'/rest/v1/ordenes_planeadas?id=eq.'+encodeURIComponent(id), { method:'PATCH', headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=minimal'}, body:JSON.stringify({fecha_inicio_cronograma:cam.start,fecha_fin_cronograma:cam.end,maquina_cronograma:cam.maquina}) }); if(resp.ok){ delete cambiosPendientes[id]; } else { errores++; } } catch(e){ errores++; } } btn.disabled=false; if(errores===0){ showToast('Todo guardado!'); btn.style.display='none'; } else { showToast('Error en '+errores+' cambios'); actualizarBotonGuardar(); } }"
+        "async function quitarDelCronograma(db_id, ev) { showToast('Quitando...'); try { var resp = await fetch(SUPA_URL+'/rest/v1/ordenes_planeadas?id=eq.'+encodeURIComponent(db_id), { method:'PATCH', headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=minimal'}, body:JSON.stringify({fecha_inicio_cronograma:null,fecha_fin_cronograma:null,maquina_cronograma:null}) }); if(resp.ok){ ev.remove(); showToast('OP devuelta a pendientes'); } else { showToast('Error al quitar'); } } catch(e){ showToast('Error de conexion'); } }"
+        "async function excluirOP(event, db_id) { event.stopPropagation(); var resp = await fetch(SUPA_URL+'/rest/v1/ordenes_planeadas?id=eq.'+encodeURIComponent(db_id), { method:'PATCH', headers:{'Content-Type':'application/json','apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Prefer':'return=minimal'}, body:JSON.stringify({excluir_cronograma:true}) }); if(resp.ok){ var t=event.target.closest('.tarjeta'); if(t) t.remove(); showToast('OP retirada de pendientes'); } }"
+        "document.addEventListener('mousemove', function(e){ tooltip.style.left=(e.clientX+15)+'px'; tooltip.style.top=(e.clientY+10)+'px'; });"
+        "document.addEventListener('DOMContentLoaded', function(){"
+        "  var lista = document.getElementById('lista-pendientes');"
+        "  if(pendientes.length === 0){ lista.innerHTML = '<div class=\"no-pending\">Todas programadas</div>'; }"
+        "  else { pendientes.forEach(function(p){"
+        "    var div = document.createElement('div');"
+        "    div.className = 'tarjeta';"
+        "    var cc = p.color || '#d97706';"
+        "    div.style.borderLeft = '3px solid '+cc;"
+        "    div.setAttribute('data-event', JSON.stringify({id:p.id,title:p.title,duration:'02:00',backgroundColor:cc,borderColor:cc,textColor:'#fff',extendedProps:p.extendedProps}));"
+        "    div.innerHTML = '<div style=\"display:flex;justify-content:space-between;align-items:center;\"><div class=\"op-num\" style=\"color:'+cc+'\">'+p.title.split(' - ')[0]+'</div><button onclick=\"excluirOP(event,\\''+p.id+'\\')\" style=\"background:none;border:none;color:#555;cursor:pointer;font-size:13px;\">x</button></div><div class=\"cli\">'+p.extendedProps.cliente+'</div><div class=\"est\">'+(cc==='#2563eb'?'En proceso':'Sin iniciar')+'</div>';"
+        "    lista.appendChild(div);"
+        "  }); }"
+        "  var calEl = document.getElementById('calendar');"
+        "  var cal = new FullCalendar.Calendar(calEl, {"
+        "    schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',"
+        "    initialView: 'resourceTimelineDay',"
+        "    locale: 'es',"
+        "    height: 540,"
+        "    nowIndicator: true,"
+        "    editable: true,"
+        "    droppable: true,"
+        "    eventResizableFromStart: true,"
+        "    slotDuration: '01:00:00',"
+        "    slotLabelFormat: {hour:'2-digit',minute:'2-digit',hour12:false},"
+        "    scrollTime: '06:00:00',"
+        "    resourceAreaWidth: '13%',"
+        "    resourceAreaHeaderContent: 'Maquina',"
+        "    headerToolbar: {left:'prev,next today',center:'title',right:'resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth'},"
+        "    buttonText: {today:'Hoy',day:'Dia',week:'Semana',month:'Mes'},"
+        "    views: {"
+        "      resourceTimelineDay: {slotDuration:'01:00:00',slotLabelFormat:{hour:'2-digit',minute:'2-digit',hour12:false}},"
+        "      resourceTimelineWeek: {slotDuration:{days:1},slotLabelFormat:{weekday:'long',day:'2-digit',month:'short'}},"
+        "      resourceTimelineMonth: {slotDuration:{days:7},slotLabelFormat:{day:'2-digit',month:'short'}}"
+        "    },"
+        "    resources: recursos,"
+        "    events: eventos,"
+        "    drop: function(info){ info.draggedEl.parentNode.removeChild(info.draggedEl); },"
+        "    eventReceive: function(info){"
+        "      var ev=info.event; var db_id=ev.extendedProps.db_id; var maq=ev.getResources()[0]?ev.getResources()[0].id:'';"
+        "      var start=ev.start?ev.start.toISOString():''; var end=ev.end?ev.end.toISOString():'';"
+        "      if(!end){ var tmp=new Date(ev.start); tmp.setHours(tmp.getHours()+2); end=tmp.toISOString(); }"
+        "      guardarEnSupabase(db_id,start,end,maq);"
+        "    },"
+        "    eventChange: function(info){"
+        "      var ev=info.event; var db_id=ev.extendedProps.db_id||ev.id; var maq=ev.getResources()[0]?ev.getResources()[0].id:'';"
+        "      var start=ev.start?ev.start.toISOString():''; var end=ev.end?ev.end.toISOString():'';"
+        "      guardarEnSupabase(db_id,start,end,maq);"
+        "    },"
+        "    eventClick: function(info){"
+        "      var ev=info.event; var db_id=ev.extendedProps.db_id||ev.id;"
+        "      var popup=document.getElementById('popup-quitar');"
+        "      document.getElementById('popup-titulo').textContent=ev.title;"
+        "      popup.style.display='flex';"
+        "      document.getElementById('btn-confirmar-quitar').onclick=function(){ popup.style.display='none'; quitarDelCronograma(db_id,ev); };"
+        "      document.getElementById('btn-cancelar-quitar').onclick=function(){ popup.style.display='none'; };"
+        "    },"
+        "    eventMouseEnter: function(info){"
+        "      var p=info.event.extendedProps;"
+        "      var s=info.event.start?info.event.start.toLocaleString('es-CO',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}):'';"
+        "      var e=info.event.end?info.event.end.toLocaleString('es-CO',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'}):'';"
+        "      tooltip.innerHTML='<b style=\"color:#fff\">'+info.event.title+'</b><br>Cliente: '+p.cliente+'<br>Estado: '+p.estado+'<br>Inicio: '+s+'<br>Fin: '+e;"
+        "      tooltip.style.display='block';"
+        "    },"
+        "    eventMouseLeave: function(){ tooltip.style.display='none'; }"
+        "  });"
+        "  cal.render();"
+        "  new FullCalendar.ThirdPartyDraggable(document.getElementById('lista-pendientes'),{"
+        "    itemSelector: '.tarjeta',"
+        "    eventData: function(el){ return JSON.parse(el.getAttribute('data-event')); }"
+        "  });"
+        "});"
+        "</script></body></html>"
+    )
 
-      <!-- Popup confirmación quitar OP -->
-      <div id="popup-quitar" style="
-        display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7);
-        z-index:10000; align-items:center; justify-content:center;
-      ">
-        <div style="background:#2a2a2a; border:1px solid #444; border-radius:12px;
-                    padding:24px 28px; max-width:320px; text-align:center; color:#eee;">
-          <div style="font-size:22px; margin-bottom:8px;">🗑️</div>
-          <div style="font-weight:700; font-size:14px; margin-bottom:6px;">¿Quitar del cronograma?</div>
-          <div id="popup-titulo" style="color:#d97706; font-size:13px; margin-bottom:16px;"></div>
-          <div style="color:#aaa; font-size:12px; margin-bottom:20px;">Volverá a la lista de pendientes sin asignar.</div>
-          <div style="display:flex; gap:10px; justify-content:center;">
-            <button id="btn-cancelar-quitar" style="
-              background:#3a3a3a; color:#ccc; border:1px solid #555;
-              border-radius:8px; padding:8px 18px; cursor:pointer; font-size:13px;">
-              Cancelar
-            </button>
-            <button id="btn-confirmar-quitar" style="
-              background:#ef4444; color:#fff; border:none;
-              border-radius:8px; padding:8px 18px; cursor:pointer; font-size:13px; font-weight:700;">
-              Sí, quitar
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <script>
-        var eventos    = """ + eventos_str    + """;
-        var recursos   = """ + recursos_str   + """;
-        var pendientes = """ + pendientes_str + """;
-        var BASE_URL   = """ + json.dumps(base_url) + """;
-        var SUPA_URL   = """ + json.dumps(supa_url) + """;
-        var SUPA_KEY   = """ + json.dumps(supa_key) + """;
-        var tooltip    = document.getElementById('tooltip');
-        var toast      = document.getElementById('toast');
-
-        // Mostrar toast brevemente
-        function showToast(msg) {
-          toast.textContent = msg;
-          toast.style.display = 'block';
-          setTimeout(function() { toast.style.display = 'none'; }, 2000);
-        }
-
-        // Cambios pendientes por guardar
-        var cambiosPendientes = {};
-
-        // Guardar directamente en Supabase via REST API
-        function guardarEnSupabase(db_id, start, end, maquina) {
-          cambiosPendientes[db_id] = { start: start, end: end, maquina: maquina };
-          actualizarBotonGuardar();
-        }
-
-        function actualizarBotonGuardar() {
-          var n = Object.keys(cambiosPendientes).length;
-          var btn = document.getElementById('btn-guardar');
-          if (n > 0) {
-            btn.style.display = 'block';
-            btn.textContent = '💾 Guardar cambios (' + n + ')';
-          } else {
-            btn.style.display = 'none';
-          }
-        }
-
-        async function ejecutarGuardado() {
-          var ids = Object.keys(cambiosPendientes);
-          var btn = document.getElementById('btn-guardar');
-          btn.textContent = '⏳ Guardando...';
-          btn.disabled = true;
-          var errores = 0;
-          for (var i = 0; i < ids.length; i++) {
-            var id  = ids[i];
-            var cam = cambiosPendientes[id];
-            try {
-              var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(id), {
-                method:  'PATCH',
-                headers: {
-                  'Content-Type':  'application/json',
-                  'apikey':        SUPA_KEY,
-                  'Authorization': 'Bearer ' + SUPA_KEY,
-                  'Prefer':        'return=minimal'
-                },
-                body: JSON.stringify({
-                  fecha_inicio_cronograma: cam.start,
-                  fecha_fin_cronograma:    cam.end,
-                  maquina_cronograma:      cam.maquina
-                })
-              });
-              if (resp.ok) {
-                delete cambiosPendientes[id];
-              } else {
-                errores++;
-              }
-            } catch(e) {
-              errores++;
-            }
-          }
-          btn.disabled = false;
-          if (errores === 0) {
-            showToast('✅ ¡Todo guardado correctamente!');
-            btn.style.display = 'none';
-          } else {
-            showToast('⚠️ ' + errores + ' cambio(s) no se pudieron guardar');
-            actualizarBotonGuardar();
-          }
-        }
-        // Quitar OP del cronograma — limpia fechas y máquina en Supabase
-        async function quitarDelCronograma(db_id, ev) {
-          showToast('⏳ Quitando...');
-          try {
-            var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(db_id), {
-              method:  'PATCH',
-              headers: {
-                'Content-Type':  'application/json',
-                'apikey':        SUPA_KEY,
-                'Authorization': 'Bearer ' + SUPA_KEY,
-                'Prefer':        'return=minimal'
-              },
-              body: JSON.stringify({
-                fecha_inicio_cronograma: null,
-                fecha_fin_cronograma:    null,
-                maquina_cronograma:      null
-              })
-            });
-            if (resp.ok) {
-              ev.remove();
-              // Agregar tarjeta de vuelta al sidebar
-              var lista = document.getElementById('lista-pendientes');
-              var sinMsg = lista.querySelector('.no-pending');
-              if (sinMsg) sinMsg.remove();
-              var div = document.createElement('div');
-              div.className = 'tarjeta';
-              div.setAttribute('data-event', JSON.stringify({
-                id: db_id,
-                title: ev.title,
-                duration: '02:00',
-                backgroundColor: '#d97706',
-                borderColor: '#d97706',
-                textColor: '#fff',
-                extendedProps: { cliente: ev.extendedProps.cliente, db_id: db_id }
-              }));
-              div.innerHTML = '<div class="op-num">' + ev.title.split('·')[0].trim() + '</div>'
-                            + '<div class="cli">👤 ' + ev.extendedProps.cliente + '</div>';
-              lista.appendChild(div);
-              // Reactivar drag en la tarjeta nueva
-              new FullCalendar.ThirdPartyDraggable(lista, {
-                itemSelector: '.tarjeta',
-                eventData: function(el) { return JSON.parse(el.getAttribute('data-event')); }
-              });
-              showToast('↩️ OP devuelta a pendientes');
-            } else {
-              showToast('⚠️ Error al quitar la OP');
-            }
-          } catch(e) {
-            showToast('⚠️ Error de conexión');
-          }
-        }
-
-        document.addEventListener('mousemove', function(e) {
-          tooltip.style.left = (e.clientX + 15) + 'px';
-          tooltip.style.top  = (e.clientY + 10) + 'px';
-        });
-
-        async function excluirOP(event, db_id) {
-          event.stopPropagation();
-          var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(db_id), {
-            method: 'PATCH',
-            headers: {
-              'Content-Type':  'application/json',
-              'apikey':        SUPA_KEY,
-              'Authorization': 'Bearer ' + SUPA_KEY,
-              'Prefer':        'return=minimal'
-            },
-            body: JSON.stringify({ excluir_cronograma: true })
-          });
-          if (resp.ok) {
-            var tarjeta = event.target.closest('.tarjeta');
-            if (tarjeta) tarjeta.remove();
-            showToast('🗑️ OP retirada de pendientes');
-          } else {
-            showToast('⚠️ Error al quitar la OP');
-          }
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-          // Renderizar tarjetas arrastrables en sidebar
-          var lista = document.getElementById('lista-pendientes');
-          if (pendientes.length === 0) {
-            lista.innerHTML = '<div class="no-pending">🎉 Todas programadas</div>';
-          } else {
-            pendientes.forEach(function(p) {
-              var div = document.createElement('div');
-              div.className = 'tarjeta';
-              var cardColor = p.color || '#d97706';
-              div.style.borderLeft = '3px solid ' + cardColor;
-              div.setAttribute('data-event', JSON.stringify({
-                id: p.id,
-                title: p.title,
-                duration: '02:00',
-                backgroundColor: cardColor,
-                borderColor: cardColor,
-                textColor: '#fff',
-                extendedProps: p.extendedProps
-              }));
-              var esAzul = cardColor === '#2563eb';
-              div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
-                            + '<div class="op-num" style="color:' + cardColor + '">' + p.title.split(' - ')[0].trim() + '</div>'
-                            + '<button onclick="excluirOP(event,\'' + p.id + '\')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0 4px;" title="Quitar de pendientes">✕</button>'
-                            + '</div>'
-                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>'
-                            + '<div style="font-size:10px;color:#666;margin-top:2px;">' + (esAzul ? '🔵 En proceso' : '🟠 Sin iniciar') + '</div>';
-              lista.appendChild(div);
-            });
-          }
-
-          var calEl = document.getElementById('calendar');
-          var cal = new FullCalendar.Calendar(calEl, {
-            schedulerLicenseKey: 'CC-Attribution-NonCommercial-NoDerivatives',
-            initialView:  'resourceTimelineDay',
-            locale:       'es',
-            height:       560,
-            nowIndicator: true,
-            editable:     true,
-            droppable:    true,
-            eventResizableFromStart: true,
-            slotDuration: '01:00:00',
-            slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false },
-            scrollTime:   '06:00:00',
-            resourceAreaWidth: '13%',
-            resourceAreaHeaderContent: 'Máquina',
-            headerToolbar: {
-              left:   'prev,next today',
-              center: 'title',
-              right:  'resourceTimelineDay,resourceTimelineWeek,resourceTimelineMonth'
-            },
-            buttonText: { today: 'Hoy', day: 'Día', week: 'Semana', month: 'Mes' },
-            views: {
-              resourceTimelineDay: {
-                slotDuration: '01:00:00',
-                slotLabelFormat: { hour: '2-digit', minute: '2-digit', hour12: false }
-              },
-              resourceTimelineWeek: {
-                slotDuration: { days: 1 },
-                slotLabelFormat: { weekday: 'long', day: '2-digit', month: 'short' }
-              },
-              resourceTimelineMonth: {
-                slotDuration: { days: 7 },
-                slotLabelFormat: { day: '2-digit', month: 'short' }
-              }
-            },
-            resources: recursos,
-            events:    eventos,
-
-            // Al soltar una tarjeta externa en el calendario
-            drop: function(info) {
-              info.draggedEl.parentNode.removeChild(info.draggedEl);
-            },
-            eventReceive: function(info) {
-              var ev    = info.event;
-              var db_id = ev.extendedProps.db_id;
-              var maq   = ev.getResources()[0] ? ev.getResources()[0].id : '';
-              var start = ev.start ? ev.start.toISOString() : '';
-              var end   = ev.end   ? ev.end.toISOString()   : '';
-              if (!end) {
-                var tmp = new Date(ev.start);
-                tmp.setHours(tmp.getHours() + 2);
-                end = tmp.toISOString();
-              }
-              guardarEnSupabase(db_id, start, end, maq);
-            },
-
-            // Al mover o redimensionar un evento ya en el calendario
-            eventChange: function(info) {
-              var ev    = info.event;
-              var db_id = ev.extendedProps.db_id || ev.id;
-              var maq   = ev.getResources()[0] ? ev.getResources()[0].id : '';
-              var start = ev.start ? ev.start.toISOString() : '';
-              var end   = ev.end   ? ev.end.toISOString()   : '';
-              guardarEnSupabase(db_id, start, end, maq);
-            },
-
-            // Tooltip hover
-            // Clic en evento — mostrar popup con opción de quitar
-            // Clic en evento — mostrar popup propio (confirm() no funciona en iframe)
-            eventClick: function(info) {
-              var ev    = info.event;
-              var db_id = ev.extendedProps.db_id || ev.id;
-              var popup = document.getElementById('popup-quitar');
-              document.getElementById('popup-titulo').textContent = ev.title;
-              popup.style.display = 'flex';
-              document.getElementById('btn-confirmar-quitar').onclick = function() {
-                popup.style.display = 'none';
-                quitarDelCronograma(db_id, ev);
-              };
-              document.getElementById('btn-cancelar-quitar').onclick = function() {
-                popup.style.display = 'none';
-              };
-            },
-
-            // Tooltip hover
-            eventMouseEnter: function(info) {
-
-              var p = info.event.extendedProps;
-              var s = info.event.start ? info.event.start.toLocaleString('es-CO', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'}) : '';
-              var e = info.event.end   ? info.event.end.toLocaleString('es-CO',   {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'short'}) : '';
-              tooltip.innerHTML = '<b style="color:#fff">' + info.event.title + '</b><br>👤 ' + p.cliente + '<br>📌 ' + p.estado + '<br>🕐 ' + s + '<br>🏁 ' + e;
-              tooltip.style.display = 'block';
-            },
-            eventMouseLeave: function() { tooltip.style.display = 'none'; }
-          });
-          cal.render();
-
-          // Activar drag desde las tarjetas del sidebar
-          new FullCalendar.ThirdPartyDraggable(document.getElementById('lista-pendientes'), {
-            itemSelector: '.tarjeta',
-            eventData: function(el) {
-              return JSON.parse(el.getAttribute('data-event'));
-            }
-          });
-        });
-      </script>
-    </body>
-    </html>
-    """ 
-
-    components.html(html_cronograma, height=620, scrolling=False)
+    components.html(html_cal, height=620, scrolling=False)
 
 # MODULO DE INVENTARIO CORES Y CAJAS
 
