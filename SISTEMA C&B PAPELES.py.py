@@ -2491,7 +2491,7 @@ elif menu == "📆 Cronograma Impresión":
         eventos_json.append({
             "id":              str(op["id"]),
             "resourceId":      op["maquina_cronograma"],
-            "title":           f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
+            "title":           f"OP {op.get('op','?')} - {op.get('cliente','')[:14]}",
             "start":           op["fecha_inicio_cronograma"],
             "end":             op["fecha_fin_cronograma"],
             "backgroundColor": color,
@@ -2507,7 +2507,7 @@ elif menu == "📆 Cronograma Impresión":
         card_color = "#2563eb" if op.get("estado") == "En Proceso" else "#d97706"
         pendientes_json.append({
             "id":    str(op["id"]),
-            "title": f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
+            "title": f"OP {op.get('op','?')} - {op.get('cliente','')[:14]}",
             "color": card_color,
             "extendedProps": {"cliente": op.get("cliente",""), "db_id": str(op["id"])}
         })
@@ -2796,7 +2796,7 @@ elif menu == "📆 Cronograma Impresión":
               }));
               var esAzul = cardColor === '#2563eb';
               div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
-                            + '<div class="op-num" style="color:' + cardColor + '">' + p.title.split('\u00b7')[0].trim() + '</div>'
+                            + '<div class="op-num" style="color:' + cardColor + '">' + p.title.split(' - ')[0].trim() + '</div>'
                             + '<button onclick="excluirOP(event,\'' + p.id + '\')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0 4px;" title="Quitar de pendientes">✕</button>'
                             + '</div>'
                             + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>'
@@ -4067,4 +4067,3 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
-
