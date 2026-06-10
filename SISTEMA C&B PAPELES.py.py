@@ -1359,102 +1359,42 @@ elif menu == "📅 Planificación":
                 st.markdown("**Edita los campos que necesitas corregir:**")
 
                 with st.form("form_editar_op"):
-                    # ── DATOS GENERALES ──────────────────────────────
-                    st.markdown("**📋 Datos Generales**")
                     ec1, ec2, ec3 = st.columns(3)
-                    nuevo_cliente  = ec1.text_input("Cliente:", value=op_edit.get('cliente', ''))
-                    nuevo_vendedor = ec2.text_input("Vendedor:", value=op_edit.get('vendedor', ''))
-                    nuevo_trabajo  = ec3.text_input("Nombre del Trabajo:", value=op_edit.get('nombre_trabajo', ''))
+                    nuevo_cliente = ec1.text_input("Cliente:", value=op_edit.get('cliente', ''))
+                    nuevo_vendedor= ec2.text_input("Vendedor:", value=op_edit.get('vendedor', ''))
+                    nuevo_trabajo = ec3.text_input("Nombre del Trabajo:", value=op_edit.get('nombre_trabajo', ''))
 
+                    # Campos según tipo de OP
                     tipo_op = op_edit.get('tipo_orden', '')
 
-                    # ── FORMAS IMPRESAS / BLANCAS ─────────────────────
                     if "FORMAS" in tipo_op:
-                        st.markdown("**📑 Datos de Formas**")
-                        ef1, ef2, ef3, ef4 = st.columns(4)
-                        nueva_cant    = ef1.number_input("Cantidad Formas:", value=int(op_edit.get('cantidad_formas', 0) or 0), min_value=0)
-                        nuevo_partes  = ef2.selectbox("Número de Partes:", [1,2,3,4,5,6], index=int(op_edit.get('num_partes', 1) or 1) - 1)
-                        nueva_pres    = ef3.selectbox("Presentación:", PRESENTACIONES, index=PRESENTACIONES.index(op_edit['presentacion']) if op_edit.get('presentacion') in PRESENTACIONES else 0)
-                        nueva_pres2   = ef4.selectbox("Encolada o Grapada:", PRESENTACIONES2, index=PRESENTACIONES2.index(op_edit['presentacion2']) if op_edit.get('presentacion2') in PRESENTACIONES2 else 0)
+                        ef1, ef2, ef3 = st.columns(3)
+                        nueva_cant   = ef1.number_input("Cantidad Formas:", value=int(op_edit.get('cantidad_formas', 0) or 0), min_value=0)
+                        nueva_pres   = ef2.selectbox("Presentación:", PRESENTACIONES,
+                                        index=PRESENTACIONES.index(op_edit['presentacion']) if op_edit.get('presentacion') in PRESENTACIONES else 0)
+                        nuevas_obs   = ef3.text_area("Observaciones:", value=op_edit.get('observaciones_formas', '') or '')
+                        nueva_trans  = st.selectbox("¿Transportadora?", ["NO", "SI"],
+                                        index=1 if op_edit.get('transportadora_formas') else 0)
+                        nuevo_dest   = st.text_input("Ciudad destino:", value=op_edit.get('destino_formas', '') or '') if nueva_trans == "SI" else "NO"
 
-                        ep1, ep2, ep3, ep4 = st.columns(4)
-                        t_perf_e  = ep1.selectbox("¿Perforaciones?", ["NO","SI"], index=1 if op_edit.get('perforaciones_detalle') and op_edit.get('perforaciones_detalle') != 'NO' else 0)
-                        perf_det_e= ep1.text_area("Detalle Perforación:", value=op_edit.get('perforaciones_detalle','') or '') if t_perf_e == "SI" else "NO"
-                        t_barr_e  = ep2.selectbox("¿Código de Barras?", ["NO","SI"], index=1 if op_edit.get('codigo_barras_detalle') and op_edit.get('codigo_barras_detalle') != 'NO' else 0)
-                        barr_det_e= ep2.text_area("Detalle Barras:", value=op_edit.get('codigo_barras_detalle','') or '') if t_barr_e == "SI" else "NO"
-                        t_num_e   = ep3.selectbox("¿Numeración?", ["NO","SI"], index=1 if op_edit.get('num_id') and op_edit.get('num_id') != 'NO' else 0)
-                        num_id_e  = ep3.text_input("Desde:", value=op_edit.get('num_id','') or '') if t_num_e == "SI" else "NO"
-                        num_fd_e  = ep3.text_input("Hasta:", value=op_edit.get('num_fd','') or '') if t_num_e == "SI" else "NO"
-                        nueva_trans_f = ep4.selectbox("¿Transportadora?", ["NO","SI"], index=1 if op_edit.get('transportadora_formas') else 0)
-                        nuevo_dest_f  = ep4.text_input("Ciudad destino:", value=op_edit.get('destino_formas','') or '') if nueva_trans_f == "SI" else "NO"
-
-                        # Partes de la forma
-                        st.markdown("**📄 Detalle de Partes**")
-                        rec_partes_e = op_edit.get('detalles_partes_json') or []
-                        lista_p_e = []
-                        for i in range(1, nuevo_partes + 1):
-                            p_data_e = rec_partes_e[i-1] if i <= len(rec_partes_e) else {}
-                            st.markdown(f"*Parte {i}*")
-                            d1,d2,d3,d4,d5,d6 = st.columns(6)
-                            anc_e = d1.text_input(f"Ancho P{i}",  key=f"ea_{i}", value=p_data_e.get('anc',''))
-                            lar_e = d2.text_input(f"Largo P{i}",  key=f"el_{i}", value=p_data_e.get('lar',''))
-                            pap_e = d3.text_input(f"Papel P{i}",  key=f"ep_{i}", value=p_data_e.get('papel',''))
-                            fon_e = d4.text_input(f"Fondo P{i}",  key=f"ef_{i}", value=p_data_e.get('color_fondo',''))
-                            gra_e = d5.text_input(f"Gramos P{i}", key=f"eg_{i}", value=p_data_e.get('gramos',''))
-                            tra_e = d6.text_input(f"Tráfico P{i}",key=f"et_{i}", value=p_data_e.get('trafico',''))
-                            tf_e, tr_e, obe_e = "N/A", "N/A", ""
-                            if tipo_op == "FORMAS IMPRESAS":
-                                t1e,t2e,t3e = st.columns(3)
-                                tf_e  = t1e.text_input(f"Tintas Frente P{i}",   key=f"etf_{i}", value=p_data_e.get('tf',''))
-                                tr_e  = t2e.text_input(f"Tintas Respaldo P{i}", key=f"etr_{i}", value=p_data_e.get('tr',''))
-                                obe_e = t3e.text_input(f"Obs. Especial P{i}",   key=f"eob_{i}", value=p_data_e.get('obs_parte',''))
-                            lista_p_e.append({"p":i,"anc":anc_e,"lar":lar_e,"papel":pap_e,"color_fondo":fon_e,"gramos":gra_e,"tf":tf_e,"tr":tr_e,"trafico":tra_e,"obs_parte":obe_e})
-
-                        nuevas_obs = st.text_area("Observaciones Generales:", value=op_edit.get('observaciones_formas','') or '')
-
-                    # ── ROLLOS IMPRESOS / BLANCOS ─────────────────────
                     elif tipo_op in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS"]:
-                        st.markdown("**🌀 Datos de Rollos**")
-                        er1, er2, er3 = st.columns(3)
-                        nuevo_mat   = er1.text_input("Material Base:", value=op_edit.get('material','') or '')
-                        nuevo_gram  = er2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ref   = er3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '')
+                        er1, er2, er3, er4 = st.columns(4)
+                        nueva_cant_r = er1.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
+                        nueva_uds_b  = er2.number_input("Unidades x Bolsa:", value=int(op_edit.get('unidades_bolsa', 0) or 0), min_value=0)
+                        nueva_uds_c  = er3.number_input("Unidades x Caja:", value=int(op_edit.get('unidades_caja', 0) or 0), min_value=0)
+                        nuevas_obs   = er4.text_area("Observaciones:", value=op_edit.get('observaciones_rollos', '') or '')
+                        nueva_trans  = st.selectbox("¿Transportadora?", ["NO", "SI"],
+                                        index=1 if op_edit.get('transportadora_rollos') else 0)
+                        nuevo_dest   = st.text_input("Ciudad destino:", value=op_edit.get('destino_rollos', '') or '') if nueva_trans == "SI" else "NO"
 
-                        er4, er5 = st.columns(2)
-                        nueva_cant_r = er4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
-                        cores = ["13MM","19MM","1 PULGADA","40 MM","2 PULGADAS","3 PULGADAS"," NINGUNO"]
-                        nuevo_core   = er5.selectbox("Core / Centro:", cores, index=cores.index(op_edit['core']) if op_edit.get('core') in cores else 0)
-
-                        if tipo_op == "ROLLOS IMPRESOS":
-                            ct1, ct2 = st.columns(2)
-                            nuevo_tf_r = ct1.text_input("Tintas Frente:", value=op_edit.get('tintas_frente_rollos','') or '')
-                            nuevo_tr_r = ct2.text_input("Tintas Respaldo:", value=op_edit.get('tintas_respaldo_rollos','') or '')
-                        else:
-                            nuevo_tf_r, nuevo_tr_r = "N/A", "N/A"
-
-                        er6, er7 = st.columns(2)
-                        nueva_uds_b = er6.number_input("Unidades x Bolsa:", value=int(op_edit.get('unidades_bolsa', 0) or 0), min_value=0)
-                        nueva_uds_c = er7.number_input("Unidades x Caja:",  value=int(op_edit.get('unidades_caja',  0) or 0), min_value=0)
-
-                        nueva_trans_r = st.selectbox("¿Transportadora?", ["NO","SI"], index=1 if op_edit.get('transportadora_rollos') else 0)
-                        nuevo_dest_r  = st.text_input("Ciudad destino:", value=op_edit.get('destino_rollos','') or '') if nueva_trans_r == "SI" else "NO"
-                        nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '')
-
-                    # ── REBOBINADO ────────────────────────────────────
                     elif tipo_op == "REBOBINADO":
-                        st.markdown("**🌀 Datos de Rebobinado**")
-                        eb1, eb2, eb3 = st.columns(3)
-                        nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '')
-                        nuevo_gram    = eb2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ancho_base','') or '')
-                        eb4, eb5 = st.columns(2)
-                        nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
-                        nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '')
-                        nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '')
+                        eb1, eb2 = st.columns(2)
+                        nueva_cant_r = eb1.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
+                        nuevas_obs   = eb2.text_area("Observaciones:", value=op_edit.get('observaciones_rollos', '') or '')
 
-                    st.markdown("---")
                     nueva_obs_gral = st.text_area("📝 Motivo del cambio (queda registrado):",
                                         placeholder="Ej: Cliente solicitó cambio de cantidad...", key="motivo_edit")
+
                     btn_guardar_edit = st.form_submit_button("💾 GUARDAR CAMBIOS", use_container_width=True)
 
                     if btn_guardar_edit:
@@ -1463,53 +1403,39 @@ elif menu == "📅 Planificación":
                         else:
                             try:
                                 update_payload = {
-                                    "cliente":        nuevo_cliente,
-                                    "vendedor":       nuevo_vendedor,
-                                    "nombre_trabajo": nuevo_trabajo,
+                                    "cliente":         nuevo_cliente,
+                                    "vendedor":        nuevo_vendedor,
+                                    "nombre_trabajo":  nuevo_trabajo,
                                 }
+
                                 if "FORMAS" in tipo_op:
                                     update_payload.update({
                                         "cantidad_formas":       nueva_cant,
-                                        "num_partes":            nuevo_partes,
                                         "presentacion":          nueva_pres,
-                                        "presentacion2":         nueva_pres2,
-                                        "perforaciones_detalle": perf_det_e,
-                                        "codigo_barras_detalle": barr_det_e,
-                                        "num_id":                num_id_e,
-                                        "num_fd":                num_fd_e,
-                                        "transportadora_formas": True if nueva_trans_f == "SI" else None,
-                                        "destino_formas":        nuevo_dest_f if nueva_trans_f == "SI" else None,
-                                        "detalles_partes_json":  lista_p_e,
                                         "observaciones_formas":  nuevas_obs,
+                                        "transportadora_formas": True if nueva_trans == "SI" else None,
+                                        "destino_formas":        nuevo_dest if nueva_trans == "SI" else None,
                                     })
                                 elif tipo_op in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS"]:
                                     update_payload.update({
-                                        "material":              nuevo_mat,
-                                        "gramaje_rollos":        nuevo_gram,
-                                        "ref_comercial":         nuevo_ref,
-                                        "cantidad_rollos":       nueva_cant_r,
-                                        "core":                  nuevo_core,
-                                        "tintas_frente_rollos":  nuevo_tf_r,
-                                        "tintas_respaldo_rollos":nuevo_tr_r,
-                                        "unidades_bolsa":        nueva_uds_b,
-                                        "unidades_caja":         nueva_uds_c,
-                                        "transportadora_rollos": True if nueva_trans_r == "SI" else None,
-                                        "destino_rollos":        nuevo_dest_r if nueva_trans_r == "SI" else None,
-                                        "observaciones_rollos":  nuevas_obs,
+                                        "cantidad_rollos":    nueva_cant_r,
+                                        "unidades_bolsa":     nueva_uds_b,
+                                        "unidades_caja":      nueva_uds_c,
+                                        "observaciones_rollos": nuevas_obs,
+                                        "transportadora_rollos": True if nueva_trans == "SI" else None,
+                                        "destino_rollos":     nuevo_dest if nueva_trans == "SI" else None,
                                     })
                                 elif tipo_op == "REBOBINADO":
                                     update_payload.update({
-                                        "material":             nuevo_mat,
-                                        "gramaje_rollos":       nuevo_gram,
-                                        "ancho_base":           nuevo_ancho,
                                         "cantidad_rollos":      nueva_cant_r,
-                                        "objetivo_rebobinado":  nuevo_obj,
                                         "observaciones_rollos": nuevas_obs,
                                     })
 
+                                # Guardar en Supabase
                                 supabase.table("ordenes_planeadas").update(update_payload)\
                                     .eq("op", op_edit['op']).execute()
 
+                                # Registrar en historial de la OP
                                 hist = op_edit.get('historial_procesos') or []
                                 hist.append({
                                     "area":    "EDICIÓN",
@@ -1532,6 +1458,7 @@ elif menu == "📅 Planificación":
 
                             except Exception as e:
                                 st.error(f"Error al guardar: {e}")
+
     with tab_nueva:
     
 #  SELECTOR OTIGEN DE OP
@@ -1887,7 +1814,6 @@ elif menu == "📅 Planificación":
 
                     time.sleep(1.5)
                     st.rerun()
-
 # MODULO: BODEGA PRODUCTO TERMINADO 
 
 elif menu == "📦 salida produccion P1":
@@ -2316,7 +2242,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     op_s = st.text_input("OP")
                     nt_s = st.text_input("Nombre Trabajo")
                     tipo_p = st.text_input("Tipo de Papel / Material")
-                    turno_s = st.selectbox("Turno", ["Mañana", "Tarde", "Noche"])
+                    turno_s = st.selectbox("Turno", ["Dia", "Mañana", "Tarde", "Noche"])
                 with cb:
                     m_r = st.number_input("Metros de Rollo", min_value=0, value=0)
                     med_r = st.text_input("Medida de Rollo")
@@ -2472,22 +2398,13 @@ elif menu == "📆 Cronograma Impresión":
         st.success("✅ Todo en orden — sin retrasos ni OPs sin asignar")
 
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
-    # Pendientes: sin asignar, no finalizadas y no excluidas del cronograma
-    ops_pendientes = [op for op in todas_las_ops if
-                      not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma"))
-                      and op.get("proxima_area") != "FINALIZADO"
-                      and op.get("estado") != "Terminado"
-                      and not op.get("excluir_cronograma")]
+    ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
 
-    # Eventos agendados — 3 colores según estado
+# Eventos agendados para el calendario
+
     eventos_json = []
     for op in ops_agendadas:
-        if op.get("proxima_area") == "FINALIZADO":
-            color, etiqueta = "#4a4a4a", "✅ FINALIZADA"   # Gris — terminada
-        elif op.get("estado") == "En Proceso":
-            color, etiqueta = "#2563eb", "🔵 EN PROCESO"   # Azul — trabajando ahora
-        else:
-            color, etiqueta = "#d97706", "🟠 PROGRAMADA"   # Naranja — agendada sin iniciar
+        color = "#4a4a4a" if op.get("proxima_area") == "FINALIZADO" else ("#2563eb" if op.get("estado") == "En Proceso" else "#d97706")
         eventos_json.append({
             "id":              str(op["id"]),
             "resourceId":      op["maquina_cronograma"],
@@ -2497,25 +2414,17 @@ elif menu == "📆 Cronograma Impresión":
             "backgroundColor": color,
             "borderColor":     color,
             "textColor":       "#ffffff",
-            "extendedProps":   {
-                "cliente": op.get("cliente",""),
-                "estado":  etiqueta,
-                "db_id":   str(op["id"])
-            }
+            "extendedProps":   {"cliente": op.get("cliente",""), "estado": op.get("estado",""), "db_id": str(op["id"])}
         })
 
-    # OPs pendientes — con color según estado para las tarjetas
+# OPs pendientes como tarjetas arrastrables (eventos externos)
+
     pendientes_json = []
     for op in ops_pendientes:
-        if op.get("estado") == "En Proceso":
-            card_color = "#2563eb"   # Azul — ya inició en algún área
-        else:
-            card_color = "#d97706"   # Naranja — aún sin tocar
         pendientes_json.append({
             "id":    str(op["id"]),
             "title": f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
-            "color": card_color,
-            "extendedProps": {"cliente": op.get("cliente",""), "db_id": str(op["id"]), "estado": op.get("estado","")}
+            "extendedProps": {"cliente": op.get("cliente",""), "db_id": str(op["id"])}
         })
 
     recursos_json  = [{"id": m, "title": m} for m in lista_maquinas]
@@ -2736,14 +2645,8 @@ elif menu == "📆 Cronograma Impresión":
                 textColor: '#fff',
                 extendedProps: { cliente: ev.extendedProps.cliente, db_id: db_id }
               }));
-              var esAzul = p.color === '#2563eb';
-              div.style.borderLeft = '3px solid ' + (p.color || '#d97706');
-              div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
-                            + '<div class="op-num" style="color:' + (p.color||'#d97706') + '">' + p.title.split('·')[0].trim() + '</div>'
-                            + '<button onclick="excluirOP(event,\'' + p.id + '\')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0 2px;" title="Quitar de pendientes">✕</button>'
-                            + '</div>'
-                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>'
-                            + '<div style="font-size:10px;color:#666;margin-top:2px;">' + (esAzul ? '🔵 En proceso' : '🟠 Sin iniciar') + '</div>';
+              div.innerHTML = '<div class="op-num">' + ev.title.split('·')[0].trim() + '</div>'
+                            + '<div class="cli">👤 ' + ev.extendedProps.cliente + '</div>';
               lista.appendChild(div);
               // Reactivar drag en la tarjeta nueva
               new FullCalendar.ThirdPartyDraggable(lista, {
@@ -2758,25 +2661,7 @@ elif menu == "📆 Cronograma Impresión":
             showToast('⚠️ Error de conexión');
           }
         }
-        // Excluir OP del sidebar sin borrarla — marca excluir_cronograma = true
-        async function excluirOP(event, db_id) {
-          event.stopPropagation(); // evitar que dispare el drag
-          var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(db_id), {
-            method: 'PATCH',
-            headers: {
-              'Content-Type':  'application/json',
-              'apikey':        SUPA_KEY,
-              'Authorization': 'Bearer ' + SUPA_KEY,
-              'Prefer':        'return=minimal'
-            },
-            body: JSON.stringify({ excluir_cronograma: true })
-          });
-          if (resp.ok) {
-            var tarjeta = event.target.closest('.tarjeta');
-            if (tarjeta) tarjeta.remove();
-            showToast('🗑️ OP retirada de pendientes');
-          }
-        }
+
         document.addEventListener('mousemove', function(e) {
           tooltip.style.left = (e.clientX + 15) + 'px';
           tooltip.style.top  = (e.clientY + 10) + 'px';
@@ -2791,24 +2676,17 @@ elif menu == "📆 Cronograma Impresión":
             pendientes.forEach(function(p) {
               var div = document.createElement('div');
               div.className = 'tarjeta';
-              var cardColor = p.color || '#d97706';
-              div.style.borderLeft = '3px solid ' + cardColor;
               div.setAttribute('data-event', JSON.stringify({
                 id: p.id,
                 title: p.title,
                 duration: '02:00',
-                backgroundColor: cardColor,
-                borderColor: cardColor,
+                backgroundColor: '#d97706',
+                borderColor: '#d97706',
                 textColor: '#fff',
                 extendedProps: p.extendedProps
               }));
-              var esAzul = cardColor === '#2563eb';
-              div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
-                            + '<div class="op-num" style="color:' + cardColor + '">' + p.title.split('·')[0].trim() + '</div>'
-                            + '<button onclick="excluirOP(event,\'' + p.id + '\')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0 2px;" title="Quitar de pendientes">✕</button>'
-                            + '</div>'
-                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>'
-                            + '<div style="font-size:10px;color:#666;margin-top:2px;">' + (esAzul ? '🔵 En proceso' : '🟠 Sin iniciar') + '</div>';
+              div.innerHTML = '<div class="op-num">' + p.title.split('·')[0].trim() + '</div>'
+                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>';
               lista.appendChild(div);
             });
           }
