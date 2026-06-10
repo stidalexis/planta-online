@@ -2513,17 +2513,18 @@ elif menu == "📆 Cronograma Impresión":
         })
 
     recursos_json  = [{"id": m, "title": m} for m in lista_maquinas]
-    eventos_str    = json.dumps(eventos_json,   ensure_ascii=False)
-    recursos_str   = json.dumps(recursos_json,  ensure_ascii=False)
-    pendientes_str = json.dumps(pendientes_json, ensure_ascii=False)
-
+    eventos_str    = json.dumps(eventos_json,    ensure_ascii=True)
+    recursos_str   = json.dumps(recursos_json,   ensure_ascii=True)
+    pendientes_str = json.dumps(pendientes_json,  ensure_ascii=True)
     # URL base para el puente query_params
     try:
-        base_url   = "https://planta-online.streamlit.app"
-        supa_url   = URL
-        supa_key   = KEY
+        base_url = "https://planta-online.streamlit.app"
+        supa_url = URL
+        supa_key = KEY
     except:
         base_url = "https://planta-online.streamlit.app"
+        supa_url = ""
+        supa_key = ""
 
     html_cronograma = """
     <!DOCTYPE html><html>
