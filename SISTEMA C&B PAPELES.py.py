@@ -2780,7 +2780,7 @@ elif menu == "📆 Cronograma Impresión":
           if (pendientes.length === 0) {
             lista.innerHTML = '<div class="no-pending">🎉 Todas programadas</div>';
           } else {
-            ppendientes.forEach(function(p) {
+            pendientes.forEach(function(p) {
               var div = document.createElement('div');
               div.className = 'tarjeta';
               var cardColor = p.color || '#d97706';
