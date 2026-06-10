@@ -2472,7 +2472,11 @@ elif menu == "📆 Cronograma Impresión":
         st.success("✅ Todo en orden — sin retrasos ni OPs sin asignar")
 
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
-    ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
+    ops_pendientes = [op for op in todas_las_ops if
+                      not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma"))
+                      and op.get("proxima_area") != "FINALIZADO"
+                      and op.get("estado") != "Terminado"
+                      and not op.get("excluir_cronograma")]
 
 # Eventos agendados para el calendario
 
@@ -2500,9 +2504,11 @@ elif menu == "📆 Cronograma Impresión":
 
     pendientes_json = []
     for op in ops_pendientes:
+        card_color = "#2563eb" if op.get("estado") == "En Proceso" else "#d97706"
         pendientes_json.append({
             "id":    str(op["id"]),
             "title": f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
+            "color": card_color,
             "extendedProps": {"cliente": op.get("cliente",""), "db_id": str(op["id"])}
         })
 
