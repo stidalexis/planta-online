@@ -2478,7 +2478,12 @@ elif menu == "📆 Cronograma Impresión":
 
     eventos_json = []
     for op in ops_agendadas:
-        color = "#4a4a4a" if op.get("proxima_area") == "FINALIZADO" else ("#2563eb" if op.get("estado") == "En Proceso" else "#d97706")
+        if op.get("proxima_area") == "FINALIZADO":
+            color, etiqueta = "#4a4a4a", "✅ FINALIZADA"
+        elif op.get("estado") == "En Proceso":
+            color, etiqueta = "#2563eb", "🔵 EN PROCESO"
+        else:
+            color, etiqueta = "#d97706", "🟠 PROGRAMADA"
         eventos_json.append({
             "id":              str(op["id"]),
             "resourceId":      op["maquina_cronograma"],
@@ -2488,7 +2493,7 @@ elif menu == "📆 Cronograma Impresión":
             "backgroundColor": color,
             "borderColor":     color,
             "textColor":       "#ffffff",
-            "extendedProps":   {"cliente": op.get("cliente",""), "estado": op.get("estado",""), "db_id": str(op["id"])}
+            "extendedProps":   {"cliente": op.get("cliente",""), "estado": etiqueta, "db_id": str(op["id"])}
         })
 
 # OPs pendientes como tarjetas arrastrables (eventos externos)
