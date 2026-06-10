@@ -2472,13 +2472,22 @@ elif menu == "📆 Cronograma Impresión":
         st.success("✅ Todo en orden — sin retrasos ni OPs sin asignar")
 
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
-    ops_pendientes = [op for op in todas_las_ops if not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma")) and op.get("estado") != "Terminado"]
+    # Pendientes: sin asignar, no finalizadas y no excluidas del cronograma
+    ops_pendientes = [op for op in todas_las_ops if
+                      not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma"))
+                      and op.get("proxima_area") != "FINALIZADO"
+                      and op.get("estado") != "Terminado"
+                      and not op.get("excluir_cronograma")]
 
-# Eventos agendados para el calendario
-
+    # Eventos agendados — 3 colores según estado
     eventos_json = []
     for op in ops_agendadas:
-        color = "#4a4a4a" if op.get("proxima_area") == "FINALIZADO" else ("#2563eb" if op.get("estado") == "En Proceso" else "#d97706")
+        if op.get("proxima_area") == "FINALIZADO":
+            color, etiqueta = "#4a4a4a", "✅ FINALIZADA"   # Gris — terminada
+        elif op.get("estado") == "En Proceso":
+            color, etiqueta = "#2563eb", "🔵 EN PROCESO"   # Azul — trabajando ahora
+        else:
+            color, etiqueta = "#d97706", "🟠 PROGRAMADA"   # Naranja — agendada sin iniciar
         eventos_json.append({
             "id":              str(op["id"]),
             "resourceId":      op["maquina_cronograma"],
@@ -2488,17 +2497,25 @@ elif menu == "📆 Cronograma Impresión":
             "backgroundColor": color,
             "borderColor":     color,
             "textColor":       "#ffffff",
-            "extendedProps":   {"cliente": op.get("cliente",""), "estado": op.get("estado",""), "db_id": str(op["id"])}
+            "extendedProps":   {
+                "cliente": op.get("cliente",""),
+                "estado":  etiqueta,
+                "db_id":   str(op["id"])
+            }
         })
 
-# OPs pendientes como tarjetas arrastrables (eventos externos)
-
+    # OPs pendientes — con color según estado para las tarjetas
     pendientes_json = []
     for op in ops_pendientes:
+        if op.get("estado") == "En Proceso":
+            card_color = "#2563eb"   # Azul — ya inició en algún área
+        else:
+            card_color = "#d97706"   # Naranja — aún sin tocar
         pendientes_json.append({
             "id":    str(op["id"]),
             "title": f"OP {op.get('op','?')} · {op.get('cliente','')[:14]}",
-            "extendedProps": {"cliente": op.get("cliente",""), "db_id": str(op["id"])}
+            "color": card_color,
+            "extendedProps": {"cliente": op.get("cliente",""), "db_id": str(op["id"]), "estado": op.get("estado","")}
         })
 
     recursos_json  = [{"id": m, "title": m} for m in lista_maquinas]
@@ -2719,8 +2736,14 @@ elif menu == "📆 Cronograma Impresión":
                 textColor: '#fff',
                 extendedProps: { cliente: ev.extendedProps.cliente, db_id: db_id }
               }));
-              div.innerHTML = '<div class="op-num">' + ev.title.split('·')[0].trim() + '</div>'
-                            + '<div class="cli">👤 ' + ev.extendedProps.cliente + '</div>';
+              var esAzul = p.color === '#2563eb';
+              div.style.borderLeft = '3px solid ' + (p.color || '#d97706');
+              div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                            + '<div class="op-num" style="color:' + (p.color||'#d97706') + '">' + p.title.split('·')[0].trim() + '</div>'
+                            + '<button onclick="excluirOP(event,\'' + p.id + '\')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0 2px;" title="Quitar de pendientes">✕</button>'
+                            + '</div>'
+                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>'
+                            + '<div style="font-size:10px;color:#666;margin-top:2px;">' + (esAzul ? '🔵 En proceso' : '🟠 Sin iniciar') + '</div>';
               lista.appendChild(div);
               // Reactivar drag en la tarjeta nueva
               new FullCalendar.ThirdPartyDraggable(lista, {
@@ -2735,7 +2758,25 @@ elif menu == "📆 Cronograma Impresión":
             showToast('⚠️ Error de conexión');
           }
         }
-
+        // Excluir OP del sidebar sin borrarla — marca excluir_cronograma = true
+        async function excluirOP(event, db_id) {
+          event.stopPropagation(); // evitar que dispare el drag
+          var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(db_id), {
+            method: 'PATCH',
+            headers: {
+              'Content-Type':  'application/json',
+              'apikey':        SUPA_KEY,
+              'Authorization': 'Bearer ' + SUPA_KEY,
+              'Prefer':        'return=minimal'
+            },
+            body: JSON.stringify({ excluir_cronograma: true })
+          });
+          if (resp.ok) {
+            var tarjeta = event.target.closest('.tarjeta');
+            if (tarjeta) tarjeta.remove();
+            showToast('🗑️ OP retirada de pendientes');
+          }
+        }
         document.addEventListener('mousemove', function(e) {
           tooltip.style.left = (e.clientX + 15) + 'px';
           tooltip.style.top  = (e.clientY + 10) + 'px';
@@ -2750,17 +2791,24 @@ elif menu == "📆 Cronograma Impresión":
             pendientes.forEach(function(p) {
               var div = document.createElement('div');
               div.className = 'tarjeta';
+              var cardColor = p.color || '#d97706';
+              div.style.borderLeft = '3px solid ' + cardColor;
               div.setAttribute('data-event', JSON.stringify({
                 id: p.id,
                 title: p.title,
                 duration: '02:00',
-                backgroundColor: '#d97706',
-                borderColor: '#d97706',
+                backgroundColor: cardColor,
+                borderColor: cardColor,
                 textColor: '#fff',
                 extendedProps: p.extendedProps
               }));
-              div.innerHTML = '<div class="op-num">' + p.title.split('·')[0].trim() + '</div>'
-                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>';
+              var esAzul = cardColor === '#2563eb';
+              div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                            + '<div class="op-num" style="color:' + cardColor + '">' + p.title.split('·')[0].trim() + '</div>'
+                            + '<button onclick="excluirOP(event,\'' + p.id + '\')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0 2px;" title="Quitar de pendientes">✕</button>'
+                            + '</div>'
+                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>'
+                            + '<div style="font-size:10px;color:#666;margin-top:2px;">' + (esAzul ? '🔵 En proceso' : '🟠 Sin iniciar') + '</div>';
               lista.appendChild(div);
             });
           }
