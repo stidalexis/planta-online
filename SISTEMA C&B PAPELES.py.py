@@ -2082,7 +2082,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     op_s = st.text_input("OP")
                     nt_s = st.text_input("Nombre Trabajo")
                     tipo_p = st.text_input("Tipo de Papel / Material")
-                    turno_s = st.selectbox("Turno", ["Mañana", "Tarde", "Noche"])
+                    turno_s = st.selectbox("Turno", ["Tarde", "Mañana", "Tarde", "Noche"])
                 with cb:
                     m_r = st.number_input("Metros de Rollo", min_value=0, value=0)
                     med_r = st.text_input("Medida de Rollo")
