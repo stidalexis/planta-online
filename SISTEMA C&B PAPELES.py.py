@@ -345,7 +345,7 @@ def generar_op_rollos(row):
     pdf.cell(115, 7, f"Cliente: {row.get('cliente','')}", 1)
     pdf.cell(75, 7, f"Vendedor: {row.get('vendedor','')}", 1, 1)
     pdf.cell(105, 7, f"Trabajo: {row.get('nombre_trabajo','')}", 1)
-    pdf.cell(85, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1)
+    pdf.cell(85, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1) 
 
 # ESPECIFICACIONES TECNICAS
 
@@ -2752,26 +2752,54 @@ elif menu == "📆 Cronograma Impresión":
           tooltip.style.top  = (e.clientY + 10) + 'px';
         });
 
+        async function excluirOP(event, db_id) {
+          event.stopPropagation();
+          var resp = await fetch(SUPA_URL + '/rest/v1/ordenes_planeadas?id=eq.' + encodeURIComponent(db_id), {
+            method: 'PATCH',
+            headers: {
+              'Content-Type':  'application/json',
+              'apikey':        SUPA_KEY,
+              'Authorization': 'Bearer ' + SUPA_KEY,
+              'Prefer':        'return=minimal'
+            },
+            body: JSON.stringify({ excluir_cronograma: true })
+          });
+          if (resp.ok) {
+            var tarjeta = event.target.closest('.tarjeta');
+            if (tarjeta) tarjeta.remove();
+            showToast('🗑️ OP retirada de pendientes');
+          } else {
+            showToast('⚠️ Error al quitar la OP');
+          }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
           // Renderizar tarjetas arrastrables en sidebar
           var lista = document.getElementById('lista-pendientes');
           if (pendientes.length === 0) {
             lista.innerHTML = '<div class="no-pending">🎉 Todas programadas</div>';
           } else {
-            pendientes.forEach(function(p) {
+            ppendientes.forEach(function(p) {
               var div = document.createElement('div');
               div.className = 'tarjeta';
+              var cardColor = p.color || '#d97706';
+              div.style.borderLeft = '3px solid ' + cardColor;
               div.setAttribute('data-event', JSON.stringify({
                 id: p.id,
                 title: p.title,
                 duration: '02:00',
-                backgroundColor: '#d97706',
-                borderColor: '#d97706',
+                backgroundColor: cardColor,
+                borderColor: cardColor,
                 textColor: '#fff',
                 extendedProps: p.extendedProps
               }));
-              div.innerHTML = '<div class="op-num">' + p.title.split('·')[0].trim() + '</div>'
-                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>';
+              var esAzul = cardColor === '#2563eb';
+              div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;">'
+                            + '<div class="op-num" style="color:' + cardColor + '">' + p.title.split('\u00b7')[0].trim() + '</div>'
+                            + '<button onclick="excluirOP(event,\'' + p.id + '\')" style="background:none;border:none;color:#555;cursor:pointer;font-size:14px;padding:0 4px;" title="Quitar de pendientes">✕</button>'
+                            + '</div>'
+                            + '<div class="cli">👤 ' + p.extendedProps.cliente + '</div>'
+                            + '<div style="font-size:10px;color:#666;margin-top:2px;">' + (esAzul ? '🔵 En proceso' : '🟠 Sin iniciar') + '</div>';
               lista.appendChild(div);
             });
           }
@@ -4038,3 +4066,4 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
+
