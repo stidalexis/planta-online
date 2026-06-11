@@ -2321,7 +2321,6 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     m_r = st.number_input("Metros de Rollo", min_value=0, value=0)
                     med_r = st.text_input("Medida de Rollo")
                     u_c = st.number_input("Unid/Caja", min_value=0, value=0)
-                    n_c = st.number_input("Número Cajas", min_value=0, value=0)
                 with cc:
                     n_v = st.number_input("Varillas", min_value=0, value=0)
                     p_d = st.number_input("Desp. KG", min_value=0.0, value=0.0, step=0.1)
