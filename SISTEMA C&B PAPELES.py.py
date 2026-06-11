@@ -345,7 +345,7 @@ def generar_op_rollos(row):
     pdf.cell(115, 7, f"Cliente: {row.get('cliente','')}", 1)
     pdf.cell(75, 7, f"Vendedor: {row.get('vendedor','')}", 1, 1)
     pdf.cell(120, 7, f"Trabajo: {row.get('nombre_trabajo','')}", 1)
-    pdf.cell(80, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1) 
+    pdf.cell(70, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1) 
 
 # ESPECIFICACIONES TECNICAS
 
