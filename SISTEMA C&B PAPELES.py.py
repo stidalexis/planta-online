@@ -344,8 +344,8 @@ def generar_op_rollos(row):
     pdf.set_font("Arial", "B", 10)
     pdf.cell(115, 7, f"Cliente: {row.get('cliente','')}", 1)
     pdf.cell(75, 7, f"Vendedor: {row.get('vendedor','')}", 1, 1)
-    pdf.cell(105, 7, f"Trabajo: {row.get('nombre_trabajo','')}", 1)
-    pdf.cell(85, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1) 
+    pdf.cell(120, 7, f"Trabajo: {row.get('nombre_trabajo','')}", 1)
+    pdf.cell(80, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1) 
 
 # ESPECIFICACIONES TECNICAS
 
@@ -362,9 +362,9 @@ def generar_op_rollos(row):
     
 # REFERENCIAS Y TRANSPORTES 
 
-    pdf.cell(115, 7, f"Referencia Comercial: {row.get('ref_comercial','')}", 1)
+    pdf.cell(135, 7, f"Referencia Comercial: {row.get('ref_comercial','')}", 1)
     trans = "SI" if row.get('transportadora_rollos') else "NO"
-    pdf.cell(75, 7, f"Transportadora: {trans}", 1, 1)
+    pdf.cell(55, 7, f"Transportadora: {trans}", 1, 1)
     pdf.cell(25, 8, "Impresión", 1, 0, 'C')
     pdf.cell(82, 8, f" Frente: {row.get('tintas_frente_rollos', 'N/A')}", 1)
     pdf.cell(83, 8, f" Respaldo: {row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1)
