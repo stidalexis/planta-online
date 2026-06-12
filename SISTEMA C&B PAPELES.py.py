@@ -1075,16 +1075,24 @@ elif menu == "🔍 Seguimiento":
             tipo_op = row.get('tipo_orden', '')
             if "FORMAS" in tipo_op:
                 icono_tipo = "📄"
-                etiqueta_tipo = "**FORMAS**"
+                etiqueta_tipo = "FORMAS"
+                color_tipo = "#1565C0"
+                borde_tipo = "#1565C0"
             elif "ROLLOS" in tipo_op:
                 icono_tipo = "🌀"
-                etiqueta_tipo = "**ROLLOS**"
+                etiqueta_tipo = "ROLLOS"
+                color_tipo = "#2E7D32"
+                borde_tipo = "#2E7D32"
             elif "REBOBINADO" in tipo_op:
                 icono_tipo = "🔄"
-                etiqueta_tipo = "**REBOBINADO**"
+                etiqueta_tipo = "REBOBINADO"
+                color_tipo = "#6A1B9A"
+                borde_tipo = "#6A1B9A"
             else:
                 icono_tipo = "📦"
-                etiqueta_tipo = "**OTRO**"
+                etiqueta_tipo = "OTRO"
+                color_tipo = "#555"
+                borde_tipo = "#555"
             
             # --- SOLUCIÓN: Eliminamos el st.markdown y usamos solo una línea de expander ---
             titulo_unico = f"{icono_tipo} {etiqueta_tipo} | **OP {op_id}** | {cliente} | *{texto_estatus}*"
