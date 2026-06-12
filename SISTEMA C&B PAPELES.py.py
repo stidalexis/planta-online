@@ -1075,39 +1075,23 @@ elif menu == "🔍 Seguimiento":
             tipo_op = row.get('tipo_orden', '')
             if "FORMAS" in tipo_op:
                 icono_tipo = "📄"
-                etiqueta_tipo = "FORMAS"
-                color_tipo = "#1565C0"
-                borde_tipo = "#1565C0"
+                etiqueta_tipo = "**FORMAS**"
             elif "ROLLOS" in tipo_op:
                 icono_tipo = "🌀"
-                etiqueta_tipo = "ROLLOS"
-                color_tipo = "#2E7D32"
-                borde_tipo = "#2E7D32"
+                etiqueta_tipo = "**ROLLOS**"
             elif "REBOBINADO" in tipo_op:
                 icono_tipo = "🔄"
-                etiqueta_tipo = "REBOBINADO"
-                color_tipo = "#6A1B9A"
-                borde_tipo = "#6A1B9A"
+                etiqueta_tipo = "**REBOBINADO**"
             else:
                 icono_tipo = "📦"
-                etiqueta_tipo = "OTRO"
-                color_tipo = "#555"
-                borde_tipo = "#555"
-
-            st.markdown(f"""
-            <div style="border-left: 5px solid {borde_tipo}; padding: 6px 12px; margin-bottom: 2px;
-                        background: rgba(0,0,0,0.15); border-radius: 4px; display:flex; align-items:center; gap:10px;">
-                <span style="background:{color_tipo}; color:white; font-size:11px; font-weight:700;
-                             padding:3px 8px; border-radius:12px;">{icono_tipo} {etiqueta_tipo}</span>
-                <span style="font-weight:700; color:#e0e0e0;">OP {op_id}</span>
-                <span style="color:#aaa;">|</span>
-                <span style="color:#e0e0e0;">{cliente}</span>
-                <span style="color:#aaa;">|</span>
-                <span style="color:#aaa; font-size:12px;">{texto_estatus}</span>
-            </div>
-            """, unsafe_allow_html=True)
-
-            with st.expander(f"{icono_tipo} OP: {op_id} | {cliente} | {texto_estatus}"):
+                etiqueta_tipo = "**OTRO**"
+            
+            # --- SOLUCIÓN: Eliminamos el st.markdown y usamos solo una línea de expander ---
+            titulo_unico = f"{icono_tipo} {etiqueta_tipo} | **OP {op_id}** | {cliente} | *{texto_estatus}*"
+            
+            with st.expander(titulo_unico):
+                # Aquí colocas los detalles de la orden usando comandos normales de Streamlit
+                st.write("Detalles internos de la OP...")
                 st.markdown(f"### ESTATUS DE TRABAJO: :{color_texto}[{texto_estatus}]")
                 
                 c1, c2, c3, c4 = st.columns(4)
