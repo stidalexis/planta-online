@@ -1095,7 +1095,12 @@ elif menu == "🔍 Seguimiento":
                 borde_tipo = "#555"
             
             # --- SOLUCIÓN: Eliminamos el st.markdown y usamos solo una línea de expander ---
-            titulo_unico = f"{icono_tipo} {etiqueta_tipo} | **OP {op_id}** | {cliente} | *{texto_estatus}*"
+            fecha_raw = row.get('created_at') or row.get('fecha_creacion') or ''
+            try:
+                fecha_fmt = datetime.fromisoformat(str(fecha_raw).replace("Z","")).strftime('%d/%m/%Y')
+            except:
+                fecha_fmt = ''
+            titulo_unico = f"{icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 💼 {vendedor} | 📅 {fecha_fmt} | {texto_estatus}"
             
             with st.expander(titulo_unico):
                 # Aquí colocas los detalles de la orden usando comandos normales de Streamlit
