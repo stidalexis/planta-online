@@ -2477,7 +2477,7 @@ elif menu == "📆 Cronograma Impresión":
             except:
                 pass
         fecha_creacion = op.get("fecha_creacion") or op.get("created_at")
-        if fecha_creacion and not op.get("maquina_cronograma"):
+        if fecha_creacion and not op.get("maquina_cronograma") and not op.get("excluir_cronograma"):
             try:
                 dt_creacion = datetime.fromisoformat(str(fecha_creacion).replace("Z","")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
                 if (ahora_col - dt_creacion).days >= 3:
