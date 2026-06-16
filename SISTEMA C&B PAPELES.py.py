@@ -239,20 +239,25 @@ def generar_pdf_op(row):
 
             pdf.set_font("Arial", 'B', 10)
             pdf.set_fill_color(240, 245, 255)
-            pdf.cell(0, 7, f" AREA: {h['area']} | MAQUINA: {h['maquina']}", ln=True, fill=True, border=1)
-            
+            area_txt  = str(h.get('area','?')).encode('latin-1','replace').decode('latin-1')
+            maq_txt   = str(h.get('maquina','?')).encode('latin-1','replace').decode('latin-1')
+            op_txt    = str(h.get('operario') or h.get('usuario','N/A')).encode('latin-1','replace').decode('latin-1')
+            aux_txt   = str(h.get('auxiliar','N/A')).encode('latin-1','replace').decode('latin-1')
+            fecha_txt = str(h.get('fecha') or h.get('fin') or h.get('inicio',''))[:19].encode('latin-1','replace').decode('latin-1')
+            dur_txt   = str(h.get('duracion','0:00:00')).encode('latin-1','replace').decode('latin-1')
+
+            pdf.cell(0, 7, f" AREA: {area_txt} | MAQUINA: {maq_txt}", ln=True, fill=True, border=1)
+
 # FILA DE RESPONSABLES POR OP
 
             pdf.set_font("Arial", 'B', 9)
-            pdf.cell(65, 6, f"Operador: {h['operario']}", border='LR')
-            pdf.cell(65, 6, f"Auxiliar: {h.get('auxiliar', 'N/A')}", border='R')
-            pdf.cell(0, 6, f"Fecha: {h['fecha']}", border='R', ln=True)
-            
+            pdf.cell(65, 6, f"Operador: {op_txt}", border='LR')
+            pdf.cell(65, 6, f"Auxiliar: {aux_txt}", border='R')
+            pdf.cell(0, 6, f"Fecha: {fecha_txt}", border='R', ln=True)
+
 # FILA DE TIEMPOS TOMADOS POR OP
 
-            pdf.cell(130, 6, f"Duracion del Proceso: {h['duracion']}", border='LRB')
-            pdf.cell(0, 6, "", border='RB', ln=True)
-
+            pdf.cell(130, 6, f"Duracion del Proceso: {dur_txt}", border='LRB')
 # DATOS TECNICOS SALIDA JHSON
 
             pdf.set_font("Arial", '', 8)
