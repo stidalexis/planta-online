@@ -1039,7 +1039,7 @@ elif menu == "🔍 Seguimiento":
             nombre_t = row.get('nombre_trabajo', 'SIN NOMBRE')
             vendedor = row.get('vendedor', 'N/A')
             lugar = row.get('tipo_origen', 'N/A')
-            
+           
 
 # LOGICA DE FILTRADO
 
@@ -1054,40 +1054,21 @@ elif menu == "🔍 Seguimiento":
                     b not in vendedor.lower()):
                     continue
 
-# LOGICA DE ESTATUS MEJORADA Y RESALTO VISUAL MODIFICADO
-
-            # Leemos el tipo de entrega desde la base de datos (por defecto 'TOTAL' si no está registrado)
-            tipo_entrega = str(row.get('tipo_entrega', 'TOTAL')).upper()
+# LOGICA DE ESTATUS MEJORADA
 
             if area_destino == "FINALIZADO":
+                
+                texto_estatus = "🔵 ORDEN FINALIZADA (BODEGA / DESPACHOS)"
                 color_texto = "blue"
-                # Evaluamos si la orden finalizada fue parcial o total
-                if "PARCIAL" in tipo_entrega:
-                    texto_estatus = "🔵 ORDEN FINALIZADA (ENTREGA PARCIAL)"
-                    bg_tarjeta = "#E1F5FE"      # Azul claro para parciales
-                    borde_tarjeta = "#0288D1"
-                else:
-                    texto_estatus = "🔵 ORDEN FINALIZADA TOTAL (BODEGA / DESPACHOS)"
-                    bg_tarjeta = "#E3F2FD"      # Azul rey claro para totales
-                    borde_tarjeta = "#0D47A1"
-                    
             elif op_id in op_en_maquina:
+                
                 maquina_nombre = op_en_maquina[op_id]
                 texto_estatus = f"🟢 EN {area_destino} (PROCESANDO EN: {maquina_nombre})"
                 color_texto = "green"
-                bg_tarjeta = "#E8F5E9"          # Verde suave para trabajos activos en máquina
-                borde_tarjeta = "#2E7D32"
-                
             else:
+               
                 texto_estatus = f"⏳ EN ESPERA DE {area_destino}"
                 color_texto = "orange"
-                # Resaltamos según el área en la que está esperando en planta
-                if "CORTE" in area_destino:
-                    bg_tarjeta = "#FFF3E0"      # Naranja de atención si está esperando corte
-                    borde_tarjeta = "#E65100"
-                else:
-                    bg_tarjeta = "#FAFAFA"      # Gris neutro estándar para otras esperas
-                    borde_tarjeta = "#757575"
 
 #  DISEÑO DE TARJETA 
 
@@ -1113,6 +1094,7 @@ elif menu == "🔍 Seguimiento":
                 color_tipo = "#555"
                 borde_tipo = "#555"
             
+            # --- SOLUCIÓN: Eliminamos el st.markdown y usamos solo una línea de expander ---
             fecha_raw = row.get('created_at') or row.get('fecha_creacion') or ''
             try:
                 fecha_fmt = datetime.fromisoformat(str(fecha_raw).replace("Z","")).strftime('%d/%m/%Y')
@@ -1120,20 +1102,8 @@ elif menu == "🔍 Seguimiento":
                 fecha_fmt = ''
             titulo_unico = f"{icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 💼 {vendedor} | 📅 {fecha_fmt} | {texto_estatus}"
             
-            # --- INYECCIÓN VISUAL AL REDEDOR DEL EXPANDER ---
-            # Abrimos un contenedor con estilo responsivo e industrial antes de pintar el expander
-            st.markdown(f"""
-            <div style="
-                background-color: {bg_tarjeta}; 
-                border-left: 8px solid {borde_tarjeta}; 
-                padding: 4px; 
-                border-radius: 6px; 
-                margin-bottom: 10px;
-            ">
-            """, unsafe_allow_html=True)
-            
             with st.expander(titulo_unico):
-                # Aquí se conservan intactos tus detalles internos originales
+                # Aquí colocas los detalles de la orden usando comandos normales de Streamlit
                 st.write("Detalles internos de la OP...")
                 st.markdown(f"### ESTATUS DE TRABAJO: :{color_texto}[{texto_estatus}]")
                 
@@ -1205,9 +1175,6 @@ elif menu == "🔍 Seguimiento":
                         )
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
-            
-            # Cerramos el contenedor HTML del recuadro de color
-            st.markdown("</div>", unsafe_allow_html=True)
 
 # MODULO DE DISEÑO
 
