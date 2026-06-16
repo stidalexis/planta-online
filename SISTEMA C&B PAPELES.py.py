@@ -728,10 +728,10 @@ def modal_detalle_op(row):
                 <div class='historial-card'>
                     <div class='historial-header'>
                         <span>✅ {h['area']} — {h['maquina']}{' 🔄 ENTREGA PARCIAL' if h.get('tipo') == 'PARCIAL' else ''}</span>
-                        <span>📅 {h['fecha']}</span>
+                        <span>📅 {h.get('fecha') or h.get('fin') or h.get('inicio') or 'Sin fecha'}</span>
                     </div>
                     <div class='historial-tecnico'>
-                        <div>👤 <b>Operario:</b> {h['operario']}</div>
+                        <div>👤 <b>Operario:</b> {h.get('operario') or h.get('usuario') or 'N/A'}</div>
                         <div>👥 <b>Auxiliar:</b> {h.get('auxiliar', 'N/A')}</div>
                         <div>⏱️ <b>Tiempo Proceso:</b> {h['duracion']}</div>
                         <div>📝 <b>Obs:</b> {h.get('observaciones', 'Sin observaciones')}</div>
