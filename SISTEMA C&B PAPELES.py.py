@@ -509,28 +509,26 @@ def generar_op_formas(row):
     pdf.cell(4,7,"P",1,0,"C",True)
     pdf.cell(15,7,"ANCHO",1,0,"C",True)
     pdf.cell(15,7,"LARGO",1,0,"C",True)
-    pdf.cell(32,7,"PAPEL",1,0,"C",True)
-    pdf.cell(25,7,"COLOR",1,0,"C",True)
+    pdf.cell(28,7,"PAPEL",1,0,"C",True)
+    pdf.cell(20,7,"COLOR",1,0,"C",True)
     pdf.cell(12,7,"GR",1,0,"C",True)
-    pdf.cell(54,7,"T. FRENTE",1,0,"C",True)
+    pdf.cell(50,7,"T. FRENTE",1,0,"C",True)
     pdf.cell(23,7,"T. RESP",1,0,"C",True)
-    pdf.cell(10,7,"OBS. PARTE",1,1,"C",True)
+    pdf.cell(19,7,"OBS",1,1,"C",True)
 
-    pdf.set_font("Arial","",8)
+    pdf.set_font("Arial","",7.5)
     partes = row.get("detalles_partes_json",[])
     for p in partes:
         cell_fit(pdf,4,7,p.get("p",""))
         cell_fit(pdf,15,7,p.get("anc",""))
         cell_fit(pdf,15,7,p.get("lar",""))
-        cell_fit(pdf,32,7,p.get("papel",""))
-        cell_fit(pdf,25,7,p.get("color_fondo",""))
+        cell_fit(pdf,28,7,p.get("papel",""))
+        cell_fit(pdf,20,7,p.get("color_fondo",""))
         cell_fit(pdf,12,7,p.get("gramos",""))
         cell_fit(pdf,54,7,p.get("tf",""))
         cell_fit(pdf,23,7,p.get("tr",""))
-        cell_fit(pdf,10,7,p.get("obs_parte","")) 
+        cell_fit(pdf,19,7,p.get("obs_parte","")) 
         pdf.ln()
-
-
 
 # OBSERVACIONES GENERALES
 
