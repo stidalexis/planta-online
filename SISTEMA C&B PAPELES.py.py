@@ -1224,7 +1224,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write(f"Numeracion Final: {datos.get('num_fd')}")
             
             with c4:
-                st.markdown("**ADICIONAlES DE FORMAS**")
+                st.markdown("**ADICIONALES DE FORMAS**")
                 st.write(f"Presentacion: {datos.get('presentacion')}")
                 st.write(f"Encolada O Grapada Por: {datos.get('presentacion2', 0)}")
                 st.write(f"Numero De Partes: {datos.get('num_partes', 0)}")
