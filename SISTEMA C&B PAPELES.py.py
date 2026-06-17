@@ -1038,8 +1038,15 @@ elif menu == "🔍 Seguimiento":
         st.warning("No hay órdenes registradas.")
     else:
         busqueda = st.text_input("🔍 Filtrar por OP, Cliente, Trabajo o Vendedor:", "")
-        
-        for row in ordenes:
+
+# TABS DE SEGUIMIENTO: PENDIENTES / FINALIZADAS
+
+        tab_pendientes, tab_finalizadas = st.tabs(["⏳ EN PROCESO / PENDIENTES", "✅ FINALIZADAS"])
+
+        ordenes_pendientes = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() != "FINALIZADO"]
+        ordenes_finalizadas = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() == "FINALIZADO"]
+
+        def pintar_tarjeta_op(row):
             op_id = str(row['op'])
             area_destino = row.get('proxima_area', 'SIN ÁREA').upper()
             cliente = row.get('cliente', 'N/A')
@@ -1059,7 +1066,7 @@ elif menu == "🔍 Seguimiento":
                     b not in lugar.lower() and  
                     b not in area_destino.lower() and 
                     b not in vendedor.lower()):
-                    continue
+                    return
 
 # LOGICA DE ESTATUS MEJORADA
 
@@ -1183,6 +1190,20 @@ elif menu == "🔍 Seguimiento":
                         )
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
+
+# RECORRIDO DE TARJETAS POR PESTAÑA
+
+        with tab_pendientes:
+            if not ordenes_pendientes:
+                st.info("No hay órdenes pendientes o en proceso.")
+            for row in ordenes_pendientes:
+                pintar_tarjeta_op(row)
+
+        with tab_finalizadas:
+            if not ordenes_finalizadas:
+                st.info("No hay órdenes finalizadas.")
+            for row in ordenes_finalizadas:
+                pintar_tarjeta_op(row)
 
 # MODULO DE DISEÑO
 
