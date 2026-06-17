@@ -1120,8 +1120,7 @@ elif menu == "🔍 Seguimiento":
                     st.write(f"**📅 FECHA:** {row.get('created_at', '')[:10]}")
                     st.write(f"**🔙 ORDEN ANTERIOR:** {row.get('op_anterior', '')[:10]}")
                 with c2:
-                    st.write("**🏗️ AREA ACTUAL:**")
-                    st.info(area_destino)
+                    st.info(f"**🏗️ AREA ACTUAL:** {area_destino}")
                     cantidad = row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0')
                     st.write(f"**📦 CANTIDAD SOLICITADA:** {cantidad}")
                     st.write(f"**📖 REFERENCIA COMERCIAL:** {row.get('ref_comercial', '')}")
