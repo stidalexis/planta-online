@@ -1116,7 +1116,7 @@ elif menu == "🔍 Seguimiento":
                 
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    st.write("**👤 CLIENTE:**")
+                    st.write("**👤 CLIENTE:**") 
                     st.info(cliente)
                     st.write("**📅 FECHA:**")
                     st.info(row.get('created_at', '')[:10])
