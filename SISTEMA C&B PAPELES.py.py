@@ -525,9 +525,8 @@ def generar_op_formas(row):
         cell_fit(pdf,32,7,p.get("papel",""))
         cell_fit(pdf,21,7,p.get("color_fondo",""))
         cell_fit(pdf,12,7,p.get("gramos",""))
-        cell_fit(pdf,36,7,p.get("tf",""))
-        cell_fit(pdf,36,7,p.get("tr",""))
-        cell_fit(pdf,19,7,p.get("obs_parte","")) 
+        cell_fit(pdf,46,7,p.get("tf",""))
+        cell_fit(pdf,43,7,p.get("tr",""))
         pdf.ln()
 
 # OBSERVACIONES GENERALES
