@@ -514,6 +514,7 @@ def generar_op_formas(row):
     pdf.cell(12,7,"GR",1,0,"C",True)
     pdf.cell(60,7,"T. FRENTE",1,0,"C",True)
     pdf.cell(36,7,"T. RESP",1,0,"C",True)
+    pdf.cell(0,7,"OBS. PARTE",1,1,"C",True)
 
     pdf.set_font("Arial","",8)
     partes = row.get("detalles_partes_json",[])
@@ -526,6 +527,7 @@ def generar_op_formas(row):
         cell_fit(pdf,12,7,p.get("gramos",""))
         cell_fit(pdf,60,7,p.get("tf",""))
         cell_fit(pdf,36,7,p.get("tr",""))
+        cell_fit(pdf,0,7,p.get("obs_parte","")) 
         pdf.ln()
 
 # OBSERVACIONES GENERALES
