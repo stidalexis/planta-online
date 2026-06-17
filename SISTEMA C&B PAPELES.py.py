@@ -516,7 +516,7 @@ def generar_op_formas(row):
     pdf.cell(23,7,"T. RESP",1,0,"C",True)
     pdf.cell(37,7,"OBS. PARTE",1,1,"C",True)
 
-    pdf.set_font("Arial","",7)
+    pdf.set_font("Arial","",6)
     partes = row.get("detalles_partes_json",[])
     for p in partes:
         cell_fit(pdf,4,7,p.get("p",""))
