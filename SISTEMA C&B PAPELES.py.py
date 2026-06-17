@@ -1116,21 +1116,29 @@ elif menu == "🔍 Seguimiento":
                 
                 c1, c2, c3, c4 = st.columns(4)
                 with c1:
-                    st.write(f"**👤 CLIENTE:** {cliente}")
-                    st.write(f"**📅 FECHA:** {row.get('created_at', '')[:10]}")
-                    st.write(f"**🔙 ORDEN ANTERIOR:** {row.get('op_anterior', '')[:10]}")
+                    st.write("**👤 CLIENTE:**")
+                    st.info(cliente)
+                    st.write("**📅 FECHA:**")
+                    st.info(row.get('created_at', '')[:10])
+                    st.write("**🔙 ORDEN ANTERIOR:**")
+                    st.info(row.get('op_anterior', '')[:10])
                 with c2:
-                    st.info(f"**🏗️ AREA ACTUAL:** {area_destino}")
-                    cantidad = row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0')
-                    st.write(f"**📦 CANTIDAD SOLICITADA:** {cantidad}")
-                    st.write(f"**📖 REFERENCIA COMERCIAL:** {row.get('ref_comercial', '')}")
+                    st.write("**🏗️ AREA ACTUAL:**")
+                    st.info(area_destino)
+                    st.write("**📦 CANTIDAD SOLICITADA:**")
+                    st.info(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
+                    st.write("**📖 REFERENCIA COMERCIAL:**")
+                    st.info(row.get('ref_comercial', ''))
                 with c3:
-                    st.write(f"**📝 NOMBRE DE TRABAJO:** {nombre_t}")
-                    st.write(f"**⚙️ TIPO DE TRABAJO:** {row.get('tipo_orden', 'N/A')}")
-                    st.write(f"**📋 OBSERVACIONES DE DISEÑO:** {row.get('observaciones_diseno', 'N/A')}")
-
+                    st.write("**📝 NOMBRE DE TRABAJO:**")
+                    st.info(nombre_t)
+                    st.write("**⚙️ TIPO DE TRABAJO:**")
+                    st.info(row.get('tipo_orden', 'N/A'))
+                    st.write("**📋 OBSERVACIONES DE DISEÑO:**")
+                    st.info(row.get('observaciones_diseno', 'N/A'))
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
+
 
 # BOTON DE READIOGRAFIA
 
