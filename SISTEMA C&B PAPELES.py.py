@@ -510,7 +510,7 @@ def generar_op_formas(row):
     pdf.cell(14,7,"ANCHO",1,0,"C",True)
     pdf.cell(14,7,"LARGO",1,0,"C",True)
     pdf.cell(30,7,"PAPEL",1,0,"C",True)
-    pdf.cell(25,7,"COLOR",1,0,"C",True)
+    pdf.cell(20,7,"COLOR",1,0,"C",True)
     pdf.cell(12,7,"GR",1,0,"C",True)
     pdf.cell(60,7,"T. FRENTE",1,0,"C",True)
     pdf.cell(36,7,"T. RESP",1,0,"C",True)
