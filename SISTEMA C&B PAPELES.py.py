@@ -1226,6 +1226,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write(f"Presentacion: {datos.get('presentacion')}")
                 st.write(f"Encolada O Grapada Por: {datos.get('presentacion2', 0)}")
                 st.write(f"Numero De Partes: {datos.get('num_partes', 0)}")
+                st.write(f"Numero De Formas: {datos.get('cantidad_formas', 0)}")
 
         c_obs1, c_obs2 = st.columns(2)
         with c_obs1:
