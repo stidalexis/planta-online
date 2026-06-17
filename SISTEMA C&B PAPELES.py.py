@@ -512,9 +512,9 @@ def generar_op_formas(row):
     pdf.cell(32,7,"PAPEL",1,0,"C",True)
     pdf.cell(25,7,"COLOR",1,0,"C",True)
     pdf.cell(12,7,"GR",1,0,"C",True)
-    pdf.cell(60,7,"T. FRENTE",1,0,"C",True)
+    pdf.cell(23,7,"T. FRENTE",1,0,"C",True)
     pdf.cell(23,7,"T. RESP",1,0,"C",True)
-    pdf.cell(0,7,"OBS. PARTE",1,1,"C",True)
+    pdf.cell(37,7,"OBS. PARTE",1,1,"C",True)
 
     pdf.set_font("Arial","",8)
     partes = row.get("detalles_partes_json",[])
@@ -525,9 +525,9 @@ def generar_op_formas(row):
         cell_fit(pdf,32,7,p.get("papel",""))
         cell_fit(pdf,25,7,p.get("color_fondo",""))
         cell_fit(pdf,12,7,p.get("gramos",""))
-        cell_fit(pdf,60,7,p.get("tf",""))
+        cell_fit(pdf,23,7,p.get("tf",""))
         cell_fit(pdf,23,7,p.get("tr",""))
-        cell_fit(pdf,0,7,p.get("obs_parte","")) 
+        cell_fit(pdf,37,7,p.get("obs_parte","")) 
         pdf.ln()
 
 
