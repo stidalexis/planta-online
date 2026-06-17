@@ -687,7 +687,9 @@ def modal_detalle_op(row):
             <div class='metric-box'>
             📦 <b>Cantidad:</b> {row.get('cantidad_formas')}<br>
             📑 <b>Partes:</b> {row.get('num_partes')}<br>
-            🎨 <b>Presentación:</b> {row.get('presentacion')}
+            🎨 <b>Presentación:</b> {row.get('presentacion')}<br>
+            🎨 <b>Numeracion Desde:</b> {row.get('num_id')}<br>
+            🎨 <b>Numeracion Hasta:</b> {row.get('num_fd')}
             </div>
             """, unsafe_allow_html=True)
         else:
