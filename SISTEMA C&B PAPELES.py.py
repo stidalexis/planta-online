@@ -688,8 +688,8 @@ def modal_detalle_op(row):
             📦 <b>Cantidad:</b> {row.get('cantidad_formas')}<br>
             📑 <b>Partes:</b> {row.get('num_partes')}<br>
             🎨 <b>Presentación:</b> {row.get('presentacion')}<br>
-            🎨 <b>Numeracion Desde:</b> {row.get('num_id')}<br>
-            🎨 <b>Numeracion Hasta:</b> {row.get('num_fd')}
+            ⚠️ <b>Numeracion Desde:</b> {row.get('num_id')}<br>
+            ⚠️ <b>Numeracion Hasta:</b> {row.get('num_fd')}
             </div>
             """, unsafe_allow_html=True)
         else:
