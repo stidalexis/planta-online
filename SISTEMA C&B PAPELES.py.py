@@ -257,7 +257,7 @@ def generar_pdf_op(row):
 
 # FILA DE TIEMPOS TOMADOS POR OP
 
-            pdf.cell(130, 6, f"Duracion del Proceso: {dur_txt}", border='LRB')
+            pdf.cell(0, 6, f"Duracion del Proceso: {dur_txt}", border='LRB')
 # DATOS TECNICOS SALIDA JHSON
 
             pdf.set_font("Arial", '', 8)
