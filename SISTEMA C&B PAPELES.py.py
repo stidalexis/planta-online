@@ -11,7 +11,6 @@ import pytz
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
 
 #  CONEXION A SUPABASE 
-
 try:
     URL = st.secrets["SUPABASE_URL"]
     KEY = st.secrets["SUPABASE_KEY"]
@@ -440,7 +439,6 @@ def generar_op_formas(row):
     pdf.ln(4)
 
 # INFORMACION DE LA ORDEN
-
     pdf.set_fill_color(230,230,230)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION DE LA ORDEN",0,1,fill=True)
@@ -453,7 +451,6 @@ def generar_op_formas(row):
     pdf.cell(95,7,f"Fecha: {row.get('created_at','')[:10]}",1,1)
 
 # ESPECIFICACIONES GENERALES 
-
     pdf.ln(4)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"2. ESPECIFICACIONES GENERALES Y ACABADOS",0,1,fill=True)
@@ -472,7 +469,6 @@ def generar_op_formas(row):
     pdf.cell(190,7,f"Destino: {row.get('destino_formas','NO APLICA')}",1,1)
 
 # PERFORACIONES
-
     pdf.ln(4)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"3. PERFORACIONES",0,1,fill=True)
@@ -480,7 +476,6 @@ def generar_op_formas(row):
     pdf.multi_cell(0,7,row.get("perforaciones_detalle","SIN PERFORACIONES"), 1)
 
 # DETALLE TECNICO POR PARTE
-
     pdf.ln(4)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"4. DETALLE TECNICO POR PARTE",0,1,fill=True)
@@ -511,7 +506,6 @@ def generar_op_formas(row):
         pdf.ln()
 
 # OBSERVACIONES GENERALES
-
     pdf.ln(5)
     pdf.set_font("Arial","B",11)
     pdf.set_text_color(255, 0, 0)
@@ -520,7 +514,6 @@ def generar_op_formas(row):
     pdf.multi_cell(0,7,row.get("observaciones_formas",""), 1)
 
 # FIRMAS
-
     pdf.ln(1)
     pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
@@ -543,7 +536,6 @@ def generar_op_formas(row):
         pdf.cell(130, 6, "", 1, 0); pdf.cell(60, 6, "", 1, 1)
 
 # PIE
-
     pdf.set_font("Arial", "I", 6)
     pdf.cell(0, 5, f"SISTEMA C&B PAPELES - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
 
@@ -556,7 +548,6 @@ def generar_op_rebobinado(row):
     tipo_op = row.get('tipo_origen', '').upper()
 
 # ENCABEZADO 
-
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # VERDE
     elif "CAMBIOS" in tipo_op:
@@ -565,7 +556,6 @@ def generar_op_rebobinado(row):
         r, g, b = (13, 71, 161)     # AZUL
 
 #  ENCABEZADO CON COLOR DINAMICO
-
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
     pdf.image("logo_cb.png", 2, 2, 60)
@@ -579,7 +569,6 @@ def generar_op_rebobinado(row):
     pdf.ln(4)
 
 # INFORMACION GENERAL
-
     pdf.set_fill_color(230,230,230)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"1. INFORMACION GENERAL",0,1,fill=True)
@@ -592,32 +581,27 @@ def generar_op_rebobinado(row):
     pdf.cell(190,7,f"Fecha de Creacion: {row.get('created_at','')[:10]}",1,1)
 
 # DATOS TECNICOS DE ENTRADA Y OBJETIVO
-
     pdf.ln(4)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"2. DATOS TECNICOS Y OBJETIVO DEL PROCESO",0,1,fill=True)
     pdf.set_font("Arial","",10)
 
 #  MATERIAL Y DIMENCIONES
-
     pdf.cell(63,7,f"Material Base: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}g",1)
     pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
 
 # CANTIDADES
-
     pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
     pdf.cell(95,7,f"Tipo de Creacion: {row.get('tipo_creacion','NUEVA')}",1,1)
 
 # OBJETIVO DE REBOBINADO (IMPRESION O PARA QUE )
-
     pdf.set_font("Arial","B",10)
     pdf.cell(190,7,"OBJETIVO PRINCIPAL DEL REBOBINADO:", "LTR", 1)
     pdf.set_font("Arial","",10)
     pdf.multi_cell(190,7, row.get('objetivo_rebobinado','No especificado'), "LRB")
 
 # OBSERVACIONES DE PLANIFICACION
-
     pdf.ln(5)
     pdf.set_font("Arial","B",11)
     pdf.cell(0,8,"3. OBSERVACIONES ADICIONALES",0,1,fill=True)
@@ -625,13 +609,11 @@ def generar_op_rebobinado(row):
     pdf.multi_cell(0,7, row.get("observaciones_rollos","Sin observaciones adicionales"), 1)
 
 # ESPACIO PARA ANOTACIONES DE PLANTA 
-
     pdf.ln(5)
     pdf.set_font("Arial","I",8)
     pdf.cell(0,5,"* Espacio reservado para el operario: verificar empalmes y diámetros finales.",0,1)
 
 # PIE DE PAGINA
-
     pdf.ln(10)
     pdf.set_font("Arial","I",7)
     pdf.cell(0,10,f"SISTEMA C&B PAPELES - GENERADO: {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
@@ -639,7 +621,6 @@ def generar_op_rebobinado(row):
     return bytes(pdf.output())
 
 # RADIOGRAFIA TECNICA
-
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
     st.markdown(f"### OP: {row['op']} — {row['nombre_trabajo']}")
@@ -709,7 +690,6 @@ def modal_detalle_op(row):
         for h in hist:
 
 # DISENO DE TARGETAS DE DENTRADA
-
             with st.container():
                 st.markdown(f"""
                 <div class='historial-card'>
@@ -727,7 +707,6 @@ def modal_detalle_op(row):
                 """, unsafe_allow_html=True)
                 
 # VER DATOS DE CIERRE EN TABLA LIMPOA Y NO JHSON
-
                 if h.get('datos_cierre'):
                     with st.expander("📊 Ver Datos Técnicos de Salida"):
                         df_datos = pd.DataFrame(list(h['datos_cierre'].items()), columns=['Parámetro', 'Valor'])
@@ -739,7 +718,6 @@ def modal_detalle_op(row):
     st.download_button(label="🖨️ Descargar Certificado de Producción (PDF)", data=pdf_bytes, file_name=f"CERTIFICADO_{row['op']}.pdf", mime="application/pdf", use_container_width=True)
 
 # ESTRUCTURA DE MENU  GENERAL 
-
 if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
@@ -769,14 +747,12 @@ if not st.session_state.get('autenticado'):
     st.stop() 
 
 # ESTRUCTURA DE MENU CON PERMISOS POR ROL
-
 with st.sidebar:
     st.title("🏭 C&B PAPELES DE COLOMBIA S.A.S")
     
     rol = st.session_state.get('rol', 'operario').lower()
     
 # DEFINICION DE PERMISOS SEGUN ROL
-
     if rol == 'admin':
         opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
     elif rol == 'ventas':
@@ -804,7 +780,6 @@ with st.sidebar:
     else:
 
 # OPERARIOS Y OTROS ROLES SI LOS DEJA DENTRAR
-
         opciones_menu = ["🖥️ Monitor"]
 
     menu = st.radio("SELECCIONE MÓDULO:", opciones_menu)
@@ -813,7 +788,6 @@ with st.sidebar:
     st.caption(f"Usuario: {st.session_state.get('usuario_actual')} | Rol: {rol}")
     
 # BOTON DE CERRAR SESION
-
     if st.button("🚪 Cerrar Sesión", use_container_width=True):
         st.session_state.clear()
         st.rerun()
@@ -823,7 +797,6 @@ with st.sidebar:
     st.caption("Conectado a Supabase Cloud")
 
 #  FUNCION PARA GESTION DE MAQUINAS   
-
 def obtener_estado_maquina(nombre_maquina):
     try:
         res = supabase.table("estado_maquinas").select("estado").eq("maquina", nombre_maquina).execute()
@@ -844,11 +817,10 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
         st.error(f"Error al cambiar estado: {e}")
 
 # MODULO MONITOR 
-
 if menu == "🖥️ Monitor":
     st.markdown("<div class='title-area'>🖥️ MONITOR DE PRODUCCIÓN EN TIEMPO REAL</div>", unsafe_allow_html=True)
 
-# ── INTERRUPTOR GLOBAL DE PLANTA (solo admin) ──────────────────
+#  INTERRUPTOR GLOBAL DE PLANTA (solo admin)
     if st.session_state.get('rol','').lower() == 'admin':
         planta_on = get_planta_activa()
         col_sw1, col_sw2, col_sw3 = st.columns([1, 2, 3])
@@ -877,7 +849,8 @@ if menu == "🖥️ Monitor":
                 except:
                     pass
     else:
-        # Operarios solo ven el estado, no pueden cambiarlo
+    
+# Operarios solo ven el estado, no pueden cambiarlo
         if not get_planta_activa():
             st.error("⏸️ Planta detenida por administración — los contadores están en pausa")
     
@@ -891,7 +864,6 @@ if menu == "🖥️ Monitor":
         diccionario_estados = {}
 
 # Traer datos de trabajos activos
-
     act_data = supabase.table("trabajos_activos").select("*").execute().data
 
 # ALERTAS DE OP ESTANCADAS (Filtrando por ON/OFF)
@@ -900,14 +872,12 @@ if menu == "🖥️ Monitor":
         try:
 
 # USA EL DICCIONARIO PARA NO BUSCAR EN LA SUPABASE
-
             if not diccionario_estados.get(a['maquina'], True):
                 continue 
             
             inicio = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
 
 # PASA EL ESTADO ACTUAL ALA FUNCION 
-
             tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'], a.get('tiempo_pausa', 0))
             
             h, m, s = map(int, tiempo_texto.split(':'))
@@ -924,7 +894,6 @@ if menu == "🖥️ Monitor":
             st.warning(al)
 
 # PREPARAR DATOS DE OPERACIONES 
-
     ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
     map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
 
@@ -935,7 +904,6 @@ if menu == "🖥️ Monitor":
         act[a['maquina']] = a
         
 #  DIBUJAR INTERFAZ (Con logica de colores) 
-
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
         cols = st.columns(4)
@@ -944,13 +912,11 @@ if menu == "🖥️ Monitor":
             with cols[idx % 4]:
 
 # Verificar si la maquina esta encendida en el diccionario
-
                 esta_encendida = diccionario_estados.get(m, True)
 
                 if not esta_encendida:
 
 # TARJETA GRIS: Maquina apagada (Mantenimiento/etc)
-
                     st.markdown(
                         f"""<div style='background-color: #424242; color: #9E9E9E; padding: 20px; 
                         border-radius: 15px; text-align: center; border: 2px solid #212121;'>
@@ -962,7 +928,6 @@ if menu == "🖥️ Monitor":
                 elif m in act:
 
 # TARJETA  produccion
-
                     st.markdown(
                         f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
                         unsafe_allow_html=True
@@ -970,14 +935,12 @@ if menu == "🖥️ Monitor":
                 else:
 
 # TARJETA Libre
-
                     st.markdown(
                         f"<div class='card-vacia'>{m}<br>LIBRE</div>",
                         unsafe_allow_html=True
                     )
 
 #  REFRESCO AUTOMATICO 
-
     try:
         from streamlit_autorefresh import st_autorefresh
         intervalo = st.select_slider(
@@ -994,7 +957,6 @@ if menu == "🖥️ Monitor":
             st.rerun()
 
 # MODULO SEGUIMIENTO
-
 elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes en Tiempo Real")
     
@@ -1008,7 +970,6 @@ elif menu == "🔍 Seguimiento":
         activos = activos_res.data
         
 # DICCIONARIO DE OP EN MAQUINAS 
-
         op_en_maquina = {str(a['op']): a['maquina'] for a in activos}
     except Exception as e:
         st.error(f"Error al conectar con las tablas: {e}")
@@ -1020,7 +981,6 @@ elif menu == "🔍 Seguimiento":
         busqueda = st.text_input("🔍 Filtrar por OP, Cliente, Trabajo o Vendedor:", "")
 
 # TABS DE SEGUIMIENTO: PENDIENTES / FINALIZADAS
-
         tab_pendientes, tab_finalizadas = st.tabs(["⏳ EN PROCESO / PENDIENTES", "✅ FINALIZADAS"])
 
         ordenes_pendientes = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() != "FINALIZADO"]
@@ -1036,7 +996,6 @@ elif menu == "🔍 Seguimiento":
            
 
 # LOGICA DE FILTRADO
-
             if busqueda:
                 b = busqueda.lower()
                 
@@ -1049,7 +1008,6 @@ elif menu == "🔍 Seguimiento":
                     return
 
 # LOGICA DE ESTATUS MEJORADA
-
             if area_destino == "FINALIZADO":
                 
                 texto_estatus = "🔵 ORDEN FINALIZADA (BODEGA / DESPACHOS)"
@@ -1065,7 +1023,6 @@ elif menu == "🔍 Seguimiento":
                 color_texto = "orange"
 
 #  DISEÑO DE TARJETA 
-
             tipo_op = row.get('tipo_orden', '')
             if "FORMAS" in tipo_op:
                 icono_tipo = "📄"
@@ -1128,12 +1085,10 @@ elif menu == "🔍 Seguimiento":
 
 
 # BOTON DE READIOGRAFIA
-
                     if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
 
  # MOSTRAR      
-
                     link_arte = row.get('link_diseno')
                     link_ticket = row.get('link_ticket')
 
@@ -1149,7 +1104,6 @@ elif menu == "🔍 Seguimiento":
                 st.divider()
 
 #  BOTONES DE DESCARGA ORDEN EN PDF
-
                 if st.session_state.get('rol') in ['admin', 'ventas', 'diseño']:
                     try:
                         tipo = row.get('tipo_orden', '')
@@ -1172,7 +1126,6 @@ elif menu == "🔍 Seguimiento":
                         st.error(f"No se pudo generar el PDF: {e}")
 
 # RECORRIDO DE TARJETAS POR PESTAÑA
-
         with tab_pendientes:
             if not ordenes_pendientes:
                 st.info("No hay órdenes pendientes o en proceso.")
@@ -1186,7 +1139,6 @@ elif menu == "🔍 Seguimiento":
                 pintar_tarjeta_op(row)
 
 # MODULO DE DISEÑO
-
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
@@ -1245,11 +1197,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
 
 #  DEFINICION DE VENTANAS
-
     tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLANCHA"])
 
 #  AUDITORIA
-
     with tab1:
         st.subheader("🕵️ Revisión de Diseño")
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
@@ -1288,7 +1238,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                         st.error("El link del ARTE y el NÚMERO DE TICKET son obligatorios.")
 
 # PRE-PRENSA
-
     with tab2:
         st.subheader("🎞️ Procesamiento de Archivos")
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
@@ -1311,7 +1260,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                     st.success("Enviado a Revisión Final."); time.sleep(1); st.rerun()
 
 # REVISION FINAL CON PLANCHA 
-
     with tab3:
         st.subheader("⚡ Control de Planchas y Salida")
         op_final = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "REVISION_FINAL").execute().data
@@ -1331,14 +1279,12 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 if st.button("🏁 FINALIZAR Y ENVIAR A IMPRESIÓN", use_container_width=True):
 
 # Actualizamos a IMPRESION para que pase a la planta
-
                     supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_3).execute()
                     st.success("Orden enviada a planta exitosamente."); time.sleep(1); st.rerun()
         else:
             st.info("No hay órdenes pendientes para revisión de plancha.")
             
 # MODULO PLANIFICACION 
-
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
 
@@ -1379,7 +1325,7 @@ elif menu == "📅 Planificación":
             es_editable = estado_actual in ESTADOS_EDITABLES
             es_admin    = rol_actual == 'admin'
 
-            # Mostrar estado actual
+# Mostrar estado actual
             st.markdown(f"""
             <div class='metric-box'>
               <b>📋 OP:</b> {op_edit.get('op')} &nbsp;&nbsp;
@@ -1401,7 +1347,7 @@ elif menu == "📅 Planificación":
                 st.markdown("**Edita los campos que necesitas corregir:**")
 
                 with st.form("form_editar_op"):
-                    # ── DATOS GENERALES ──────────────────────────────
+#  DATOS GENERALES 
                     st.markdown("**📋 Datos Generales**")
                     ec1, ec2, ec3 = st.columns(3)
                     nuevo_cliente  = ec1.text_input("Cliente:", value=op_edit.get('cliente', ''))
@@ -1410,7 +1356,7 @@ elif menu == "📅 Planificación":
 
                     tipo_op = op_edit.get('tipo_orden', '')
 
-                    # ── FORMAS IMPRESAS / BLANCAS ─────────────────────
+#  FORMAS IMPRESAS / BLANCAS 
                     if "FORMAS" in tipo_op:
                         st.markdown("**📑 Datos de Formas**")
                         ef1, ef2, ef3, ef4 = st.columns(4)
@@ -1430,7 +1376,7 @@ elif menu == "📅 Planificación":
                         nueva_trans_f = ep4.selectbox("¿Transportadora?", ["NO","SI"], index=1 if op_edit.get('transportadora_formas') else 0)
                         nuevo_dest_f  = ep4.text_input("Ciudad destino:", value=op_edit.get('destino_formas','') or '') if nueva_trans_f == "SI" else "NO"
 
-                        # Partes de la forma
+# Partes de la forma
                         st.markdown("**📄 Detalle de Partes**")
                         rec_partes_e = op_edit.get('detalles_partes_json') or []
                         lista_p_e = []
@@ -1454,7 +1400,7 @@ elif menu == "📅 Planificación":
 
                         nuevas_obs = st.text_area("Observaciones Generales:", value=op_edit.get('observaciones_formas','') or '')
 
-                    # ── ROLLOS IMPRESOS / BLANCOS ─────────────────────
+#  ROLLOS IMPRESOS / BLANCOS 
                     elif tipo_op in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS"]:
                         st.markdown("**🌀 Datos de Rollos**")
                         er1, er2, er3 = st.columns(3)
@@ -1482,7 +1428,7 @@ elif menu == "📅 Planificación":
                         nuevo_dest_r  = st.text_input("Ciudad destino:", value=op_edit.get('destino_rollos','') or '') if nueva_trans_r == "SI" else "NO"
                         nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '')
 
-                    # ── REBOBINADO ────────────────────────────────────
+#  REBOBINADO 
                     elif tipo_op == "REBOBINADO":
                         st.markdown("**🌀 Datos de Rebobinado**")
                         eb1, eb2, eb3 = st.columns(3)
@@ -1578,14 +1524,12 @@ elif menu == "📅 Planificación":
     with tab_nueva:
     
 #  SELECTOR OTIGEN DE OP
-
         st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
         origen = st.radio("¿Cómo desea ingresar la orden?", 
                         ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                         horizontal=True)
     
 # VARIABLE PARA ALMACENAR DATOS RECUPERADOS
-
         datos_rec = {}
         
         if "Repetición" in origen:
@@ -1607,8 +1551,7 @@ elif menu == "📅 Planificación":
 
         st.divider()
 
-    # SELECTOR DE TIPO DE PRODUCTO
-
+# SELECTOR DE TIPO DE PRODUCTO
         c1, c2, c3, c4, c5 = st.columns(5)
         if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
         if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
@@ -1621,8 +1564,7 @@ elif menu == "📅 Planificación":
             prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-"}.get(t, "")
             p1, p2, p3, p4 = st.columns(4)
 
-    #  PERFORACIONES TODOS
-
+#  PERFORACIONES TODOS
             t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
 
             if t_perf == "SI":
@@ -1630,8 +1572,7 @@ elif menu == "📅 Planificación":
             else:
                 perf_d = "NO"
 
-    #  SOLO PARA FORMAS   
-
+#  SOLO PARA FORMAS   
             if "FORMAS" in t:
 
 
@@ -1681,8 +1622,7 @@ elif menu == "📅 Planificación":
                 num_id = "NO"
                 num_fd = "NO"
 
-    #  TRANSPORTADORA (TODOS) 
-
+#  TRANSPORTADORA (TODOS) 
             t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
 
             if t_trans_f == "SI":
@@ -1691,8 +1631,7 @@ elif menu == "📅 Planificación":
                 dest_f = "NO"
             partes = st.session_state.get("partes_sel", 1)
 
-    # BOTON COPIAR PARTE 1 A TODAS
-
+# BOTON COPIAR PARTE 1 A TODAS
             if "FORMAS" in t and partes > 1:
                 if st.button("📋 Copiar Parte 1 a todas las partes"):
 
@@ -1716,13 +1655,11 @@ elif menu == "📅 Planificación":
             with st.form("form_plan", clear_on_submit=True):
                 st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
                 
-    # SECCION: DATOS GENERALES 
-
+# SECCION: DATOS GENERALES 
                 f1, f2, f3 = st.columns(3)
                 op_input = f1.text_input("Número de Nueva OP (Solo número) *")
                 
-    # SI ES REPETICION SUGERIR LA OP ANTERIOR BUSCADA
-
+# SI ES REPETICION SUGERIR LA OP ANTERIOR BUSCADA
                 val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
                 op_a = f2.text_input("OP Anterior", value=val_op_ant)
                 
@@ -1738,8 +1675,7 @@ elif menu == "📅 Planificación":
 
                     for i in range(1, partes + 1):
 
-    # INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION 
-
+# INTEBNTAR TRAER DAROS  DE LA  PARTE SI EXSITE REPEETICION 
                         p_data = rec_partes[i-1] if i <= len(rec_partes) else {}
                         
                         st.markdown(f"**PARTE {i}**")
@@ -1790,8 +1726,7 @@ elif menu == "📅 Planificación":
                     
                 else: 
 
-    #  SECCION: ROLLOS 
-
+#  SECCION: ROLLOS 
                     r1, r2, r3 = st.columns(3)
                     mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
                     gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
@@ -1815,8 +1750,7 @@ elif menu == "📅 Planificación":
                     uc = r8.number_input("Unidades x Caja", 0, value=int(datos_rec.get('unidades_caja', 0)))
                     obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
 
-    #  ERROR SI TIENE CAMPOS SIN LLENAR 
-
+#  ERROR SI TIENE CAMPOS SIN LLENAR 
                 if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
 
                     campos_faltantes = []
@@ -1839,8 +1773,7 @@ elif menu == "📅 Planificación":
 
                     op_final = f"{prefijo}{op_input.upper()}"
 
-    #  VALIDAR OP DUPLICADA
-
+#  VALIDAR OP DUPLICADA
                     existe_op = supabase.table("ordenes_planeadas") \
                     .select("op") \
                     .eq("op", op_final) \
@@ -1850,8 +1783,7 @@ elif menu == "📅 Planificación":
                         st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
                         st.stop()
 
-    # DEFINIR AREA INICIAL SEGUN TIPO
-
+# DEFINIR AREA INICIAL SEGUN TIPO
                     if t == "FORMAS IMPRESAS":
                         ruta_inicial = "DISEÑO (AUDITORIA)"
 
@@ -1930,8 +1862,8 @@ elif menu == "📅 Planificación":
 
                     time.sleep(1.5)
                     st.rerun()
-# MODULO: BODEGA PRODUCTO TERMINADO 
 
+# MODULO: BODEGA PRODUCTO TERMINADO 
 elif menu == "📦 salida produccion P1":
     st.title("📦 Inventario de Producto Terminado")
     
@@ -1941,16 +1873,13 @@ elif menu == "📦 salida produccion P1":
         st.subheader("🔄 Gestión de Movimientos")
         
 # IDENTIFICAR PERMISOS SEGUN ROL
-
         rol_usuario = st.session_state.get('rol', '').lower()
         
 # DEFINE QUIN PUEDE HACER QUE DENTRO DEL MODULO 
-
         puede_ingresar = rol_usuario in ['admin', 'patinador_roll' ] 
         puede_despachar = rol_usuario in ['admin', 'ventas']
 
 #  SELECTOR DE OPERACION FILTRADO
-
         opciones_disponibles = []
         if puede_ingresar: opciones_disponibles.append("➕ ENTRADA (Ingreso)")
         if puede_despachar: opciones_disponibles.append("➖ SALIDA (Despacho)")
@@ -1969,7 +1898,6 @@ elif menu == "📦 salida produccion P1":
                 with col1:
 
 #  SI ES INGRESO SEJA CREAR SI ES SALIDA SOLO SELECCIONA DE LO YA EXISTENTE
-
                     if "ENTRADA" in tipo_accion:
                         nuevo_o_existente = st.checkbox("¿Es un producto nuevo en bodega?")
                         if nuevo_o_existente:
@@ -1988,7 +1916,6 @@ elif menu == "📦 salida produccion P1":
                     notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
 
 # BOTON DINAMICO DE REGISTRO A INGRESOS
-
                 texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
                 btn_procesar = st.form_submit_button(texto_boton)
 
@@ -2002,12 +1929,10 @@ elif menu == "📦 salida produccion P1":
                         producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
                         
 # LOGICA DE SUMA Y RESTA
-
                         es_entrada = "ENTRADA" in tipo_accion
                         factor = 1 if es_entrada else -1
 
 # VALIDACION DE STOCK PARA SALIDAS
-
                         if not es_entrada:
                             if not producto_actual:
                                 st.error("El producto no existe en inventario.")
@@ -2017,12 +1942,10 @@ elif menu == "📦 salida produccion P1":
                                 st.stop()
 
 # ACTUALIZAR O INSERTAR EN BODEGA ACTUAL
-
                         try:
                             if producto_actual:
 
 # ACTUALIZAR EXISTENTE
-
                                 nuevo_stk_cajas = producto_actual['stock_cajas'] + (c_cajas * factor)
                                 nuevo_stk_rollos = producto_actual['stock_rollos'] + (c_rollos * factor)
                                 
@@ -2036,7 +1959,6 @@ elif menu == "📦 salida produccion P1":
                             elif es_entrada:
 
 # INSERTAR NUEVO (Solo si es entrada)
-
                                 supabase.table("bodega_producto_terminado").insert({
                                     "nombre_trabajo": nom_trabajo,
                                     "tipo_producto": tipo_prod,
@@ -2047,7 +1969,6 @@ elif menu == "📦 salida produccion P1":
                                 }).execute()
 
 #  REGISTRAR SIEMPRE EN HISTORIAL 
-
                             supabase.table("bodega_historial").insert({
                                 "nombre_trabajo": nom_trabajo,
                                 "tipo_movimiento": "ENTRADA" if es_entrada else "SALIDA",
@@ -2066,7 +1987,6 @@ elif menu == "📦 salida produccion P1":
                             st.error(f"Error al procesar en base de datos: {e}")
 
 # PESTAÑA DE INVENTARIO ACTUAL
-
     with tab_inv:
         st.subheader("📊 Existencias en Bodega")
         
@@ -2081,7 +2001,6 @@ elif menu == "📦 salida produccion P1":
             df_show = df_bodega[cols_finales].copy()
             
 # RENOMBRAR COLUMBAS PARA VISUALIZACION 
-
             nombres_columnas = {
                 'nombre_trabajo': 'TRABAJO',
                 'tipo_producto': 'TIPO',
@@ -2093,17 +2012,14 @@ elif menu == "📦 salida produccion P1":
             df_show.rename(columns=nombres_columnas, inplace=True)
             
 # BUSCADOR RAPIDO
-
             busqueda_b = st.text_input("🔍 Filtrar inventario por nombre...")
             if busqueda_b:
                 df_show = df_show[df_show['TRABAJO'].str.contains(busqueda_b.upper(), na=False)]
             
 # MOSTRAR TABLAS 
-
             st.dataframe(df_show, use_container_width=True, hide_index=True)
             
 # ALERTAS D ESTOCK BAJO 
-
             if 'CAJAS' in df_show.columns:
                 bajo_stock = df_show[df_show['CAJAS'] <= 2]
                 if not bajo_stock.empty:
@@ -2112,7 +2028,6 @@ elif menu == "📦 salida produccion P1":
             st.info("La bodega está vacía actualmente.")
 
 # MODULO: REPORTES 
-
 elif menu == "📊 Reportes Admin":
         st.title("📊 Panel de Control y Reportes")
         
@@ -2135,7 +2050,6 @@ elif menu == "📊 Reportes Admin":
             st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
 
 #  TOMA DE TIEMPOS DE MAQUIA LIBRE ENTRE UN AOP Y OTRA 
-
             res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
             if res_m:
                 df_m = pd.DataFrame(res_m)
@@ -2150,7 +2064,6 @@ elif menu == "📊 Reportes Admin":
             st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
 
 # AQUI S EMUESTRA PORQUE LA MAQUINA SE DERUBO 
-
             res_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True).execute().data
             if res_p:
                 df_p = pd.DataFrame(res_p)
@@ -2173,16 +2086,13 @@ elif menu == "📦 Almacen/Despachos":
         st.subheader("🔄 Gestión de Movimientos")
         
 # IDENTIFICAR PERMISOS SEGUN ROL
-
         rol_usuario = st.session_state.get('rol', '').lower()
         
 # DEFINE QUIN PUEDE HACER QUE DENTRO DEL MODULO 
-
         puede_ingresar = rol_usuario in ['admin', 'jefe_log', 'patinador_log' ] 
         puede_despachar = rol_usuario in ['admin', 'jefe_log', 'patinador_log', 'aux_log']
 
 #  SELECTOR DE OPERACION FILTRADO
-
         opciones_disponibles = []
         if puede_ingresar: opciones_disponibles.append("➕ ENTRADA DE MERCANCIA (Ingreso)")
         if puede_despachar: opciones_disponibles.append("➖ SALIDA DE MERCANCIA (Despacho)")
@@ -2201,7 +2111,6 @@ elif menu == "📦 Almacen/Despachos":
                 with col1:
 
 #  SI ES INGRESO SEJA CREAR SI ES SALIDA SOLO SELECCIONA DE LO YA EXISTENTE
-
                     if "ENTRADA" in tipo_accion:
                         nuevo_o_existente = st.checkbox("¿Es un producto nuevo en bodega?")
                         if nuevo_o_existente:
@@ -2220,7 +2129,6 @@ elif menu == "📦 Almacen/Despachos":
                     notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
 
 # BOTON DINAMICO DE REGISTRO A INGRESOS
-
                 texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
                 btn_procesar = st.form_submit_button(texto_boton)
 
@@ -2234,12 +2142,10 @@ elif menu == "📦 Almacen/Despachos":
                         producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
                         
 # LOGICA DE SUMA Y RESTA
-
                         es_entrada = "ENTRADA" in tipo_accion
                         factor = 1 if es_entrada else -1
 
 # VALIDACION DE STOCK PARA SALIDAS
-
                         if not es_entrada:
                             if not producto_actual:
                                 st.error("El producto no existe en inventario.")
@@ -2249,12 +2155,10 @@ elif menu == "📦 Almacen/Despachos":
                                 st.stop()
 
 # ACTUALIZAR O INSERTAR EN BODEGA ACTUAL
-
                         try:
                             if producto_actual:
 
 # ACTUALIZAR EXISTENTE
-
                                 nuevo_stk_cajas = producto_actual['stock_cajas'] + (c_cajas * factor)
                                 nuevo_stk_rollos = producto_actual['stock_rollos'] + (c_rollos * factor)
                                 
@@ -2268,7 +2172,6 @@ elif menu == "📦 Almacen/Despachos":
                             elif es_entrada:
 
 # INSERTAR NUEVO (Solo si es entrada)
-
                                 supabase.table("almacen_producto_terminado").insert({
                                     "nombre_trabajo": nom_trabajo,
                                     "tipo_producto": tipo_prod,
@@ -2279,7 +2182,6 @@ elif menu == "📦 Almacen/Despachos":
                                 }).execute()
 
 #  REGISTRAR SIEMPRE EN HISTORIAL 
-
                             supabase.table("bodega_historial").insert({
                                 "nombre_trabajo": nom_trabajo,
                                 "tipo_movimiento": "ENTRADA" if es_entrada else "SALIDA",
@@ -2298,7 +2200,6 @@ elif menu == "📦 Almacen/Despachos":
                             st.error(f"Error al procesar en base de datos: {e}")
 
 # PESTAÑA DE INVENTARIO ACTUAL
-
     with tab_inv:
         st.subheader("📊 Existencias en Bodega")
         
@@ -2313,7 +2214,6 @@ elif menu == "📦 Almacen/Despachos":
             df_show = df_bodega[cols_finales].copy()
             
 # RENOMBRAR COLUMBAS PARA VISUALIZACION 
-
             nombres_columnas = {
                 'nombre_trabajo': 'TRABAJO',
                 'tipo_producto': 'TIPO',
@@ -2325,17 +2225,14 @@ elif menu == "📦 Almacen/Despachos":
             df_show.rename(columns=nombres_columnas, inplace=True)
             
 # BUSCADOR RAPIDO
-
             busqueda_b = st.text_input("🔍 Filtrar inventario por nombre...")
             if busqueda_b:
                 df_show = df_show[df_show['TRABAJO'].str.contains(busqueda_b.upper(), na=False)]
             
 # MOSTRAR TABLAS 
-
             st.dataframe(df_show, use_container_width=True, hide_index=True)
             
 # ALERTAS D ESTOCK BAJO 
-
             if 'CAJAS' in df_show.columns:
                 bajo_stock = df_show[df_show['CAJAS'] <= 2]
                 if not bajo_stock.empty:
@@ -2346,7 +2243,6 @@ elif menu == "📦 Almacen/Despachos":
 elif menu == "⏱️ Seguimiento Cortadoras":
         st.header("⏱️ Seguimiento Horario de Cortadoras")
         
-        # Usamos las máquinas de corte configuradas en tus CONSTANTES
         maq_sel = st.selectbox("Seleccione la Máquina", MAQUINAS["CORTE"])
         
         t1, t2 = st.tabs(["📝 Registro", "📋 Historial"])
@@ -2370,7 +2266,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     mot_d = st.text_input("Motivo Desp.")
                     obs = st.text_area("Observaciones")
                 
-                # Campos de cierre de turno opcionales
+# Campos de cierre de turno opcionales
                 st.markdown("---")
                 st.markdown("##### 📦 Datos de Cierre de Turno (Opcional)")
                 col_x, col_y = st.columns(2)
@@ -2397,7 +2293,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                                 "unidades_por_caja": u_c, 
                                 "num_varillas": n_v, 
                                 "num_cajas": n_c,
-                                "peso_desperdicio": p_d, # CORREGIDO AQUÍ
+                                "peso_desperdicio": p_d,
                                 "motivo_desperdicio_seg": mot_d, 
                                 "observaciones": obs,
                                 "total_cajas_empacadas": c_t, 
@@ -2422,8 +2318,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     
                     columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
                     
-# Renombrar las columnas para que se vea estético en pantalla
-
+# Renombrar las columnas para que se vea estetico en pantalla
                     df_mostrar = df_h[columnas_visibles].rename(columns={
                         "fecha": "Fecha",
                         "hora_registro": "Hora",
@@ -2443,7 +2338,6 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                 st.error(f"Error al cargar el historial: {e}")
 
 #  CRONOGRAMA DE IMPRESIÓN ESTILO NOTION
-
 elif menu == "📆 Cronograma Impresión":
     import streamlit.components.v1 as components
     import json
@@ -2696,7 +2590,6 @@ elif menu == "📆 Cronograma Impresión":
     components.html(html_cal, height=620, scrolling=False)
 
 # MODULO DE INVENTARIO CORES Y CAJAS
-
 elif menu == "📦 Inventario":
     st.title("Gestión de Suministros (Cores y Cajas)")
     
@@ -2708,7 +2601,6 @@ elif menu == "📦 Inventario":
         col_nombre = "nombre_core" if tipo_insumo == "CORES" else "nombre_caja"
         
 # TRAER DATOS DE LA TABLA SEGUN SELECCION 
-
         items_db = supabase.table(tabla_db).select("*").execute().data
         opciones = {item[col_nombre]: item['id'] for item in items_db}
         
@@ -2746,12 +2638,10 @@ elif menu == "📦 Inventario":
             st.dataframe(pd.DataFrame(supabase.table("inventario_cajas").select("*").execute().data), use_container_width=True)
 
 #  VALIDACION DE ACCESO A AREAS DE PRODUCCION 
-
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]:
     rol_actual = st.session_state.get("rol", "operario").lower()
 
 # DICCIONARIO DE PERMISOS UNIFICADO
-
     PERMISOS = {
         "admin": ["TODOS"],
         "ventas": ["TODOS"],
@@ -2784,11 +2674,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
  # LOGICA DE PARADAS TECNICAS 
-
                 if not tr.get("pausado"):
 
 # BOTON DE PARADA 
-
                     with st.popover("🚨 REGISTRAR PARADA"):
                         motivo_p = st.selectbox("Motivo de parada:", MOTIVOS_PARADA, key=f"mot_{m}")
                         if st.button("Confirmar Parada", key=f"btn_p_{m}", type="primary"):
@@ -2801,7 +2689,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 else:
 
 # MOSTRAR PORQUE ESTA DETENIDA LA AMQUINA 
-
                     st.error(f"DETENIDA POR: {tr.get('motivo_pausa', 'Sin motivo')}")
                     if st.button(f"▶️ REANUDAR TRABAJO", key=f"r_{m}", type="secondary"):
                         try:
@@ -2810,7 +2697,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             pausa_segundos = (ahora - inicio_p).total_seconds()
             
 # GUARDAR ENH LA TABLA DE TIEMPOS MUERTOS
-
                             supabase.table("paradas_maquina").insert({
                                 "maquina": m,
                                 "motivo": tr.get('motivo_pausa'),
@@ -2820,7 +2706,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             }).execute()
 
 # ACTUALIZAR EL REGISTRO DE ACTIVOS PARA IR TRABAJANO
-
                             nuevo_tiempo_acumulado = tr.get("tiempo_pausa", 0) + pausa_segundos
                             supabase.table("trabajos_activos").update({
                                 "pausado": False,
@@ -2833,7 +2718,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             st.error(f"Error: {e}")
 
 #  BOTON FINALIZAR SIEMPRE VERLO
-
                 if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
                     st.session_state.rep = tr
                     st.rerun()
@@ -2850,7 +2734,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         ahora_iso = hora_colombia().isoformat()
     
 # INTENTAR BUSCAR HORA DE CUANDO TERMINO EL ULTIMO TRABAJO  
-
                         ultimo_registro = supabase.table("tiempos_muertos").select("fin").eq("maquina", m).order("fin", desc=True).limit(1).execute()
     
                         if ultimo_registro.data:
@@ -2858,7 +2741,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             ocio_segundos = (hora_colombia() - fin_ultimo).total_seconds()
         
 # GUARDA TIEMPO Q8UE NESTUBNO LIBRE O SIN TRABAJO 
-
                             if ocio_segundos > 360: # Solo si fue mas de 3 minuto
                                 supabase.table("tiempos_muertos").insert({
                                     "maquina": m,
@@ -2869,7 +2751,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 }).execute()
 
 # INICIAR TRABAJO NORMAL
-
                         supabase.table("trabajos_activos").insert({
                             "maquina": m,
                             "area": area_act,
@@ -2912,7 +2793,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.markdown("---")
 
 # CNSUMO DE CAJAS Y CORES
-                
                 col_inv1, col_inv2 = st.columns(2)
                 
                 with col_inv1:
@@ -2936,7 +2816,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.markdown("---")
 
 # CALCULOS AUTOMATICOS
-
                 rollos = datos_c.get('rollos_finales', 0)
                 imagenes = datos_c.get('imagenes_corte', 0)
 
@@ -2959,7 +2838,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['desperdicio'] = f3.number_input("Total desperdicio (Kg)", 0)
 
 # COLECTORAS
-
             elif area_act == "COLECTORAS":
                 c1, c2, c3 = st.columns(3) 
                 datos_c['tipo_papel'] = c1.text_input("tipo de papel")
@@ -2973,7 +2851,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     index=0
                 )
 # CONSUMO DE CAJAS EN COLECTORAS
-
                 st.markdown("---")
                 col_inv_col = st.columns(2)
                 with col_inv_col[0]:
@@ -2998,7 +2875,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['unidades_caja'] = c2.number_input("cantidad por caja", 0)
                 
 #  CONSUMO DE CAJAS EN ENCUADERNACION
-
                 st.markdown("---")
                 col_inv_enc = st.columns(2)
                 with col_inv_enc[0]:
@@ -3031,7 +2907,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             obs_prod = st.text_area("Observaciones de producción / saldos ")
 
 #  ENTREGA PARCIAL
-
             st.markdown("### 📦 ENTREGA PARCIAL (OPCIONAL)")
             cantidad_parcial = st.number_input("Cantidad parcial producida", 0)
             obs_parcial = st.text_input("Observación parcial")
@@ -3041,7 +2916,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             parcial = col_f2.form_submit_button("📦 ENTREGA PARCIAL")
 
 #  FINALIZAR TRABAJO ( LOGICA)
-
             if finalizar:
 
                 if op_name:
@@ -3049,14 +2923,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     inicio_raw = r['hora_inicio']
 
 #  CONVERTIR A DATATIME (TODOS LOS MISMOS DATOS )
-
                     if isinstance(inicio_raw, str):
                         inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
                     else:
                         inicio = inicio_raw
 
 #  NORMALIZAR A ZONA HORARIA COLOMBIA
-
                     tz = pytz.timezone("America/Bogota")
 
                     if inicio.tzinfo is None:
@@ -3065,15 +2937,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         inicio = inicio.astimezone(tz)
 
 #  HORA ACTUAL CONSISTENTE
-
                     fin = hora_colombia()
 
 #  CALCULAR DURACION
-
                     duracion = calcular_duracion_laboral(inicio, fin, r.get('maquina'), r.get('tiempo_pausa', 0))
 
 #  LOGICA DE DESCUENTO DE INVENTARIO
-
                     if area_act == "CORTE" and 'id_tubo_inventario' in datos_c:
                         id_t = datos_c['id_tubo_inventario']
                         cant_gastar = datos_c.get('rollos_finales', 0)
@@ -3084,7 +2953,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 datos_c['info_inventario_tubo'] = f"Descontados {cant_gastar} tubos"
 
 # DESCUENTO DE CAJAS GENERAL 
-
                     if 'id_caja_inventario' in datos_c:
                         id_cj = datos_c['id_caja_inventario']
                         cant_cj = datos_c.get('cajas_totales', 0)
@@ -3096,13 +2964,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 datos_c['info_inventario_caja'] = f"Descontadas {cant_cj} de {datos_c.get('nombre_caja')}"
 
 # DETENER OP  NO CUENTA TIEMPO DE LA OP PERO SI DE PARADA
-
                     d_op = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
                     tipo = d_op['tipo_orden']
                     n_area = "FINALIZADO"
 
 #  RUTAS 
-
                     if tipo in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                         if area_act == "IMPRESIÓN":
                             n_area = "COLECTORAS"
@@ -3152,7 +3018,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     st.rerun()
 
 #  ENTREGAS PARCIALES 
-
         if parcial:
             # 1. Validaciones de la cantidad
             if cantidad_parcial <= 0:
@@ -3160,7 +3025,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.stop()
                 
 # Captura de tiempos
-
             inicio_raw = r['hora_inicio']
             if isinstance(inicio_raw, str):
                 inicio = datetime.fromisoformat(inicio_raw.replace("Z", "+00:00"))
@@ -3177,7 +3041,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             duracion = calcular_duracion_laboral(inicio, fin, r['maquina'], r.get('tiempo_pausa', 0))
 
 # Preparar el nuevo historial — leer desde ordenes_planeadas, no desde trabajos_activos
-
             d_op_hist = supabase.table("ordenes_planeadas").select("historial_procesos").eq("op", r['op']).single().execute().data
             hist = d_op_hist.get('historial_procesos') or [] if d_op_hist else []
             
@@ -3185,13 +3048,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if obs_parcial:
                 datos_c['observacion_parcial'] = obs_parcial
                 
-# Recuperamos operario y auxiliar directamente del registro activo 'r'
-
+# Recupera operario y auxiliar directamente del registro activo 'r'
             operario_actual = r.get('operario', 'Operario Planta')
             auxiliar_actual = r.get('auxiliar', '')
                 
 # Agrega al historial de forma segura
-
             hist.append({
                 "area": area_act,
                 "maquina": r['maquina'],
@@ -3205,7 +3066,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             })
             
 #  CAMBIO CLAVE SIMULTANEO 
-
             d_op_p = supabase.table("ordenes_planeadas").select("tipo_orden").eq("op", r['op']).single().execute().data
             tipo_p = d_op_p['tipo_orden'] if d_op_p else ""
 
@@ -3230,7 +3090,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             try:
 
 # OP avanza a siguiente area Y queda visible en area origen
-
                 supabase.table("ordenes_planeadas").update({
                     "proxima_area": n_area_parcial,
                     "estado_parcial": f"ACTIVO EN {area_act}",
@@ -3238,7 +3097,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 }).eq("op", r['op']).execute()
 
 # Maquina queda LIBRE
-
                 supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
 
                 st.success(f"✅ Parcial enviado a {n_area_parcial}. La máquina {r['maquina']} quedó libre y la OP sigue activa en {area_act}.")
@@ -3252,7 +3110,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 if st.session_state.get('rol') == 'admin':
 
 # BLOQUE INTERRUPTORES DE MAQUINAS
-
     with st.expander("⚙️ INTERRUPTORES DE MÁQUINAS (ON/OFF)"):
         st.warning("Si apagas una máquina, el sistema no contará tiempos laborados para ella.")
         
@@ -3265,7 +3122,6 @@ if st.session_state.get('rol') == 'admin':
                     estado_actual = obtener_estado_maquina(maq)
 
 # El interruptor (toggle)
-
                     nuevo_st = st.toggle(f"{maq}", value=estado_actual, key=f"switch_{maq}")
                     
                     if nuevo_st != estado_actual:
@@ -3277,7 +3133,6 @@ if st.session_state.get('rol') == 'admin':
     st.divider()
 
 #  BLOQUE ADMINISTRACION DE USUARIOS 
-
     with st.expander("➕ Panel de Administración de Usuarios"):
         st.info("Desde aquí se puede dar de alta nuevos operarios en la base de datos de Supabase.")
         
@@ -3307,7 +3162,6 @@ if st.session_state.get('rol') == 'admin':
                 st.warning("Por favor, completa todos los campos.")
 
 #  FUNCIONES DE MERCADO DE AVATARES C&B  
-
 def mercado_obtener_coins(usuario):
     """Retorna los coins actuales de un usuario."""
     try:
@@ -3341,7 +3195,6 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
 
 
 #  MÓDULO MERCADO PRINCIPAL 
-
 if menu == "🛒 Mercado":
     usuario_actual = st.session_state.get('usuario_actual', '')
     nombre_actual  = st.session_state.get('nombre_usuario', '')
@@ -3352,7 +3205,6 @@ if menu == "🛒 Mercado":
     coins_usuario = mercado_obtener_coins(usuario_actual)
 
 #  BARRA DE COINS 
-    
     st.markdown(f"""
     <div style="background: linear-gradient(135deg,#1565C0,#0D47A1); border-radius:16px; 
                 padding:18px 28px; display:flex; align-items:center; gap:16px; margin-bottom:20px;">
@@ -3365,7 +3217,6 @@ if menu == "🛒 Mercado":
     """, unsafe_allow_html=True)
 
 # TABS PRINCIPALES
-
     if rol_actual == 'admin':
         tab_admin, tab_historial = st.tabs(
             ["⚙️ Panel Admin", "📜 Historial Monedas"]
@@ -3375,13 +3226,12 @@ if menu == "🛒 Mercado":
             ["📜 Mi Historial"]
         )
 
-# TAB — PANEL ADMIN
-   
+# TAB  PANEL ADMIN
     if rol_actual == 'admin':
         with tab_admin:
             st.markdown("<div class='section-header'>⚙️ ADMINISTRACIÓN DEL MERCADO</div>", unsafe_allow_html=True)
 
-            # ── Asignar / quitar coins ───────────────────────
+# Asignar / quitar coins 
             with st.expander("🪙 Asignar o Quitar Coins a Trabajadores", expanded=True):
                 st.info("Puedes dar coins como recompensa por buen desempeño, o descontarlos si es necesario.")
                 
@@ -3418,7 +3268,6 @@ if menu == "🛒 Mercado":
                             st.rerun()
 
 #  Ver monederos de todos
-            
             with st.expander("💰 Ver Coins de Todos los Trabajadores"):
                 try:
                     monederos = supabase.table("monedas_usuarios").select("*").order("coins", desc=True).execute().data or []
@@ -3436,8 +3285,7 @@ if menu == "🛒 Mercado":
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-# TAB — HISTORIAL (ADMIN ve todo, usuario ve lo suyo)
-       
+# TAB  HISTORIAL (ADMIN ve todo, usuario ve lo suyo)
         with tab_historial:
             st.markdown("<div class='section-header'>📜 HISTORIAL DE MOVIMIENTOS DE COINS</div>", unsafe_allow_html=True)
             try:
