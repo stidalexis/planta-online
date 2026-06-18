@@ -344,36 +344,77 @@ def generar_op_rollos(row):
 
 # INFORMACION GENERAL
 
-    pdf.set_fill_color(230, 230, 230); pdf.set_font("Arial", "B", 11)
+    # --- 1. INFORMACIÓN DE LA ORDEN ---
+    pdf.set_fill_color(230, 230, 230)
+    pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(115, 7, f"Cliente: {row.get('cliente','')}", 1)
-    pdf.cell(75, 7, f"Vendedor: {row.get('vendedor','')}", 1, 1)
-    pdf.cell(120, 7, f"Trabajo: {row.get('nombre_trabajo','')}", 1)
-    pdf.cell(70, 7, f"Tipo Orden: {row.get('tipo_orden','')}", 1, 1) 
 
-# ESPECIFICACIONES TECNICAS
+    # Fila 1 (Ancho total: 115 + 75 = 190)
+    # Cliente: Título (25mm) + Valor (90mm) = 115mm
+    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Cliente: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(90, 7, f"{row.get('cliente','')}", 1, 0)
+    # Vendedor: Título (25mm) + Valor (50mm) = 75mm
+    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Vendedor: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(50, 7, f"{row.get('vendedor','')}", 1, 1) # Salto de línea
 
-    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    # Fila 2 (Ancho total: 120 + 70 = 190)
+    # Trabajo: Título (25mm) + Valor (95mm) = 120mm
+    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Trabajo: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(95, 7, f"{row.get('nombre_trabajo','')}", 1, 0)
+    # Tipo Orden: Título (25mm) + Valor (45mm) = 70mm
+    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Tipo Orden: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('tipo_orden','')}", 1, 1) # Salto de línea
+
+
+    # --- 2. ESPECIFICACIONES TÉCNICAS ---
+    pdf.ln(4)
+    pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
-    pdf.set_font("Arial", "B", 10)
-    pdf.cell(63, 7, f"Material: {row.get('material','')}", 1)
-    pdf.cell(63, 7, f"Gramaje: {row.get('gramaje_rollos','')}", 1)
-    pdf.cell(64, 7, f"Core: {row.get('core','')}", 1, 1)
 
-    pdf.cell(63, 7, f"Cantidad Rollos: {row.get('cantidad_rollos','')}", 1)
-    pdf.cell(63, 7, f"Unidades Bolsa: {row.get('unidades_bolsa','')}", 1)
-    pdf.cell(64, 7, f"Unidades Caja: {row.get('unidades_caja','')}", 1, 1)
-    
-# REFERENCIAS Y TRANSPORTES 
+    # Fila 1 (Dividido en 3 columnas de ~63.3mm para sumar 190)
+    # Material
+    pdf.set_font("Arial", "B", 10); pdf.cell(23, 7, " Material: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(40, 7, f"{row.get('material','')}", 1, 0)
+    # Gramaje
+    pdf.set_font("Arial", "B", 10); pdf.cell(23, 7, " Gramaje: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(40, 7, f"{row.get('gramaje_rollos','')}", 1, 0)
+    # Core
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Core: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(44, 7, f"{row.get('core','')}", 1, 1) # Salto de línea
 
-    pdf.cell(135, 7, f"Referencia Comercial: {row.get('ref_comercial','')}", 1)
+    # Fila 2 
+    # Cantidad Rollos
+    pdf.set_font("Arial", "B", 10); pdf.cell(33, 7, " Cant. Rollos: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('cantidad_rollos','')}", 1, 0)
+    # Unidades Bolsa
+    pdf.set_font("Arial", "B", 10); pdf.cell(33, 7, " Unid. Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('unidades_bolsa','')}", 1, 0)
+    # Unidades Caja
+    pdf.set_font("Arial", "B", 10); pdf.cell(31, 7, " Unid. Caja: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('unidades_caja','')}", 1, 1) # Salto de línea
+
+
+    # --- REFERENCIAS Y TRANSPORTES ---
+    # Referencia Comercial (135mm totales)
+    pdf.set_font("Arial", "B", 10); pdf.cell(40, 7, " Ref. Comercial: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(95, 7, f"{row.get('ref_comercial','')}", 1, 0)
+    # Transportadora (55mm totales)
     trans = "SI" if row.get('transportadora_rollos') else "NO"
-    pdf.cell(55, 7, f"Transportadora: {trans}", 1, 1)
-    pdf.cell(25, 8, "Impresión", 1, 0, 'C')
-    pdf.cell(82, 8, f" Frente: {row.get('tintas_frente_rollos', 'N/A')}", 1)
-    pdf.cell(83, 8, f" Respaldo: {row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1)
-    pdf.cell(190, 7, f"Destino: {row.get('destino_rollos','PLANTA')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Transportadora: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(25, 7, f"{trans}", 1, 1) # Salto de línea
+
+    # Impresión (Frente y Respaldo)
+    pdf.set_font("Arial", "B", 10); pdf.cell(25, 8, "Impresión", 1, 0, 'C', fill=True)
+    # Frente
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 8, " Frente: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(62, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
+    # Respaldo
+    pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 8, f"{row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1) # Salto de línea
+
+    # Destino
+    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(165, 7, f"{row.get('destino_rollos','PLANTA')}", 1, 1)
 
 # OBSERFVACIONES Y PERFORACIONES 
 
