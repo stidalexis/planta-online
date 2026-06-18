@@ -464,10 +464,10 @@ def generar_op_formas(row):
     pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('num_partes','')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(26, 7, " Presentación: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(38, 7, f"{row.get('presentacion','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Numeración Del: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('num_id','NO')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Numeración Al: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('num_fd','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Numeración Del: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('num_id','NO')}", 1, 0)
+    pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Numeración Al: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('num_fd','')}", 1, 1)
     pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Código Barras: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(90, 7, f"{row.get('codigo_barras_detalle','')}", 1, 0)
     trans = "SI" if row.get('transportadora_formas') else "NO"
@@ -477,7 +477,6 @@ def generar_op_formas(row):
     pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('presentacion2', 'N/A')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('destino_formas','NO APLICA')}", 1, 1)
-
 
 # PERFORACIONES
     pdf.ln(4)
