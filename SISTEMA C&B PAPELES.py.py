@@ -8,7 +8,6 @@ from fpdf import FPDF
 import pytz
 
 #  CONFIGURACION DE PAGINA 
-
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
 
 #  CONEXION A SUPABASE 
@@ -22,7 +21,6 @@ except Exception as e:
     st.stop()
     
 #  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL)
-
 st.markdown("""
     <style>
     .stButton > button { height: 70px !important; border-radius: 15px; font-weight: bold; font-size: 20px !important; width: 100%; }
@@ -67,7 +65,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 #  CONSTANTES 
-
 MAQUINAS = {
     "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": [f"COR-{i:02d}" for i in range(1, 15)],
@@ -80,12 +77,10 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
 #  USUARIOS ORGANIZADOS POR ROL 
-
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     try:
 
 # CONSULTA EN TABLA DE USUARIOS FILTRADAS POR EL NOMBRE DE USUSRIO
-
         respuesta = supabase.table("usuarios")\
             .select("*")\
             .eq("usuario", usuario_ingresado)\
@@ -93,7 +88,6 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
             .execute()
         
 # SI LA LISTA ESTA VASIA EL USUARIO NO EXISTE NO DEJA INGRESAR
-
         if len(respuesta.data) > 0:
             return respuesta.data[0] 
         else:
@@ -103,7 +97,6 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
         return None
 
 #  FUNCIONES AUXILIARES 
-
 def cell_fit(pdf, w, h, text, border=1):
 
     text = str(text)
@@ -114,7 +107,6 @@ def cell_fit(pdf, w, h, text, border=1):
     pdf.cell(w, h, text, border)
 
 # FUNCION DE HORARIOS
-
 def hora_colombia():
     tz = pytz.timezone("America/Bogota")
     return datetime.now(tz)
@@ -131,7 +123,7 @@ def get_planta_activa() -> bool:
               .eq("clave", "planta_activa").single().execute()
         activa = str(res.data.get("valor", "true")).lower() == "true"
     except:
-        activa = True  # Si falla la consulta, asume activa para no bloquear producción
+        activa = True  
     st.session_state[cache_key] = activa
     st.session_state[cache_ts]  = ahora
     return activa
@@ -145,12 +137,11 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
         "updated_at": hora_colombia().isoformat(),
         "updated_by": usuario
     }).execute()
-    # Limpiar cache
+    
     st.session_state.pop('_planta_activa_cache', None)
     st.session_state.pop('_planta_activa_ts', None)
 
-# FUNCION DE DURACION — Ya no depende de horario fijo, respeta estado de planta
-
+# FUNCION DE DURACION 
 def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_segundos=0):
     """Calcula tiempo trabajado descontando pausas individuales y respetando estado de planta."""
     if nombre_maquina:
@@ -161,23 +152,21 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
     total = fin - inicio
     if total.total_seconds() < 0:
         return "0:00:00"
-    # Descontar pausas acumuladas (fallas, descansos, etc.)
+    
+# Descontar pausas acumuladas 
     total_segundos = max(0, total.total_seconds() - tiempo_pausa_segundos)
     return str(timedelta(seconds=int(total_segundos)))
     
 #  PDF DE CERTIFICADO 
-
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
     
 # ENCABEZADO INDUSTRIAL PDF CERTIFICADO 
-
     pdf.set_fill_color(13, 71, 161)
     pdf.rect(0, 0, 210, 40, 'F')
 
 # LOGO CYB PAPELES
-
     pdf.image("logo_cb.png", 2, 2, 60)
     
     pdf.set_text_color(255, 255, 255)
@@ -190,7 +179,6 @@ def generar_pdf_op(row):
     pdf.ln(0.5)
     
 #  SECCION DATOS DE VENTA PDF
-
     pdf.set_font("Arial", 'B', 11)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(0, 8, " 1. INFORMACION GENERAL Y ORIGEN", ln=True, fill=True)
@@ -204,7 +192,6 @@ def generar_pdf_op(row):
     pdf.ln(5)
 
 #  SECCION ESPECIFICACIONES PDF
-
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, " 2. ESPECIFICACIONES TECNICAS", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
@@ -223,7 +210,6 @@ def generar_pdf_op(row):
     pdf.ln(5)
 
 #  SECCION BITACORA TECNICA  
-
     pdf.set_font("Arial", 'B', 11)
     pdf.cell(0, 8, " 3. TRAZABILIDAD Y REGISTROS DE PLANTA", ln=True, fill=True)
     
@@ -236,7 +222,6 @@ def generar_pdf_op(row):
             pdf.ln(2)
 
 # FILA DE TITULO DE AREA
-
             pdf.set_font("Arial", 'B', 10)
             pdf.set_fill_color(240, 245, 255)
             area_txt  = str(h.get('area','?')).encode('latin-1','replace').decode('latin-1')
@@ -249,17 +234,14 @@ def generar_pdf_op(row):
             pdf.cell(0, 7, f" AREA: {area_txt} | MAQUINA: {maq_txt}", ln=True, fill=True, border=1)
 
 # FILA DE RESPONSABLES POR OP
-
             pdf.set_font("Arial", 'B', 9)
             pdf.cell(65, 6, f"Operador: {op_txt}", border='LR')
             pdf.cell(65, 6, f"Auxiliar: {aux_txt}", border='R')
             pdf.cell(0, 6, f"Fecha: {fecha_txt}", border='R', ln=True)
 
 # FILA DE TIEMPOS TOMADOS POR OP
-
             pdf.cell(0, 6, f"Duracion del Proceso: {dur_txt}", border='LRB', ln=True)
 # DATOS TECNICOS SALIDA JHSON
-
             pdf.set_font("Arial", '', 8)
 
             datos_c = h.get('datos_cierre', {})
@@ -270,7 +252,6 @@ def generar_pdf_op(row):
                 pdf.set_fill_color(230,230,230)
 
 # ENCABEZADOS TABLA
-
                 pdf.cell(47,6,"OBJETO",1,0,'C',True)
                 pdf.cell(48,6,"DATO",1,0,'C',True)
                 pdf.cell(47,6,"OBJETO",1,0,'C',True)
@@ -298,7 +279,6 @@ def generar_pdf_op(row):
                     pdf.cell(48,6,str(v2),1,1)
             
 # BLOQUE OBSERVACIONES
-
             if h.get('observaciones'):
                 pdf.set_font("Arial", 'I', 8)
                 pdf.multi_cell(0, 5, f"OBSERVACIONES: {h['observaciones']}", border=1)
@@ -317,7 +297,6 @@ def generar_op_rollos(row):
     pdf.add_page()
 
 # LOGICA DE COLOR SEGUN ORDEN 
-
     tipo_op = row.get('tipo_origen', '').upper()
 
     if "NUEVA" in tipo_op:
@@ -328,7 +307,6 @@ def generar_op_rollos(row):
         r, g, b = (13, 71, 161)     # AZUL
 
 #  ENCABEZADO CON COLOR DINAMICO
-
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
     pdf.image("logo_cb.png", 2, 2, 60)
@@ -343,81 +321,50 @@ def generar_op_rollos(row):
     pdf.ln(4)
 
 # INFORMACION GENERAL
-
-    # --- 1. INFORMACIÓN DE LA ORDEN ---
     pdf.set_fill_color(230, 230, 230)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
 
-    # Fila 1 (Ancho total: 115 + 75 = 190)
-    # Cliente: Título (25mm) + Valor (90mm) = 115mm
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Cliente: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(90, 7, f"{row.get('cliente','')}", 1, 0)
-    # Vendedor: Título (25mm) + Valor (50mm) = 75mm
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Vendedor: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(50, 7, f"{row.get('vendedor','')}", 1, 1) # Salto de línea
-
-    # Fila 2 (Ancho total: 120 + 70 = 190)
-    # Trabajo: Título (25mm) + Valor (95mm) = 120mm
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Trabajo: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(95, 7, f"{row.get('nombre_trabajo','')}", 1, 0)
-    # Tipo Orden: Título (25mm) + Valor (45mm) = 70mm
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Cliente: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(95, 7, f"{row.get('cliente','')}", 1, 0)
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Vendedor: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(55, 7, f"{row.get('vendedor','')}", 1, 1) 
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Trabajo: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(100, 7, f"{row.get('nombre_trabajo','')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Tipo Orden: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('tipo_orden','')}", 1, 1) # Salto de línea
+    pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('tipo_orden','')}", 1, 1) 
 
-
-    # --- 2. ESPECIFICACIONES TÉCNICAS ---
+#  ESPECIFICACIONES TECNICAS
     pdf.ln(4)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
 
-    # Fila 1 (Dividido en 3 columnas de ~63.3mm para sumar 190)
-    # Material
-    pdf.set_font("Arial", "B", 10); pdf.cell(23, 7, " Material: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(40, 7, f"{row.get('material','')}", 1, 0)
-    # Gramaje
-    pdf.set_font("Arial", "B", 10); pdf.cell(23, 7, " Gramaje: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(40, 7, f"{row.get('gramaje_rollos','')}", 1, 0)
-    # Core
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Material: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('material','')}", 1, 0)
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Gramaje: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('gramaje_rollos','')} GRS", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Core: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(44, 7, f"{row.get('core','')}", 1, 1) # Salto de línea
-
-    # Fila 2 
-    # Cantidad Rollos
-    pdf.set_font("Arial", "B", 10); pdf.cell(33, 7, " Cant. Rollos: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('cantidad_rollos','')}", 1, 0)
-    # Unidades Bolsa
-    pdf.set_font("Arial", "B", 10); pdf.cell(33, 7, " Unid. Bolsa: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('unidades_bolsa','')}", 1, 0)
-    # Unidades Caja
-    pdf.set_font("Arial", "B", 10); pdf.cell(31, 7, " Unid. Caja: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('unidades_caja','')}", 1, 1) # Salto de línea
-
-
-    # --- REFERENCIAS Y TRANSPORTES ---
-    # Referencia Comercial (135mm totales)
-    pdf.set_font("Arial", "B", 10); pdf.cell(40, 7, " Ref. Comercial: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(95, 7, f"{row.get('ref_comercial','')}", 1, 0)
-    # Transportadora (55mm totales)
+    pdf.set_font("Arial", "", 10);  pdf.cell(44, 7, f"{row.get('core','')}", 1, 1) 
+    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Cant. Rollos: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('cantidad_rollos','')}", 1, 0)
+    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Unid. Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('unidades_bolsa','')}", 1, 0)
+    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Unid. Caja: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(34, 7, f"{row.get('unidades_caja','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Ref. Comercial: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(100, 7, f"{row.get('ref_comercial','')}", 1, 0)
     trans = "SI" if row.get('transportadora_rollos') else "NO"
     pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Transportadora: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(25, 7, f"{trans}", 1, 1) # Salto de línea
-
-    # Impresión (Frente y Respaldo)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 8, "Impresión", 1, 0, 'C', fill=True)
-    # Frente
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 8, " Frente: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(62, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
-    # Respaldo
+    pdf.set_font("Arial", "", 10);  pdf.cell(25, 7, f"{trans}", 1, 1) 
+    pdf.set_font("Arial", "B", 10); pdf.cell(20, 8, "Impresión", 1, 0, 'C', fill=True)
+    pdf.set_font("Arial", "B", 10); pdf.cell(27, 8, " Frente: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(60, 8, f"{row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1) # Salto de línea
-
-    # Destino
+    pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1) 
     pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(165, 7, f"{row.get('destino_rollos','PLANTA')}", 1, 1)
 
 # OBSERFVACIONES Y PERFORACIONES 
-
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
     pdf.cell(0, 8, "3. ADICIONALES Y OBSERVACIONES", 0, 1, fill=True)
     pdf.set_font("Arial", "B", 10)
@@ -426,7 +373,6 @@ def generar_op_rollos(row):
     pdf.multi_cell(0, 7, f"Observaciones: {row.get('observaciones_rollos','')}", 1)
 
 # FIRMAS O SELLOS
-
     pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
     pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
@@ -438,13 +384,11 @@ def generar_op_rollos(row):
     pdf.cell(63, 20, "", 1, 0); pdf.cell(63, 20, "", 1, 0); pdf.cell(64, 20, "", 1, 1)
 
 # DATOS DE ESTIBAS 
-
     pdf.set_font("Arial", "", 11)
     y_est = pdf.get_y() + 2
     pdf.set_xy(10, y_est)
     pdf.set_fill_color(210, 210, 210); pdf.set_font("Arial", 'B', 11)
     pdf.cell(190, 5, "5 .REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
-    
     
     w_e = 190 / 3
     pdf.set_font("Arial", '', 8)
@@ -454,7 +398,6 @@ def generar_op_rollos(row):
         pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:_________H:___________", 1, 1)
 
 # OBSERVACIONES FINALIZADO
-
     pdf.set_font("Arial", "B", 8)
     pdf.cell(130, 8, "OBSERVACIONES FINALIZADO", 1, 0, "C"); pdf.cell(60, 8, "RECIBE", 1, 1, "C")
     pdf.set_font("Arial", "", 7)
@@ -462,15 +405,13 @@ def generar_op_rollos(row):
         pdf.cell(130, 6, "", 1, 0); pdf.cell(60, 6, "", 1, 1)
 
 # PIE
-
     pdf.set_font("Arial", "I", 6)
     pdf.cell(0, 5, f"SISTEMA C&B PAPELES - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
 
     return bytes(pdf.output())
 
 
-# GENERAR PDF FORMAS
-
+# GENERAR PDF FORMAS        pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)         pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
 def generar_op_formas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -478,7 +419,6 @@ def generar_op_formas(row):
     tipo_op = row.get('tipo_origen', '').upper()
 
 # ENCABEZADO DINAMICO
-
     if "NUEVA" in tipo_op:
         r, g, b = (40, 167, 69)      # VERDE
     elif "CAMBIOS" in tipo_op:
@@ -487,7 +427,6 @@ def generar_op_formas(row):
         r, g, b = (13, 71, 161)     # AZUL
 
 # ENCABEZADO CON COLOR DINAMICO
-
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
     pdf.image("logo_cb.png", 2, 2, 60)
