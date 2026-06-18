@@ -360,7 +360,7 @@ def generar_op_rollos(row):
     pdf.set_font("Arial", "B", 10); pdf.cell(27, 8, " Frente: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1) 
+    pdf.set_font("Arial", "", 10);  pdf.cell(55, 8, f"{row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1) 
     pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(165, 7, f"{row.get('destino_rollos','PLANTA')}", 1, 1)
 
