@@ -271,10 +271,10 @@ def generar_pdf_op(row):
 
 # ENCABEZADOS TABLA
 
-                pdf.cell(45,6,"OBJETO",1,0,'C',True)
-                pdf.cell(45,6,"DATO",1,0,'C',True)
-                pdf.cell(45,6,"OBJETO",1,0,'C',True)
-                pdf.cell(45,6,"DATO",1,1,'C',True)
+                pdf.cell(47,6,"OBJETO",1,0,'C',True)
+                pdf.cell(48,6,"DATO",1,0,'C',True)
+                pdf.cell(47,6,"OBJETO",1,0,'C',True)
+                pdf.cell(48,6,"DATO",1,1,'C',True)
 
                 pdf.set_font("Arial",'',8)
 
@@ -292,10 +292,10 @@ def generar_pdf_op(row):
                         key2=""
                         v2=""
 
-                    pdf.cell(45,6,key1,1)
-                    pdf.cell(45,6,str(v1),1)
-                    pdf.cell(45,6,key2,1)
-                    pdf.cell(45,6,str(v2),1,1)
+                    pdf.cell(47,6,key1,1)
+                    pdf.cell(48,6,str(v1),1)
+                    pdf.cell(47,6,key2,1)
+                    pdf.cell(48,6,str(v2),1,1)
             
 # BLOQUE OBSERVACIONES
 
