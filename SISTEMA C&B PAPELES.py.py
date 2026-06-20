@@ -1884,7 +1884,8 @@ elif menu == "📅 Planificación":
                         "tipo_orden": t,
                         "tipo_origen": origen,
                         "proxima_area": ruta_inicial,
-                        "historial_procesos": []
+                        "historial_procesos": [],
+                        "creado_por": st.session_state.get('nombre_usuario', '')
                     }
 
                     if "FORMAS" in t:
@@ -1931,7 +1932,13 @@ elif menu == "📅 Planificación":
                             "destino_rollos": dest_f if t_trans_f == "SI" else None,
                         })
 
-                    supabase.table("ordenes_planeadas").insert(payload).execute()
+                    try:
+                        supabase.table("ordenes_planeadas").insert(payload).execute()
+                    except Exception:
+# Compatibilidad: si la tabla aun no tiene la columna 'creado_por'
+# (hay que agregarla en Supabase), reintenta sin ese campo
+                        payload.pop("creado_por", None)
+                        supabase.table("ordenes_planeadas").insert(payload).execute()
 
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
@@ -2107,10 +2114,12 @@ elif menu == "📦 salida produccion P1":
 elif menu == "📊 Reportes Admin":
         st.title("📊 Panel de Control y Reportes")
         
-        tab_historial, tab_muertos, tab_paradas = st.tabs([
+        tab_historial, tab_muertos, tab_paradas, tab_traza, tab_movs = st.tabs([
             "📦 Historial de Bodega", 
             "⏳ Disponibilidad (Máquina Libre)", 
-            "🛑 Reporte de Paradas (Fallas)"
+            "🛑 Reporte de Paradas (Fallas)",
+            "🗂️ Trazabilidad de OPs",
+            "🛠️ Movimientos del Sistema"
         ])
         
         with tab_historial:
@@ -2151,6 +2160,105 @@ elif menu == "📊 Reportes Admin":
                 st.dataframe(df_p, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay reportes de fallas técnicos.")
+
+#  TAB NUEVA: TRAZABILIDAD COMPLETA DE OPs (desde que se crea hasta el ultimo paso) 
+        with tab_traza:
+            st.subheader("🗂️ Trazabilidad Completa de Órdenes de Producción")
+            st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
+
+            busqueda_op = st.text_input("🔎 Buscar por número de OP o nombre de cliente", key="busca_traza")
+
+            todas_ops_traza = supabase.table("ordenes_planeadas").select("*").execute().data or []
+
+            if busqueda_op:
+                b = busqueda_op.strip().lower()
+                todas_ops_traza = [
+                    o for o in todas_ops_traza
+                    if b in str(o.get("op", "")).lower() or b in str(o.get("cliente", "")).lower()
+                ]
+
+            def _fecha_orden_traza(o):
+                return str(o.get("created_at") or o.get("fecha_creacion") or "")
+            todas_ops_traza.sort(key=_fecha_orden_traza, reverse=True)
+
+            if not busqueda_op:
+                st.info(f"Mostrando las 50 órdenes más recientes de {len(todas_ops_traza)}. Usa el buscador para ver cualquier OP histórica.")
+                todas_ops_traza = todas_ops_traza[:50]
+            else:
+                st.caption(f"{len(todas_ops_traza)} orden(es) encontradas")
+
+            for o in todas_ops_traza:
+                fecha_creacion_raw = o.get("created_at") or o.get("fecha_creacion") or ""
+                try:
+                    fecha_creacion_fmt = datetime.fromisoformat(str(fecha_creacion_raw).replace("Z", "")).strftime('%d/%m/%Y %H:%M')
+                except Exception:
+                    fecha_creacion_fmt = str(fecha_creacion_raw)[:16] or "Sin fecha"
+
+# 'creado_por' solo existe en ordenes creadas despues de activar esta funcion
+                creador = o.get("creado_por") or "No registrado (orden anterior a esta función)"
+                estado_actual = o.get("proxima_area", "Sin estado")
+
+                with st.expander(f"📋 OP {o.get('op')} | {o.get('cliente','')} | Estado: {estado_actual}"):
+                    c1, c2, c3 = st.columns(3)
+                    c1.markdown(f"**Vendedor:** {o.get('vendedor','-')}")
+                    c2.markdown(f"**Creado por:** {creador}")
+                    c3.markdown(f"**Fecha creación:** {fecha_creacion_fmt}")
+                    st.markdown(f"**Trabajo:** {o.get('nombre_trabajo','-')}  |  **Tipo:** {o.get('tipo_orden','-')}")
+
+                    historial = o.get("historial_procesos") or []
+                    if not historial:
+                        st.info("Esta orden todavía no tiene pasos de producción registrados.")
+                    else:
+                        st.markdown("**🔗 Línea de tiempo de producción:**")
+                        for paso_idx, paso in enumerate(historial, start=1):
+                            st.markdown(
+                                f"**{paso_idx}. {paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
+                                f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
+                                f"{paso.get('fecha','-')}  |  Duración: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
+                            )
+                            if paso.get("observaciones"):
+                                st.caption(f"📝 {paso['observaciones']}")
+                            if paso.get("datos_cierre"):
+                                with st.expander(f"Ver datos técnicos del paso {paso_idx}"):
+                                    df_paso = pd.DataFrame(list(paso["datos_cierre"].items()), columns=["Parámetro", "Valor"])
+                                    df_paso["Parámetro"] = df_paso["Parámetro"].str.replace("_", " ").str.upper()
+                                    st.table(df_paso)
+                            st.divider()
+
+#  TAB NUEVA: MOVIMIENTOS DEL SISTEMA (coins, usuarios, etc) 
+        with tab_movs:
+            st.subheader("🛠️ Movimientos y Actividad del Sistema")
+
+            sub_coins, sub_usuarios = st.tabs(["🪙 Movimientos de Coins", "👥 Usuarios del Sistema"])
+
+            with sub_coins:
+                st.caption("Cada vez que se asignan o descuentan coins a un trabajador, queda registrado aquí.")
+                res_coins = supabase.table("monedas_historial").select("*").order("fecha", desc=True).execute().data or []
+                if res_coins:
+                    df_coins = pd.DataFrame(res_coins)
+                    if 'cantidad' in df_coins.columns:
+                        otorgados = df_coins[df_coins['cantidad'] > 0]['cantidad'].sum()
+                        descontados = df_coins[df_coins['cantidad'] < 0]['cantidad'].sum()
+                        c1, c2 = st.columns(2)
+                        c1.metric("🟢 Total Coins Otorgados", f"+{otorgados}")
+                        c2.metric("🔴 Total Coins Descontados", f"{descontados}")
+                    st.dataframe(df_coins, use_container_width=True, hide_index=True)
+                else:
+                    st.info("Sin movimientos de coins registrados todavía.")
+
+            with sub_usuarios:
+                st.caption("Listado de todos los usuarios con acceso al sistema (no se muestran contraseñas).")
+                try:
+                    res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol, maquina_asignada").execute().data or []
+                except Exception:
+# Compatibilidad: si la columna 'maquina_asignada' aun no existe en Supabase
+                    res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
+                if res_usuarios:
+                    df_usuarios = pd.DataFrame(res_usuarios)
+                    st.dataframe(df_usuarios, use_container_width=True, hide_index=True)
+                    st.caption(f"Total de usuarios registrados: {len(res_usuarios)}")
+                else:
+                    st.info("No hay usuarios registrados.")
 
 
 elif menu == "📦 Almacen/Despachos":
