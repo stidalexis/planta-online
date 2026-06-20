@@ -72,6 +72,19 @@ MAQUINAS = {
     "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
 }
+
+# RELACION INVERSA: dado el nombre de una maquina, saber a que area pertenece
+# (usado para el rol "maquinista", que esta atado a UNA maquina especifica)
+MAQUINA_A_AREA = {maquina: area for area, lista in MAQUINAS.items() for maquina in lista}
+
+# AREA -> ETIQUETA DE MENU (para construir el menu del maquinista segun su maquina)
+AREA_A_MENU = {
+    "IMPRESIÓN":      "🖨️ Impresión",
+    "CORTE":          "✂️ Corte",
+    "COLECTORAS":     "📥 Colectoras",
+    "ENCUADERNACIÓN": "📕 Encuadernación",
+    "REBOBINADORAS":  "🌀 Rebobinadoras",
+}
 PRESENTACIONES = ["BLOCK", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS", "FORMA CONTINUA"]
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
@@ -792,6 +805,7 @@ if not st.session_state.get('autenticado'):
                 st.session_state['usuario_actual'] = datos_usuario['usuario']
                 st.session_state['nombre_usuario'] = datos_usuario['nombre']
                 st.session_state['rol'] = datos_usuario['rol']
+                st.session_state['maquina_asignada'] = datos_usuario.get('maquina_asignada')
                 st.success(f"Bienvenido {datos_usuario['nombre']}")
                 time.sleep(1)
                 st.rerun()
@@ -830,6 +844,15 @@ with st.sidebar:
         opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'diseño':
         opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
+    elif rol == 'maquinista':
+        mi_maquina = st.session_state.get('maquina_asignada')
+        mi_area = MAQUINA_A_AREA.get(mi_maquina)
+        mi_menu = AREA_A_MENU.get(mi_area)
+        if mi_menu:
+            opciones_menu = ["🖥️ Monitor", mi_menu]
+        else:
+            st.error("⛔ Este usuario no tiene una máquina asignada válida. Contacta al administrador.")
+            opciones_menu = ["🖥️ Monitor"]
     else:
 
 # OPERARIOS Y OTROS ROLES SI LOS DEJA DENTRAR
@@ -2710,7 +2733,15 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
     
     permisos_del_usuario = PERMISOS.get(rol_actual, [])
 
-    if "TODOS" not in permisos_del_usuario and area_act not in permisos_del_usuario:
+# CASO ESPECIAL: el maquinista solo tiene permiso sobre SU PROPIA maquina,
+# no sobre el area completa como los supervisores
+    mi_maquina_asignada = None
+    if rol_actual == "maquinista":
+        mi_maquina_asignada = st.session_state.get("maquina_asignada")
+        if MAQUINA_A_AREA.get(mi_maquina_asignada) != area_act:
+            st.error("⛔ No tienes una máquina asignada en esta área. Contacta al administrador.")
+            st.stop()
+    elif "TODOS" not in permisos_del_usuario and area_act not in permisos_del_usuario:
         st.error(f"⛔ El rol '{rol_actual}' no tiene permiso para el área {area_act}")
         st.stop()
 
@@ -2718,9 +2749,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
     
     activos_data = supabase.table("trabajos_activos").select("*").eq("area", area_act).execute().data
     activos = {a['maquina']: a for a in activos_data}
-    
+
+# SI ES MAQUINISTA, SOLO VE SU MAQUINA. SI NO, VE TODAS LAS DEL AREA (supervisor/admin)
+    maquinas_a_mostrar = [mi_maquina_asignada] if rol_actual == "maquinista" else MAQUINAS[area_act]
+
     cols = st.columns(3)
-    for idx, m in enumerate(MAQUINAS[area_act]):
+    for idx, m in enumerate(maquinas_a_mostrar):
         with cols[idx % 3]:
             if m in activos:
                 tr = activos[m]
@@ -2805,15 +2839,23 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 }).execute()
 
 # INICIAR TRABAJO NORMAL
-                        supabase.table("trabajos_activos").insert({
+                        registro_nuevo_trabajo = {
                             "maquina": m,
                             "area": area_act,
                             "op": sel_op,
                             "hora_inicio": ahora_iso,
                             "pausado": False,
                             "tiempo_pausa": 0,
-                            "inicio_pausa": None
-                        }).execute()
+                            "inicio_pausa": None,
+                            "operario": st.session_state.get('nombre_usuario', 'Operario Planta')
+                        }
+                        try:
+                            supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
+                        except Exception:
+# Compatibilidad: si la tabla 'trabajos_activos' aun no tiene la columna 'operario'
+# (hay que agregarla en Supabase), reintenta sin ese campo para no bloquear el inicio
+                            registro_nuevo_trabajo.pop("operario", None)
+                            supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
                         st.rerun()
 
     if st.session_state.rep and st.session_state.rep["area"] == area_act:
@@ -2821,7 +2863,13 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         st.divider()
         with st.form("cierre_tecnico_completo"):
             st.warning(f"### REGISTRO DE CIERRE: OP {r['op']}")
-            op_name = st.text_input("Nombre del Operario *")
+
+# SI ES MAQUINISTA, EL NOMBRE QUEDA AUTOMATICO CON SU PROPIO LOGIN (no se escribe a mano)
+            if rol_actual == "maquinista":
+                op_name = st.session_state.get('nombre_usuario', '')
+                st.info(f"👤 Operario registrado automáticamente: **{op_name}**")
+            else:
+                op_name = st.text_input("Nombre del Operario *")
             auxiliar = st.text_input("Auxiliar")
             datos_c = {}
             
@@ -3196,8 +3244,20 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log' ], key="admin_r")
-        
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
+
+# SI EL ROL ES MAQUINISTA, PEDIR A QUE MAQUINA ESPECIFICA QUEDA ASIGNADO
+        nueva_maquina_asignada = None
+        if nuevo_r == "maquinista":
+            todas_las_maquinas = [m for lista in MAQUINAS.values() for m in lista]
+            nueva_maquina_asignada = st.selectbox(
+                "¿A qué máquina queda asignado este usuario?",
+                todas_las_maquinas,
+                key="admin_maquina"
+            )
+            st.caption(f"Este usuario solo podrá trabajar la máquina **{nueva_maquina_asignada}** "
+                       f"(área {MAQUINA_A_AREA.get(nueva_maquina_asignada, '?')}).")
+
         if st.button("🚀 Crear Usuario en Sistema"):
             if nuevo_u and nuevo_p and nuevo_n:
                 try:
@@ -3205,7 +3265,8 @@ if st.session_state.get('rol') == 'admin':
                         "usuario": nuevo_u,
                         "clave": _hashear_clave(nuevo_p),
                         "nombre": nuevo_n, 
-                        "rol": nuevo_r
+                        "rol": nuevo_r,
+                        "maquina_asignada": nueva_maquina_asignada
                     }).execute()
                     st.success(f"Usuario {nuevo_u} creado exitosamente.")
                     time.sleep(1.5)
