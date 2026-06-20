@@ -2929,13 +2929,22 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             pausa_segundos = (ahora - inicio_p).total_seconds()
             
 # GUARDAR ENH LA TABLA DE TIEMPOS MUERTOS
-                            supabase.table("paradas_maquina").insert({
+                            registro_parada = {
                                 "maquina": m,
                                 "motivo": tr.get('motivo_pausa'),
                                 "inicio": tr["inicio_pausa"],
                                 "fin": ahora.isoformat(),
                                 "duracion_segundos": pausa_segundos
-                            }).execute()
+                            }
+                            try:
+                                supabase.table("paradas_maquina").insert(registro_parada).execute()
+                            except Exception:
+# Compatibilidad: si la tabla 'paradas_maquina' no tiene la columna 'duracion_segundos'
+                                try:
+                                    registro_parada.pop("duracion_segundos", None)
+                                    supabase.table("paradas_maquina").insert(registro_parada).execute()
+                                except Exception:
+                                    pass
 
 # ACTUALIZAR EL REGISTRO DE ACTIVOS PARA IR TRABAJANO
                             nuevo_tiempo_acumulado = tr.get("tiempo_pausa", 0) + pausa_segundos
@@ -2973,13 +2982,24 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
         
 # GUARDA TIEMPO QUE ESTUVO LIBRE O SIN TRABAJO 
                             if ocio_segundos > 360: # Solo si fue mas de 3 minutos
-                                supabase.table("tiempos_muertos").insert({
+                                registro_tiempo_libre = {
                                     "maquina": m,
                                     "motivo": "TIEMPO LIBRE (ENTRE OPs)",
                                     "inicio": fin_ultimo.isoformat(),
                                     "fin": ahora_iso,
                                     "duracion_segundos": ocio_segundos
-                                }).execute()
+                                }
+                                try:
+                                    supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
+                                except Exception:
+# Compatibilidad: si la tabla 'tiempos_muertos' no tiene la columna 'duracion_segundos'
+# (hay que agregarla en Supabase, tipo numeric), reintenta sin ese campo para no
+# bloquear el inicio de la maquina por un problema de reportes
+                                    try:
+                                        registro_tiempo_libre.pop("duracion_segundos", None)
+                                        supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
+                                    except Exception:
+                                        pass
 
 # INICIAR TRABAJO NORMAL
                         registro_nuevo_trabajo = {
