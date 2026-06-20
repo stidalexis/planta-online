@@ -2138,9 +2138,12 @@ elif menu == "📊 Reportes Admin":
             res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
             if res_m:
                 df_m = pd.DataFrame(res_m)
-                if 'duracion_min' in df_m.columns:
+# LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
+                if 'duracion_segundos' in df_m.columns:
+                    df_m['duracion_min'] = (df_m['duracion_segundos'].fillna(0) / 60).round(1)
                     total_libre = df_m['duracion_min'].sum()
-                    st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre} min")
+                    st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre:.1f} min")
+                    df_m = df_m.drop(columns=['duracion_segundos'])
                 st.dataframe(df_m, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay registros de tiempo libre.")
@@ -2153,9 +2156,12 @@ elif menu == "📊 Reportes Admin":
             if res_p:
                 df_p = pd.DataFrame(res_p)
 
-                if 'duracion_min' in df_p.columns:
+# LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
+                if 'duracion_segundos' in df_p.columns:
+                    df_p['duracion_min'] = (df_p['duracion_segundos'].fillna(0) / 60).round(1)
                     total_parada = df_p['duracion_min'].sum()
-                    st.metric("Total Tiempo Perdido por Fallas", f"{total_parada} min", delta_color="inverse")
+                    st.metric("Total Tiempo Perdido por Fallas", f"{total_parada:.1f} min", delta_color="inverse")
+                    df_p = df_p.drop(columns=['duracion_segundos'])
                 
                 st.dataframe(df_p, use_container_width=True, hide_index=True)
             else:
