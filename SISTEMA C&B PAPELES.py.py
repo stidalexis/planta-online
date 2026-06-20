@@ -6,6 +6,7 @@ import time
 import io
 from fpdf import FPDF
 import pytz
+import bcrypt
 
 #  CONFIGURACION DE PAGINA 
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
@@ -76,21 +77,63 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
 #  USUARIOS ORGANIZADOS POR ROL 
-def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
-    try:
 
-# CONSULTA EN TABLA DE USUARIOS FILTRADAS POR EL NOMBRE DE USUSRIO
+def _es_hash_bcrypt(valor) -> bool:
+    """Detecta si un valor guardado en 'clave' ya es un hash bcrypt (vs texto plano antiguo)."""
+    return isinstance(valor, str) and valor.startswith(("$2a$", "$2b$", "$2y$"))
+
+
+def _hashear_clave(clave_texto: str) -> str:
+    """Genera un hash bcrypt seguro a partir de una clave en texto plano."""
+    return bcrypt.hashpw(clave_texto.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
+    """
+    Valida usuario/clave contra Supabase usando hash bcrypt.
+    Compatibilidad: si encuentra una clave antigua en texto plano que coincide,
+    la migra automáticamente a hash bcrypt en ese mismo instante (sin pedirle
+    nada al usuario ni requerir una migración manual aparte).
+    """
+    try:
+# CONSULTA EN TABLA DE USUARIOS FILTRADA SOLO POR EL NOMBRE DE USUARIO
+# (la clave ya NO se compara en la consulta, se verifica con bcrypt abajo)
         respuesta = supabase.table("usuarios")\
             .select("*")\
             .eq("usuario", usuario_ingresado)\
-            .eq("clave", clave_ingresada)\
             .execute()
-        
-# SI LA LISTA ESTA VASIA EL USUARIO NO EXISTE NO DEJA INGRESAR
-        if len(respuesta.data) > 0:
-            return respuesta.data[0] 
-        else:
+
+        if not respuesta.data:
             return None
+
+        fila_usuario = respuesta.data[0]
+        clave_guardada = fila_usuario.get("clave", "") or ""
+
+# CASO 1: la clave guardada ya es un hash bcrypt -> verificacion normal
+        if _es_hash_bcrypt(clave_guardada):
+            try:
+                coincide = bcrypt.checkpw(
+                    clave_ingresada.encode("utf-8"),
+                    clave_guardada.encode("utf-8")
+                )
+            except ValueError:
+                coincide = False
+            return fila_usuario if coincide else None
+
+# CASO 2: clave antigua en texto plano (usuarios creados antes de este cambio)
+# Si coincide, se deja entrar Y se migra a hash automaticamente para la proxima vez
+        if clave_guardada == clave_ingresada and clave_guardada != "":
+            try:
+                nuevo_hash = _hashear_clave(clave_ingresada)
+                supabase.table("usuarios").update({"clave": nuevo_hash})\
+                    .eq("usuario", usuario_ingresado).execute()
+            except Exception:
+# Si la migracion automatica falla, el login de hoy funciona igual;
+# se reintentara la migracion en el siguiente login.
+                pass
+            return fila_usuario
+
+        return None
     except Exception as e:
         st.error(f"Error al conectar con la tabla de usuarios: {e}")
         return None
@@ -2365,14 +2408,15 @@ elif menu == "📆 Cronograma Impresión":
                 "fecha_fin_cronograma":    qp["crono_end"],
                 "maquina_cronograma":      qp["crono_maq"]
             }).eq("id", qp["crono_id"]).execute()
-        except:
-            pass
+        except Exception as e:
+            st.error(f"No se pudo guardar el cambio de cronograma: {e}")
         st.query_params.clear()
         st.rerun()
 
     try:
         todas_las_ops = supabase.table("ordenes_planeadas").select("*").execute().data or []
-    except:
+    except Exception as e:
+        st.warning(f"No se pudieron cargar las órdenes planeadas: {e}")
         todas_las_ops = []
 
     # ALERTAS
@@ -3158,8 +3202,8 @@ if st.session_state.get('rol') == 'admin':
             if nuevo_u and nuevo_p and nuevo_n:
                 try:
                     supabase.table("usuarios").insert({
-                        "usuario": nuevo_u, 
-                        "clave": nuevo_p, 
+                        "usuario": nuevo_u,
+                        "clave": _hashear_clave(nuevo_p),
                         "nombre": nuevo_n, 
                         "rol": nuevo_r
                     }).execute()
@@ -3181,7 +3225,8 @@ def mercado_obtener_coins(usuario):
         # Si no existe, crea registro con 0 coins
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": 0}, on_conflict="usuario").execute()
         return 0
-    except:
+    except Exception as e:
+        st.error(f"No se pudo consultar el saldo de coins: {e}")
         return 0
 
 def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
@@ -3247,7 +3292,8 @@ if menu == "🛒 Mercado":
                 
                 try:
                     todos_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
-                except:
+                except Exception as e:
+                    st.error(f"No se pudo cargar la lista de trabajadores: {e}")
                     todos_usuarios = []
 
                 opciones_u = {f"{u['nombre']} ({u['usuario']}) — {u['rol']}": u['usuario'] for u in todos_usuarios}
