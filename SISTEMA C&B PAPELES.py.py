@@ -892,6 +892,36 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
 
+
+def obtener_ultima_actividad_maquina(nombre_maquina):
+    """
+    Busca en el historial de TODAS las ordenes cual fue la ultima vez que esta
+    maquina termino un paso de produccion (ultima fecha en historial_procesos).
+    Esto reemplaza la logica anterior que buscaba en 'tiempos_muertos', la cual
+    nunca podia arrancar porque dependia de un registro previo en esa misma tabla
+    que nunca llegaba a crearse.
+    Devuelve un datetime con zona horaria Colombia, o None si la maquina nunca ha trabajado.
+    """
+    try:
+        ops_data = supabase.table("ordenes_planeadas").select("historial_procesos").execute().data or []
+    except Exception:
+        return None
+
+    tz = pytz.timezone("America/Bogota")
+    ultima_fecha = None
+    for o in ops_data:
+        for paso in (o.get("historial_procesos") or []):
+            if paso.get("maquina") == nombre_maquina and paso.get("fecha"):
+                try:
+                    f = datetime.strptime(paso["fecha"], "%d/%m/%Y %H:%M")
+                    f = tz.localize(f)
+                    if ultima_fecha is None or f > ultima_fecha:
+                        ultima_fecha = f
+                except Exception:
+                    continue
+    return ultima_fecha
+
+
 # MODULO MONITOR 
 if menu == "🖥️ Monitor":
     st.markdown("<div class='title-area'>🖥️ MONITOR DE PRODUCCIÓN EN TIEMPO REAL</div>", unsafe_allow_html=True)
@@ -2935,19 +2965,18 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
                         ahora_iso = hora_colombia().isoformat()
     
-# INTENTAR BUSCAR HORA DE CUANDO TERMINO EL ULTIMO TRABAJO  
-                        ultimo_registro = supabase.table("tiempos_muertos").select("fin").eq("maquina", m).order("fin", desc=True).limit(1).execute()
+# BUSCAR CUANDO TERMINO REALMENTE EL ULTIMO TRABAJO DE ESTA MAQUINA
+                        fin_ultimo = obtener_ultima_actividad_maquina(m)
     
-                        if ultimo_registro.data:
-                            fin_ultimo = datetime.fromisoformat(ultimo_registro.data[0]["fin"].replace("Z", "+00:00"))
+                        if fin_ultimo:
                             ocio_segundos = (hora_colombia() - fin_ultimo).total_seconds()
         
-# GUARDA TIEMPO Q8UE NESTUBNO LIBRE O SIN TRABAJO 
-                            if ocio_segundos > 360: # Solo si fue mas de 3 minuto
+# GUARDA TIEMPO QUE ESTUVO LIBRE O SIN TRABAJO 
+                            if ocio_segundos > 360: # Solo si fue mas de 3 minutos
                                 supabase.table("tiempos_muertos").insert({
                                     "maquina": m,
                                     "motivo": "TIEMPO LIBRE (ENTRE OPs)",
-                                    "inicio": ultimo_registro.data[0]["fin"],
+                                    "inicio": fin_ultimo.isoformat(),
                                     "fin": ahora_iso,
                                     "duracion_segundos": ocio_segundos
                                 }).execute()
