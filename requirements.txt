@@ -8,3 +8,5 @@ pytz
 streamlit-calendar
 streamlit-autorefresh
 bcrypt
+Pillow
+qrcode
