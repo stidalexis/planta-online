@@ -1092,6 +1092,16 @@ elif menu == "🔍 Seguimiento":
         ordenes_pendientes = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() != "FINALIZADO"]
         ordenes_finalizadas = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() == "FINALIZADO"]
 
+# SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS / REBOBINADO
+        def _categoria_op(row):
+            tipo = (row.get('tipo_orden') or '').upper()
+            if "FORMAS" in tipo:
+                return "FORMAS"
+            elif "REBOBINADO" in tipo:
+                return "REBOBINADO"
+            else:
+                return "ROLLOS"
+
         def pintar_tarjeta_op(row):
             op_id = str(row['op'])
             area_destino = row.get('proxima_area', 'SIN ÁREA').upper()
@@ -1231,18 +1241,48 @@ elif menu == "🔍 Seguimiento":
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
 
-# RECORRIDO DE TARJETAS POR PESTAÑA
+# RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS / REBOBINADO
         with tab_pendientes:
-            if not ordenes_pendientes:
-                st.info("No hay órdenes pendientes o en proceso.")
-            for row in ordenes_pendientes:
-                pintar_tarjeta_op(row)
+            sub_formas_p, sub_rollos_p, sub_rebob_p = st.tabs(["📄 Formas", "🌀 Rollos", "🔄 Rebobinado"])
+            pendientes_formas = [r for r in ordenes_pendientes if _categoria_op(r) == "FORMAS"]
+            pendientes_rollos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS"]
+            pendientes_rebob = [r for r in ordenes_pendientes if _categoria_op(r) == "REBOBINADO"]
+            with sub_formas_p:
+                if not pendientes_formas:
+                    st.info("No hay órdenes de FORMAS pendientes o en proceso.")
+                for row in pendientes_formas:
+                    pintar_tarjeta_op(row)
+            with sub_rollos_p:
+                if not pendientes_rollos:
+                    st.info("No hay órdenes de ROLLOS pendientes o en proceso.")
+                for row in pendientes_rollos:
+                    pintar_tarjeta_op(row)
+            with sub_rebob_p:
+                if not pendientes_rebob:
+                    st.info("No hay órdenes de REBOBINADO pendientes o en proceso.")
+                for row in pendientes_rebob:
+                    pintar_tarjeta_op(row)
 
         with tab_finalizadas:
-            if not ordenes_finalizadas:
-                st.info("No hay órdenes finalizadas.")
-            for row in ordenes_finalizadas:
-                pintar_tarjeta_op(row)
+            sub_formas_f, sub_rollos_f, sub_rebob_f = st.tabs(["📄 Formas", "🌀 Rollos", "🔄 Rebobinado"])
+            finalizadas_formas = [r for r in ordenes_finalizadas if _categoria_op(r) == "FORMAS"]
+            finalizadas_rollos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS"]
+            finalizadas_rebob = [r for r in ordenes_finalizadas if _categoria_op(r) == "REBOBINADO"]
+            with sub_formas_f:
+                if not finalizadas_formas:
+                    st.info("No hay órdenes de FORMAS finalizadas.")
+                for row in finalizadas_formas:
+                    pintar_tarjeta_op(row)
+            with sub_rollos_f:
+                if not finalizadas_rollos:
+                    st.info("No hay órdenes de ROLLOS finalizadas.")
+                for row in finalizadas_rollos:
+                    pintar_tarjeta_op(row)
+            with sub_rebob_f:
+                if not finalizadas_rebob:
+                    st.info("No hay órdenes de REBOBINADO finalizadas.")
+                for row in finalizadas_rebob:
+                    pintar_tarjeta_op(row)
 
 # MODULO DE DISEÑO
 elif menu == "🎨 Diseño y Pre-Prensa":
@@ -2981,7 +3021,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             ocio_segundos = (hora_colombia() - fin_ultimo).total_seconds()
         
 # GUARDA TIEMPO QUE ESTUVO LIBRE O SIN TRABAJO 
-                            if ocio_segundos > 360: # Solo si fue mas de 3 minutos
+                            if ocio_segundos > 10: # Ignora solo dobles-clics/parpadeos, no huecos reales
                                 registro_tiempo_libre = {
                                     "maquina": m,
                                     "motivo": "TIEMPO LIBRE (ENTRE OPs)",
@@ -3605,3 +3645,4 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
+ 
