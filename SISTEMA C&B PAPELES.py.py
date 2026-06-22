@@ -7,6 +7,7 @@ import io
 from fpdf import FPDF
 import pytz
 import bcrypt
+import qrcode
 
 #  CONFIGURACION DE PAGINA 
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
@@ -19,6 +20,9 @@ try:
 except Exception as e:
     st.error("Error de conexion a Base de Datos. Revisar los Secrets.")
     st.stop()
+
+# URL PUBLICA DE LA APP (para el QR de los rotulos). Configurar en Secrets como APP_URL.
+APP_URL = st.secrets.get("APP_URL", "").rstrip("/")
     
 #  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL)
 st.markdown("""
@@ -72,9 +76,12 @@ MAQUINAS = {
     "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
 }
-# ROL POR MAQUINISTAS
+
+# RELACION INVERSA: dado el nombre de una maquina, saber a que area pertenece
+# (usado para el rol "maquinista", que esta atado a UNA maquina especifica)
 MAQUINA_A_AREA = {maquina: area for area, lista in MAQUINAS.items() for maquina in lista}
 
+# AREA -> ETIQUETA DE MENU (para construir el menu del maquinista segun su maquina)
 AREA_A_MENU = {
     "IMPRESIÓN":      "🖨️ Impresión",
     "CORTE":          "✂️ Corte",
@@ -87,6 +94,7 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
 #  USUARIOS ORGANIZADOS POR ROL 
+
 def _es_hash_bcrypt(valor) -> bool:
     """Detecta si un valor guardado en 'clave' ya es un hash bcrypt (vs texto plano antiguo)."""
     return isinstance(valor, str) and valor.startswith(("$2a$", "$2b$", "$2y$"))
@@ -106,6 +114,7 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     """
     try:
 # CONSULTA EN TABLA DE USUARIOS FILTRADA SOLO POR EL NOMBRE DE USUARIO
+# (la clave ya NO se compara en la consulta, se verifica con bcrypt abajo)
         respuesta = supabase.table("usuarios")\
             .select("*")\
             .eq("usuario", usuario_ingresado)\
@@ -117,7 +126,7 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
         fila_usuario = respuesta.data[0]
         clave_guardada = fila_usuario.get("clave", "") or ""
 
-# la clave guardada ya es un hash bcrypt 
+# CASO 1: la clave guardada ya es un hash bcrypt -> verificacion normal
         if _es_hash_bcrypt(clave_guardada):
             try:
                 coincide = bcrypt.checkpw(
@@ -128,7 +137,8 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
                 coincide = False
             return fila_usuario if coincide else None
 
-# clave antigua en texto plano (usuarios creados antes de este cambio)
+# CASO 2: clave antigua en texto plano (usuarios creados antes de este cambio)
+# Si coincide, se deja entrar Y se migra a hash automaticamente para la proxima vez
         if clave_guardada == clave_ingresada and clave_guardada != "":
             try:
                 nuevo_hash = _hashear_clave(clave_ingresada)
@@ -136,6 +146,7 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
                     .eq("usuario", usuario_ingresado).execute()
             except Exception:
 # Si la migracion automatica falla, el login de hoy funciona igual;
+# se reintentara la migracion en el siguiente login.
                 pass
             return fila_usuario
 
@@ -205,7 +216,89 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
     total_segundos = max(0, total.total_seconds() - tiempo_pausa_segundos)
     return str(timedelta(seconds=int(total_segundos)))
     
-#  PDF DE CERTIFICADO 
+#  ROTULO DE CAJA 100x150mm CON QR (link directo a la info de la OP) 
+def generar_rotulo_pdf(row):
+    tipo = (row.get('tipo_orden') or '').upper()
+    if "FORMAS" in tipo:
+        titulo = "FORMAS - MATERIAL"
+    elif "REBOBINADO" in tipo:
+        titulo = "REBOBINADO - MATERIAL"
+    else:
+        titulo = "ROLLO - MATERIAL"
+
+# GENERAR IMAGEN QR TEMPORAL CON EL LINK A LA OP (requiere haber iniciado sesion para verla)
+    link = f"{APP_URL}/?op={row.get('op','')}"
+    qr_img = qrcode.make(link)
+    qr_buffer = io.BytesIO()
+    qr_img.save(qr_buffer, format="PNG")
+    qr_buffer.seek(0)
+    qr_path_temp = f"/tmp/qr_{row.get('op','x')}.png"
+    with open(qr_path_temp, "wb") as f_qr:
+        f_qr.write(qr_buffer.getvalue())
+
+    pdf = FPDF(orientation="P", unit="mm", format=(100, 150))
+    pdf.add_page()
+    pdf.set_margins(4, 4, 4)
+
+# TITULO Y NUMERO DE OP
+    pdf.set_font("Arial", "B", 22)
+    pdf.set_xy(4, 8)
+    pdf.cell(92, 11, titulo, align="C")
+
+    pdf.set_font("Arial", "", 11)
+    pdf.set_xy(4, 19)
+    pdf.cell(92, 6, f"OP: {row.get('op','-')}", align="C")
+
+    pdf.set_line_width(0.6)
+    pdf.line(4, 28, 96, 28)
+
+    y = 34
+    def campo(label, valor, tam_valor=18):
+        nonlocal y
+        pdf.set_xy(4, y)
+        pdf.set_font("Arial", "", 10)
+        pdf.cell(92, 5, label)
+        y += 6
+        pdf.set_xy(4, y)
+        pdf.set_font("Arial", "B", tam_valor)
+        pdf.cell(92, 9, str(valor)[:40])
+        y += 13
+
+    campo("REFERENCIA COMERCIAL", row.get('ref_comercial', '') or '-')
+    campo("UNIDADES POR CAJA", row.get('unidades_caja', '') or '-')
+
+    pdf.line(4, y, 96, y)
+    y += 6
+
+# ZONA INFERIOR: IZQUIERDA INFO, DERECHA QR
+    pdf.set_xy(4, y)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(58, 5, "NOMBRE TRABAJO")
+    pdf.set_xy(4, y + 6)
+    pdf.set_font("Arial", "B", 13)
+    pdf.multi_cell(58, 7, str(row.get('nombre_trabajo', '') or '-')[:60])
+
+    y2 = y + 28
+    pdf.set_xy(4, y2)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(58, 5, "FECHA DE DESCARGA")
+    pdf.set_xy(4, y2 + 6)
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(58, 8, hora_colombia().strftime("%d/%m/%Y"))
+
+    pdf.image(qr_path_temp, x=62, y=y + 3, w=34, h=34)
+    pdf.set_xy(62, y + 38)
+    pdf.set_font("Arial", "", 8)
+    pdf.cell(34, 4, "INFORMACION OP", align="C")
+
+    try:
+        import os
+        os.remove(qr_path_temp)
+    except Exception:
+        pass
+
+    return bytes(pdf.output())
+
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
@@ -289,7 +382,6 @@ def generar_pdf_op(row):
 
 # FILA DE TIEMPOS TOMADOS POR OP
             pdf.cell(0, 6, f"Duracion del Proceso: {dur_txt}", border='LRB', ln=True)
-
 # DATOS TECNICOS SALIDA JHSON
             pdf.set_font("Arial", '', 8)
 
@@ -460,7 +552,7 @@ def generar_op_rollos(row):
     return bytes(pdf.output())
 
 
-# GENERAR PDF FORMAS        
+# GENERAR PDF FORMAS        pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)         pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
 def generar_op_formas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -782,6 +874,7 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
 # LOGIN PRINCIPAL  LOGUIN
+
 if not st.session_state.get('autenticado'):
     st.title("🔐 Acceso al Sistema C&B PAPELES DE COLOMBIA S.A.S")
     
@@ -805,6 +898,40 @@ if not st.session_state.get('autenticado'):
             else:
                 st.error("Usuario o contraseña incorrectos")
     st.stop() 
+
+# ENLACE DIRECTO DESDE UN ROTULO ESCANEADO (el QR trae ?op=NUMERO en la URL)
+qp_op = st.query_params.get("op")
+if qp_op:
+    st.title(f"📦 Información de la Orden {qp_op}")
+    fila_op_qr = supabase.table("ordenes_planeadas").select("*").eq("op", qp_op).execute().data
+    if fila_op_qr:
+        o = fila_op_qr[0]
+        st.subheader(o.get('nombre_trabajo', ''))
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Cliente", o.get('cliente', '-') or '-')
+        c2.metric("Estado actual", o.get('proxima_area', '-') or '-')
+        c3.metric("Unidades x Caja", o.get('unidades_caja', '-') or '-')
+        st.markdown(f"**Referencia comercial:** {o.get('ref_comercial', '-') or '-'}")
+        st.markdown(f"**Tipo de orden:** {o.get('tipo_orden', '-') or '-'}")
+        st.markdown(f"**Vendedor:** {o.get('vendedor', '-') or '-'}")
+
+        historial_qr = o.get("historial_procesos") or []
+        if historial_qr:
+            st.markdown("**🔗 Línea de tiempo de producción:**")
+            for idx, paso in enumerate(historial_qr, start=1):
+                st.markdown(
+                    f"{idx}. **{paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
+                    f"Operario: {paso.get('operario','-')}  |  {paso.get('fecha','-')}"
+                )
+        else:
+            st.info("Esta orden todavía no tiene pasos de producción registrados.")
+    else:
+        st.warning(f"No se encontró ninguna orden con el número {qp_op}.")
+
+    if st.button("✖️ Cerrar y continuar al sistema"):
+        st.query_params.clear()
+        st.rerun()
+    st.stop()
 
 # ESTRUCTURA DE MENU CON PERMISOS POR ROL
 with st.sidebar:
@@ -913,6 +1040,7 @@ def obtener_ultima_actividad_maquina(nombre_maquina):
                 except Exception:
                     continue
     return ultima_fecha
+
 
 # MODULO MONITOR 
 if menu == "🖥️ Monitor":
@@ -1059,6 +1187,7 @@ elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes en Tiempo Real")
     
 # TRAER TRABAJOS Y ORDENES ACTIVAS 
+
     try:
         ordenes_res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute()
         activos_res = supabase.table("trabajos_activos").select("op, maquina").execute()
@@ -1233,6 +1362,19 @@ elif menu == "🔍 Seguimiento":
                         )
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
+
+# BOTON DE DESCARGA DEL ROTULO PARA CAJAS (100x150mm con QR)
+                    try:
+                        st.download_button(
+                            label=f"🏷️ Descargar Rótulo para Cajas {op_id}",
+                            data=generar_rotulo_pdf(row),
+                            file_name=f"rotulo_OP_{op_id}.pdf",
+                            mime="application/pdf",
+                            key=f"dl_rotulo_{op_id}",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.error(f"No se pudo generar el rótulo: {e}")
 
 # RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
         with tab_pendientes:
@@ -1442,6 +1584,24 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 # MODULO PLANIFICACION 
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
+
+# SI SE ACABA DE CREAR UNA OP, OFRECER DESCARGAR SU ROTULO PARA CAJAS
+    if st.session_state.get('ultima_op_creada'):
+        op_recien_creada = st.session_state['ultima_op_creada']
+        st.success(f"✅ Orden {op_recien_creada.get('op')} creada correctamente.")
+        c_rot1, c_rot2 = st.columns([3, 1])
+        with c_rot1:
+            st.download_button(
+                "📥 Descargar Rótulo para Cajas (100x150mm)",
+                data=generar_rotulo_pdf(op_recien_creada),
+                file_name=f"rotulo_OP_{op_recien_creada.get('op')}.pdf",
+                mime="application/pdf",
+                key="dl_rotulo_nueva_op"
+            )
+        with c_rot2:
+            if st.button("✖️ Cerrar aviso", key="cerrar_aviso_rotulo"):
+                st.session_state['ultima_op_creada'] = None
+                st.rerun()
 
     # Estados donde la OP aún no ha sido procesada por ningún área
     ESTADOS_EDITABLES = [
@@ -2019,8 +2179,36 @@ elif menu == "📅 Planificación":
                         payload.pop("creado_por", None)
                         supabase.table("ordenes_planeadas").insert(payload).execute()
 
+                    st.session_state['ultima_op_creada'] = payload
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
+
+# DEJAR EL NOMBRE Y REFERENCIA YA LISTOS EN "SALIDA PRODUCCION P1"
+# (asi quien recibe en bodega no tiene que volver a escribirlo a mano)
+                    try:
+                        existe_en_bodega = supabase.table("bodega_producto_terminado")\
+                            .select("id").eq("nombre_trabajo", trab).execute().data
+                        if not existe_en_bodega:
+                            tipo_b = "IMPRESO" if "IMPRESO" in (t or "").upper() else (
+                                "REBOBINADO" if "REBOBINADO" in (t or "").upper() else "BLANCO"
+                            )
+                            registro_bodega_nuevo = {
+                                "nombre_trabajo": trab,
+                                "tipo_producto": tipo_b,
+                                "stock_cajas": 0,
+                                "stock_rollos": 0,
+                                "ultima_actualizacion": hora_colombia().isoformat(),
+                                "observaciones": "Creado automáticamente al generar la OP",
+                                "ref_comercial": ref_c
+                            }
+                            try:
+                                supabase.table("bodega_producto_terminado").insert(registro_bodega_nuevo).execute()
+                            except Exception:
+# Compatibilidad: si la tabla aun no tiene la columna 'ref_comercial', reintenta sin ella
+                                registro_bodega_nuevo.pop("ref_comercial", None)
+                                supabase.table("bodega_producto_terminado").insert(registro_bodega_nuevo).execute()
+                    except Exception:
+                        pass
 
                     time.sleep(1.5)
                     st.rerun()
@@ -2157,7 +2345,7 @@ elif menu == "📦 salida produccion P1":
         if res_bodega:
             df_bodega = pd.DataFrame(res_bodega)
             
-            cols_esperadas = ['nombre_trabajo', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion', 'observaciones']
+            cols_esperadas = ['nombre_trabajo', 'ref_comercial', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion', 'observaciones']
             cols_finales = [c for c in cols_esperadas if c in df_bodega.columns]
             
             df_show = df_bodega[cols_finales].copy()
@@ -2165,6 +2353,7 @@ elif menu == "📦 salida produccion P1":
 # RENOMBRAR COLUMBAS PARA VISUALIZACION 
             nombres_columnas = {
                 'nombre_trabajo': 'TRABAJO',
+                'ref_comercial': 'REFERENCIA',
                 'tipo_producto': 'TIPO',
                 'stock_cajas': 'CAJAS',
                 'stock_rollos': 'ROLLOS',
