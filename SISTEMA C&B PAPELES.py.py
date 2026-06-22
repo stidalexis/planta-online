@@ -72,12 +72,9 @@ MAQUINAS = {
     "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
 }
-
-# RELACION INVERSA: dado el nombre de una maquina, saber a que area pertenece
-# (usado para el rol "maquinista", que esta atado a UNA maquina especifica)
+# ROL POR MAQUINISTAS
 MAQUINA_A_AREA = {maquina: area for area, lista in MAQUINAS.items() for maquina in lista}
 
-# AREA -> ETIQUETA DE MENU (para construir el menu del maquinista segun su maquina)
 AREA_A_MENU = {
     "IMPRESIÓN":      "🖨️ Impresión",
     "CORTE":          "✂️ Corte",
@@ -90,7 +87,6 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
 #  USUARIOS ORGANIZADOS POR ROL 
-
 def _es_hash_bcrypt(valor) -> bool:
     """Detecta si un valor guardado en 'clave' ya es un hash bcrypt (vs texto plano antiguo)."""
     return isinstance(valor, str) and valor.startswith(("$2a$", "$2b$", "$2y$"))
@@ -110,7 +106,6 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     """
     try:
 # CONSULTA EN TABLA DE USUARIOS FILTRADA SOLO POR EL NOMBRE DE USUARIO
-# (la clave ya NO se compara en la consulta, se verifica con bcrypt abajo)
         respuesta = supabase.table("usuarios")\
             .select("*")\
             .eq("usuario", usuario_ingresado)\
@@ -122,7 +117,7 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
         fila_usuario = respuesta.data[0]
         clave_guardada = fila_usuario.get("clave", "") or ""
 
-# CASO 1: la clave guardada ya es un hash bcrypt -> verificacion normal
+# la clave guardada ya es un hash bcrypt 
         if _es_hash_bcrypt(clave_guardada):
             try:
                 coincide = bcrypt.checkpw(
@@ -133,8 +128,7 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
                 coincide = False
             return fila_usuario if coincide else None
 
-# CASO 2: clave antigua en texto plano (usuarios creados antes de este cambio)
-# Si coincide, se deja entrar Y se migra a hash automaticamente para la proxima vez
+# clave antigua en texto plano (usuarios creados antes de este cambio)
         if clave_guardada == clave_ingresada and clave_guardada != "":
             try:
                 nuevo_hash = _hashear_clave(clave_ingresada)
@@ -142,7 +136,6 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
                     .eq("usuario", usuario_ingresado).execute()
             except Exception:
 # Si la migracion automatica falla, el login de hoy funciona igual;
-# se reintentara la migracion en el siguiente login.
                 pass
             return fila_usuario
 
@@ -296,6 +289,7 @@ def generar_pdf_op(row):
 
 # FILA DE TIEMPOS TOMADOS POR OP
             pdf.cell(0, 6, f"Duracion del Proceso: {dur_txt}", border='LRB', ln=True)
+
 # DATOS TECNICOS SALIDA JHSON
             pdf.set_font("Arial", '', 8)
 
@@ -466,7 +460,7 @@ def generar_op_rollos(row):
     return bytes(pdf.output())
 
 
-# GENERAR PDF FORMAS        pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)         pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
+# GENERAR PDF FORMAS        
 def generar_op_formas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -788,7 +782,6 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
 # LOGIN PRINCIPAL  LOGUIN
-
 if not st.session_state.get('autenticado'):
     st.title("🔐 Acceso al Sistema C&B PAPELES DE COLOMBIA S.A.S")
     
@@ -920,7 +913,6 @@ def obtener_ultima_actividad_maquina(nombre_maquina):
                 except Exception:
                     continue
     return ultima_fecha
-
 
 # MODULO MONITOR 
 if menu == "🖥️ Monitor":
@@ -1067,7 +1059,6 @@ elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes en Tiempo Real")
     
 # TRAER TRABAJOS Y ORDENES ACTIVAS 
-
     try:
         ordenes_res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute()
         activos_res = supabase.table("trabajos_activos").select("op, maquina").execute()
@@ -1092,15 +1083,17 @@ elif menu == "🔍 Seguimiento":
         ordenes_pendientes = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() != "FINALIZADO"]
         ordenes_finalizadas = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() == "FINALIZADO"]
 
-# SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS / REBOBINADO
+# SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
         def _categoria_op(row):
             tipo = (row.get('tipo_orden') or '').upper()
             if "FORMAS" in tipo:
                 return "FORMAS"
             elif "REBOBINADO" in tipo:
                 return "REBOBINADO"
+            elif "BLANCOS" in tipo:
+                return "ROLLOS_BLANCOS"
             else:
-                return "ROLLOS"
+                return "ROLLOS_IMPRESOS"
 
         def pintar_tarjeta_op(row):
             op_id = str(row['op'])
@@ -1241,47 +1234,63 @@ elif menu == "🔍 Seguimiento":
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
 
-# RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS / REBOBINADO
+# RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
         with tab_pendientes:
-            sub_formas_p, sub_rollos_p, sub_rebob_p = st.tabs(["📄 Formas", "🌀 Rollos", "🔄 Rebobinado"])
+            sub_formas_p, sub_rblancos_p, sub_rebob_p, sub_rimpresos_p = st.tabs(
+                ["📄 Formas", "🌀 Rollos Blancos", "🔄 Rebobinado", "🌀 Rollos Impresos"]
+            )
             pendientes_formas = [r for r in ordenes_pendientes if _categoria_op(r) == "FORMAS"]
-            pendientes_rollos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS"]
+            pendientes_rblancos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_BLANCOS"]
             pendientes_rebob = [r for r in ordenes_pendientes if _categoria_op(r) == "REBOBINADO"]
+            pendientes_rimpresos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_IMPRESOS"]
             with sub_formas_p:
                 if not pendientes_formas:
                     st.info("No hay órdenes de FORMAS pendientes o en proceso.")
                 for row in pendientes_formas:
                     pintar_tarjeta_op(row)
-            with sub_rollos_p:
-                if not pendientes_rollos:
-                    st.info("No hay órdenes de ROLLOS pendientes o en proceso.")
-                for row in pendientes_rollos:
+            with sub_rblancos_p:
+                if not pendientes_rblancos:
+                    st.info("No hay órdenes de ROLLOS BLANCOS pendientes o en proceso.")
+                for row in pendientes_rblancos:
                     pintar_tarjeta_op(row)
             with sub_rebob_p:
                 if not pendientes_rebob:
                     st.info("No hay órdenes de REBOBINADO pendientes o en proceso.")
                 for row in pendientes_rebob:
                     pintar_tarjeta_op(row)
+            with sub_rimpresos_p:
+                if not pendientes_rimpresos:
+                    st.info("No hay órdenes de ROLLOS IMPRESOS pendientes o en proceso.")
+                for row in pendientes_rimpresos:
+                    pintar_tarjeta_op(row)
 
         with tab_finalizadas:
-            sub_formas_f, sub_rollos_f, sub_rebob_f = st.tabs(["📄 Formas", "🌀 Rollos", "🔄 Rebobinado"])
+            sub_formas_f, sub_rblancos_f, sub_rebob_f, sub_rimpresos_f = st.tabs(
+                ["📄 Formas", "🌀 Rollos Blancos", "🔄 Rebobinado", "🌀 Rollos Impresos"]
+            )
             finalizadas_formas = [r for r in ordenes_finalizadas if _categoria_op(r) == "FORMAS"]
-            finalizadas_rollos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS"]
+            finalizadas_rblancos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS_BLANCOS"]
             finalizadas_rebob = [r for r in ordenes_finalizadas if _categoria_op(r) == "REBOBINADO"]
+            finalizadas_rimpresos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS_IMPRESOS"]
             with sub_formas_f:
                 if not finalizadas_formas:
                     st.info("No hay órdenes de FORMAS finalizadas.")
                 for row in finalizadas_formas:
                     pintar_tarjeta_op(row)
-            with sub_rollos_f:
-                if not finalizadas_rollos:
-                    st.info("No hay órdenes de ROLLOS finalizadas.")
-                for row in finalizadas_rollos:
+            with sub_rblancos_f:
+                if not finalizadas_rblancos:
+                    st.info("No hay órdenes de ROLLOS BLANCOS finalizadas.")
+                for row in finalizadas_rblancos:
                     pintar_tarjeta_op(row)
             with sub_rebob_f:
                 if not finalizadas_rebob:
                     st.info("No hay órdenes de REBOBINADO finalizadas.")
                 for row in finalizadas_rebob:
+                    pintar_tarjeta_op(row)
+            with sub_rimpresos_f:
+                if not finalizadas_rimpresos:
+                    st.info("No hay órdenes de ROLLOS IMPRESOS finalizadas.")
+                for row in finalizadas_rimpresos:
                     pintar_tarjeta_op(row)
 
 # MODULO DE DISEÑO
@@ -3645,4 +3654,3 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
- 
