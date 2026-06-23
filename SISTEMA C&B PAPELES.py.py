@@ -1373,7 +1373,7 @@ elif menu == "🔍 Seguimiento":
 # RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
         with tab_pendientes:
             sub_formas_p, sub_rblancos_p, sub_rebob_p, sub_rimpresos_p = st.tabs(
-                ["📄 Formas", "🌀 Rollos Blancos", "🌀 Rollos Impresos", "🔄 Rebobinado"]
+                ["📄 Formas", "🌀 Rollos Blancos", "🔄 Rebobinado", "🌀 Rollos Impresos"]
             )
             pendientes_formas = [r for r in ordenes_pendientes if _categoria_op(r) == "FORMAS"]
             pendientes_rblancos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_BLANCOS"]
