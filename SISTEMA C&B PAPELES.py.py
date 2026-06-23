@@ -3474,7 +3474,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  RUTAS 
                     if tipo in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                         if area_act == "IMPRESIÓN":
-                            n_area = "COLECTORAS"
+                            if r['maquina'] in ["MTY-1", "MTY-2"]:
+# LAS MAQUINAS MTY-1 Y MTY-2 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
+                                n_area = "ENCUADERNACIÓN"
+                            else:
+                                n_area = "COLECTORAS"
                         elif area_act == "COLECTORAS":
                             if datos_c.get('destino_final') == "Finalizar en Colectora":
                                 n_area = "FINALIZADO"
@@ -3575,7 +3579,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             n_area_parcial = "FINALIZADO"
             if tipo_p in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                 if area_act == "IMPRESIÓN":
-                    n_area_parcial = "COLECTORAS"
+                    if r['maquina'] in ["MTY-1", "MTY-2"]:
+# LAS MAQUINAS MTY-1 Y MTY-2 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
+                        n_area_parcial = "ENCUADERNACIÓN"
+                    else:
+                        n_area_parcial = "COLECTORAS"
                 elif area_act == "COLECTORAS":
                     n_area_parcial = "ENCUADERNACIÓN"
             elif tipo_p == "ROLLOS IMPRESOS":
