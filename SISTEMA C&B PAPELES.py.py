@@ -304,7 +304,6 @@ def generar_rotulo_pdf(row):
         titulo = f"ROLLO {row.get('material','-') or '-'}"
 
 # GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
-# LA CANTIDAD SE TOMA DE UN CAMPO DISTINTO SEGUN EL TIPO DE ORDEN
     if "FORMAS" in tipo:
         cantidad_total = row.get('cantidad_formas', '-') or '-'
     else:
