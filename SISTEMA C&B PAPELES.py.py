@@ -270,7 +270,7 @@ def generar_rotulo_pdf(row):
     elif "REBOBINADO" in tipo:
         titulo = "REBOBINADO - MATERIAL"
     else:
-        titulo = "ROLLO - MATERIAL"
+        titulo = f"Rollo {row.get('material','-') or '-'}"
 
 # GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
     texto_qr = (
