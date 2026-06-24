@@ -273,6 +273,12 @@ def generar_rotulo_pdf(row):
         titulo = f"ROLLO {row.get('material','-') or '-'}"
 
 # GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
+# LA CANTIDAD SE TOMA DE UN CAMPO DISTINTO SEGUN EL TIPO DE ORDEN
+    if "FORMAS" in tipo:
+        cantidad_total = row.get('cantidad_formas', '-') or '-'
+    else:
+        cantidad_total = row.get('cantidad_rollos', '-') or '-'
+
     texto_qr = (
         "ORDEN DE PRODUCCION\n"
         f"OP: {row.get('op','-')}\n"
@@ -281,7 +287,7 @@ def generar_rotulo_pdf(row):
         f"Referencia: {row.get('ref_comercial','-') or '-'}\n"
         f"Tipo: {row.get('tipo_orden','-') or '-'}\n"
         f"Unidades x Caja: {row.get('unidades_caja','-') or '-'}\n"
-        f"Cantidad Total: {row.get('cantidad_rollos','-') or 'cantidad_formas'}"
+        f"Cantidad Total: {cantidad_total}"
     )
     qr_img = qrcode.make(texto_qr)
     qr_buffer = io.BytesIO()
