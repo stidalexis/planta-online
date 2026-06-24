@@ -251,7 +251,7 @@ def generar_rotulo_pdf(row):
     pdf.set_margins(4, 4, 4)
 
 # TITULO Y NUMERO DE OP
-    pdf.set_font("Arial", "B", 22)
+    pdf.set_font("Arial", "B", 18)
     pdf.set_xy(4, 8)
     pdf.cell(92, 11, titulo, align="C")
 
@@ -263,7 +263,7 @@ def generar_rotulo_pdf(row):
     pdf.line(4, 28, 96, 28)
 
     y = 34
-    def campo(label, valor, tam_valor=18):
+    def campo(label, valor, tam_valor=14):
         nonlocal y
         pdf.set_xy(4, y)
         pdf.set_font("Arial", "", 10)
@@ -271,7 +271,7 @@ def generar_rotulo_pdf(row):
         y += 6
         pdf.set_xy(4, y)
         pdf.set_font("Arial", "B", tam_valor)
-        pdf.cell(92, 9, str(valor)[:40])
+        pdf.cell(92, 9, str(valor)[:20])
         y += 13
 
     campo("REFERENCIA COMERCIAL", row.get('ref_comercial', '') or '-')
