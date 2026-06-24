@@ -220,11 +220,11 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
 def generar_rotulo_pdf(row):
     tipo = (row.get('tipo_orden') or '').upper()
     if "FORMAS" in tipo:
-        titulo = "FORMAS - MATERIAL"
+        titulo = (row.get('presentacion') or '').upper()
     elif "REBOBINADO" in tipo:
         titulo = "REBOBINADO - MATERIAL"
     else:
-        titulo = "ROLLO - MATERIAL"
+        titulo = (row.get('material') or '').upper()
 
 # GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
 # (no apunta a la app: al escanear se lee directo, sin internet ni iniciar sesion)
