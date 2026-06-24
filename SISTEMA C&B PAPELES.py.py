@@ -276,6 +276,7 @@ def generar_rotulo_pdf(row):
 
     campo("REFERENCIA COMERCIAL", row.get('ref_comercial', '') or '-')
     campo("UNIDADES POR CAJA", row.get('unidades_caja', '') or '-')
+    campo("CANTIDAD TOTAL", row.get('cantidad_rollos', '') or '-')
 
     pdf.line(4, y, 96, y)
     y += 6
