@@ -266,7 +266,7 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
 def generar_rotulo_pdf(row):
     tipo = (row.get('tipo_orden') or '').upper()
     if "FORMAS" in tipo:
-        titulo = "FORMAS - MATERIAL"
+        titulo = f"FORMAS {row.get('presentacion','-') or '-'}"
     elif "REBOBINADO" in tipo:
         titulo = "REBOBINADO - MATERIAL"
     else:
