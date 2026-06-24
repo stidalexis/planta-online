@@ -151,6 +151,39 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
         return None
 
 #  FUNCIONES AUXILIARES 
+MESES_ES = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril", 5: "Mayo", 6: "Junio",
+    7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
+}
+
+def _fecha_creacion_legible(row):
+    """Devuelve la fecha de creacion de la OP en formato 'Mes DD del AAAA', en español."""
+    raw = row.get('created_at') or row.get('fecha_creacion') or ''
+    raw = str(raw)[:10]  # YYYY-MM-DD
+    try:
+        anio, mes, dia = raw.split('-')
+        return f"{MESES_ES.get(int(mes), mes)} {dia} del {anio}"
+    except Exception:
+        return raw or "-"
+
+def dibujar_caja_fecha_creacion(pdf, row, x=155, y=2, w=53, h=16):
+    """Dibuja una caja blanca con la fecha de creacion de la OP, en la esquina
+    opuesta al logo (no mueve el cursor del PDF, lo deja igual que antes de llamarla)."""
+    x0, y0 = pdf.get_x(), pdf.get_y()
+
+    pdf.set_fill_color(255, 255, 255)
+    pdf.rect(x, y, w, h, 'F')
+    pdf.rect(x, y, w, h)
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_xy(x, y + 1)
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(w, 5, "FECHA DE CREACIÓN", 0, 2, "C")
+    pdf.set_x(x)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(w, 8, _fecha_creacion_legible(row), 0, 2, "C")
+
+    pdf.set_xy(x0, y0)
+
 def cell_fit(pdf, w, h, text, border=1):
 
     text = str(text)
@@ -370,6 +403,7 @@ def generar_pdf_op(row):
 
 # LOGO CYB PAPELES
     pdf.image("logo_cb.png", 2, 2, 60)
+    dibujar_caja_fecha_creacion(pdf, row)
     
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", 'B', 18)
@@ -513,6 +547,7 @@ def generar_op_rollos(row):
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
     pdf.image("logo_cb.png", 2, 2, 60)
+    dibujar_caja_fecha_creacion(pdf, row)
     
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("Arial", "B", 16)
@@ -637,6 +672,7 @@ def generar_op_formas(row):
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
     pdf.image("logo_cb.png", 2, 2, 60)
+    dibujar_caja_fecha_creacion(pdf, row)
 
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
@@ -783,6 +819,7 @@ def generar_op_rebobinado(row):
     pdf.set_fill_color(r, g, b)
     pdf.rect(0, 0, 210, 35, 'F')
     pdf.image("logo_cb.png", 2, 2, 60)
+    dibujar_caja_fecha_creacion(pdf, row)
 
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
