@@ -165,6 +165,57 @@ def cell_fit(pdf, w, h, text, border=1):
 
     pdf.cell(w, h, text, border)
 
+def _lineas_ajustadas(pdf, texto, ancho_mm):
+    """Parte un texto en lineas que caben dentro de ancho_mm con la fuente actual de pdf."""
+    texto = str(texto) if texto is not None else ""
+    if texto == "":
+        return [""]
+    palabras = texto.split(" ")
+    lineas = []
+    actual = ""
+    for palabra in palabras:
+        prueba = (actual + " " + palabra).strip() if actual else palabra
+        if actual == "" or pdf.get_string_width(prueba) <= (ancho_mm - 2):
+            actual = prueba
+        else:
+            lineas.append(actual)
+            actual = palabra
+    if actual:
+        lineas.append(actual)
+    return lineas if lineas else [""]
+
+def fila_grid(pdf, celdas, h_linea=7):
+    """
+    Dibuja una fila de celdas lado a lado tipo grilla (como pdf.cell en serie),
+    pero si el texto de una celda no cabe en una linea, en vez de salirse del
+    recuadro pasa a la siguiente linea DENTRO de la misma celda. Toda la fila
+    crece de alto segun la celda que mas lineas necesite.
+    celdas: lista de dicts con: ancho, texto, negrita (bool), fill (bool), tam (pt, opcional)
+    """
+    x0, y0 = pdf.get_x(), pdf.get_y()
+
+    listas_lineas = []
+    for c in celdas:
+        pdf.set_font("Arial", "B" if c.get("negrita") else "", c.get("tam", 10))
+        listas_lineas.append(_lineas_ajustadas(pdf, c.get("texto", ""), c["ancho"]))
+
+    n_lineas = max(len(l) for l in listas_lineas)
+    alto_fila = n_lineas * h_linea
+
+    x = x0
+    for c, lineas in zip(celdas, listas_lineas):
+        if c.get("fill"):
+            pdf.set_fill_color(230, 230, 230)
+            pdf.rect(x, y0, c["ancho"], alto_fila, "F")
+        pdf.rect(x, y0, c["ancho"], alto_fila)
+        pdf.set_font("Arial", "B" if c.get("negrita") else "", c.get("tam", 10))
+        for i, linea in enumerate(lineas):
+            pdf.set_xy(x + 1, y0 + (i * h_linea))
+            pdf.cell(c["ancho"] - 2, h_linea, linea, border=0)
+        x += c["ancho"]
+
+    pdf.set_xy(x0, y0 + alto_fila)
+
 # FUNCION DE HORARIOS
 def hora_colombia():
     tz = pytz.timezone("America/Bogota")
@@ -220,11 +271,11 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
 def generar_rotulo_pdf(row):
     tipo = (row.get('tipo_orden') or '').upper()
     if "FORMAS" in tipo:
-        titulo = (row.get('presentacion') or '').upper()
+        titulo = "FORMAS - MATERIAL"
     elif "REBOBINADO" in tipo:
         titulo = "REBOBINADO - MATERIAL"
     else:
-        titulo = (row.get('material') or '').upper()
+        titulo = "ROLLO - MATERIAL"
 
 # GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
 # (no apunta a la app: al escanear se lee directo, sin internet ni iniciar sesion)
@@ -476,14 +527,18 @@ def generar_op_rollos(row):
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
 
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Cliente: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(95, 7, f"{row.get('cliente','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Vendedor: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(55, 7, f"{row.get('vendedor','')}", 1, 1) 
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Trabajo: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(100, 7, f"{row.get('nombre_trabajo','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Tipo Orden: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('tipo_orden','')}", 1, 1) 
+    fila_grid(pdf, [
+        {"ancho": 20, "texto": " Cliente: ", "negrita": True, "fill": True},
+        {"ancho": 95, "texto": row.get('cliente',''), "negrita": False, "fill": False},
+        {"ancho": 20, "texto": " Vendedor: ", "negrita": True, "fill": True},
+        {"ancho": 55, "texto": row.get('vendedor',''), "negrita": False, "fill": False},
+    ])
+    fila_grid(pdf, [
+        {"ancho": 20, "texto": " Trabajo: ", "negrita": True, "fill": True},
+        {"ancho": 100, "texto": row.get('nombre_trabajo',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Tipo Orden: ", "negrita": True, "fill": True},
+        {"ancho": 45, "texto": row.get('tipo_orden',''), "negrita": False, "fill": False},
+    ])
 
 #  ESPECIFICACIONES TECNICAS
     pdf.ln(4)
@@ -594,18 +649,24 @@ def generar_op_formas(row):
     pdf.set_fill_color(230, 230, 230)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Cliente: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('cliente','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Vendedor: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('vendedor','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Trabajo: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('nombre_trabajo','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Tipo Orden: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('tipo_orden','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " OP Anterior: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('op_anterior','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Fecha: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('created_at','')[:10]}", 1, 1)
+    fila_grid(pdf, [
+        {"ancho": 25, "texto": " Cliente: ", "negrita": True, "fill": True},
+        {"ancho": 70, "texto": row.get('cliente',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Vendedor: ", "negrita": True, "fill": True},
+        {"ancho": 70, "texto": row.get('vendedor',''), "negrita": False, "fill": False},
+    ])
+    fila_grid(pdf, [
+        {"ancho": 25, "texto": " Trabajo: ", "negrita": True, "fill": True},
+        {"ancho": 70, "texto": row.get('nombre_trabajo',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Tipo Orden: ", "negrita": True, "fill": True},
+        {"ancho": 70, "texto": row.get('tipo_orden',''), "negrita": False, "fill": False},
+    ])
+    fila_grid(pdf, [
+        {"ancho": 25, "texto": " OP Anterior: ", "negrita": True, "fill": True},
+        {"ancho": 70, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Fecha: ", "negrita": True, "fill": True},
+        {"ancho": 70, "texto": row.get('created_at','')[:10], "negrita": False, "fill": False},
+    ])
 
 # ESPECIFICACIONES GENERALES Y ACABADOS 
     pdf.set_font("Arial", "B", 11)
@@ -736,11 +797,17 @@ def generar_op_rebobinado(row):
     pdf.cell(0,8,"1. INFORMACION GENERAL",0,1,fill=True)
     pdf.set_font("Arial","",10)
 
-    pdf.cell(95,7,f"Cliente: {row.get('cliente','')}",1)
-    pdf.cell(95,7,f"Vendedor: {row.get('vendedor','')}",1,1)
-    pdf.cell(95,7,f"Trabajo: {row.get('nombre_trabajo','')}",1)
-    pdf.cell(95,7,f"OP Anterior: {row.get('op_anterior','N/A')}",1,1)
-    pdf.cell(190,7,f"Fecha de Creacion: {row.get('created_at','')[:10]}",1,1)
+    fila_grid(pdf, [
+        {"ancho": 95, "texto": f"Cliente: {row.get('cliente','')}", "negrita": False, "fill": False},
+        {"ancho": 95, "texto": f"Vendedor: {row.get('vendedor','')}", "negrita": False, "fill": False},
+    ])
+    fila_grid(pdf, [
+        {"ancho": 95, "texto": f"Trabajo: {row.get('nombre_trabajo','')}", "negrita": False, "fill": False},
+        {"ancho": 95, "texto": f"OP Anterior: {row.get('op_anterior','N/A')}", "negrita": False, "fill": False},
+    ])
+    fila_grid(pdf, [
+        {"ancho": 190, "texto": f"Fecha de Creacion: {row.get('created_at','')[:10]}", "negrita": False, "fill": False},
+    ])
 
 # DATOS TECNICOS DE ENTRADA Y OBJETIVO
     pdf.ln(4)
