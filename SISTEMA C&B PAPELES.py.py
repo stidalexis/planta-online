@@ -166,21 +166,19 @@ def _fecha_creacion_legible(row):
     except Exception:
         return raw or "-"
 
-def dibujar_caja_fecha_creacion(pdf, row, x=155, y=2, w=53, h=16):
-    """Dibuja una caja blanca con la fecha de creacion de la OP, en la esquina
-    opuesta al logo (no mueve el cursor del PDF, lo deja igual que antes de llamarla)."""
+def dibujar_caja_fecha_creacion(pdf, row, x=145, y=4, w=63, h=16):
+    """Escribe la fecha de creacion de la OP en la esquina opuesta al logo,
+    solo como texto (sin caja ni fondo), a juego con el resto del encabezado.
+    No mueve el cursor del PDF, lo deja igual que antes de llamarla."""
     x0, y0 = pdf.get_x(), pdf.get_y()
 
-    pdf.set_fill_color(255, 255, 255)
-    pdf.rect(x, y, w, h, 'F')
-    pdf.rect(x, y, w, h)
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_xy(x, y + 1)
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_xy(x, y)
     pdf.set_font("Arial", "B", 8)
-    pdf.cell(w, 5, "FECHA DE CREACIÓN", 0, 2, "C")
+    pdf.cell(w, 5, "FECHA DE CREACIÓN", 0, 2, "R")
     pdf.set_x(x)
     pdf.set_font("Arial", "B", 11)
-    pdf.cell(w, 8, _fecha_creacion_legible(row), 0, 2, "C")
+    pdf.cell(w, 7, _fecha_creacion_legible(row), 0, 2, "R")
 
     pdf.set_xy(x0, y0)
 
