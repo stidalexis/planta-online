@@ -281,7 +281,7 @@ def generar_rotulo_pdf(row):
         f"Referencia: {row.get('ref_comercial','-') or '-'}\n"
         f"Tipo: {row.get('tipo_orden','-') or '-'}\n"
         f"Unidades x Caja: {row.get('unidades_caja','-') or '-'}\n"
-        f"Vendedor: {row.get('vendedor','-') or '-'}"
+        f"Cantidad Total: {row.get('cantidad_rollos','-') or 'cantidad_formas'}"
     )
     qr_img = qrcode.make(texto_qr)
     qr_buffer = io.BytesIO()
