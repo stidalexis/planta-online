@@ -78,7 +78,6 @@ MAQUINAS = {
 }
 
 # RELACION INVERSA: dado el nombre de una maquina, saber a que area pertenece
-# (usado para el rol "maquinista", que esta atado a UNA maquina especifica)
 MAQUINA_A_AREA = {maquina: area for area, lista in MAQUINAS.items() for maquina in lista}
 
 # AREA -> ETIQUETA DE MENU (para construir el menu del maquinista segun su maquina)
@@ -94,7 +93,6 @@ PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
 #  USUARIOS ORGANIZADOS POR ROL 
-
 def _es_hash_bcrypt(valor) -> bool:
     """Detecta si un valor guardado en 'clave' ya es un hash bcrypt (vs texto plano antiguo)."""
     return isinstance(valor, str) and valor.startswith(("$2a$", "$2b$", "$2y$"))
@@ -113,8 +111,8 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     nada al usuario ni requerir una migración manual aparte).
     """
     try:
+
 # CONSULTA EN TABLA DE USUARIOS FILTRADA SOLO POR EL NOMBRE DE USUARIO
-# (la clave ya NO se compara en la consulta, se verifica con bcrypt abajo)
         respuesta = supabase.table("usuarios")\
             .select("*")\
             .eq("usuario", usuario_ingresado)\
@@ -126,7 +124,6 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
         fila_usuario = respuesta.data[0]
         clave_guardada = fila_usuario.get("clave", "") or ""
 
-# CASO 1: la clave guardada ya es un hash bcrypt -> verificacion normal
         if _es_hash_bcrypt(clave_guardada):
             try:
                 coincide = bcrypt.checkpw(
@@ -137,16 +134,14 @@ def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
                 coincide = False
             return fila_usuario if coincide else None
 
-# CASO 2: clave antigua en texto plano (usuarios creados antes de este cambio)
-# Si coincide, se deja entrar Y se migra a hash automaticamente para la proxima vez
         if clave_guardada == clave_ingresada and clave_guardada != "":
             try:
                 nuevo_hash = _hashear_clave(clave_ingresada)
                 supabase.table("usuarios").update({"clave": nuevo_hash})\
                     .eq("usuario", usuario_ingresado).execute()
             except Exception:
+
 # Si la migracion automatica falla, el login de hoy funciona igual;
-# se reintentara la migracion en el siguiente login.
                 pass
             return fila_usuario
 
@@ -267,7 +262,7 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
     total_segundos = max(0, total.total_seconds() - tiempo_pausa_segundos)
     return str(timedelta(seconds=int(total_segundos)))
     
-#  ROTULO DE CAJA 100x150mm CON QR (link directo a la info de la OP) 
+#  ROTULO DE CAJA 100x150mm CON QR
 def generar_rotulo_pdf(row):
     tipo = (row.get('tipo_orden') or '').upper()
     if "FORMAS" in tipo:
@@ -278,7 +273,6 @@ def generar_rotulo_pdf(row):
         titulo = "ROLLO - MATERIAL"
 
 # GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
-# (no apunta a la app: al escanear se lee directo, sin internet ni iniciar sesion)
     texto_qr = (
         "ORDEN DE PRODUCCION\n"
         f"OP: {row.get('op','-')}\n"
@@ -443,6 +437,7 @@ def generar_pdf_op(row):
 
 # FILA DE TIEMPOS TOMADOS POR OP
             pdf.cell(0, 6, f"Duracion del Proceso: {dur_txt}", border='LRB', ln=True)
+
 # DATOS TECNICOS SALIDA JHSON
             pdf.set_font("Arial", '', 8)
 
@@ -617,7 +612,7 @@ def generar_op_rollos(row):
     return bytes(pdf.output())
 
 
-# GENERAR PDF FORMAS        pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)         pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
+# GENERAR PDF FORMAS       
 def generar_op_formas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -1360,7 +1355,6 @@ elif menu == "🔍 Seguimiento":
                 color_tipo = "#555"
                 borde_tipo = "#555"
             
-            # --- SOLUCIÓN: Eliminamos el st.markdown y usamos solo una línea de expander ---
             fecha_raw = row.get('created_at') or row.get('fecha_creacion') or ''
             try:
                 fecha_fmt = datetime.fromisoformat(str(fecha_raw).replace("Z","")).strftime('%d/%m/%Y')
@@ -1369,7 +1363,6 @@ elif menu == "🔍 Seguimiento":
             titulo_unico = f"{icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 💼 {vendedor} | 📅 {fecha_fmt} | {texto_estatus}"
             
             with st.expander(titulo_unico):
-                # Aquí colocas los detalles de la orden usando comandos normales de Streamlit
                 st.write("Detalles internos de la OP...")
                 st.markdown(f"### ESTATUS DE TRABAJO: :{color_texto}[{texto_estatus}]")
                 
@@ -1680,7 +1673,7 @@ elif menu == "📅 Planificación":
                 st.session_state['ultima_op_creada'] = None
                 st.rerun()
 
-    # Estados donde la OP aún no ha sido procesada por ningún área
+# Estados donde la OP aún no ha sido procesada por ningún área
     ESTADOS_EDITABLES = [
         "DISEÑO (AUDITORIA)", "IMPRESIÓN", "CORTE", "REBOBINADORAS",
         "ESPERA DE AUDITORIA", "ESPERA DE CORTE", "ESPERA DE IMPRESIÓN"
@@ -2251,8 +2244,6 @@ elif menu == "📅 Planificación":
                     try:
                         supabase.table("ordenes_planeadas").insert(payload).execute()
                     except Exception:
-# Compatibilidad: si la tabla aun no tiene la columna 'creado_por'
-# (hay que agregarla en Supabase), reintenta sin ese campo
                         payload.pop("creado_por", None)
                         supabase.table("ordenes_planeadas").insert(payload).execute()
 
@@ -2260,8 +2251,6 @@ elif menu == "📅 Planificación":
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
 
-# DEJAR EL NOMBRE Y REFERENCIA YA LISTOS EN "SALIDA PRODUCCION P1"
-# (asi quien recibe en bodega no tiene que volver a escribirlo a mano)
                     try:
                         existe_en_bodega = supabase.table("bodega_producto_terminado")\
                             .select("id").eq("nombre_trabajo", trab).execute().data
@@ -2281,7 +2270,6 @@ elif menu == "📅 Planificación":
                             try:
                                 supabase.table("bodega_producto_terminado").insert(registro_bodega_nuevo).execute()
                             except Exception:
-# Compatibilidad: si la tabla aun no tiene la columna 'ref_comercial', reintenta sin ella
                                 registro_bodega_nuevo.pop("ref_comercial", None)
                                 supabase.table("bodega_producto_terminado").insert(registro_bodega_nuevo).execute()
                     except Exception:
@@ -2483,6 +2471,7 @@ elif menu == "📊 Reportes Admin":
             res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
             if res_m:
                 df_m = pd.DataFrame(res_m)
+
 # LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
                 if 'duracion_segundos' in df_m.columns:
                     df_m['duracion_min'] = (df_m['duracion_segundos'].fillna(0) / 60).round(1)
@@ -2512,7 +2501,7 @@ elif menu == "📊 Reportes Admin":
             else:
                 st.info("No hay reportes de fallas técnicos.")
 
-#  TAB NUEVA: TRAZABILIDAD COMPLETA DE OPs (desde que se crea hasta el ultimo paso) 
+# TRAZABILIDAD COMPLETA DE OPs (desde que se crea hasta el ultimo paso) 
         with tab_traza:
             st.subheader("🗂️ Trazabilidad Completa de Órdenes de Producción")
             st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
@@ -2602,7 +2591,6 @@ elif menu == "📊 Reportes Admin":
                 try:
                     res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol, maquina_asignada").execute().data or []
                 except Exception:
-# Compatibilidad: si la columna 'maquina_asignada' aun no existe en Supabase
                     res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
                 if res_usuarios:
                     df_usuarios = pd.DataFrame(res_usuarios)
@@ -3192,8 +3180,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
     
     permisos_del_usuario = PERMISOS.get(rol_actual, [])
 
-# CASO ESPECIAL: el maquinista solo tiene permiso sobre SU PROPIA maquina,
-# no sobre el area completa como los supervisores
     mi_maquina_asignada = None
     if rol_actual == "maquinista":
         mi_maquina_asignada = st.session_state.get("maquina_asignada")
@@ -3254,7 +3240,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             try:
                                 supabase.table("paradas_maquina").insert(registro_parada).execute()
                             except Exception:
-# Compatibilidad: si la tabla 'paradas_maquina' no tiene la columna 'duracion_segundos'
                                 try:
                                     registro_parada.pop("duracion_segundos", None)
                                     supabase.table("paradas_maquina").insert(registro_parada).execute()
@@ -3307,9 +3292,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 try:
                                     supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
                                 except Exception:
-# Compatibilidad: si la tabla 'tiempos_muertos' no tiene la columna 'duracion_segundos'
-# (hay que agregarla en Supabase, tipo numeric), reintenta sin ese campo para no
-# bloquear el inicio de la maquina por un problema de reportes
+
                                     try:
                                         registro_tiempo_libre.pop("duracion_segundos", None)
                                         supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
@@ -3330,8 +3313,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         try:
                             supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
                         except Exception:
-# Compatibilidad: si la tabla 'trabajos_activos' aun no tiene la columna 'operario'
-# (hay que agregarla en Supabase), reintenta sin ese campo para no bloquear el inicio
                             registro_nuevo_trabajo.pop("operario", None)
                             supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
                         st.rerun()
@@ -3409,7 +3390,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['varillas_finales'] = varillas_auto
                 datos_c['cajas_totales']    = cajas_auto
 
-                # Mostrar resultados calculados para que el operario los vea
                 col_r1, col_r2 = st.columns(2)
                 col_r1.info(f"🔩 **Varillas calculadas:** {varillas_auto}  \n_(Rollos {rollos} ÷ Imágenes/Bobina {imagenes})_")
                 col_r2.info(f"📦 **Cajas calculadas:** {cajas_auto}  \n_(Rollos {rollos} ÷ Uds/Caja OP: {uds_caja_op})_")
@@ -3430,6 +3410,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     ["Enviar a Encuadernación", "Finalizar en Colectora"],
                     index=0
                 )
+
 # CONSUMO DE CAJAS EN COLECTORAS
                 st.markdown("---")
                 col_inv_col = st.columns(2)
@@ -3552,6 +3533,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     if tipo in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                         if area_act == "IMPRESIÓN":
                             if r['maquina'] in ["MTY-1", "MTY-2"]:
+
 # LAS MAQUINAS MTY-1 Y MTY-2 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
                                 n_area = "ENCUADERNACIÓN"
                             else:
@@ -3603,7 +3585,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
 #  ENTREGAS PARCIALES 
         if parcial:
-            # 1. Validaciones de la cantidad
             if cantidad_parcial <= 0:
                 st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
                 st.stop()
@@ -3657,6 +3638,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if tipo_p in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                 if area_act == "IMPRESIÓN":
                     if r['maquina'] in ["MTY-1", "MTY-2"]:
+
 # LAS MAQUINAS MTY-1 Y MTY-2 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
                         n_area_parcial = "ENCUADERNACIÓN"
                     else:
@@ -3769,7 +3751,8 @@ def mercado_obtener_coins(usuario):
         res = supabase.table("monedas_usuarios").select("coins").eq("usuario", usuario).execute()
         if res.data:
             return res.data[0]['coins']
-        # Si no existe, crea registro con 0 coins
+        
+# Si no existe, crea registro con 0 coins
         supabase.table("monedas_usuarios").upsert({"usuario": usuario, "coins": 0}, on_conflict="usuario").execute()
         return 0
     except Exception as e:
@@ -3794,7 +3777,6 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
     except Exception as e:
         st.error(f"Error al ajustar coins: {e}")
         return None
-
 
 #  MÓDULO MERCADO PRINCIPAL 
 if menu == "🛒 Mercado":
