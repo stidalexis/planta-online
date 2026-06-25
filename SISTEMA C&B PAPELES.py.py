@@ -304,6 +304,7 @@ def generar_rotulo_pdf(row):
         titulo = f"ROLLO {row.get('material','-') or '-'}"
 
 # GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
+# LA CANTIDAD SE TOMA DE UN CAMPO DISTINTO SEGUN EL TIPO DE ORDEN
     if "FORMAS" in tipo:
         cantidad_total = row.get('cantidad_formas', '-') or '-'
     else:
@@ -952,6 +953,23 @@ def modal_detalle_op(row):
         st.info("No hay registros de producción todavía.")
     else:
         for h in hist:
+
+# TARJETA ESPECIAL PARA EDICIONES (no es un paso de produccion, es un cambio en los datos de la OP)
+            if h.get('area') == 'EDICIÓN':
+                with st.container():
+                    st.markdown(f"""
+                    <div class='historial-card'>
+                        <div class='historial-header'>
+                            <span>✏️ EDICIÓN DE LA ORDEN</span>
+                            <span>📅 {h.get('fecha') or h.get('fin') or h.get('inicio') or 'Sin fecha'}</span>
+                        </div>
+                        <div class='historial-tecnico'>
+                            <div>👤 <b>Editado por:</b> {h.get('operario') or h.get('usuario') or 'N/A'}</div>
+                            <div>📝 <b>Motivo:</b> {h.get('observaciones') or 'Sin motivo registrado'}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                continue
 
 # DISENO DE TARGETAS DE DENTRADA
             with st.container():
@@ -1930,9 +1948,12 @@ elif menu == "📅 Planificación":
                                     "tipo":    "EDICIÓN",
                                     "inicio":  hora_colombia().isoformat(),
                                     "fin":     hora_colombia().isoformat(),
+                                    "fecha":   hora_colombia().strftime("%d/%m/%Y %H:%M"),
                                     "duracion":"0:00:00",
-                                    "usuario": st.session_state.get('nombre_usuario','?'),
-                                    "nota":    f"Editado: {nueva_obs_gral}"
+                                    "operario":      st.session_state.get('nombre_usuario','?'),
+                                    "usuario":       st.session_state.get('nombre_usuario','?'),
+                                    "observaciones": nueva_obs_gral,
+                                    "nota":          f"Editado: {nueva_obs_gral}"
                                 })
                                 supabase.table("ordenes_planeadas").update({
                                     "historial_procesos": hist
@@ -2591,6 +2612,16 @@ elif menu == "📊 Reportes Admin":
                     else:
                         st.markdown("**🔗 Línea de tiempo de producción:**")
                         for paso_idx, paso in enumerate(historial, start=1):
+                            if paso.get('area') == 'EDICIÓN':
+                                st.markdown(
+                                    f"**{paso_idx}. ✏️ EDICIÓN DE LA ORDEN** — "
+                                    f"Editado por: {paso.get('operario') or paso.get('usuario','-')}  |  "
+                                    f"{paso.get('fecha','-')}"
+                                )
+                                if paso.get("observaciones"):
+                                    st.caption(f"📝 Motivo: {paso['observaciones']}")
+                                st.divider()
+                                continue
                             st.markdown(
                                 f"**{paso_idx}. {paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
                                 f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
