@@ -157,14 +157,16 @@ MESES_ES = {
 }
 
 def _fecha_creacion_legible(row):
-    """Devuelve la fecha de creacion de la OP en formato 'Mes DD del AAAA', en español."""
+    """Devuelve la fecha de creacion de la OP en formato 'Mes DD del AAAA', en español (hora Colombia)."""
     raw = row.get('created_at') or row.get('fecha_creacion') or ''
-    raw = str(raw)[:10]  # YYYY-MM-DD
+    if not raw:
+        return "-"
+    fecha_dd_mm_aaaa = fmt_fecha_hora(raw, con_hora=False)  # 'DD/MM/AAAA' ya en hora Colombia
     try:
-        anio, mes, dia = raw.split('-')
+        dia, mes, anio = fecha_dd_mm_aaaa.split('/')
         return f"{MESES_ES.get(int(mes), mes)} {dia} del {anio}"
     except Exception:
-        return raw or "-"
+        return fecha_dd_mm_aaaa or "-"
 
 def dibujar_caja_fecha_creacion(pdf, row, x=145, y=4, w=63, h=16):
     """Escribe la fecha de creacion de la OP en la esquina opuesta al logo,
@@ -246,6 +248,58 @@ def fila_grid(pdf, celdas, h_linea=7):
 def hora_colombia():
     tz = pytz.timezone("America/Bogota")
     return datetime.now(tz)
+
+def fmt_fecha_hora(valor, con_hora=True):
+    """
+    Convierte CUALQUIER fecha/hora (string ISO con o sin zona horaria, en UTC,
+    en Colombia, con microsegundos, etc.) al formato unico que debe usarse en
+    TODO el programa: 'DD/MM/AAAA HH:MM' en hora Colombia, sin segundos.
+    Si con_hora=False, devuelve solo 'DD/MM/AAAA'.
+    Si el valor es vacio, None, o no se puede interpretar, lo devuelve tal cual
+    (o '-' si esta vacio) para no romper nada que ya estuviera funcionando.
+    """
+    if valor is None or valor == "":
+        return "-"
+    if not isinstance(valor, (list, dict)):
+        try:
+            if pd.isna(valor):
+                return "-"
+        except (TypeError, ValueError):
+            pass
+    if isinstance(valor, (datetime,)):
+        dt = valor
+    else:
+        try:
+            texto = str(valor).strip().replace("Z", "+00:00")
+            dt = datetime.fromisoformat(texto)
+        except Exception:
+            return valor
+    try:
+        tz_col = pytz.timezone("America/Bogota")
+        if dt.tzinfo is None:
+            dt = tz_col.localize(dt)
+        else:
+            dt = dt.astimezone(tz_col)
+        return dt.strftime("%d/%m/%Y %H:%M") if con_hora else dt.strftime("%d/%m/%Y")
+    except Exception:
+        return valor
+
+def formatear_fechas_df(df, columnas=None):
+    """
+    Aplica fmt_fecha_hora a las columnas de fecha de un DataFrame. Si no se
+    especifican columnas, las detecta automaticamente por nombre (cualquier
+    columna que contenga 'fecha', 'created_at', 'actualizacion', 'modificacion',
+    'inicio', 'fin' o 'hora').
+    """
+    if df is None or len(df) == 0:
+        return df
+    if columnas is None:
+        claves = ['fecha', 'created_at', 'actualizacion', 'modificacion', 'inicio', 'fin', 'hora']
+        columnas = [c for c in df.columns if any(p in c.lower() for p in claves)]
+    for c in columnas:
+        if c in df.columns:
+            df[c] = df[c].apply(fmt_fecha_hora)
+    return df
 
 def get_planta_activa() -> bool:
     """Consulta si la planta está activa en Supabase. Cache 10 segundos."""
@@ -422,7 +476,7 @@ def generar_pdf_op(row):
     pdf.cell(c1, 7, f"Cliente: {row.get('cliente')}", border='B')
     pdf.cell(0, 7, f"Vendedor: {row.get('vendedor')}", border='B', ln=True)
     pdf.cell(c1, 7, f"Tipo de Orden: {row.get('tipo_orden')}", border='B')
-    pdf.cell(0, 7, f"Fecha Creacion: {row.get('created_at', '')[:10]}", border='B', ln=True)
+    pdf.cell(0, 7, f"Fecha Creacion: {fmt_fecha_hora(row.get('created_at'), con_hora=False)}", border='B', ln=True)
     pdf.ln(5)
 
 #  SECCION ESPECIFICACIONES PDF
@@ -700,7 +754,7 @@ def generar_op_formas(row):
         {"ancho": 25, "texto": " OP Anterior: ", "negrita": True, "fill": True},
         {"ancho": 70, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
         {"ancho": 25, "texto": " Fecha: ", "negrita": True, "fill": True},
-        {"ancho": 70, "texto": row.get('created_at','')[:10], "negrita": False, "fill": False},
+        {"ancho": 70, "texto": fmt_fecha_hora(row.get('created_at'), con_hora=False), "negrita": False, "fill": False},
     ])
 
 # ESPECIFICACIONES GENERALES Y ACABADOS 
@@ -842,7 +896,7 @@ def generar_op_rebobinado(row):
         {"ancho": 95, "texto": f"OP Anterior: {row.get('op_anterior','N/A')}", "negrita": False, "fill": False},
     ])
     fila_grid(pdf, [
-        {"ancho": 190, "texto": f"Fecha de Creacion: {row.get('created_at','')[:10]}", "negrita": False, "fill": False},
+        {"ancho": 190, "texto": f"Fecha de Creacion: {fmt_fecha_hora(row.get('created_at'), con_hora=False)}", "negrita": False, "fill": False},
     ])
 
 # DATOS TECNICOS DE ENTRADA Y OBJETIVO
@@ -902,7 +956,7 @@ def modal_detalle_op(row):
         📝 <b>Nombre trabajo:</b> {row.get('nombre_trabajo')}<br>
         📑 <b>referencia:</b> {row.get('ref_comercial')}<br>
         🔙 <b>orden anterior:</b> {row.get('op_anterior')}<br>
-        📅 <b>Fecha:</b> {row.get('created_at', '')[:10]}
+        📅 <b>Fecha:</b> {fmt_fecha_hora(row.get('created_at'), con_hora=False)}
         </div>
         """, unsafe_allow_html=True)
 
@@ -1414,9 +1468,8 @@ elif menu == "🔍 Seguimiento":
                 borde_tipo = "#555"
             
             fecha_raw = row.get('created_at') or row.get('fecha_creacion') or ''
-            try:
-                fecha_fmt = datetime.fromisoformat(str(fecha_raw).replace("Z","")).strftime('%d/%m/%Y')
-            except:
+            fecha_fmt = fmt_fecha_hora(fecha_raw, con_hora=False) if fecha_raw else ''
+            if fecha_fmt == '-':
                 fecha_fmt = ''
             titulo_unico = f"{icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 💼 {vendedor} | 📅 {fecha_fmt} | {texto_estatus}"
             
@@ -1429,7 +1482,7 @@ elif menu == "🔍 Seguimiento":
                     st.write("**👤 CLIENTE:**") 
                     st.info(cliente)
                     st.write("**📅 FECHA:**")
-                    st.info(row.get('created_at', '')[:10])
+                    st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
                     st.write("**🔙 ORDEN ANTERIOR:**")
                     st.info(row.get('op_anterior', '')[:10])
                 with c2:
@@ -1576,7 +1629,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
             c2.write(f"**CLIENTE:**\n{datos.get('cliente')}")
             c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
-            c3.write(f"**FECHA DE CREACION:**\n{datos.get('created_at', '')[:19]}")
+            c3.write(f"**FECHA DE CREACION:**\n{fmt_fecha_hora(datos.get('created_at'))}")
             c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
             c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
@@ -2475,6 +2528,7 @@ elif menu == "📦 salida produccion P1":
             cols_finales = [c for c in cols_esperadas if c in df_bodega.columns]
             
             df_show = df_bodega[cols_finales].copy()
+            df_show = formatear_fechas_df(df_show)
             
 # RENOMBRAR COLUMBAS PARA VISUALIZACION 
             nombres_columnas = {
@@ -2521,6 +2575,7 @@ elif menu == "📊 Reportes Admin":
             res_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True).execute().data
             if res_h:
                 df_h = pd.DataFrame(res_h)
+                df_h = formatear_fechas_df(df_h)
                 st.dataframe(df_h, use_container_width=True, hide_index=True)
             else:
                 st.info("Sin registros en bodega.")
@@ -2539,6 +2594,7 @@ elif menu == "📊 Reportes Admin":
                     total_libre = df_m['duracion_min'].sum()
                     st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre:.1f} min")
                     df_m = df_m.drop(columns=['duracion_segundos'])
+                df_m = formatear_fechas_df(df_m)
                 st.dataframe(df_m, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay registros de tiempo libre.")
@@ -2558,6 +2614,7 @@ elif menu == "📊 Reportes Admin":
                     st.metric("Total Tiempo Perdido por Fallas", f"{total_parada:.1f} min", delta_color="inverse")
                     df_p = df_p.drop(columns=['duracion_segundos'])
                 
+                df_p = formatear_fechas_df(df_p)
                 st.dataframe(df_p, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay reportes de fallas técnicos.")
@@ -2590,10 +2647,7 @@ elif menu == "📊 Reportes Admin":
 
             for o in todas_ops_traza:
                 fecha_creacion_raw = o.get("created_at") or o.get("fecha_creacion") or ""
-                try:
-                    fecha_creacion_fmt = datetime.fromisoformat(str(fecha_creacion_raw).replace("Z", "")).strftime('%d/%m/%Y %H:%M')
-                except Exception:
-                    fecha_creacion_fmt = str(fecha_creacion_raw)[:16] or "Sin fecha"
+                fecha_creacion_fmt = fmt_fecha_hora(fecha_creacion_raw) if fecha_creacion_raw else "Sin fecha"
 
 # 'creado_por' solo existe en ordenes creadas despues de activar esta funcion
                 creador = o.get("creado_por") or "No registrado (orden anterior a esta función)"
@@ -2653,6 +2707,7 @@ elif menu == "📊 Reportes Admin":
                         c1, c2 = st.columns(2)
                         c1.metric("🟢 Total Coins Otorgados", f"+{otorgados}")
                         c2.metric("🔴 Total Coins Descontados", f"{descontados}")
+                    df_coins = formatear_fechas_df(df_coins)
                     st.dataframe(df_coins, use_container_width=True, hide_index=True)
                 else:
                     st.info("Sin movimientos de coins registrados todavía.")
@@ -2806,6 +2861,7 @@ elif menu == "📦 Almacen/Despachos":
             cols_finales = [c for c in cols_esperadas if c in df_bodega.columns]
             
             df_show = df_bodega[cols_finales].copy()
+            df_show = formatear_fechas_df(df_show)
             
 # RENOMBRAR COLUMBAS PARA VISUALIZACION 
             nombres_columnas = {
@@ -2876,7 +2932,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                         try:
                             datos_insertar = {
                                 "fecha": hora_colombia().strftime("%Y-%m-%d"), 
-                                "hora_registro": hora_colombia().strftime("%H:%M:%S"),
+                                "hora_registro": hora_colombia().strftime("%H:%M"),
                                 "turno": turno_s, 
                                 "maquina": maq_sel, 
                                 "op": str(op_s), 
@@ -2909,6 +2965,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                 
                 if respuesta.data:
                     df_h = pd.DataFrame(respuesta.data)
+                    df_h = formatear_fechas_df(df_h, columnas=['fecha'])
                     
                     columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
                     
@@ -3227,10 +3284,10 @@ elif menu == "📦 Inventario":
         c1, c2 = st.columns(2)
         with c1:
             st.subheader("Cores")
-            st.dataframe(pd.DataFrame(supabase.table("inventario_cores").select("*").execute().data), use_container_width=True)
+            st.dataframe(formatear_fechas_df(pd.DataFrame(supabase.table("inventario_cores").select("*").execute().data)), use_container_width=True)
         with c2:
             st.subheader("Cajas")
-            st.dataframe(pd.DataFrame(supabase.table("inventario_cajas").select("*").execute().data), use_container_width=True)
+            st.dataframe(formatear_fechas_df(pd.DataFrame(supabase.table("inventario_cajas").select("*").execute().data)), use_container_width=True)
 
 #  VALIDACION DE ACCESO A AREAS DE PRODUCCION 
 elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras"]:
@@ -3952,6 +4009,7 @@ if menu == "🛒 Mercado":
 
                 if hist_data:
                     df_hist = pd.DataFrame(hist_data)
+                    df_hist = formatear_fechas_df(df_hist, columnas=['fecha'])
                     df_hist['Tipo'] = df_hist['cantidad'].apply(lambda x: "➕ Ingreso" if x > 0 else "➖ Gasto")
                     cols_show = ['fecha', 'usuario', 'cantidad', 'Tipo', 'motivo', 'admin'] if rol_actual == 'admin' else ['fecha', 'cantidad', 'Tipo', 'motivo']
                     col_names = {
@@ -3972,6 +4030,7 @@ if menu == "🛒 Mercado":
                 hist_data = supabase.table("monedas_historial").select("*").eq("usuario", usuario_actual).order("fecha", desc=True).limit(100).execute().data or []
                 if hist_data:
                     df_hist = pd.DataFrame(hist_data)
+                    df_hist = formatear_fechas_df(df_hist, columnas=['fecha'])
                     df_hist['Tipo'] = df_hist['cantidad'].apply(lambda x: "➕ Ingreso" if x > 0 else "➖ Gasto")
                     df_show = df_hist[['fecha', 'cantidad', 'Tipo', 'motivo']].rename(columns={
                         'fecha': 'Fecha', 'cantidad': '🪙 Coins', 'motivo': 'Descripción'
