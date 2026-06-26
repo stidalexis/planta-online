@@ -1695,17 +1695,15 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 with col_inputs[0]:
                     link_arte = st.text_input("LINK DEL ARTE (DRIVE):", value=datos_op.get('link_diseno', '') or "")
                 with col_inputs[1]:
-                    
-                    num_ticket = st.number_input("NUMERO DEL TICKET:", value=int(datos_op.get('num_ticket', 0) or 0), step=1)
+                    st.metric("🎫 NÚMERO DE TICKET (asignado por ventas)", datos_op.get('num_ticket', 0) or 0)
                 
                 obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "")
                 obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "")
                 
                 if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
-                    if link_arte and num_ticket > 0:
+                    if link_arte:
                         update_data = {
                             "link_diseno": link_arte, 
-                            "num_ticket": num_ticket, 
                             "observaciones_diseno": obs_dis,
                             "observaciones_diseno2": obs_dise,  
                             "proxima_area": "PRE-PRENSA"
@@ -1713,7 +1711,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                         supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
                         st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
                     else:
-                        st.error("El link del ARTE y el NÚMERO DE TICKET son obligatorios.")
+                        st.error("El link del ARTE es obligatorio.")
 
 # PRE-PRENSA
     with tab2:
@@ -2164,9 +2162,10 @@ elif menu == "📅 Planificación":
                 
                 cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
                 
-                f4, f5 = st.columns(2)
+                f4, f5, f6 = st.columns(3)
                 vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
                 trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
+                num_ticket_creacion = f6.number_input("Número de Ticket", value=int(datos_rec.get('num_ticket', 0) or 0), min_value=0, step=1)
 
                 if "FORMAS" in t:
                     lista_p = []
@@ -2308,7 +2307,8 @@ elif menu == "📅 Planificación":
                         "tipo_origen": origen,
                         "proxima_area": ruta_inicial,
                         "historial_procesos": [],
-                        "creado_por": st.session_state.get('nombre_usuario', '')
+                        "creado_por": st.session_state.get('nombre_usuario', ''),
+                        "num_ticket": int(num_ticket_creacion)
                     }
 
                     if "FORMAS" in t:
