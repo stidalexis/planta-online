@@ -20,9 +20,6 @@ try:
 except Exception as e:
     st.error("Error de conexion a Base de Datos. Revisar los Secrets.")
     st.stop()
-
-# URL PUBLICA DE LA APP (para el QR de los rotulos). Configurar en Secrets como APP_URL.
-APP_URL = st.secrets.get("APP_URL", "").rstrip("/")
     
 #  ESTILOS CSS (DISEÑO INDUSTRIAL Y TACTIL)
 st.markdown("""
@@ -1082,40 +1079,6 @@ if not st.session_state.get('autenticado'):
             else:
                 st.error("Usuario o contraseña incorrectos")
     st.stop() 
-
-# ENLACE DIRECTO DESDE UN ROTULO ESCANEADO (el QR trae ?op=NUMERO en la URL)
-qp_op = st.query_params.get("op")
-if qp_op:
-    st.title(f"📦 Información de la Orden {qp_op}")
-    fila_op_qr = supabase.table("ordenes_planeadas").select("*").eq("op", qp_op).execute().data
-    if fila_op_qr:
-        o = fila_op_qr[0]
-        st.subheader(o.get('nombre_trabajo', ''))
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Cliente", o.get('cliente', '-') or '-')
-        c2.metric("Estado actual", o.get('proxima_area', '-') or '-')
-        c3.metric("Unidades x Caja", o.get('unidades_caja', '-') or '-')
-        st.markdown(f"**Referencia comercial:** {o.get('ref_comercial', '-') or '-'}")
-        st.markdown(f"**Tipo de orden:** {o.get('tipo_orden', '-') or '-'}")
-        st.markdown(f"**Vendedor:** {o.get('vendedor', '-') or '-'}")
-
-        historial_qr = o.get("historial_procesos") or []
-        if historial_qr:
-            st.markdown("**🔗 Línea de tiempo de producción:**")
-            for idx, paso in enumerate(historial_qr, start=1):
-                st.markdown(
-                    f"{idx}. **{paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
-                    f"Operario: {paso.get('operario','-')}  |  {paso.get('fecha','-')}"
-                )
-        else:
-            st.info("Esta orden todavía no tiene pasos de producción registrados.")
-    else:
-        st.warning(f"No se encontró ninguna orden con el número {qp_op}.")
-
-    if st.button("✖️ Cerrar y continuar al sistema"):
-        st.query_params.clear()
-        st.rerun()
-    st.stop()
 
 # ESTRUCTURA DE MENU CON PERMISOS POR ROL
 with st.sidebar:
