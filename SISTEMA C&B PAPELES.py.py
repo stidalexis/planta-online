@@ -328,11 +328,54 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
     st.session_state.pop('_planta_activa_cache', None)
     st.session_state.pop('_planta_activa_ts', None)
 
+def get_area_activa(area: str) -> bool:
+    """Consulta si un AREA especifica esta activa (independiente del interruptor general). Cache 10 segundos."""
+    cache_key = f'_area_activa_cache_{area}'
+    cache_ts  = f'_area_activa_ts_{area}'
+    ahora = hora_colombia().timestamp()
+    if cache_key in st.session_state and ahora - st.session_state.get(cache_ts, 0) < 10:
+        return st.session_state[cache_key]
+    try:
+        res = supabase.table("configuracion_sistema").select("valor")\
+              .eq("clave", f"area_activa_{area}").single().execute()
+        activa = str(res.data.get("valor", "true")).lower() == "true"
+    except Exception:
+# Si nunca se ha guardado un registro para esta area, se asume activa por defecto
+        activa = True
+    st.session_state[cache_key] = activa
+    st.session_state[cache_ts]  = ahora
+    return activa
+
+def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
+    """Activa o desactiva UN AREA especifica. No usa un id fijo (a diferencia de la planta)
+    porque aqui puede haber varias filas, una por cada area."""
+    clave = f"area_activa_{area}"
+    payload = {
+        "clave":      clave,
+        "valor":      "true" if estado else "false",
+        "updated_at": hora_colombia().isoformat(),
+        "updated_by": usuario
+    }
+    try:
+        existente = supabase.table("configuracion_sistema").select("id").eq("clave", clave).execute().data
+        if existente:
+            supabase.table("configuracion_sistema").update(payload).eq("clave", clave).execute()
+        else:
+            supabase.table("configuracion_sistema").insert(payload).execute()
+    except Exception as e:
+        st.error(f"Error al guardar el estado del área {area}: {e}")
+
+    st.session_state.pop(f'_area_activa_cache_{area}', None)
+    st.session_state.pop(f'_area_activa_ts_{area}', None)
+
 # FUNCION DE DURACION 
 def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_segundos=0):
     """Calcula tiempo trabajado descontando pausas individuales y respetando estado de planta."""
     if nombre_maquina:
         if not obtener_estado_maquina(nombre_maquina):
+            return "0:00:00"
+        area_de_maquina = MAQUINA_A_AREA.get(nombre_maquina)
+        if area_de_maquina and not get_area_activa(area_de_maquina):
             return "0:00:00"
     if not get_planta_activa():
         return "0:00:00"
@@ -1221,11 +1264,31 @@ if menu == "🖥️ Monitor":
                         st.caption(f"Detenida por **{res_cfg['updated_by']}** a las {str(res_cfg['updated_at'])[:16]}")
                 except:
                     pass
+
+        st.markdown("**⚙️ Interruptores por Área** (independientes del general — apagar una no afecta a las demás)")
+        cols_areas = st.columns(len(MAQUINAS))
+        for idx, area in enumerate(MAQUINAS.keys()):
+            with cols_areas[idx]:
+                area_on = get_area_activa(area)
+                nuevo_area_st = st.toggle(
+                    area if area_on else f"⏸️ {area}",
+                    value=area_on,
+                    key=f"toggle_area_{area}"
+                )
+                if nuevo_area_st != area_on:
+                    set_area_activa(area, nuevo_area_st, st.session_state.get('nombre_usuario','admin'))
+                    st.toast(f"Área {area} {'ACTIVADA' if nuevo_area_st else 'DESACTIVADA'}", icon="⚙️")
+                    time.sleep(0.5)
+                    st.rerun()
     else:
     
 # Operarios solo ven el estado, no pueden cambiarlo
         if not get_planta_activa():
             st.error("⏸️ Planta detenida por administración — los contadores están en pausa")
+
+        areas_apagadas = [a for a in MAQUINAS.keys() if not get_area_activa(a)]
+        if areas_apagadas:
+            st.warning(f"⏸️ Área(s) detenida(s) por administración: {', '.join(areas_apagadas)}")
     
 #  TRAER ESTADOS DE MAQUINAS DE UN SOLO GOLPE 
     try:
