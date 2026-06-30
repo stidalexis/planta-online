@@ -347,8 +347,11 @@ def get_area_activa(area: str) -> bool:
     return activa
 
 def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
-    """Activa o desactiva UN AREA especifica. No usa un id fijo (a diferencia de la planta)
-    porque aqui puede haber varias filas, una por cada area."""
+    """Activa o desactiva UN AREA especifica.
+    Usa upsert tomando 'clave' como identificador unico (no 'id'), porque la
+    columna id de esta tabla quedo fija en 1 desde que solo se usaba para
+    la fila de 'planta_activa' — usar update/insert manual con 'id' causa
+    choque de llave duplicada al crear la primera fila de un area nueva."""
     clave = f"area_activa_{area}"
     payload = {
         "clave":      clave,
@@ -357,11 +360,7 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
         "updated_by": usuario
     }
     try:
-        existente = supabase.table("configuracion_sistema").select("id").eq("clave", clave).execute().data
-        if existente:
-            supabase.table("configuracion_sistema").update(payload).eq("clave", clave).execute()
-        else:
-            supabase.table("configuracion_sistema").insert(payload).execute()
+        supabase.table("configuracion_sistema").upsert(payload, on_conflict="clave").execute()
     except Exception as e:
         st.error(f"Error al guardar el estado del área {area}: {e}")
 
