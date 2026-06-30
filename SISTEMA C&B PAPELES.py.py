@@ -1176,6 +1176,22 @@ with st.sidebar:
 # OPERARIOS Y OTROS ROLES SI LOS DEJA DENTRAR
         opciones_menu = ["🖥️ Monitor"]
 
+# 💬 MENSAJES SE AGREGA A TODOS LOS ROLES SIN EXCEPCION
+    opciones_menu = opciones_menu + ["💬 Mensajes"]
+
+# CONTAR MENSAJES NO LEIDOS PARA MOSTRAR BADGE
+    try:
+        usuario_actual = st.session_state.get('usuario_actual', '')
+        no_leidos = supabase.table("mensajes_internos")\
+            .select("id", count="exact")\
+            .eq("leido", False)\
+            .or_(f"destinatario.eq.{usuario_actual},destinatario_rol.eq.{rol},destinatario.eq.TODOS")\
+            .execute().count or 0
+        if no_leidos > 0:
+            st.sidebar.info(f"💬 Tienes **{no_leidos}** mensaje(s) sin leer")
+    except Exception:
+        no_leidos = 0
+
     menu = st.radio("SELECCIONE MÓDULO:", opciones_menu)
     
     st.divider()
@@ -3941,6 +3957,130 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
         return None
 
 #  MÓDULO MERCADO PRINCIPAL 
+if menu == "💬 Mensajes":
+    st.title("💬 Canal de Comunicación Interno")
+    usuario_actual = st.session_state.get('usuario_actual', '')
+    nombre_actual  = st.session_state.get('nombre_usuario', '')
+    rol_actual_msg = st.session_state.get('rol', '')
+
+    tab_recibidos, tab_enviados, tab_nuevo = st.tabs(["📥 Recibidos", "📤 Enviados", "✉️ Nuevo Mensaje"])
+
+    with tab_recibidos:
+        st.subheader("📥 Mensajes Recibidos")
+        try:
+            recibidos = supabase.table("mensajes_internos").select("*")\
+                .or_(f"destinatario.eq.{usuario_actual},destinatario_rol.eq.{rol_actual_msg},destinatario.eq.TODOS")\
+                .order("created_at", desc=True).execute().data or []
+        except Exception as e:
+            st.error(f"Error cargando mensajes: {e}"); recibidos = []
+
+        if not recibidos:
+            st.info("No tienes mensajes recibidos aún.")
+        for msg in recibidos:
+            leido = msg.get("leido", False)
+            with st.container():
+                cols = st.columns([0.05, 0.95])
+                with cols[0]:
+                    st.markdown("⚪" if leido else "🔵")
+                with cols[1]:
+                    dest_label = msg.get('destinatario') or f"Rol: {msg.get('destinatario_rol','?')}"
+                    with st.expander(
+                        f"{'✉️' if not leido else '📨'} **{msg.get('remitente_nombre','?')}** → {dest_label}  |  "
+                        f"{fmt_fecha_hora(msg.get('created_at'))}",
+                        expanded=not leido
+                    ):
+                        st.markdown(f"**{msg.get('asunto','Sin asunto')}**")
+                        st.write(msg.get('cuerpo',''))
+                        if not leido:
+                            if st.button("✅ Marcar como leído", key=f"leer_{msg['id']}"):
+                                supabase.table("mensajes_internos").update({"leido": True}).eq("id", msg["id"]).execute()
+                                st.rerun()
+
+    with tab_enviados:
+        st.subheader("📤 Mensajes Enviados")
+        try:
+            enviados = supabase.table("mensajes_internos").select("*")\
+                .eq("remitente", usuario_actual)\
+                .order("created_at", desc=True).execute().data or []
+        except Exception as e:
+            st.error(f"Error cargando mensajes: {e}"); enviados = []
+
+        if not enviados:
+            st.info("No has enviado mensajes aún.")
+        for msg in enviados:
+            dest_label = msg.get('destinatario') or f"Rol: {msg.get('destinatario_rol','?')}"
+            with st.expander(
+                f"📤 Para: **{dest_label}**  |  {fmt_fecha_hora(msg.get('created_at'))}",
+                expanded=False
+            ):
+                st.markdown(f"**{msg.get('asunto','Sin asunto')}**")
+                st.write(msg.get('cuerpo',''))
+
+    with tab_nuevo:
+        st.subheader("✉️ Redactar Nuevo Mensaje")
+
+        if rol_actual_msg == 'admin':
+# ADMIN PUEDE ESCRIBIR A CUALQUIER USUARIO O A UN ROL COMPLETO
+            tipo_dest = st.radio("Enviar a:", ["Usuario específico", "Todos los de un rol", "Todos los usuarios"], horizontal=True, key="msg_tipo_dest")
+
+            destinatario_usuario = None
+            destinatario_rol     = None
+
+            if tipo_dest == "Usuario específico":
+                try:
+                    lista_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
+                    opciones_u = {f"{u['nombre']} ({u['usuario']}) - {u['rol']}": u['usuario'] for u in lista_usuarios if u['usuario'] != usuario_actual}
+                    sel_u = st.selectbox("Seleccionar usuario:", list(opciones_u.keys()), key="msg_dest_u")
+                    destinatario_usuario = opciones_u.get(sel_u)
+                    dest_label_nuevo = sel_u
+                except Exception as e:
+                    st.error(f"Error cargando usuarios: {e}")
+
+            elif tipo_dest == "Todos los de un rol":
+                ROLES_DISPONIBLES = ["ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb",
+                                     "supervisor_enc", "diseño", "patinador_roll", "almacen",
+                                     "jefe_log", "patinador_log", "aux_log", "maquinista"]
+                sel_r = st.selectbox("Seleccionar rol:", ROLES_DISPONIBLES, key="msg_dest_r")
+                destinatario_rol     = sel_r
+                dest_label_nuevo     = f"Todos con rol: {sel_r}"
+
+            else:
+                destinatario_usuario = "TODOS"
+                dest_label_nuevo     = "Todos los usuarios"
+
+        else:
+# OTROS ROLES SOLO PUEDEN ESCRIBIR AL ADMIN
+            st.info("📩 Este mensaje será enviado al Administrador.")
+            destinatario_usuario = "admin"
+            dest_label_nuevo     = "Administrador"
+            destinatario_rol     = None
+
+        asunto = st.text_input("📌 Asunto:", key="msg_asunto")
+        cuerpo = st.text_area("💬 Mensaje:", key="msg_cuerpo", height=150)
+
+        if st.button("📨 Enviar Mensaje", use_container_width=True, key="msg_enviar"):
+            if not asunto.strip():
+                st.warning("El asunto no puede estar vacío.")
+            elif not cuerpo.strip():
+                st.warning("El mensaje no puede estar vacío.")
+            else:
+                nuevo_msg = {
+                    "remitente":         usuario_actual,
+                    "remitente_nombre":  nombre_actual,
+                    "destinatario":      destinatario_usuario,
+                    "destinatario_rol":  destinatario_rol,
+                    "asunto":            asunto.strip(),
+                    "cuerpo":            cuerpo.strip(),
+                    "leido":             False
+                }
+                try:
+                    supabase.table("mensajes_internos").insert(nuevo_msg).execute()
+                    st.success(f"✅ Mensaje enviado correctamente a {dest_label_nuevo}.")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error al enviar el mensaje: {e}")
+
 if menu == "🛒 Mercado":
     usuario_actual = st.session_state.get('usuario_actual', '')
     nombre_actual  = st.session_state.get('nombre_usuario', '')
