@@ -348,10 +348,10 @@ def get_area_activa(area: str) -> bool:
 
 def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     """Activa o desactiva UN AREA especifica.
-    Usa upsert tomando 'clave' como identificador unico (no 'id'), porque la
-    columna id de esta tabla quedo fija en 1 desde que solo se usaba para
-    la fila de 'planta_activa' — usar update/insert manual con 'id' causa
-    choque de llave duplicada al crear la primera fila de un area nueva."""
+    NOTA TECNICA: la columna 'id' de esta tabla tiene un valor por defecto fijo
+    en 1 (no es una secuencia autoincremental), porque originalmente solo se usaba
+    para la fila de 'planta_activa'. Por eso aqui se calcula manualmente un id
+    libre antes de insertar, en vez de confiar en el default de la base de datos."""
     clave = f"area_activa_{area}"
     payload = {
         "clave":      clave,
@@ -360,7 +360,16 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
         "updated_by": usuario
     }
     try:
-        supabase.table("configuracion_sistema").upsert(payload, on_conflict="clave").execute()
+        existente = supabase.table("configuracion_sistema").select("id").eq("clave", clave).execute().data
+        if existente:
+# Ya existe esta clave -> solo actualizar, sin tocar el id
+            supabase.table("configuracion_sistema").update(payload).eq("clave", clave).execute()
+        else:
+# Clave nueva -> calcular un id libre (max id actual + 1) en vez de usar el default roto
+            todos_ids = supabase.table("configuracion_sistema").select("id").execute().data or []
+            siguiente_id = max([fila.get("id", 0) or 0 for fila in todos_ids], default=0) + 1
+            payload["id"] = siguiente_id
+            supabase.table("configuracion_sistema").insert(payload).execute()
     except Exception as e:
         st.error(f"Error al guardar el estado del área {area}: {e}")
 
