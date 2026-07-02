@@ -4060,11 +4060,23 @@ if menu == "💬 Mensajes":
                 dest_label_nuevo     = "Todos los usuarios"
 
         else:
-# OTROS ROLES SOLO PUEDEN ESCRIBIR AL ADMIN
-            st.info("📩 Este mensaje será enviado al Administrador.")
-            destinatario_usuario = "admin"
-            dest_label_nuevo     = "Administrador"
-            destinatario_rol     = None
+# CUALQUIER ROL PUEDE ESCRIBIRLE A CUALQUIER OTRO USUARIO (chat 1 a 1)
+            try:
+                lista_usuarios_msg = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
+                opciones_todos = {
+                    f"{u['nombre']} ({u['rol']})": u['usuario']
+                    for u in lista_usuarios_msg
+                    if u['usuario'] != usuario_actual
+                }
+                sel_dest = st.selectbox("Enviar a:", list(opciones_todos.keys()), key="msg_dest_u_otros")
+                destinatario_usuario = opciones_todos.get(sel_dest)
+                dest_label_nuevo     = sel_dest
+                destinatario_rol     = None
+            except Exception as e:
+                st.error(f"Error cargando usuarios: {e}")
+                destinatario_usuario = None
+                dest_label_nuevo     = ""
+                destinatario_rol     = None
 
         asunto = st.text_input("📌 Asunto:", key="msg_asunto")
         cuerpo = st.text_area("💬 Mensaje:", key="msg_cuerpo", height=150)
