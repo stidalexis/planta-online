@@ -70,7 +70,7 @@ MAQUINAS = {
     "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": [f"COR-{i:02d}" for i in range(1, 15)],
     "COLECTORAS": ["COL-01", "COL-02"],
-    "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)],
+    "ENCUADERNACIÓN": ["JINNA", "KELLY", "VIVIANA", "ROSMIA", "ANGIE", "JOHANA.N", "MARTHA", "OLGA", "J0HANA.R", "ANY"],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
 }
 
