@@ -70,7 +70,7 @@ MAQUINAS = {
     "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": [f"COR-{i:02d}" for i in range(1, 15)],
     "COLECTORAS": ["COL-01", "COL-02"],
-    "ENCUADERNACIÓN": ["JINNA", "KELLY", "VIVIANA", "ROSMIA", "ANGIE", "JOHANA.N", "MARTHA", "OLGA", "J0HANA.R", "ANY"],  ###[f"LINEA-{i:02d}" for i in range(1, 11)],
+    "ENCUADERNACIÓN": [f"LINEA-{i:02d}" for i in range(1, 11)],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
 }
 
@@ -3969,140 +3969,223 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
 
 #  MÓDULO MERCADO PRINCIPAL 
 if menu == "💬 Mensajes":
-    st.title("💬 Canal de Comunicación Interno")
-    usuario_actual = st.session_state.get('usuario_actual', '')
-    nombre_actual  = st.session_state.get('nombre_usuario', '')
-    rol_actual_msg = st.session_state.get('rol', '')
+    usuario_actual  = st.session_state.get('usuario_actual', '')
+    nombre_actual   = st.session_state.get('nombre_usuario', '')
+    rol_actual_msg  = st.session_state.get('rol', '')
 
-    tab_recibidos, tab_enviados, tab_nuevo = st.tabs(["📥 Recibidos", "📤 Enviados", "✉️ Nuevo Mensaje"])
+# CSS PARA BURBUJAS DE CHAT
+    st.markdown("""
+    <style>
+    .burbuja-yo    { background:#2b5be7; color:white; border-radius:18px 18px 4px 18px; padding:10px 16px; margin:4px 0; max-width:72%; float:right; clear:both; font-size:15px; }
+    .burbuja-otro  { background:#2a2a2a; color:#f0f0f0; border-radius:18px 18px 18px 4px; padding:10px 16px; margin:4px 0; max-width:72%; float:left;  clear:both; font-size:15px; }
+    .hora-chat     { font-size:11px; color:#888; clear:both; margin-bottom:6px; }
+    .hora-yo       { text-align:right; }
+    .hora-otro     { text-align:left;  }
+    .nombre-otro   { font-size:12px; color:#aaa; margin-bottom:2px; clear:both; }
+    .separador-chat{ border:none; border-top:1px solid #333; margin:8px 0; clear:both; }
+    .chat-area     { height:460px; overflow-y:auto; padding:12px 8px; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    with tab_recibidos:
-        st.subheader("📥 Mensajes Recibidos")
+# CARGAR TODOS LOS USUARIOS (excluyendo el actual)
+    try:
+        todos_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
+        otros_usuarios = [u for u in todos_usuarios if u['usuario'] != usuario_actual]
+        mapa_nombre    = {u['usuario']: u['nombre'] for u in todos_usuarios}
+    except Exception:
+        otros_usuarios = []
+        mapa_nombre    = {}
+
+# COLUMNA IZQUIERDA: LISTA DE CONTACTOS
+# COLUMNA DERECHA: VENTANA DE CHAT
+    col_contactos, col_chat = st.columns([1, 3], gap="medium")
+
+    with col_contactos:
+        st.markdown("### 💬 Chats")
+
+# OBTENER ÚLTIMOS MENSAJES POR CONTACTO PARA MOSTRAR PREVIEW
         try:
-            recibidos = supabase.table("mensajes_internos").select("*")\
-                .or_(f"destinatario.eq.{usuario_actual},destinatario_rol.eq.{rol_actual_msg},destinatario.eq.TODOS")\
+            todos_mis_msgs = supabase.table("mensajes_internos").select("*")\
+                .or_(f"remitente.eq.{usuario_actual},destinatario.eq.{usuario_actual}")\
                 .order("created_at", desc=True).execute().data or []
-        except Exception as e:
-            st.error(f"Error cargando mensajes: {e}"); recibidos = []
 
-        if not recibidos:
-            st.info("No tienes mensajes recibidos aún.")
-        for msg in recibidos:
-            leido = msg.get("leido", False)
-            with st.container():
-                cols = st.columns([0.05, 0.95])
-                with cols[0]:
-                    st.markdown("⚪" if leido else "🔵")
-                with cols[1]:
-                    dest_label = msg.get('destinatario') or f"Rol: {msg.get('destinatario_rol','?')}"
-                    with st.expander(
-                        f"{'✉️' if not leido else '📨'} **{msg.get('remitente_nombre','?')}** → {dest_label}  |  "
-                        f"{fmt_fecha_hora(msg.get('created_at'))}",
-                        expanded=not leido
-                    ):
-                        st.markdown(f"**{msg.get('asunto','Sin asunto')}**")
-                        st.write(msg.get('cuerpo',''))
-                        if not leido:
-                            if st.button("✅ Marcar como leído", key=f"leer_{msg['id']}"):
-                                supabase.table("mensajes_internos").update({"leido": True}).eq("id", msg["id"]).execute()
-                                st.rerun()
+# PARA ADMIN TAMBIÉN MENSAJES DE ROL Y BROADCAST
+            if rol_actual_msg == 'admin':
+                msgs_broadcast = supabase.table("mensajes_internos").select("*")\
+                    .or_("destinatario.eq.TODOS,destinatario_rol.eq.admin")\
+                    .order("created_at", desc=True).execute().data or []
+                todos_mis_msgs = todos_mis_msgs + [m for m in msgs_broadcast if m not in todos_mis_msgs]
+        except Exception:
+            todos_mis_msgs = []
 
-    with tab_enviados:
-        st.subheader("📤 Mensajes Enviados")
-        try:
-            enviados = supabase.table("mensajes_internos").select("*")\
-                .eq("remitente", usuario_actual)\
-                .order("created_at", desc=True).execute().data or []
-        except Exception as e:
-            st.error(f"Error cargando mensajes: {e}"); enviados = []
+# CONSTRUIR LISTA DE CONTACTOS CON LOS QUE HAY CONVERSACION + NUEVOS CONTACTOS
+        contactos_con_conv = {}
+        for m in todos_mis_msgs:
+            otro = m['destinatario'] if m['remitente'] == usuario_actual else m['remitente']
+            if otro and otro not in ('TODOS', None) and otro not in contactos_con_conv:
+                no_leidos_c = sum(1 for x in todos_mis_msgs
+                                  if x.get('destinatario') == usuario_actual
+                                  and x.get('remitente') == otro
+                                  and not x.get('leido'))
+                contactos_con_conv[otro] = {
+                    "ultimo": m.get('cuerpo','')[:30],
+                    "hora":   fmt_fecha_hora(m.get('created_at'), con_hora=False),
+                    "no_leidos": no_leidos_c
+                }
 
-        if not enviados:
-            st.info("No has enviado mensajes aún.")
-        for msg in enviados:
-            dest_label = msg.get('destinatario') or f"Rol: {msg.get('destinatario_rol','?')}"
-            with st.expander(
-                f"📤 Para: **{dest_label}**  |  {fmt_fecha_hora(msg.get('created_at'))}",
-                expanded=False
-            ):
-                st.markdown(f"**{msg.get('asunto','Sin asunto')}**")
-                st.write(msg.get('cuerpo',''))
-
-    with tab_nuevo:
-        st.subheader("✉️ Redactar Nuevo Mensaje")
-
+# ADMIN: OPCION ESPECIAL PARA MENSAJES DE ROL/BROADCAST
         if rol_actual_msg == 'admin':
-# ADMIN PUEDE ESCRIBIR A CUALQUIER USUARIO O A UN ROL COMPLETO
-            tipo_dest = st.radio("Enviar a:", ["Usuario específico", "Todos los de un rol", "Todos los usuarios"], horizontal=True, key="msg_tipo_dest")
+            msgs_rol_bcast = [m for m in todos_mis_msgs
+                              if m.get('destinatario_rol') or m.get('destinatario') == 'TODOS']
+            if msgs_rol_bcast:
+                contactos_con_conv['__broadcast__'] = {
+                    "ultimo": "Mensajes grupales / roles",
+                    "hora": "",
+                    "no_leidos": sum(1 for m in msgs_rol_bcast if not m.get('leido') and m.get('remitente') != usuario_actual)
+                }
 
-            destinatario_usuario = None
-            destinatario_rol     = None
+# AGREGAR NUEVOS CONTACTOS SIN CONVERSACION PREVIA
+        st.caption("Conversaciones activas")
+        contacto_sel = st.session_state.get('chat_contacto')
 
-            if tipo_dest == "Usuario específico":
-                try:
-                    lista_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
-                    opciones_u = {f"{u['nombre']} ({u['usuario']}) - {u['rol']}": u['usuario'] for u in lista_usuarios if u['usuario'] != usuario_actual}
-                    sel_u = st.selectbox("Seleccionar usuario:", list(opciones_u.keys()), key="msg_dest_u")
-                    destinatario_usuario = opciones_u.get(sel_u)
-                    dest_label_nuevo = sel_u
-                except Exception as e:
-                    st.error(f"Error cargando usuarios: {e}")
+        for u_key, info in contactos_con_conv.items():
+            nombre_display = "📢 Mensajes grupales" if u_key == '__broadcast__' else mapa_nombre.get(u_key, u_key)
+            badge = f" 🔵 {info['no_leidos']}" if info['no_leidos'] > 0 else ""
+            activo = "▶ " if contacto_sel == u_key else ""
+            if st.button(f"{activo}**{nombre_display}**{badge}\n{info['ultimo'][:28]}...", key=f"cont_{u_key}", use_container_width=True):
+                st.session_state['chat_contacto'] = u_key
+                st.rerun()
 
-            elif tipo_dest == "Todos los de un rol":
-                ROLES_DISPONIBLES = ["ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb",
-                                     "supervisor_enc", "diseño", "patinador_roll", "almacen",
-                                     "jefe_log", "patinador_log", "aux_log", "maquinista"]
-                sel_r = st.selectbox("Seleccionar rol:", ROLES_DISPONIBLES, key="msg_dest_r")
-                destinatario_rol     = sel_r
-                dest_label_nuevo     = f"Todos con rol: {sel_r}"
+        st.divider()
+        st.caption("Nuevo chat")
 
-            else:
-                destinatario_usuario = "TODOS"
-                dest_label_nuevo     = "Todos los usuarios"
+        opciones_nuevos = {f"{u['nombre']} ({u['rol']})": u['usuario']
+                          for u in otros_usuarios if u['usuario'] not in contactos_con_conv}
+        if opciones_nuevos:
+            nuevo_chat_sel = st.selectbox("", ["— Seleccionar —"] + list(opciones_nuevos.keys()), key="nuevo_chat_sel", label_visibility="collapsed")
+            if nuevo_chat_sel != "— Seleccionar —":
+                nuevo_dest = opciones_nuevos[nuevo_chat_sel]
+                if st.button("💬 Iniciar chat", use_container_width=True, key="btn_nuevo_chat"):
+                    st.session_state['chat_contacto'] = nuevo_dest
+                    st.rerun()
+
+# ADMIN: BOTON PARA MENSAJE A ROL/TODOS
+        if rol_actual_msg == 'admin':
+            st.divider()
+            st.caption("Mensajes grupales (admin)")
+            if st.button("📢 Enviar a rol / todos", use_container_width=True, key="btn_grupal"):
+                st.session_state['chat_contacto'] = '__broadcast__'
+                st.rerun()
+
+    with col_chat:
+        contacto_activo = st.session_state.get('chat_contacto')
+
+        if not contacto_activo:
+            st.markdown("<br><br><br>", unsafe_allow_html=True)
+            st.info("👈 Selecciona un contacto para ver la conversación o inicia un chat nuevo.")
+
+        elif contacto_activo == '__broadcast__':
+# VISTA ESPECIAL ADMIN: mensajes de rol / broadcast
+            st.markdown("### 📢 Mensajes Grupales")
+            try:
+                msgs_g = supabase.table("mensajes_internos").select("*")\
+                    .or_("destinatario_rol.neq.null,destinatario.eq.TODOS")\
+                    .not_.is_("destinatario_rol", "null")\
+                    .order("created_at", desc=True).execute().data or []
+                msgs_bcast = supabase.table("mensajes_internos").select("*")\
+                    .eq("destinatario", "TODOS")\
+                    .order("created_at", desc=True).execute().data or []
+                msgs_g = msgs_g + [m for m in msgs_bcast if m not in msgs_g]
+            except Exception:
+                msgs_g = []
+
+            chat_html = '<div class="chat-area">'
+            for m in reversed(msgs_g):
+                es_mio = m['remitente'] == usuario_actual
+                dest_txt = f"Rol: {m['destinatario_rol']}" if m.get('destinatario_rol') else "Todos"
+                nombre_r = m.get('remitente_nombre', m['remitente'])
+                hora_txt = fmt_fecha_hora(m.get('created_at'))
+                if es_mio:
+                    chat_html += f'<div class="burbuja-yo">📢 Para {dest_txt}<br>{m["cuerpo"]}</div><div class="hora-chat hora-yo">{hora_txt}</div>'
+                else:
+                    chat_html += f'<div class="nombre-otro">{nombre_r}</div><div class="burbuja-otro">📢 Para {dest_txt}<br>{m["cuerpo"]}</div><div class="hora-chat hora-otro">{hora_txt}</div>'
+            chat_html += '</div>'
+            st.markdown(chat_html, unsafe_allow_html=True)
+
+            st.divider()
+            with st.form("form_grupal", clear_on_submit=True):
+                ROLES_DISPONIBLES = ["ventas","supervisor_imp","supervisor_cor","supervisor_reb",
+                                     "supervisor_enc","diseño","patinador_roll","almacen",
+                                     "jefe_log","patinador_log","aux_log","maquinista"]
+                tipo_g = st.radio("Enviar a:", ["Todos los de un rol", "Todos los usuarios"], horizontal=True, key="radio_g")
+                sel_rol_g = st.selectbox("Rol:", ROLES_DISPONIBLES, key="sel_rol_g") if tipo_g == "Todos los de un rol" else None
+                texto_g = st.text_area("Mensaje:", height=80, key="txt_g")
+                if st.form_submit_button("📢 Enviar", use_container_width=True):
+                    if texto_g.strip():
+                        supabase.table("mensajes_internos").insert({
+                            "remitente": usuario_actual, "remitente_nombre": nombre_actual,
+                            "destinatario": None if sel_rol_g else "TODOS",
+                            "destinatario_rol": sel_rol_g,
+                            "asunto": "Mensaje grupal", "cuerpo": texto_g.strip(), "leido": False
+                        }).execute()
+                        st.rerun()
 
         else:
-# CUALQUIER ROL PUEDE ESCRIBIRLE A CUALQUIER OTRO USUARIO (chat 1 a 1)
+# CHAT 1 A 1
+            nombre_contacto = mapa_nombre.get(contacto_activo, contacto_activo)
+            st.markdown(f"### 💬 {nombre_contacto}")
+
             try:
-                lista_usuarios_msg = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
-                opciones_todos = {
-                    f"{u['nombre']} ({u['rol']})": u['usuario']
-                    for u in lista_usuarios_msg
-                    if u['usuario'] != usuario_actual
-                }
-                sel_dest = st.selectbox("Enviar a:", list(opciones_todos.keys()), key="msg_dest_u_otros")
-                destinatario_usuario = opciones_todos.get(sel_dest)
-                dest_label_nuevo     = sel_dest
-                destinatario_rol     = None
+                conv = supabase.table("mensajes_internos").select("*")\
+                    .or_(
+                        f"and(remitente.eq.{usuario_actual},destinatario.eq.{contacto_activo}),"
+                        f"and(remitente.eq.{contacto_activo},destinatario.eq.{usuario_actual})"
+                    ).order("created_at").execute().data or []
             except Exception as e:
-                st.error(f"Error cargando usuarios: {e}")
-                destinatario_usuario = None
-                dest_label_nuevo     = ""
-                destinatario_rol     = None
+                st.error(f"Error cargando chat: {e}"); conv = []
 
-        asunto = st.text_input("📌 Asunto:", key="msg_asunto")
-        cuerpo = st.text_area("💬 Mensaje:", key="msg_cuerpo", height=150)
-
-        if st.button("📨 Enviar Mensaje", use_container_width=True, key="msg_enviar"):
-            if not asunto.strip():
-                st.warning("El asunto no puede estar vacío.")
-            elif not cuerpo.strip():
-                st.warning("El mensaje no puede estar vacío.")
-            else:
-                nuevo_msg = {
-                    "remitente":         usuario_actual,
-                    "remitente_nombre":  nombre_actual,
-                    "destinatario":      destinatario_usuario,
-                    "destinatario_rol":  destinatario_rol,
-                    "asunto":            asunto.strip(),
-                    "cuerpo":            cuerpo.strip(),
-                    "leido":             False
-                }
+# MARCAR COMO LEÍDOS AUTOMÁTICAMENTE AL ABRIR
+            ids_no_leidos = [m['id'] for m in conv if not m.get('leido') and m['remitente'] == contacto_activo]
+            if ids_no_leidos:
                 try:
-                    supabase.table("mensajes_internos").insert(nuevo_msg).execute()
-                    st.success(f"✅ Mensaje enviado correctamente a {dest_label_nuevo}.")
-                    time.sleep(1)
+                    for msg_id in ids_no_leidos:
+                        supabase.table("mensajes_internos").update({"leido": True}).eq("id", msg_id).execute()
+                except Exception:
+                    pass
+
+# RENDERIZAR BURBUJAS
+            chat_html = '<div class="chat-area">'
+            for m in conv:
+                es_mio   = m['remitente'] == usuario_actual
+                hora_txt = fmt_fecha_hora(m.get('created_at'))
+                texto    = m.get('cuerpo', '')
+                if es_mio:
+                    chat_html += f'<div class="burbuja-yo">{texto}</div><div class="hora-chat hora-yo">{hora_txt} ✓{"✓" if m.get("leido") else ""}</div>'
+                else:
+                    chat_html += f'<div class="burbuja-otro">{texto}</div><div class="hora-chat hora-otro">{hora_txt}</div>'
+            if not conv:
+                chat_html += '<div style="text-align:center;color:#666;margin-top:60px">No hay mensajes aún. ¡Escribe el primero!</div>'
+            chat_html += '</div>'
+            st.markdown(chat_html, unsafe_allow_html=True)
+
+            st.divider()
+# CAJA DE TEXTO + BOTÓN ENVIAR
+            with st.form("form_chat", clear_on_submit=True):
+                cols_input = st.columns([5, 1])
+                texto_nuevo = cols_input[0].text_input("", placeholder=f"Escribe un mensaje a {nombre_contacto}...", label_visibility="collapsed", key="txt_chat")
+                enviar = cols_input[1].form_submit_button("Enviar ➤", use_container_width=True)
+                if enviar and texto_nuevo.strip():
+                    supabase.table("mensajes_internos").insert({
+                        "remitente":        usuario_actual,
+                        "remitente_nombre": nombre_actual,
+                        "destinatario":     contacto_activo,
+                        "destinatario_rol": None,
+                        "asunto":           "chat",
+                        "cuerpo":           texto_nuevo.strip(),
+                        "leido":            False
+                    }).execute()
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Error al enviar el mensaje: {e}")
+
 
 if menu == "🛒 Mercado":
     usuario_actual = st.session_state.get('usuario_actual', '')
