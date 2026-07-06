@@ -1353,6 +1353,55 @@ if menu == "🖥️ Monitor":
         for al in alertas:
             st.warning(al)
 
+# ALERTAS DE 3+ DIAS (SOLO VISIBLES PARA ADMIN)
+    if st.session_state.get('rol', '').lower() == 'admin':
+        alertas_3d = []
+
+# CASO 1: OP ACTIVA EN UNA MAQUINA QUE LLEVA 3+ DIAS SIN FINALIZARSE
+        for a in act_data:
+            try:
+                if not diccionario_estados.get(a['maquina'], True):
+                    continue
+                inicio_a = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
+                dias_en_maquina = (hora_colombia() - inicio_a.astimezone(pytz.timezone("America/Bogota"))).days
+                if dias_en_maquina >= 3:
+                    alertas_3d.append(f"🕒 OP {a['op']} en {a['maquina']} lleva {dias_en_maquina} día(s) SIN FINALIZARSE en la máquina")
+            except Exception as e:
+                print(f"Error en alerta 3 dias (activa): {e}")
+
+# CASO 2: OP CREADA HACE 3+ DIAS QUE NUNCA HA ENTRADO A NINGUNA MAQUINA
+        try:
+            ops_espera = supabase.table("ordenes_planeadas").select(
+                "op,cliente,nombre_trabajo,proxima_area,historial_procesos,created_at,fecha_creacion"
+            ).execute().data or []
+        except Exception:
+            ops_espera = []
+
+        ops_activas_ids = {str(a['op']) for a in act_data}
+        for o in ops_espera:
+            try:
+                if (o.get('proxima_area') or '').upper() == "FINALIZADO":
+                    continue
+                if str(o.get('op')) in ops_activas_ids:
+                    continue
+                if o.get('historial_procesos'):
+                    continue  # ya tuvo movimiento en algun momento, no aplica este caso
+                raw_fecha = o.get('created_at') or o.get('fecha_creacion')
+                if not raw_fecha:
+                    continue
+                dt_creacion = datetime.fromisoformat(str(raw_fecha).replace("Z", "")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
+                dias_sin_entrar = (hora_colombia() - dt_creacion).days
+                if dias_sin_entrar >= 3:
+                    alertas_3d.append(f"📋 OP {o.get('op')} ({o.get('cliente','')}) lleva {dias_sin_entrar} día(s) creada SIN ENTRAR a ninguna máquina")
+            except Exception as e:
+                print(f"Error en alerta 3 dias (creacion): {e}")
+
+        if alertas_3d:
+            st.markdown("---")
+            with st.expander(f"🕒 {len(alertas_3d)} ALERTA(S) DE 3+ DÍAS — solo visibles para Admin", expanded=True):
+                for al in alertas_3d:
+                    st.warning(al)
+
 # PREPARAR DATOS DE OPERACIONES 
     ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
     map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
@@ -1445,6 +1494,42 @@ elif menu == "🔍 Seguimiento":
 
         ordenes_pendientes = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() != "FINALIZADO"]
         ordenes_finalizadas = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() == "FINALIZADO"]
+
+# ALERTA DE OPs QUIETAS (5+ DIAS SIN MOVIMIENTO) — SOLO VISIBLE PARA ADMIN
+        rol_seg_actual = st.session_state.get('rol', '').lower()
+        if rol_seg_actual == 'admin':
+            tz_col = pytz.timezone("America/Bogota")
+            ahora_seg = hora_colombia()
+            alertas_quietas = []
+            for r in ordenes_pendientes:
+                try:
+                    ultima_dt = None
+                    hist_r = r.get('historial_procesos') or []
+                    if hist_r:
+                        raw_ult = hist_r[-1].get('fecha') or hist_r[-1].get('fin') or hist_r[-1].get('inicio')
+                        if raw_ult:
+                            try:
+                                ultima_dt = tz_col.localize(datetime.strptime(raw_ult, "%d/%m/%Y %H:%M"))
+                            except Exception:
+                                ultima_dt = None
+                    if ultima_dt is None:
+                        raw_creacion = r.get('created_at') or r.get('fecha_creacion')
+                        if raw_creacion:
+                            ultima_dt = datetime.fromisoformat(str(raw_creacion).replace("Z", "")).replace(tzinfo=pytz.utc).astimezone(tz_col)
+                    if ultima_dt is None:
+                        continue
+                    dias_quieta = (ahora_seg - ultima_dt).days
+                    if dias_quieta >= 5:
+                        alertas_quietas.append(
+                            f"🕒 OP {r.get('op')} ({r.get('cliente','')}) lleva {dias_quieta} día(s) SIN MOVIMIENTO — en espera de {r.get('proxima_area','SIN ÁREA')}"
+                        )
+                except Exception as e:
+                    print(f"Error en alerta OP quieta: {e}")
+
+            if alertas_quietas:
+                with st.expander(f"🚨 {len(alertas_quietas)} OP(s) QUIETAS por 5+ días — solo visibles para Admin", expanded=True):
+                    for al in alertas_quietas:
+                        st.warning(al)
 
 # SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
         def _categoria_op(row):
