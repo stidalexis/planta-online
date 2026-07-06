@@ -1057,7 +1057,16 @@ def modal_detalle_op(row):
         for h in hist:
 
 # TARJETA ESPECIAL PARA EDICIONES (no es un paso de produccion, es un cambio en los datos de la OP)
-            if h.get('area') == 'EDICIÓN':
+# Se usa startswith('EDIC') en vez de comparar el string completo, para que no falle
+# por temas de codificacion de tildes (Ó) que a veces llegan distinto desde la base de datos.
+            if (h.get('area') or '').strip().upper().startswith('EDIC') or (h.get('tipo') or '').strip().upper().startswith('EDIC'):
+                motivo_edicion = (
+                    h.get('observaciones')
+                    or h.get('motivo')
+                    or h.get('motivo_edicion')
+                    or (h.get('nota', '').replace('Editado: ', '') if h.get('nota') else None)
+                    or 'Sin motivo registrado'
+                )
                 with st.container():
                     st.markdown(f"""
                     <div class='historial-card'>
@@ -1067,7 +1076,7 @@ def modal_detalle_op(row):
                         </div>
                         <div class='historial-tecnico'>
                             <div>👤 <b>Editado por:</b> {h.get('operario') or h.get('usuario') or 'N/A'}</div>
-                            <div>📝 <b>Motivo:</b> {h.get('observaciones') or 'Sin motivo registrado'}</div>
+                            <div>📝 <b>Motivo:</b> {motivo_edicion}</div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -2812,14 +2821,20 @@ elif menu == "📊 Reportes Admin":
                     else:
                         st.markdown("**🔗 Línea de tiempo de producción:**")
                         for paso_idx, paso in enumerate(historial, start=1):
-                            if paso.get('area') == 'EDICIÓN':
+                            if (paso.get('area') or '').strip().upper().startswith('EDIC') or (paso.get('tipo') or '').strip().upper().startswith('EDIC'):
+                                motivo_edicion_traza = (
+                                    paso.get('observaciones')
+                                    or paso.get('motivo')
+                                    or paso.get('motivo_edicion')
+                                    or (paso.get('nota', '').replace('Editado: ', '') if paso.get('nota') else None)
+                                    or 'Sin motivo registrado'
+                                )
                                 st.markdown(
                                     f"**{paso_idx}. ✏️ EDICIÓN DE LA ORDEN** — "
                                     f"Editado por: {paso.get('operario') or paso.get('usuario','-')}  |  "
                                     f"{paso.get('fecha','-')}"
                                 )
-                                if paso.get("observaciones"):
-                                    st.caption(f"📝 Motivo: {paso['observaciones']}")
+                                st.caption(f"📝 Motivo: {motivo_edicion_traza}")
                                 st.divider()
                                 continue
                             st.markdown(
