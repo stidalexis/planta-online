@@ -1361,7 +1361,7 @@ def calcular_tiempo_en_area(op_data):
 # RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
 # Se usa tanto en Diseño y Pre-Prensa como en Auditoria Ventas, para revisar la orden
 # antes de aprobarla o pasarla a la siguiente etapa.
-def radiografia_completa_op(datos):
+def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
 
     with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
@@ -1407,7 +1407,8 @@ def radiografia_completa_op(datos):
     with c_obs1:
         st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
         st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
-        st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
+        if mostrar_obs_auditoria1:
+            st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
     with c_obs2:
         if datos.get('detalles_partes_json'):
             st.write("**📑 Estructura de Partes (Papel/Tintas):**")
@@ -2064,16 +2065,11 @@ elif menu == "🧐 Auditoría Ventas":
         datos_op_av = next((o for o in op_pendientes_av if str(o['op']) == str(op_id_av)), None)
 
         if datos_op_av:
-            radiografia_completa_op(datos_op_av)
+            radiografia_completa_op(datos_op_av, mostrar_obs_auditoria1=False)
             st.divider()
 
             ruta_siguiente_av = ruta_despues_de_auditoria_ventas(datos_op_av.get('tipo_orden', ''))
             st.info(f"➡️ Al aprobarse, esta orden seguirá su ruta hacia: **{ruta_siguiente_av}**")
-
-            obs_auditoria_ventas = st.text_area(
-                "✍️ Observaciones de la auditoría (opcional):",
-                key="obs_aud_ventas"
-            )
 
             if st.button("✅ MARCAR COMO REVISADO — CONTINUAR RUTA", use_container_width=True, key="btn_aprobar_aud_ventas"):
                 _, tiempo_area_txt_av = calcular_tiempo_en_area(datos_op_av)
@@ -2085,8 +2081,7 @@ elif menu == "🧐 Auditoría Ventas":
                     "operario": st.session_state.get('nombre_usuario', '?'),
                     "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
                     "duracion": tiempo_area_txt_av,
-                    "tiempo_total_area": tiempo_area_txt_av,
-                    "observaciones": obs_auditoria_ventas
+                    "tiempo_total_area": tiempo_area_txt_av
                 })
                 supabase.table("ordenes_planeadas").update({
                     "proxima_area": ruta_siguiente_av,
@@ -3001,6 +2996,19 @@ elif menu == "📊 Reportes Admin":
                     st.markdown(f"**Trabajo:** {o.get('nombre_trabajo','-')}  |  **Tipo:** {o.get('tipo_orden','-')}")
 
                     historial = o.get("historial_procesos") or []
+
+# RESUMEN RAPIDO DE TIEMPOS POR AREA (areas ya completadas, en el orden que las paso)
+# Esto responde "cuanto duro en el area anterior" sin tener que abrir la linea de tiempo completa de abajo.
+                    resumen_tiempos = []
+                    for h in historial:
+                        area_h = (h.get('area') or '').strip().upper()
+                        tipo_h = (h.get('tipo') or '').strip().upper()
+                        if area_h.startswith('EDIC') or tipo_h.startswith('EDIC'):
+                            continue
+                        t_area = h.get('tiempo_total_area') or h.get('duracion') or '-'
+                        resumen_tiempos.append(f"**{h.get('area','-')}**: {t_area}")
+                    if resumen_tiempos:
+                        st.success("📊 Tiempo que duró en cada área anterior:  " + "   |   ".join(resumen_tiempos))
 
 # TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado, se calcula en vivo)
                     if estado_actual != "FINALIZADO":
