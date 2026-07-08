@@ -95,11 +95,15 @@ def _es_hash_bcrypt(valor) -> bool:
     return isinstance(valor, str) and valor.startswith(("$2a$", "$2b$", "$2y$"))
 
 
+# Convierte una contrasena de texto plano en un hash seguro (bcrypt) para guardarla cifrada en la base de datos
 def _hashear_clave(clave_texto: str) -> str:
     """Genera un hash bcrypt seguro a partir de una clave en texto plano."""
     return bcrypt.hashpw(clave_texto.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
+# Valida usuario y clave contra la tabla de usuarios en Supabase.
+# Si la clave de ese usuario todavia estaba guardada sin cifrar (cuentas muy antiguas),
+# la cifra automaticamente con bcrypt la primera vez que valida bien, sin que el usuario haga nada.
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     """
     Valida usuario/clave contra Supabase usando hash bcrypt.
@@ -153,6 +157,7 @@ MESES_ES = {
     7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
 }
 
+# Devuelve la fecha de creacion de una orden ya formateada como DD/MM/AAAA, lista para mostrar o imprimir
 def _fecha_creacion_legible(row):
     """Devuelve la fecha de creacion de la OP en formato 'Mes DD del AAAA', en español (hora Colombia)."""
     raw = row.get('created_at') or row.get('fecha_creacion') or ''
@@ -165,6 +170,7 @@ def _fecha_creacion_legible(row):
     except Exception:
         return fecha_dd_mm_aaaa or "-"
 
+# Dibuja en el PDF la cajita con la fecha de creacion de la orden (se usa en rotulos y ordenes de produccion)
 def dibujar_caja_fecha_creacion(pdf, row, x=145, y=4, w=63, h=16):
     """Escribe la fecha de creacion de la OP en la esquina opuesta al logo,
     solo como texto (sin caja ni fondo), a juego con el resto del encabezado.
@@ -181,6 +187,7 @@ def dibujar_caja_fecha_creacion(pdf, row, x=145, y=4, w=63, h=16):
 
     pdf.set_xy(x0, y0)
 
+# Escribe texto dentro de una celda del PDF reduciendo el tamano de letra si el texto no cabe, para que nunca se corte
 def cell_fit(pdf, w, h, text, border=1):
 
     text = str(text)
@@ -190,6 +197,7 @@ def cell_fit(pdf, w, h, text, border=1):
 
     pdf.cell(w, h, text, border)
 
+# Divide un texto largo en varias lineas para que quepa dentro del ancho (en mm) disponible en el PDF
 def _lineas_ajustadas(pdf, texto, ancho_mm):
     """Parte un texto en lineas que caben dentro de ancho_mm con la fuente actual de pdf."""
     texto = str(texto) if texto is not None else ""
@@ -209,6 +217,7 @@ def _lineas_ajustadas(pdf, texto, ancho_mm):
         lineas.append(actual)
     return lineas if lineas else [""]
 
+# Dibuja una fila de celdas alineadas, tipo tabla, dentro del PDF
 def fila_grid(pdf, celdas, h_linea=7):
     """
     Dibuja una fila de celdas lado a lado tipo grilla (como pdf.cell en serie),
@@ -246,6 +255,8 @@ def hora_colombia():
     tz = pytz.timezone("America/Bogota")
     return datetime.now(tz)
 
+# FUNCION CENTRAL DE FORMATO DE FECHAS: convierte cualquier fecha/hora que llegue de la base de datos
+# (con o sin zona horaria, con o sin segundos) al formato unico DD/MM/AAAA HH:MM en hora Colombia
 def fmt_fecha_hora(valor, con_hora=True):
     """
     Convierte CUALQUIER fecha/hora (string ISO con o sin zona horaria, en UTC,
@@ -281,6 +292,7 @@ def fmt_fecha_hora(valor, con_hora=True):
     except Exception:
         return valor
 
+# Aplica fmt_fecha_hora a todas las columnas de fecha de una tabla (DataFrame) para mostrarla legible en pantalla
 def formatear_fechas_df(df, columnas=None):
     """
     Aplica fmt_fecha_hora a las columnas de fecha de un DataFrame. Si no se
@@ -298,6 +310,7 @@ def formatear_fechas_df(df, columnas=None):
             df[c] = df[c].apply(fmt_fecha_hora)
     return df
 
+# Consulta si la PLANTA ENTERA esta ACTIVA o DETENIDA (interruptor general que pausa el conteo de tiempos de todas las maquinas)
 def get_planta_activa() -> bool:
     """Consulta si la planta está activa en Supabase. Cache 10 segundos."""
     cache_key = '_planta_activa_cache'
@@ -315,6 +328,7 @@ def get_planta_activa() -> bool:
     st.session_state[cache_ts]  = ahora
     return activa
 
+# Enciende o apaga el interruptor general de planta (solo lo usa el administrador, ej: para almuerzo general o corte de energia)
 def set_planta_activa(estado: bool, usuario: str = "admin"):
     """Activa o desactiva la planta globalmente. Usa upsert por si la fila no existe."""
     supabase.table("configuracion_sistema").upsert({
@@ -328,6 +342,7 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
     st.session_state.pop('_planta_activa_cache', None)
     st.session_state.pop('_planta_activa_ts', None)
 
+# Consulta si un area especifica (Impresion, Corte, etc.) esta activa o detenida en este momento
 def get_area_activa(area: str) -> bool:
     """Consulta si un AREA especifica esta activa (independiente del interruptor general). Cache 10 segundos."""
     cache_key = f'_area_activa_cache_{area}'
@@ -346,6 +361,7 @@ def get_area_activa(area: str) -> bool:
     st.session_state[cache_ts]  = ahora
     return activa
 
+# Enciende o apaga el interruptor de UN AREA especifica, sin afectar a las demas (solo administrador)
 def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     """Activa o desactiva UN AREA especifica.
     NOTA TECNICA: la columna 'id' de esta tabla tiene un valor por defecto fijo
@@ -493,6 +509,7 @@ def generar_rotulo_pdf(row):
 
     return bytes(pdf.output())
 
+# GENERA EL PDF DE ORDEN DE PRODUCCION — version base/generica (encabezado y estructura comun del documento)
 def generar_pdf_op(row):
     pdf = FPDF()
     pdf.add_page()
@@ -629,6 +646,7 @@ def generar_pdf_op(row):
     
     return bytes(pdf.output())
 
+# GENERA EL PDF DE ORDEN DE PRODUCCION — version para ROLLOS (impresos o blancos)
 def generar_op_rollos(row):
     pdf = FPDF()
     pdf.add_page()
@@ -901,6 +919,7 @@ def generar_op_formas(row):
 
     return bytes(pdf.output())
 
+# GENERA EL PDF DE ORDEN DE PRODUCCION — version para REBOBINADO
 def generar_op_rebobinado(row):
     pdf = FPDF()
     pdf.add_page()
@@ -1148,9 +1167,11 @@ with st.sidebar:
     
 # DEFINICION DE PERMISOS SEGUN ROL
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
+        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🧐 Auditoría Ventas", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
+    elif rol == 'aud_ventas':
+        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "🔍 Seguimiento"]
     elif rol == 'jefe_log':
         opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos"]
     elif rol == 'patinador_log':
@@ -1225,6 +1246,7 @@ def obtener_estado_maquina(nombre_maquina):
     except:
         return True
 
+# Cambia el estado ON/OFF de UNA maquina puntual (activa <-> fuera de servicio), usado por el administrador desde el Monitor
 def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
     try:
         supabase.table("estado_maquinas").upsert({
@@ -1236,6 +1258,7 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
         st.error(f"Error al cambiar estado: {e}")
 
 
+# Calcula hace cuanto tiempo una maquina no tiene actividad, para sumar ese tiempo como "tiempo libre entre OPs" en las estadisticas
 def obtener_ultima_actividad_maquina(nombre_maquina):
     """
     Busca en el historial de TODAS las ordenes cual fue la ultima vez que esta
@@ -1263,6 +1286,134 @@ def obtener_ultima_actividad_maquina(nombre_maquina):
                 except Exception:
                     continue
     return ultima_fecha
+
+
+# RUTA DE LA OP DESPUES DE SER REVISADA EN AUDITORIA VENTAS
+# Es la misma logica que antes decidia la ruta inicial al crear la OP; ahora se usa
+# despues de que el auditor de ventas la marca como revisada, no en el momento de crearla.
+def ruta_despues_de_auditoria_ventas(tipo_orden):
+    if tipo_orden == "FORMAS IMPRESAS":
+        return "DISEÑO (AUDITORIA)"
+    elif tipo_orden == "FORMAS BLANCAS":
+        return "IMPRESIÓN"
+    elif tipo_orden == "ROLLOS IMPRESOS":
+        return "DISEÑO (AUDITORIA)"
+    elif tipo_orden == "ROLLOS BLANCOS":
+        return "CORTE"
+    elif tipo_orden == "REBOBINADO":
+        return "REBOBINADORAS"
+    return "IMPRESIÓN"
+
+
+# CALCULO DE TIEMPO EN AREA (desde que la OP entro al area actual hasta ahora o hasta que se cierra)
+def _ultima_fecha_relevante_historial(historial):
+    """
+    Devuelve el datetime (hora Colombia) del ultimo paso 'real' del historial de una OP,
+    ignorando las tarjetas de EDICION (esas no representan tiempo de ningun area, son
+    solo un cambio de datos). Se usa como el momento en que la OP 'entro' a su area actual.
+    """
+    tz = pytz.timezone("America/Bogota")
+    for h in reversed(historial or []):
+        area_h = (h.get('area') or '').strip().upper()
+        tipo_h = (h.get('tipo') or '').strip().upper()
+        if area_h.startswith('EDIC') or tipo_h.startswith('EDIC'):
+            continue
+        raw = h.get('fecha') or h.get('fin') or h.get('inicio')
+        if not raw:
+            continue
+        try:
+            return tz.localize(datetime.strptime(raw, "%d/%m/%Y %H:%M"))
+        except Exception:
+            try:
+                dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+                return dt.astimezone(tz) if dt.tzinfo else tz.localize(dt)
+            except Exception:
+                continue
+    return None
+
+
+def calcular_tiempo_en_area(op_data):
+    """
+    Calcula cuanto tiempo lleva (o llevó) una OP en su area actual: desde el
+    ultimo paso 'real' registrado en su historial (ignorando ediciones), o si
+    todavía no tiene ningún paso, desde que se creó la OP. Se usa tanto para
+    guardar cuanto duró un area al cerrarla (Diseño, Auditoria Ventas, etc.)
+    como para mostrar en Trazabilidad cuánto lleva esperando una OP en el area
+    donde está en este momento.
+    Devuelve una tupla (segundos, texto 'H:MM:SS').
+    """
+    tz = pytz.timezone("America/Bogota")
+    entrada = _ultima_fecha_relevante_historial(op_data.get('historial_procesos'))
+    if entrada is None:
+        raw_creacion = op_data.get('created_at') or op_data.get('fecha_creacion')
+        if raw_creacion:
+            try:
+                dt = datetime.fromisoformat(str(raw_creacion).replace("Z", "+00:00"))
+                entrada = dt.astimezone(tz) if dt.tzinfo else tz.localize(dt)
+            except Exception:
+                entrada = None
+    if entrada is None:
+        return 0, "N/A"
+    segundos = max(0, (hora_colombia() - entrada).total_seconds())
+    return segundos, str(timedelta(seconds=int(segundos)))
+
+
+# RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
+# Se usa tanto en Diseño y Pre-Prensa como en Auditoria Ventas, para revisar la orden
+# antes de aprobarla o pasarla a la siguiente etapa.
+def radiografia_completa_op(datos):
+    st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
+
+    with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
+        c1, c2, c3, c4 = st.columns(4)
+        c1.write(f"**OP #:**\n{datos.get('op')}")
+        c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
+        c2.write(f"**CLIENTE:**\n{datos.get('cliente')}")
+        c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
+        c3.write(f"**FECHA DE CREACION:**\n{fmt_fecha_hora(datos.get('created_at'))}")
+        c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
+        c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
+        c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
+
+    with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
+        c1, c2, c3, c4 = st.columns(4)
+        with c1:
+            st.markdown("**ADICIONALES ROLLOS**")
+            st.write(f"**Tintas Frente:** {datos.get('tintas_frente_rollos')}")
+            st.write(f"Tintas Respaldo: {datos.get('tintas_respaldo_rollos')}")
+            st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
+            st.write(f"Core: {datos.get('core')}")
+        with c2:
+            st.markdown("**ADICIONALES ROLLOS**")
+            st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
+            st.write(f"Unidades Por Bolsa: {datos.get('unidades_bolsa')}")
+            st.write(f"Unidades Por Caja: {datos.get('unidades_caja')}")
+            st.write(f"Repeticion : {datos.get('tipo_origen')}")
+        with c3:
+            st.markdown("**ADICIONALES FORMAS**")
+            st.write(f"Perforaciones: {datos.get('perforaciones_detalle')}")
+            st.write(f"Codigo De Barras: {datos.get('codigo_barras_detalle')}")
+            st.write(f"Numeracion Inicial: {datos.get('num_id')}")
+            st.write(f"Numeracion Final: {datos.get('num_fd')}")
+
+        with c4:
+            st.markdown("**ADICIONALES DE FORMAS**")
+            st.write(f"Presentacion: {datos.get('presentacion')}")
+            st.write(f"Encolada O Grapada Por: {datos.get('presentacion2', 0)}")
+            st.write(f"Numero De Partes: {datos.get('num_partes', 0)}")
+            st.write(f"Numero De Formas: {datos.get('cantidad_formas', 0)}")
+
+    c_obs1, c_obs2 = st.columns(2)
+    with c_obs1:
+        st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
+        st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
+        st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
+    with c_obs2:
+        if datos.get('detalles_partes_json'):
+            st.write("**📑 Estructura de Partes (Papel/Tintas):**")
+            st.table(datos.get('detalles_partes_json'))
+        else:
+            st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
 
 
 # MODULO MONITOR 
@@ -1764,60 +1915,6 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
-    def radiografia_completa_op(datos):
-        st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
-        
-        with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
-            c1, c2, c3, c4 = st.columns(4)
-            c1.write(f"**OP #:**\n{datos.get('op')}")
-            c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
-            c2.write(f"**CLIENTE:**\n{datos.get('cliente')}")
-            c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
-            c3.write(f"**FECHA DE CREACION:**\n{fmt_fecha_hora(datos.get('created_at'))}")
-            c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
-            c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
-            c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
-
-        with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
-            c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                st.markdown("**ADICIONALES ROLLOS**")
-                st.write(f"**Tintas Frente:** {datos.get('tintas_frente_rollos')}")
-                st.write(f"Tintas Respaldo: {datos.get('tintas_respaldo_rollos')}")
-                st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
-                st.write(f"Core: {datos.get('core')}")
-            with c2:
-                st.markdown("**ADICIONALES ROLLOS**")
-                st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
-                st.write(f"Unidades Por Bolsa: {datos.get('unidades_bolsa')}")
-                st.write(f"Unidades Por Caja: {datos.get('unidades_caja')}")
-                st.write(f"Repeticion : {datos.get('tipo_origen')}")
-            with c3:
-                st.markdown("**ADICIONALES FORMAS**")
-                st.write(f"Perforaciones: {datos.get('perforaciones_detalle')}")
-                st.write(f"Codigo De Barras: {datos.get('codigo_barras_detalle')}")
-                st.write(f"Numeracion Inicial: {datos.get('num_id')}")
-                st.write(f"Numeracion Final: {datos.get('num_fd')}")
-            
-            with c4:
-                st.markdown("**ADICIONALES DE FORMAS**")
-                st.write(f"Presentacion: {datos.get('presentacion')}")
-                st.write(f"Encolada O Grapada Por: {datos.get('presentacion2', 0)}")
-                st.write(f"Numero De Partes: {datos.get('num_partes', 0)}")
-                st.write(f"Numero De Formas: {datos.get('cantidad_formas', 0)}")
-
-        c_obs1, c_obs2 = st.columns(2)
-        with c_obs1:
-            st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
-            st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
-            st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
-        with c_obs2:
-            if datos.get('detalles_partes_json'):
-                st.write("**📑 Estructura de Partes (Papel/Tintas):**")
-                st.table(datos_op.get('detalles_partes_json'))
-            else:
-                st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
-
 #  DEFINICION DE VENTANAS
     tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLANCHA"])
 
@@ -1846,11 +1943,24 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 
                 if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
                     if link_arte:
+                        _, tiempo_area_txt = calcular_tiempo_en_area(datos_op)
+                        hist_dis = datos_op.get('historial_procesos') or []
+                        hist_dis.append({
+                            "area": "DISEÑO (AUDITORIA)",
+                            "maquina": "—",
+                            "tipo": "DISEÑO",
+                            "operario": st.session_state.get('nombre_usuario', '?'),
+                            "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                            "duracion": tiempo_area_txt,
+                            "tiempo_total_area": tiempo_area_txt,
+                            "observaciones": obs_dis
+                        })
                         update_data = {
                             "link_diseno": link_arte, 
                             "observaciones_diseno": obs_dis,
                             "observaciones_diseno2": obs_dise,  
-                            "proxima_area": "PRE-PRENSA"
+                            "proxima_area": "PRE-PRENSA",
+                            "historial_procesos": hist_dis
                         }
                         supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
                         st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
@@ -1876,7 +1986,22 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 radiografia_completa_op(datos_op_2)
                 
                 if st.button("🚀 ENVIAR A REVISIÓN FINAL", use_container_width=True):
-                    supabase.table("ordenes_planeadas").update({"proxima_area": "REVISION_FINAL"}).eq("op", op_id_2).execute()
+                    _, tiempo_area_txt2 = calcular_tiempo_en_area(datos_op_2)
+                    hist_pre = datos_op_2.get('historial_procesos') or []
+                    hist_pre.append({
+                        "area": "PRE-PRENSA",
+                        "maquina": "—",
+                        "tipo": "DISEÑO",
+                        "operario": st.session_state.get('nombre_usuario', '?'),
+                        "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                        "duracion": tiempo_area_txt2,
+                        "tiempo_total_area": tiempo_area_txt2,
+                        "observaciones": ""
+                    })
+                    supabase.table("ordenes_planeadas").update({
+                        "proxima_area": "REVISION_FINAL",
+                        "historial_procesos": hist_pre
+                    }).eq("op", op_id_2).execute()
                     st.success("Enviado a Revisión Final."); time.sleep(1); st.rerun()
 
 # REVISION FINAL CON PLANCHA 
@@ -1898,12 +2023,79 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
                 if st.button("🏁 FINALIZAR Y ENVIAR A IMPRESIÓN", use_container_width=True):
 
+                    _, tiempo_area_txt3 = calcular_tiempo_en_area(datos_op_3)
+                    hist_rev = datos_op_3.get('historial_procesos') or []
+                    hist_rev.append({
+                        "area": "REVISION_FINAL",
+                        "maquina": "—",
+                        "tipo": "DISEÑO",
+                        "operario": st.session_state.get('nombre_usuario', '?'),
+                        "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                        "duracion": tiempo_area_txt3,
+                        "tiempo_total_area": tiempo_area_txt3,
+                        "observaciones": f"Planchas reveladas: {num_plancha}" if num_plancha else ""
+                    })
+
 # Actualizamos a IMPRESION para que pase a la planta
-                    supabase.table("ordenes_planeadas").update({"proxima_area": "IMPRESIÓN"}).eq("op", op_id_3).execute()
+                    supabase.table("ordenes_planeadas").update({
+                        "proxima_area": "IMPRESIÓN",
+                        "historial_procesos": hist_rev
+                    }).eq("op", op_id_3).execute()
                     st.success("Orden enviada a planta exitosamente."); time.sleep(1); st.rerun()
         else:
             st.info("No hay órdenes pendientes para revisión de plancha.")
             
+# MODULO PLANIFICACION 
+elif menu == "🧐 Auditoría Ventas":
+    st.title("🧐 Auditoría de Ventas")
+    st.caption("Toda OP nueva (Formas o Rollos, Impresas o Blancas, Rebobinado) pasa primero por aquí antes de seguir su ruta normal.")
+
+    op_pendientes_av = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "AUDITORIA VENTAS").execute().data
+
+    if not op_pendientes_av:
+        st.info("No hay órdenes pendientes de auditoría de ventas en este momento.")
+    else:
+        op_sel_av = st.selectbox(
+            "Seleccione OP a revisar:",
+            [f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}" for o in op_pendientes_av],
+            key="aud_ventas_sel"
+        )
+        op_id_av = op_sel_av.split(" - ")[0]
+        datos_op_av = next((o for o in op_pendientes_av if str(o['op']) == str(op_id_av)), None)
+
+        if datos_op_av:
+            radiografia_completa_op(datos_op_av)
+            st.divider()
+
+            ruta_siguiente_av = ruta_despues_de_auditoria_ventas(datos_op_av.get('tipo_orden', ''))
+            st.info(f"➡️ Al aprobarse, esta orden seguirá su ruta hacia: **{ruta_siguiente_av}**")
+
+            obs_auditoria_ventas = st.text_area(
+                "✍️ Observaciones de la auditoría (opcional):",
+                key="obs_aud_ventas"
+            )
+
+            if st.button("✅ MARCAR COMO REVISADO — CONTINUAR RUTA", use_container_width=True, key="btn_aprobar_aud_ventas"):
+                _, tiempo_area_txt_av = calcular_tiempo_en_area(datos_op_av)
+                hist_av = datos_op_av.get('historial_procesos') or []
+                hist_av.append({
+                    "area": "AUDITORIA VENTAS",
+                    "maquina": "—",
+                    "tipo": "AUDITORIA_VENTAS",
+                    "operario": st.session_state.get('nombre_usuario', '?'),
+                    "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                    "duracion": tiempo_area_txt_av,
+                    "tiempo_total_area": tiempo_area_txt_av,
+                    "observaciones": obs_auditoria_ventas
+                })
+                supabase.table("ordenes_planeadas").update({
+                    "proxima_area": ruta_siguiente_av,
+                    "historial_procesos": hist_av
+                }).eq("op", op_id_av).execute()
+                st.success(f"✅ OP {op_id_av} revisada. Continúa hacia {ruta_siguiente_av}.")
+                time.sleep(1.2)
+                st.rerun()
+
 # MODULO PLANIFICACION 
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
@@ -1928,7 +2120,7 @@ elif menu == "📅 Planificación":
 
 # Estados donde la OP aún no ha sido procesada por ningún área
     ESTADOS_EDITABLES = [
-        "DISEÑO (AUDITORIA)", "IMPRESIÓN", "CORTE", "REBOBINADORAS",
+        "AUDITORIA VENTAS", "DISEÑO (AUDITORIA)", "IMPRESIÓN", "CORTE", "REBOBINADORAS",
         "ESPERA DE AUDITORIA", "ESPERA DE CORTE", "ESPERA DE IMPRESIÓN"
     ]
 
@@ -2079,10 +2271,13 @@ elif menu == "📅 Planificación":
                         nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '')
 
                     st.markdown("---")
+# Este campo es obligatorio: el motivo queda guardado en el historial como una tarjeta especial de EDICION
                     nueva_obs_gral = st.text_area("📝 Motivo del cambio (queda registrado):",
                                         placeholder="Ej: Cliente solicitó cambio de cantidad...", key="motivo_edit")
                     btn_guardar_edit = st.form_submit_button("💾 GUARDAR CAMBIOS", use_container_width=True)
 
+# Al presionar GUARDAR CAMBIOS: arma el payload segun el tipo de orden (Formas/Rollos/Rebobinado),
+# actualiza la OP en Supabase y agrega la tarjeta de EDICION al historial_procesos para dejar trazabilidad
                     if btn_guardar_edit:
                         if not nueva_obs_gral.strip():
                             st.error("⚠️ Debes escribir el motivo del cambio.")
@@ -2425,21 +2620,11 @@ elif menu == "📅 Planificación":
                         st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
                         st.stop()
 
-# DEFINIR AREA INICIAL SEGUN TIPO
-                    if t == "FORMAS IMPRESAS":
-                        ruta_inicial = "DISEÑO (AUDITORIA)"
-
-                    elif t == "FORMAS BLANCAS":
-                        ruta_inicial = "IMPRESIÓN"
-
-                    elif t == "ROLLOS IMPRESOS":
-                        ruta_inicial = "DISEÑO (AUDITORIA)"
-
-                    elif t == "ROLLOS BLANCOS":
-                        ruta_inicial = "CORTE"
-                        
-                    elif t == "REBOBINADO":
-                        ruta_inicial = "REBOBINADORAS"  
+# DEFINIR AREA INICIAL: TODA OP NUEVA PASA PRIMERO POR AUDITORIA VENTAS,
+# sin importar su tipo (Formas/Rollos, Impresos/Blancos/Rebobinado).
+# La ruta que le corresponda segun su tipo (ruta_despues_de_auditoria_ventas)
+# se aplica solo cuando el Auditor de Ventas la marca como revisada.
+                    ruta_inicial = "AUDITORIA VENTAS"
 
                     payload = {
                         "op": op_final,
@@ -2816,6 +3001,12 @@ elif menu == "📊 Reportes Admin":
                     st.markdown(f"**Trabajo:** {o.get('nombre_trabajo','-')}  |  **Tipo:** {o.get('tipo_orden','-')}")
 
                     historial = o.get("historial_procesos") or []
+
+# TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado, se calcula en vivo)
+                    if estado_actual != "FINALIZADO":
+                        _, tiempo_actual_area = calcular_tiempo_en_area(o)
+                        st.info(f"⏳ Lleva **{tiempo_actual_area}** en el área actual (**{estado_actual}**)")
+
                     if not historial:
                         st.info("Esta orden todavía no tiene pasos de producción registrados.")
                     else:
@@ -2840,8 +3031,11 @@ elif menu == "📊 Reportes Admin":
                             st.markdown(
                                 f"**{paso_idx}. {paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
                                 f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
-                                f"{paso.get('fecha','-')}  |  Duración: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
+                                f"{paso.get('fecha','-')}  |  Duración trabajada: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
                             )
+# TIEMPO TOTAL QUE LA OP ESTUVO EN ESTA AREA (desde que entro hasta que salio, incluyendo esperas/pausas)
+                            if paso.get("tiempo_total_area"):
+                                st.caption(f"⏱️ Tiempo total en el área: {paso['tiempo_total_area']}")
                             if paso.get("observaciones"):
                                 st.caption(f"📝 {paso['observaciones']}")
                             if paso.get("datos_cierre"):
@@ -2887,6 +3081,7 @@ elif menu == "📊 Reportes Admin":
                     st.info("No hay usuarios registrados.")
 
 
+# MODULO ALMACEN/DESPACHOS: registra entradas y salidas de producto terminado hasta que sale despachado al cliente
 elif menu == "📦 Almacen/Despachos":
     st.title("📦 Inventario de Productos Almacen")
     
@@ -3209,6 +3404,7 @@ elif menu == "📆 Cronograma Impresión":
     else:
         st.success("✅ Todo en orden")
 
+# Separa las OPs que YA estan agendadas en el calendario de las que TODAVIA estan pendientes por asignar
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
     ops_pendientes = [op for op in todas_las_ops if
                       not (op.get("fecha_inicio_cronograma") and op.get("maquina_cronograma"))
@@ -3216,6 +3412,7 @@ elif menu == "📆 Cronograma Impresión":
                       and op.get("estado") != "Terminado"
                       and not op.get("excluir_cronograma")]
 
+# Construye los bloques (eventos) que dibuja el calendario, con su color segun el estado de la OP
     eventos_json = []
     for op in ops_agendadas:
         if op.get("proxima_area") == "FINALIZADO":
@@ -3243,6 +3440,7 @@ elif menu == "📆 Cronograma Impresión":
             }
         })
 
+# Construye las tarjetas de OPs sin asignar que se muestran en la barra lateral, listas para arrastrar al calendario
     pendientes_json = []
     for op in ops_pendientes:
         card_color = "#2563eb" if op.get("estado") == "En Proceso" else "#d97706"
@@ -3263,11 +3461,14 @@ elif menu == "📆 Cronograma Impresión":
     supa_url = str(URL)
     supa_key = str(KEY)
 
+# A partir de aqui se arma a mano el HTML/CSS/JS del calendario tipo Notion (libreria FullCalendar),
+# que luego se incrusta en la pagina de Streamlit con components.html(). Aqui vive todo el "dibujo" del cronograma.
     html_cal = (
         "<!DOCTYPE html><html><head>"
         "<link href='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css' rel='stylesheet'/>"
         "<script src='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.js'></script>"
         "<style>"
+        # ESTILOS (CSS): tema oscuro para que el calendario combine con el resto de la aplicacion
         "* { box-sizing: border-box; margin: 0; padding: 0; }"
         "body { background: #191919; color: #e0e0e0; font-family: Segoe UI, sans-serif; display: flex; gap: 10px; padding: 10px; }"
         "#calendar-wrap { flex: 1; min-width: 0; }"
@@ -3311,6 +3512,8 @@ elif menu == "📆 Cronograma Impresión":
         "</div></div></div>"
         "<div id='tooltip'></div>"
         "<script>"
+        # JAVASCRIPT: aqui vive toda la logica visual del calendario y el guardado automatico en Supabase
+        # cada vez que se arrastra, redimensiona o quita una orden del cronograma
         "var eventos    = " + eventos_str + ";"
         "var recursos   = " + recursos_str + ";"
         "var pendientes = " + pendientes_str + ";"
@@ -3400,6 +3603,7 @@ elif menu == "📆 Cronograma Impresión":
         "</script></body></html>"
     )
 
+# Renderiza dentro de la pagina de Streamlit todo el HTML/CSS/JS armado arriba
     components.html(html_cal, height=620, scrolling=False)
 
 # MODULO DE INVENTARIO CORES Y CAJAS
@@ -3850,6 +4054,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             n_area = "FINALIZADO"
 
                     hist = d_op.get('historial_procesos') or []
+                    _, tiempo_area_prod = calcular_tiempo_en_area(d_op)
                     hist.append({
                         "area": area_act,
                         "maquina": r['maquina'],
@@ -3857,6 +4062,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         "auxiliar": auxiliar,
                         "fecha": fin.strftime("%d/%m/%Y %H:%M"),
                         "duracion": duracion,
+                        "tiempo_total_area": tiempo_area_prod,
                         "tipo": "FINAL",
                         "datos_cierre": datos_c,
                         "observaciones": obs_prod
@@ -3895,8 +4101,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             duracion = calcular_duracion_laboral(inicio, fin, r['maquina'], r.get('tiempo_pausa', 0))
 
 # Preparar el nuevo historial — leer desde ordenes_planeadas, no desde trabajos_activos
-            d_op_hist = supabase.table("ordenes_planeadas").select("historial_procesos").eq("op", r['op']).single().execute().data
+            d_op_hist = supabase.table("ordenes_planeadas").select("*").eq("op", r['op']).single().execute().data
             hist = d_op_hist.get('historial_procesos') or [] if d_op_hist else []
+            _, tiempo_area_parcial = calcular_tiempo_en_area(d_op_hist or {})
             
             datos_c['cantidad_parcial_entregada'] = cantidad_parcial
             if obs_parcial:
@@ -3914,6 +4121,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 "auxiliar": auxiliar_actual,
                 "fecha": fin.strftime("%d/%m/%Y %H:%M"),
                 "duracion": duracion,
+                "tiempo_total_area": tiempo_area_parcial,
                 "tipo": "PARCIAL",
                 "datos_cierre": datos_c,
                 "observaciones": obs_parcial if obs_parcial else f"Entrega parcial de {cantidad_parcial} unidades."
@@ -4001,7 +4209,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
 
 # SI EL ROL ES MAQUINISTA, PEDIR A QUE MAQUINA ESPECIFICA QUEDA ASIGNADO
         nueva_maquina_asignada = None
@@ -4067,7 +4275,7 @@ def mercado_ajustar_coins(usuario, cantidad, motivo, admin_who):
         st.error(f"Error al ajustar coins: {e}")
         return None
 
-#  MÓDULO MERCADO PRINCIPAL 
+# MODULO DE MENSAJES (chat interno entre usuarios y grupos de trabajo)
 if menu == "💬 Mensajes":
     usuario_actual = st.session_state.get('usuario_actual', '')
     nombre_actual  = st.session_state.get('nombre_usuario', '')
@@ -4210,6 +4418,7 @@ if menu == "💬 Mensajes":
                 else:
                     st.warning("Pon un nombre y al menos un miembro.")
 
+# COLUMNA DERECHA: muestra la conversacion seleccionada (chat individual o de grupo) y su historial de mensajes
     with col_conv:
         clave_activa = st.session_state.get('chat_sel')
 
@@ -4298,6 +4507,7 @@ if menu == "💬 Mensajes":
 
 
 
+# MODULO MERCADO DE COINS (sistema de reconocimiento/puntos para los trabajadores)
 if menu == "🛒 Mercado":
     usuario_actual = st.session_state.get('usuario_actual', '')
     nombre_actual  = st.session_state.get('nombre_usuario', '')
