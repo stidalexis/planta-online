@@ -436,7 +436,7 @@ def generar_rotulo_pdf(row):
         f"Referencia: {row.get('ref_comercial','-') or '-'}\n"
         f"Tipo: {row.get('tipo_orden','-') or '-'}\n"
         f"Unidades x Caja: {row.get('unidades_caja','-') or '-'}\n"
-        f"Cantidad Total: {cantidad_total}"
+        f"Cantidad Total: {row.get('cantidad_total','-')}"
     )
     qr_img = qrcode.make(texto_qr)
     qr_buffer = io.BytesIO()
@@ -1134,7 +1134,6 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
 # LOGIN PRINCIPAL  LOGUIN
-
 if not st.session_state.get('autenticado'):
     st.title("🔐 Acceso al Sistema C&B PAPELES DE COLOMBIA S.A.S")
     
@@ -1287,7 +1286,6 @@ def obtener_ultima_actividad_maquina(nombre_maquina):
                     continue
     return ultima_fecha
 
-
 # RUTA DE LA OP DESPUES DE SER REVISADA EN AUDITORIA VENTAS
 # Es la misma logica que antes decidia la ruta inicial al crear la OP; ahora se usa
 # despues de que el auditor de ventas la marca como revisada, no en el momento de crearla.
@@ -1303,7 +1301,6 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
     elif tipo_orden == "REBOBINADO":
         return "REBOBINADORAS"
     return "IMPRESIÓN"
-
 
 # CALCULO DE TIEMPO EN AREA (desde que la OP entro al area actual hasta ahora o hasta que se cierra)
 def _ultima_fecha_relevante_historial(historial):
@@ -1356,7 +1353,6 @@ def calcular_tiempo_en_area(op_data):
         return 0, "N/A"
     segundos = max(0, (hora_colombia() - entrada).total_seconds())
     return segundos, str(timedelta(seconds=int(segundos)))
-
 
 # RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
 # Se usa tanto en Diseño y Pre-Prensa como en Auditoria Ventas, para revisar la orden
@@ -1415,7 +1411,6 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             st.table(datos.get('detalles_partes_json'))
         else:
             st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
-
 
 # MODULO MONITOR 
 if menu == "🖥️ Monitor":
@@ -1798,7 +1793,6 @@ elif menu == "🔍 Seguimiento":
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
 
-
 # BOTON DE READIOGRAFIA
                     if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
@@ -2046,7 +2040,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         else:
             st.info("No hay órdenes pendientes para revisión de plancha.")
             
-# MODULO PLANIFICACION 
+# MODULO PLANIFICACION por venta
 elif menu == "🧐 Auditoría Ventas":
     st.title("🧐 Auditoría de Ventas")
     st.caption("Toda OP nueva (Formas o Rollos, Impresas o Blancas, Rebobinado) pasa primero por aquí antes de seguir su ruta normal.")
