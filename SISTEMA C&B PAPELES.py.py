@@ -1630,31 +1630,72 @@ if menu == "🖥️ Monitor":
 elif menu == "🔍 Seguimiento":
     st.title("🔍 Seguimiento de Órdenes en Tiempo Real")
     
-# TRAER TRABAJOS Y ORDENES ACTIVAS 
+# TRAER TRABAJOS ACTIVOS (para saber que OP esta en que maquina)
 
     try:
-        ordenes_res = supabase.table("ordenes_planeadas").select("*").order("created_at", desc=True).execute()
         activos_res = supabase.table("trabajos_activos").select("op, maquina").execute()
-        
-        ordenes = ordenes_res.data
-        activos = activos_res.data
-        
+        activos = activos_res.data or []
 # DICCIONARIO DE OP EN MAQUINAS 
         op_en_maquina = {str(a['op']): a['maquina'] for a in activos}
     except Exception as e:
         st.error(f"Error al conectar con las tablas: {e}")
-        ordenes = []
+        op_en_maquina = {}
 
-    if not ordenes:
+    busqueda = st.text_input("🔍 Filtrar por OP, Cliente, Trabajo o Vendedor:", "")
+
+# OPTIMIZACION DE VELOCIDAD DE CARGA:
+# Antes este modulo traia TODAS las OPs (activas + finalizadas de toda la historia) con select("*")
+# y luego las separaba en Python. Eso significaba descargar y procesar tambien todas las OPs
+# finalizadas historicas solo para mostrar la pestaña de pendientes. Ahora:
+#  - Las PENDIENTES se piden directo filtradas en la base de datos (mucho mas liviano).
+#  - Las FINALIZADAS solo traen, por defecto, las 200 mas recientes; si el usuario busca algo
+#    especifico, la busqueda se hace directo en la base de datos sobre TODO el historico,
+#    para no perder la posibilidad de encontrar una OP finalizada antigua.
+    try:
+        ordenes_pendientes = (
+            supabase.table("ordenes_planeadas")
+            .select("*")
+            .neq("proxima_area", "FINALIZADO")
+            .order("created_at", desc=True)
+            .execute().data or []
+        )
+    except Exception as e:
+        st.error(f"Error al cargar órdenes pendientes: {e}")
+        ordenes_pendientes = []
+
+    try:
+        if busqueda:
+            b_like = f"%{busqueda}%"
+            ordenes_finalizadas = (
+                supabase.table("ordenes_planeadas")
+                .select("*")
+                .eq("proxima_area", "FINALIZADO")
+                .or_(f"op.ilike.{b_like},cliente.ilike.{b_like},nombre_trabajo.ilike.{b_like},vendedor.ilike.{b_like}")
+                .order("created_at", desc=True)
+                .execute().data or []
+            )
+        else:
+            ordenes_finalizadas = (
+                supabase.table("ordenes_planeadas")
+                .select("*")
+                .eq("proxima_area", "FINALIZADO")
+                .order("created_at", desc=True)
+                .limit(200)
+                .execute().data or []
+            )
+    except Exception as e:
+        st.error(f"Error al cargar órdenes finalizadas: {e}")
+        ordenes_finalizadas = []
+
+    if not ordenes_pendientes and not ordenes_finalizadas:
         st.warning("No hay órdenes registradas.")
     else:
-        busqueda = st.text_input("🔍 Filtrar por OP, Cliente, Trabajo o Vendedor:", "")
 
 # TABS DE SEGUIMIENTO: PENDIENTES / FINALIZADAS
         tab_pendientes, tab_finalizadas = st.tabs(["⏳ EN PROCESO / PENDIENTES", "✅ FINALIZADAS"])
 
-        ordenes_pendientes = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() != "FINALIZADO"]
-        ordenes_finalizadas = [r for r in ordenes if r.get('proxima_area', 'SIN ÁREA').upper() == "FINALIZADO"]
+        if not busqueda:
+            st.caption(f"Mostrando las {len(ordenes_finalizadas)} órdenes finalizadas más recientes. Usa el buscador para encontrar cualquier OP histórica.")
 
 # ALERTA DE OPs QUIETAS (5+ DIAS SIN MOVIMIENTO) — SOLO VISIBLE PARA ADMIN
         rol_seg_actual = st.session_state.get('rol', '').lower()
@@ -1805,15 +1846,17 @@ elif menu == "🔍 Seguimiento":
 
  # MOSTRAR      
                     link_arte = row.get('link_diseno')
-                    link_ticket = row.get('link_ticket')
+                    num_ticket_seg = row.get('num_ticket')
 
                     if link_arte:
                         st.link_button("🎨 VER ARTE", link_arte, use_container_width=True)
-                    
-                    if link_ticket:
-                        st.link_button("🎫 VER TICKET", link_ticket, use_container_width=True)
-                    
-                    if not link_arte and not link_ticket:
+
+# El ticket ya no es un link: es un numero que el vendedor ingresa al crear la OP (num_ticket).
+# Se muestra en pantalla, debajo del link del arte, en vez del boton "VER TICKET" que ya no aplica.
+                    if num_ticket_seg:
+                        st.metric("🎫 TICKET", num_ticket_seg)
+
+                    if not link_arte and not num_ticket_seg:
                         st.caption("Sin links adjuntos")
 
                 st.divider()
