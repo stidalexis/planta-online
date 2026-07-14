@@ -1261,15 +1261,28 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
 # Calcula hace cuanto tiempo una maquina no tiene actividad, para sumar ese tiempo como "tiempo libre entre OPs" en las estadisticas
 def obtener_ultima_actividad_maquina(nombre_maquina):
     """
-    Busca en el historial de TODAS las ordenes cual fue la ultima vez que esta
+    Busca en el historial de ordenes RECIENTES cual fue la ultima vez que esta
     maquina termino un paso de produccion (ultima fecha en historial_procesos).
     Esto reemplaza la logica anterior que buscaba en 'tiempos_muertos', la cual
     nunca podia arrancar porque dependia de un registro previo en esa misma tabla
     que nunca llegaba a crearse.
     Devuelve un datetime con zona horaria Colombia, o None si la maquina nunca ha trabajado.
+
+    OPTIMIZACION: antes esta funcion traia el historial_procesos de TODAS las
+    ordenes de TODA la historia de la empresa cada vez que alguien presionaba
+    "INICIAR" en una maquina — con miles de ordenes historicas, eso volvia lenta
+    esa accion tan frecuente. Ahora solo se piden las 400 ordenes creadas mas
+    recientemente (mas que suficiente para encontrar la ultima actividad real de
+    cualquier maquina, ya que ninguna maquina deberia llevar meses sin trabajar).
     """
     try:
-        ops_data = supabase.table("ordenes_planeadas").select("historial_procesos").execute().data or []
+        ops_data = (
+            supabase.table("ordenes_planeadas")
+            .select("historial_procesos")
+            .order("created_at", desc=True)
+            .limit(400)
+            .execute().data or []
+        )
     except Exception:
         return None
 
@@ -1531,10 +1544,12 @@ if menu == "🖥️ Monitor":
                 print(f"Error en alerta 3 dias (activa): {e}")
 
 # CASO 2: OP CREADA HACE 3+ DIAS QUE NUNCA HA ENTRADO A NINGUNA MAQUINA
+# OPTIMIZACION: se filtra "proxima_area != FINALIZADO" directo en la base de datos,
+# en vez de traer TAMBIEN todas las ordenes finalizadas historicas solo para descartarlas despues.
         try:
             ops_espera = supabase.table("ordenes_planeadas").select(
                 "op,cliente,nombre_trabajo,proxima_area,historial_procesos,created_at,fecha_creacion"
-            ).execute().data or []
+            ).neq("proxima_area", "FINALIZADO").execute().data or []
         except Exception:
             ops_espera = []
 
@@ -1564,7 +1579,15 @@ if menu == "🖥️ Monitor":
                     st.warning(al)
 
 # PREPARAR DATOS DE OPERACIONES 
-    ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").execute().data
+# OPTIMIZACION: antes se traia "op,nombre_trabajo" de TODAS las ordenes de toda la
+# historia solo para poder mostrar el nombre del trabajo en las tarjetas de maquinas
+# activas. Ahora solo se piden los nombres de las OPs que realmente estan activas
+# en alguna maquina en este momento (siempre son muy pocas).
+    op_ids_activos = list({str(a['op']) for a in act_data}) if act_data else []
+    if op_ids_activos:
+        ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").in_("op", op_ids_activos).execute().data or []
+    else:
+        ops = []
     map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
 
     act = {}
@@ -2950,8 +2973,16 @@ elif menu == "📊 Reportes Admin":
         
         with tab_historial:
             st.subheader("Historial de Movimientos de Bodega")
-            res_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True).execute().data
+# OPTIMIZACION: por defecto solo trae los 500 movimientos mas recientes (mucho mas
+# rapido); si se necesita revisar mas atras, el interruptor trae todo el historico.
+            ver_todo_bodega = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_bodega")
+            q_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True)
+            if not ver_todo_bodega:
+                q_h = q_h.limit(500)
+            res_h = q_h.execute().data
             if res_h:
+                if not ver_todo_bodega:
+                    st.caption(f"Mostrando los {len(res_h)} movimientos más recientes.")
                 df_h = pd.DataFrame(res_h)
                 df_h = formatear_fechas_df(df_h)
                 st.dataframe(df_h, use_container_width=True, hide_index=True)
@@ -2962,8 +2993,15 @@ elif menu == "📊 Reportes Admin":
             st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
 
 #  TOMA DE TIEMPOS DE MAQUIA LIBRE ENTRE UN AOP Y OTRA 
-            res_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True).execute().data
+# OPTIMIZACION: mismo criterio — 500 mas recientes por defecto, con opcion de ver todo.
+            ver_todo_muertos = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_muertos")
+            q_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True)
+            if not ver_todo_muertos:
+                q_m = q_m.limit(500)
+            res_m = q_m.execute().data
             if res_m:
+                if not ver_todo_muertos:
+                    st.caption(f"Mostrando los {len(res_m)} registros más recientes.")
                 df_m = pd.DataFrame(res_m)
 
 # LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
@@ -2981,8 +3019,15 @@ elif menu == "📊 Reportes Admin":
             st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
 
 # AQUI S EMUESTRA PORQUE LA MAQUINA SE DERUBO 
-            res_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True).execute().data
+# OPTIMIZACION: mismo criterio — 500 mas recientes por defecto, con opcion de ver todo.
+            ver_todo_paradas = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_paradas")
+            q_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True)
+            if not ver_todo_paradas:
+                q_p = q_p.limit(500)
+            res_p = q_p.execute().data
             if res_p:
+                if not ver_todo_paradas:
+                    st.caption(f"Mostrando los {len(res_p)} registros más recientes.")
                 df_p = pd.DataFrame(res_p)
 
 # LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
@@ -3442,7 +3487,10 @@ elif menu == "📆 Cronograma Impresión":
         st.rerun()
 
     try:
-        todas_las_ops = supabase.table("ordenes_planeadas").select("*").execute().data or []
+# OPTIMIZACION: el cronograma solo necesita ordenes que TODAVIA se puedan agendar/mover,
+# no hace falta traer tambien anos de ordenes ya finalizadas (que antes se descargaban
+# completas, con su historial_procesos, solo para descartarlas un renglon despues).
+        todas_las_ops = supabase.table("ordenes_planeadas").select("*").neq("proxima_area", "FINALIZADO").execute().data or []
     except Exception as e:
         st.warning(f"No se pudieron cargar las órdenes planeadas: {e}")
         todas_las_ops = []
@@ -4411,16 +4459,28 @@ if menu == "💬 Mensajes":
                 "hora": fmt_fecha_hora(m.get('created_at'), con_hora=False),
                 "no_leidos": nl
             }
+# OPTIMIZACION: antes se hacian 2 consultas a la base de datos POR CADA GRUPO
+# (ultimo mensaje + contador de no leidos), asi que si el usuario estaba en 10
+# grupos, cargar el modulo de Mensajes disparaba 20 consultas extra. Ahora se
+# traen en UNA sola consulta todos los mensajes de todos los grupos del usuario,
+# y el ultimo mensaje / contador de no leidos de cada grupo se calcula en Python.
+    grupo_ids = [str(g['id']) for g in mis_grupos]
+    msgs_por_grupo = {}
+    if grupo_ids:
+        try:
+            msgs_grupos_todos = supabase.table("mensajes_internos")\
+                .select("grupo_id,cuerpo,created_at,leido,remitente")\
+                .in_("grupo_id", grupo_ids).order("created_at", desc=True).execute().data or []
+            for m in msgs_grupos_todos:
+                msgs_por_grupo.setdefault(str(m.get('grupo_id')), []).append(m)
+        except Exception:
+            msgs_por_grupo = {}
+
     for g in mis_grupos:
         gid = str(g['id'])
-        try:
-            ult_g = supabase.table("mensajes_internos").select("cuerpo,created_at")\
-                .eq("grupo_id", gid).order("created_at", desc=True).limit(1).execute().data
-            nl_g = supabase.table("mensajes_internos").select("id", count="exact")\
-                .eq("grupo_id", gid).eq("leido", False)\
-                .neq("remitente", usuario_actual).execute().count or 0
-        except Exception:
-            ult_g = []; nl_g = 0
+        msgs_g = msgs_por_grupo.get(gid, [])  # ya vienen ordenados desc por fecha
+        ult_g = msgs_g[:1]
+        nl_g = sum(1 for x in msgs_g if not x.get('leido') and x.get('remitente') != usuario_actual)
         convs[f"grupo_{gid}"] = {
             "tipo": "grupo", "gid": gid,
             "nombre": f"👥 {g['nombre']}",
