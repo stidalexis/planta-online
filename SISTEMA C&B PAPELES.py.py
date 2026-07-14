@@ -436,7 +436,7 @@ def generar_rotulo_pdf(row):
         f"Referencia: {row.get('ref_comercial','-') or '-'}\n"
         f"Tipo: {row.get('tipo_orden','-') or '-'}\n"
         f"Unidades x Caja: {row.get('unidades_caja','-') or '-'}\n"
-        f"Cantidad Total: {row.get('cantidad_total','-')}"
+        f"Cantidad Total: {cantidad_total}"
     )
     qr_img = qrcode.make(texto_qr)
     qr_buffer = io.BytesIO()
@@ -1134,6 +1134,7 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
 # LOGIN PRINCIPAL  LOGUIN
+
 if not st.session_state.get('autenticado'):
     st.title("🔐 Acceso al Sistema C&B PAPELES DE COLOMBIA S.A.S")
     
@@ -1286,6 +1287,7 @@ def obtener_ultima_actividad_maquina(nombre_maquina):
                     continue
     return ultima_fecha
 
+
 # RUTA DE LA OP DESPUES DE SER REVISADA EN AUDITORIA VENTAS
 # Es la misma logica que antes decidia la ruta inicial al crear la OP; ahora se usa
 # despues de que el auditor de ventas la marca como revisada, no en el momento de crearla.
@@ -1301,6 +1303,7 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
     elif tipo_orden == "REBOBINADO":
         return "REBOBINADORAS"
     return "IMPRESIÓN"
+
 
 # CALCULO DE TIEMPO EN AREA (desde que la OP entro al area actual hasta ahora o hasta que se cierra)
 def _ultima_fecha_relevante_historial(historial):
@@ -1353,6 +1356,7 @@ def calcular_tiempo_en_area(op_data):
         return 0, "N/A"
     segundos = max(0, (hora_colombia() - entrada).total_seconds())
     return segundos, str(timedelta(seconds=int(segundos)))
+
 
 # RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
 # Se usa tanto en Diseño y Pre-Prensa como en Auditoria Ventas, para revisar la orden
@@ -1411,6 +1415,7 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             st.table(datos.get('detalles_partes_json'))
         else:
             st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
+
 
 # MODULO MONITOR 
 if menu == "🖥️ Monitor":
@@ -1793,6 +1798,7 @@ elif menu == "🔍 Seguimiento":
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
 
+
 # BOTON DE READIOGRAFIA
                     if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
@@ -2040,7 +2046,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         else:
             st.info("No hay órdenes pendientes para revisión de plancha.")
             
-# MODULO PLANIFICACION por venta
+# MODULO PLANIFICACION 
 elif menu == "🧐 Auditoría Ventas":
     st.title("🧐 Auditoría de Ventas")
     st.caption("Toda OP nueva (Formas o Rollos, Impresas o Blancas, Rebobinado) pasa primero por aquí antes de seguir su ruta normal.")
@@ -2953,99 +2959,122 @@ elif menu == "📊 Reportes Admin":
             st.subheader("🗂️ Trazabilidad Completa de Órdenes de Producción")
             st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
 
-            busqueda_op = st.text_input("🔎 Buscar por número de OP o nombre de cliente", key="busca_traza")
+# SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-) PARA QUE SEA MAS FACIL
+# BUSCAR UNA TRAZABILIDAD ESPECIFICA SIN TENER QUE VER TODAS MEZCLADAS
+            sub_ri, sub_rb, sub_fri, sub_frb, sub_rr = st.tabs([
+                "🌀 RI- (Rollos Impresos)", "⚪ RB- (Rollos Blancos)",
+                "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)"
+            ])
 
-            todas_ops_traza = supabase.table("ordenes_planeadas").select("*").execute().data or []
+            def _tab_trazabilidad_por_prefijo(prefijo, key_sufijo):
+                busqueda_op = st.text_input(
+                    f"🔎 Buscar por número de OP o nombre de cliente (dentro de {prefijo})",
+                    key=f"busca_traza_{key_sufijo}"
+                )
 
-            if busqueda_op:
-                b = busqueda_op.strip().lower()
-                todas_ops_traza = [
-                    o for o in todas_ops_traza
-                    if b in str(o.get("op", "")).lower() or b in str(o.get("cliente", "")).lower()
-                ]
+                todas_ops_traza = supabase.table("ordenes_planeadas").select("*").ilike("op", f"{prefijo}%").execute().data or []
 
-            def _fecha_orden_traza(o):
-                return str(o.get("created_at") or o.get("fecha_creacion") or "")
-            todas_ops_traza.sort(key=_fecha_orden_traza, reverse=True)
+                if busqueda_op:
+                    b = busqueda_op.strip().lower()
+                    todas_ops_traza = [
+                        o for o in todas_ops_traza
+                        if b in str(o.get("op", "")).lower() or b in str(o.get("cliente", "")).lower()
+                    ]
 
-            if not busqueda_op:
-                st.info(f"Mostrando las 50 órdenes más recientes de {len(todas_ops_traza)}. Usa el buscador para ver cualquier OP histórica.")
-                todas_ops_traza = todas_ops_traza[:50]
-            else:
-                st.caption(f"{len(todas_ops_traza)} orden(es) encontradas")
+                def _fecha_orden_traza(o):
+                    return str(o.get("created_at") or o.get("fecha_creacion") or "")
+                todas_ops_traza.sort(key=_fecha_orden_traza, reverse=True)
 
-            for o in todas_ops_traza:
-                fecha_creacion_raw = o.get("created_at") or o.get("fecha_creacion") or ""
-                fecha_creacion_fmt = fmt_fecha_hora(fecha_creacion_raw) if fecha_creacion_raw else "Sin fecha"
+                if not busqueda_op:
+                    st.info(f"Mostrando las 50 órdenes {prefijo} más recientes de {len(todas_ops_traza)}. Usa el buscador para ver cualquier OP histórica.")
+                    todas_ops_traza = todas_ops_traza[:50]
+                else:
+                    st.caption(f"{len(todas_ops_traza)} orden(es) encontradas")
+
+                for o in todas_ops_traza:
+                    fecha_creacion_raw = o.get("created_at") or o.get("fecha_creacion") or ""
+                    fecha_creacion_fmt = fmt_fecha_hora(fecha_creacion_raw) if fecha_creacion_raw else "Sin fecha"
 
 # 'creado_por' solo existe en ordenes creadas despues de activar esta funcion
-                creador = o.get("creado_por") or "No registrado (orden anterior a esta función)"
-                estado_actual = o.get("proxima_area", "Sin estado")
+                    creador = o.get("creado_por") or "No registrado (orden anterior a esta función)"
+                    estado_actual = o.get("proxima_area", "Sin estado")
 
-                with st.expander(f"📋 OP {o.get('op')} | {o.get('cliente','')} | Estado: {estado_actual}"):
-                    c1, c2, c3 = st.columns(3)
-                    c1.markdown(f"**Vendedor:** {o.get('vendedor','-')}")
-                    c2.markdown(f"**Creado por:** {creador}")
-                    c3.markdown(f"**Fecha creación:** {fecha_creacion_fmt}")
-                    st.markdown(f"**Trabajo:** {o.get('nombre_trabajo','-')}  |  **Tipo:** {o.get('tipo_orden','-')}")
+                    with st.expander(f"📋 OP {o.get('op')} | {o.get('cliente','')} | Estado: {estado_actual}"):
+                        c1, c2, c3 = st.columns(3)
+                        c1.markdown(f"**Vendedor:** {o.get('vendedor','-')}")
+                        c2.markdown(f"**Creado por:** {creador}")
+                        c3.markdown(f"**Fecha creación:** {fecha_creacion_fmt}")
+                        st.markdown(f"**Trabajo:** {o.get('nombre_trabajo','-')}  |  **Tipo:** {o.get('tipo_orden','-')}")
 
-                    historial = o.get("historial_procesos") or []
+                        historial = o.get("historial_procesos") or []
 
 # RESUMEN RAPIDO DE TIEMPOS POR AREA (areas ya completadas, en el orden que las paso)
 # Esto responde "cuanto duro en el area anterior" sin tener que abrir la linea de tiempo completa de abajo.
-                    resumen_tiempos = []
-                    for h in historial:
-                        area_h = (h.get('area') or '').strip().upper()
-                        tipo_h = (h.get('tipo') or '').strip().upper()
-                        if area_h.startswith('EDIC') or tipo_h.startswith('EDIC'):
-                            continue
-                        t_area = h.get('tiempo_total_area') or h.get('duracion') or '-'
-                        resumen_tiempos.append(f"**{h.get('area','-')}**: {t_area}")
-                    if resumen_tiempos:
-                        st.success("📊 Tiempo que duró en cada área anterior:  " + "   |   ".join(resumen_tiempos))
-
-# TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado, se calcula en vivo)
-                    if estado_actual != "FINALIZADO":
-                        _, tiempo_actual_area = calcular_tiempo_en_area(o)
-                        st.info(f"⏳ Lleva **{tiempo_actual_area}** en el área actual (**{estado_actual}**)")
-
-                    if not historial:
-                        st.info("Esta orden todavía no tiene pasos de producción registrados.")
-                    else:
-                        st.markdown("**🔗 Línea de tiempo de producción:**")
-                        for paso_idx, paso in enumerate(historial, start=1):
-                            if (paso.get('area') or '').strip().upper().startswith('EDIC') or (paso.get('tipo') or '').strip().upper().startswith('EDIC'):
-                                motivo_edicion_traza = (
-                                    paso.get('observaciones')
-                                    or paso.get('motivo')
-                                    or paso.get('motivo_edicion')
-                                    or (paso.get('nota', '').replace('Editado: ', '') if paso.get('nota') else None)
-                                    or 'Sin motivo registrado'
-                                )
-                                st.markdown(
-                                    f"**{paso_idx}. ✏️ EDICIÓN DE LA ORDEN** — "
-                                    f"Editado por: {paso.get('operario') or paso.get('usuario','-')}  |  "
-                                    f"{paso.get('fecha','-')}"
-                                )
-                                st.caption(f"📝 Motivo: {motivo_edicion_traza}")
-                                st.divider()
+                        resumen_tiempos = []
+                        for h in historial:
+                            area_h = (h.get('area') or '').strip().upper()
+                            tipo_h = (h.get('tipo') or '').strip().upper()
+                            if area_h.startswith('EDIC') or tipo_h.startswith('EDIC'):
                                 continue
-                            st.markdown(
-                                f"**{paso_idx}. {paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
-                                f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
-                                f"{paso.get('fecha','-')}  |  Duración trabajada: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
-                            )
-# TIEMPO TOTAL QUE LA OP ESTUVO EN ESTA AREA (desde que entro hasta que salio, incluyendo esperas/pausas)
-                            if paso.get("tiempo_total_area"):
-                                st.caption(f"⏱️ Tiempo total en el área: {paso['tiempo_total_area']}")
-                            if paso.get("observaciones"):
-                                st.caption(f"📝 {paso['observaciones']}")
-                            if paso.get("datos_cierre"):
-                                with st.expander(f"Ver datos técnicos del paso {paso_idx}"):
-                                    df_paso = pd.DataFrame(list(paso["datos_cierre"].items()), columns=["Parámetro", "Valor"])
-                                    df_paso["Parámetro"] = df_paso["Parámetro"].str.replace("_", " ").str.upper()
-                                    st.table(df_paso)
-                            st.divider()
+                            t_area = h.get('tiempo_total_area') or h.get('duracion') or '-'
+                            resumen_tiempos.append(f"**{h.get('area','-')}**: {t_area}")
+                        if resumen_tiempos:
+                            st.success("📊 Tiempo que duró en cada área anterior:  " + "   |   ".join(resumen_tiempos))
+
+    # TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado, se calcula en vivo)
+                        if estado_actual != "FINALIZADO":
+                            _, tiempo_actual_area = calcular_tiempo_en_area(o)
+                            st.info(f"⏳ Lleva **{tiempo_actual_area}** en el área actual (**{estado_actual}**)")
+
+                        if not historial:
+                            st.info("Esta orden todavía no tiene pasos de producción registrados.")
+                        else:
+                            st.markdown("**🔗 Línea de tiempo de producción:**")
+                            for paso_idx, paso in enumerate(historial, start=1):
+                                if (paso.get('area') or '').strip().upper().startswith('EDIC') or (paso.get('tipo') or '').strip().upper().startswith('EDIC'):
+                                    motivo_edicion_traza = (
+                                        paso.get('observaciones')
+                                        or paso.get('motivo')
+                                        or paso.get('motivo_edicion')
+                                        or (paso.get('nota', '').replace('Editado: ', '') if paso.get('nota') else None)
+                                        or 'Sin motivo registrado'
+                                    )
+                                    st.markdown(
+                                        f"**{paso_idx}. ✏️ EDICIÓN DE LA ORDEN** — "
+                                        f"Editado por: {paso.get('operario') or paso.get('usuario','-')}  |  "
+                                        f"{paso.get('fecha','-')}"
+                                    )
+                                    st.caption(f"📝 Motivo: {motivo_edicion_traza}")
+                                    st.divider()
+                                    continue
+                                st.markdown(
+                                    f"**{paso_idx}. {paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
+                                    f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
+                                    f"{paso.get('fecha','-')}  |  Duración trabajada: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
+                                )
+    # TIEMPO TOTAL QUE LA OP ESTUVO EN ESTA AREA (desde que entro hasta que salio, incluyendo esperas/pausas)
+                                if paso.get("tiempo_total_area"):
+                                    st.caption(f"⏱️ Tiempo total en el área: {paso['tiempo_total_area']}")
+                                if paso.get("observaciones"):
+                                    st.caption(f"📝 {paso['observaciones']}")
+                                if paso.get("datos_cierre"):
+                                    with st.expander(f"Ver datos técnicos del paso {paso_idx}"):
+                                        df_paso = pd.DataFrame(list(paso["datos_cierre"].items()), columns=["Parámetro", "Valor"])
+                                        df_paso["Parámetro"] = df_paso["Parámetro"].str.replace("_", " ").str.upper()
+                                        st.table(df_paso)
+                                st.divider()
+
+# LLAMA LA FUNCION DE ARRIBA UNA VEZ POR CADA PESTAÑA, FILTRANDO POR SU PROPIO PREFIJO DE OP
+            with sub_ri:
+                _tab_trazabilidad_por_prefijo("RI-", "ri")
+            with sub_rb:
+                _tab_trazabilidad_por_prefijo("RB-", "rb")
+            with sub_fri:
+                _tab_trazabilidad_por_prefijo("FRI-", "fri")
+            with sub_frb:
+                _tab_trazabilidad_por_prefijo("FRB-", "frb")
+            with sub_rr:
+                _tab_trazabilidad_por_prefijo("RR-", "rr")
 
 #  TAB NUEVA: MOVIMIENTOS DEL SISTEMA (coins, usuarios, etc) 
         with tab_movs:
