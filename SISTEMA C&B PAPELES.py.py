@@ -1192,6 +1192,8 @@ with st.sidebar:
         opciones_menu = ["📦 Almacen/Despachos"]
     elif rol == 'diseño':
         opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
+    elif rol in ('diseño1', 'diseño2', 'diseño3'):
+        opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
     elif rol == 'maquinista':
         mi_maquina = st.session_state.get('maquina_asignada')
         mi_area = MAQUINA_A_AREA.get(mi_maquina)
@@ -1982,11 +1984,23 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
+# CONTROL DE ACCESO POR ETAPA: los roles diseño1/diseño2/diseño3 solo pueden
+# INTERACTUAR con su propia pestaña (Auditoria/Pre-Prensa/Revision Final).
+# Los roles 'admin' y 'diseño' (genérico) siguen viendo y usando las 3 pestañas,
+# igual que antes, para no romper flujos existentes.
+    _rol_diseno_actual = st.session_state.get('rol', '').lower()
+    puede_tab1 = _rol_diseno_actual in ('admin', 'diseño', 'diseño1')
+    puede_tab2 = _rol_diseno_actual in ('admin', 'diseño', 'diseño2')
+    puede_tab3 = _rol_diseno_actual in ('admin', 'diseño', 'diseño3')
+
 #  DEFINICION DE VENTANAS
     tab1, tab2, tab3 = st.tabs(["📋 1. AUDITORIA TECNICA", "🎞️ 2. PRE-PRENSA", "⚡ 3. REVISION FINAL PLANCHA"])
 
 #  AUDITORIA
     with tab1:
+      if not puede_tab1:
+        st.warning("🔒 Tu usuario no tiene permiso para interactuar con esta etapa. Solo puedes ver/usar tu propia pestaña asignada.")
+      else:
         st.subheader("🕵️ Revisión de Diseño")
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
@@ -2036,6 +2050,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
 # PRE-PRENSA
     with tab2:
+      if not puede_tab2:
+        st.warning("🔒 Tu usuario no tiene permiso para interactuar con esta etapa. Solo puedes ver/usar tu propia pestaña asignada.")
+      else:
         st.subheader("🎞️ Procesamiento de Archivos")
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
@@ -2073,6 +2090,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
 
 # REVISION FINAL CON PLANCHA 
     with tab3:
+      if not puede_tab3:
+        st.warning("🔒 Tu usuario no tiene permiso para interactuar con esta etapa. Solo puedes ver/usar tu propia pestaña asignada.")
+      else:
         st.subheader("⚡ Control de Planchas y Salida")
         op_final = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "REVISION_FINAL").execute().data
 
@@ -4331,7 +4351,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
 
 # SI EL ROL ES MAQUINISTA, PEDIR A QUE MAQUINA ESPECIFICA QUEDA ASIGNADO
         nueva_maquina_asignada = None
