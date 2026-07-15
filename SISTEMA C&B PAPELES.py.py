@@ -2015,12 +2015,12 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 
                 col_inputs = st.columns(2)
                 with col_inputs[0]:
-                    link_arte = st.text_input("LINK DEL ARTE (DRIVE):", value=datos_op.get('link_diseno', '') or "")
+                    link_arte = st.text_input("LINK DEL ARTE (DRIVE):", value=datos_op.get('link_diseno', '') or "", key=f"link_arte_{op_id}")
                 with col_inputs[1]:
                     st.metric("🎫 NÚMERO DE TICKET (asignado por ventas)", datos_op.get('num_ticket', 0) or 0)
                 
-                obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "")
-                obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "")
+                obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}")
+                obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}")
                 
                 if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
                     if link_arte:
@@ -2104,7 +2104,21 @@ elif menu == "🎨 Diseño y Pre-Prensa":
             if datos_op_3:
                 st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **DATOS DE PLANCHAS A REVELAR:** {datos_op_3.get('observaciones_diseno2')}")
 
-                num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:")
+# VER EL ARTE Y CORREGIR EL LINK SI QUEDO MAL CARGADO EN AUDITORIA TECNICA (tab1).
+# Esta es la ULTIMA oportunidad de corregirlo antes de que la orden pase a Impresión;
+# una vez en Impresión, el link ya no se puede editar desde este módulo.
+                link_actual_3 = datos_op_3.get('link_diseno', '') or ''
+                c_arte1, c_arte2 = st.columns([1, 2])
+                with c_arte1:
+                    st.link_button("🎨 VER ARTE", link_actual_3 or "#", use_container_width=True, disabled=not link_actual_3)
+                with c_arte2:
+                    link_arte_final = st.text_input(
+                        "LINK DEL ARTE (corregir si quedó mal cargado):",
+                        value=link_actual_3,
+                        key=f"link_final_{op_id_3}"
+                    )
+
+                num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:", key=f"num_plancha_{op_id_3}")
                 
                 radiografia_completa_op(datos_op_3)
 
@@ -2123,9 +2137,11 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                         "observaciones": f"Planchas reveladas: {num_plancha}" if num_plancha else ""
                     })
 
-# Actualizamos a IMPRESION para que pase a la planta
+# Actualizamos a IMPRESION para que pase a la planta (incluye el link del arte,
+# por si se corrigio aqui mismo antes de enviar)
                     supabase.table("ordenes_planeadas").update({
                         "proxima_area": "IMPRESIÓN",
+                        "link_diseno": link_arte_final,
                         "historial_procesos": hist_rev
                     }).eq("op", op_id_3).execute()
                     st.success("Orden enviada a planta exitosamente."); time.sleep(1); st.rerun()
