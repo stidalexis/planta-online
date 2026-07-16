@@ -2966,6 +2966,11 @@ elif menu == "📦 salida produccion P1":
             
             df_show = df_bodega[cols_finales].copy()
             df_show = formatear_fechas_df(df_show)
+
+# SI LA REFERENCIA COMERCIAL VIENE VACIA (ordenes antiguas creadas antes de que
+# se empezara a guardar este dato), se muestra "-" en vez del texto "None"
+            if 'ref_comercial' in df_show.columns:
+                df_show['ref_comercial'] = df_show['ref_comercial'].fillna('-').replace('', '-')
             
 # RENOMBRAR COLUMBAS PARA VISUALIZACION 
             nombres_columnas = {
@@ -4244,6 +4249,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                             if rollos_salida > 0 or cajas_salida > 0:
                                 nombre_trabajo_bodega = d_op.get('nombre_trabajo') or f"OP {r['op']}"
                                 tipo_prod_bodega = "IMPRESO" if tipo == "ROLLOS IMPRESOS" else "BLANCO"
+                                ref_comercial_bodega = d_op.get('ref_comercial') or ''
                                 fecha_mov_auto = hora_colombia().isoformat()
 
                                 prod_existente_list = supabase.table("bodega_producto_terminado")\
@@ -4251,16 +4257,24 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                 prod_existente = prod_existente_list[0] if prod_existente_list else None
 
                                 if prod_existente:
-                                    supabase.table("bodega_producto_terminado").update({
+                                    update_payload_bodega = {
                                         "stock_cajas": prod_existente.get('stock_cajas', 0) + cajas_salida,
                                         "stock_rollos": prod_existente.get('stock_rollos', 0) + rollos_salida,
                                         "ultima_actualizacion": fecha_mov_auto,
                                         "observaciones": f"OP {r['op']} — ingreso automático desde Corte"
-                                    }).eq("id", prod_existente['id']).execute()
+                                    }
+# SOLO SE ACTUALIZA LA REFERENCIA COMERCIAL SI LA OP TRAE UNA Y ES DISTINTA A LA
+# YA GUARDADA, PARA NO BORRAR UNA REFERENCIA CORRECTA CON UN VALOR VACIO
+                                    if ref_comercial_bodega and prod_existente.get('ref_comercial') != ref_comercial_bodega:
+                                        update_payload_bodega["ref_comercial"] = ref_comercial_bodega
+                                    supabase.table("bodega_producto_terminado").update(
+                                        update_payload_bodega
+                                    ).eq("id", prod_existente['id']).execute()
                                 else:
                                     supabase.table("bodega_producto_terminado").insert({
                                         "nombre_trabajo": nombre_trabajo_bodega,
                                         "tipo_producto": tipo_prod_bodega,
+                                        "ref_comercial": ref_comercial_bodega,
                                         "stock_cajas": cajas_salida,
                                         "stock_rollos": rollos_salida,
                                         "ultima_actualizacion": fecha_mov_auto,
