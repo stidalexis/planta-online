@@ -4232,6 +4232,55 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         "estado_parcial": None
                     }).eq("op", r['op']).execute()
 
+# INGRESO AUTOMATICO A INVENTARIO DE PRODUCTO TERMINADO (SOLO CORTE, AL FINALIZAR ROLLOS)
+# Cuando una OP de Rollos (Impresos o Blancos) termina en Corte, la cantidad de
+# "Total Rollos cortados" que el maquinista ya registró arriba en el formulario
+# se suma SOLA al inventario de producto terminado (📦 Salida producción P1),
+# sin que nadie tenga que volver a escribirla a mano en ese otro módulo.
+                    if area_act == "CORTE" and n_area == "FINALIZADO":
+                        try:
+                            rollos_salida = int(datos_c.get('rollos_finales', 0) or 0)
+                            cajas_salida = int(datos_c.get('cajas_totales', 0) or 0)
+                            if rollos_salida > 0 or cajas_salida > 0:
+                                nombre_trabajo_bodega = d_op.get('nombre_trabajo') or f"OP {r['op']}"
+                                tipo_prod_bodega = "IMPRESO" if tipo == "ROLLOS IMPRESOS" else "BLANCO"
+                                fecha_mov_auto = hora_colombia().isoformat()
+
+                                prod_existente_list = supabase.table("bodega_producto_terminado")\
+                                    .select("*").eq("nombre_trabajo", nombre_trabajo_bodega).execute().data
+                                prod_existente = prod_existente_list[0] if prod_existente_list else None
+
+                                if prod_existente:
+                                    supabase.table("bodega_producto_terminado").update({
+                                        "stock_cajas": prod_existente.get('stock_cajas', 0) + cajas_salida,
+                                        "stock_rollos": prod_existente.get('stock_rollos', 0) + rollos_salida,
+                                        "ultima_actualizacion": fecha_mov_auto,
+                                        "observaciones": f"OP {r['op']} — ingreso automático desde Corte"
+                                    }).eq("id", prod_existente['id']).execute()
+                                else:
+                                    supabase.table("bodega_producto_terminado").insert({
+                                        "nombre_trabajo": nombre_trabajo_bodega,
+                                        "tipo_producto": tipo_prod_bodega,
+                                        "stock_cajas": cajas_salida,
+                                        "stock_rollos": rollos_salida,
+                                        "ultima_actualizacion": fecha_mov_auto,
+                                        "observaciones": f"OP {r['op']} — ingreso automático desde Corte"
+                                    }).execute()
+
+# TAMBIEN QUEDA EN EL HISTORIAL DE MOVIMIENTOS DE BODEGA, IGUAL QUE SI SE HUBIERA
+# INGRESADO A MANO, PARA QUE SE VEA EN REPORTES ADMIN Y EN SALIDA PRODUCCION P1
+                                supabase.table("bodega_historial").insert({
+                                    "nombre_trabajo": nombre_trabajo_bodega,
+                                    "tipo_movimiento": "ENTRADA",
+                                    "cajas": cajas_salida,
+                                    "rollos": rollos_salida,
+                                    "fecha": fecha_mov_auto,
+                                    "usuario": op_name,
+                                    "observaciones": f"Ingreso automático al finalizar OP {r['op']} en Corte"
+                                }).execute()
+                        except Exception as e:
+                            print(f"Error al ingresar automáticamente a bodega desde Corte: {e}")
+
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
