@@ -1585,39 +1585,51 @@ if menu == "🖥️ Monitor":
 #  DIBUJAR INTERFAZ (Con logica de colores) 
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
-        cols = st.columns(4)
-        
-        for idx, m in enumerate(maquinas):
-            with cols[idx % 4]:
+
+# Se recorre la lista de maquinas en BLOQUES DE 4 (una fila de columnas nueva
+# por cada bloque), en vez de crear las 4 columnas UNA sola vez para toda el
+# area y repartir las maquinas segun su posicion "indice % 4". Esa forma
+# anterior se veia bien en computador (las 4 columnas quedan lado a lado),
+# pero en celular o tablet, donde Streamlit APILA las columnas una debajo de
+# otra en vez de ponerlas lado a lado, se notaba el desorden 1,5,9,13,2,6,...
+# porque primero se dibujaba toda la columna 0, luego toda la columna 1, etc.
+# Con una fila de 4 columnas por cada bloque de 4 maquinas en su orden normal,
+# el celular las apila ya en el orden correcto: 1,2,3,4,5,6,7,8...
+        for inicio_fila in range(0, len(maquinas), 4):
+            fila_maquinas = maquinas[inicio_fila:inicio_fila + 4]
+            cols = st.columns(4)
+
+            for idx, m in enumerate(fila_maquinas):
+                with cols[idx]:
 
 # Verificar si la maquina esta encendida en el diccionario
-                esta_encendida = diccionario_estados.get(m, True)
+                    esta_encendida = diccionario_estados.get(m, True)
 
-                if not esta_encendida:
+                    if not esta_encendida:
 
 # TARJETA GRIS: Maquina apagada (Mantenimiento/etc)
-                    st.markdown(
-                        f"""<div style='background-color: #424242; color: #9E9E9E; padding: 20px; 
-                        border-radius: 15px; text-align: center; border: 2px solid #212121;'>
-                        <span style='font-size: 18px; font-weight: bold;'>{m}</span><br>
-                        <span style='font-size: 14px;'>🚫 FUERA DE SERVICIO</span>
-                        </div>""", 
-                        unsafe_allow_html=True
-                    )
-                elif m in act:
+                        st.markdown(
+                            f"""<div style='background-color: #424242; color: #9E9E9E; padding: 20px; 
+                            border-radius: 15px; text-align: center; border: 2px solid #212121;'>
+                            <span style='font-size: 18px; font-weight: bold;'>{m}</span><br>
+                            <span style='font-size: 14px;'>🚫 FUERA DE SERVICIO</span>
+                            </div>""", 
+                            unsafe_allow_html=True
+                        )
+                    elif m in act:
 
 # TARJETA  produccion
-                    st.markdown(
-                        f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
-                        unsafe_allow_html=True
-                    )
-                else:
+                        st.markdown(
+                            f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
+                            unsafe_allow_html=True
+                        )
+                    else:
 
 # TARJETA Libre
-                    st.markdown(
-                        f"<div class='card-vacia'>{m}<br>LIBRE</div>",
-                        unsafe_allow_html=True
-                    )
+                        st.markdown(
+                            f"<div class='card-vacia'>{m}<br>LIBRE</div>",
+                            unsafe_allow_html=True
+                        )
 
 #  REFRESCO AUTOMATICO 
     try:
@@ -3838,124 +3850,130 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 # SI ES MAQUINISTA, SOLO VE SU MAQUINA. SI NO, VE TODAS LAS DEL AREA (supervisor/admin)
     maquinas_a_mostrar = [mi_maquina_asignada] if rol_actual == "maquinista" else MAQUINAS[area_act]
 
-    cols = st.columns(3)
-    for idx, m in enumerate(maquinas_a_mostrar):
-        with cols[idx % 3]:
-            if m in activos:
-                tr = activos[m]
+# Se recorre la lista de maquinas en BLOQUES DE 3 (una fila de columnas nueva
+# por cada bloque), igual que se hizo en el Monitor, para que el orden se vea
+# correcto tanto en computador como en celular/tablet (donde las columnas se
+# apilan en vez de quedar lado a lado).
+    for inicio_fila_prod in range(0, len(maquinas_a_mostrar), 3):
+        fila_maquinas_prod = maquinas_a_mostrar[inicio_fila_prod:inicio_fila_prod + 3]
+        cols = st.columns(3)
+        for idx, m in enumerate(fila_maquinas_prod):
+            with cols[idx]:
+                if m in activos:
+                    tr = activos[m]
 
-                st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr['op']}</div>", unsafe_allow_html=True)
 
- # LOGICA DE PARADAS TECNICAS 
-                if not tr.get("pausado"):
+     # LOGICA DE PARADAS TECNICAS 
+                    if not tr.get("pausado"):
 
-# BOTON DE PARADA 
-                    with st.popover("🚨 REGISTRAR PARADA"):
-                        motivo_p = st.selectbox("Motivo de parada:", MOTIVOS_PARADA, key=f"mot_{m}")
-                        if st.button("Confirmar Parada", key=f"btn_p_{m}", type="primary"):
-                            supabase.table("trabajos_activos").update({
-                                "pausado": True,
-                                "inicio_pausa": hora_colombia().isoformat(),
-                                "motivo_pausa": motivo_p 
-                            }).eq("maquina", m).execute()
-                            st.rerun()
-                else:
+    # BOTON DE PARADA 
+                        with st.popover("🚨 REGISTRAR PARADA"):
+                            motivo_p = st.selectbox("Motivo de parada:", MOTIVOS_PARADA, key=f"mot_{m}")
+                            if st.button("Confirmar Parada", key=f"btn_p_{m}", type="primary"):
+                                supabase.table("trabajos_activos").update({
+                                    "pausado": True,
+                                    "inicio_pausa": hora_colombia().isoformat(),
+                                    "motivo_pausa": motivo_p 
+                                }).eq("maquina", m).execute()
+                                st.rerun()
+                    else:
 
-# MOSTRAR PORQUE ESTA DETENIDA LA AMQUINA 
-                    st.error(f"DETENIDA POR: {tr.get('motivo_pausa', 'Sin motivo')}")
-                    if st.button(f"▶️ REANUDAR TRABAJO", key=f"r_{m}", type="secondary"):
-                        try:
-                            inicio_p = datetime.fromisoformat(tr["inicio_pausa"].replace("Z", "+00:00"))
-                            ahora = hora_colombia()
-                            pausa_segundos = (ahora - inicio_p).total_seconds()
-            
-# GUARDAR ENH LA TABLA DE TIEMPOS MUERTOS
-                            registro_parada = {
-                                "maquina": m,
-                                "motivo": tr.get('motivo_pausa'),
-                                "inicio": tr["inicio_pausa"],
-                                "fin": ahora.isoformat(),
-                                "duracion_segundos": pausa_segundos
-                            }
+    # MOSTRAR PORQUE ESTA DETENIDA LA AMQUINA 
+                        st.error(f"DETENIDA POR: {tr.get('motivo_pausa', 'Sin motivo')}")
+                        if st.button(f"▶️ REANUDAR TRABAJO", key=f"r_{m}", type="secondary"):
                             try:
-                                supabase.table("paradas_maquina").insert(registro_parada).execute()
-                            except Exception:
-                                try:
-                                    registro_parada.pop("duracion_segundos", None)
-                                    supabase.table("paradas_maquina").insert(registro_parada).execute()
-                                except Exception:
-                                    pass
-
-# ACTUALIZAR EL REGISTRO DE ACTIVOS PARA IR TRABAJANO
-                            nuevo_tiempo_acumulado = tr.get("tiempo_pausa", 0) + pausa_segundos
-                            supabase.table("trabajos_activos").update({
-                                "pausado": False,
-                                "tiempo_pausa": nuevo_tiempo_acumulado,
-                                "inicio_pausa": None,
-                                "motivo_pausa": None
-                            }).eq("maquina", m).execute()
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error: {e}")
-
-#  BOTON FINALIZAR SIEMPRE VERLO
-                if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
-                    st.session_state.rep = tr
-                    st.rerun()
-            else:
-                st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
-                ops_p = supabase.table("ordenes_planeadas").select("*").or_(f"proxima_area.eq.{area_act},estado_parcial.eq.ACTIVO EN {area_act}").execute().data
-                if ops_p:
-                    op_dict = {f"{o['op']} - {o['nombre_trabajo']}": o['op'] for o in ops_p}
-
-                    sel_op_label = st.selectbox("Seleccionar OP", list(op_dict.keys()), key=f"s_{m}")
-                    sel_op = op_dict[sel_op_label]
-                    
-                    if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
-                        ahora_iso = hora_colombia().isoformat()
-    
-# BUSCAR CUANDO TERMINO REALMENTE EL ULTIMO TRABAJO DE ESTA MAQUINA
-                        fin_ultimo = obtener_ultima_actividad_maquina(m)
-    
-                        if fin_ultimo:
-                            ocio_segundos = (hora_colombia() - fin_ultimo).total_seconds()
-        
-# GUARDA TIEMPO QUE ESTUVO LIBRE O SIN TRABAJO 
-                            if ocio_segundos > 10: # Ignora solo dobles-clics/parpadeos, no huecos reales
-                                registro_tiempo_libre = {
+                                inicio_p = datetime.fromisoformat(tr["inicio_pausa"].replace("Z", "+00:00"))
+                                ahora = hora_colombia()
+                                pausa_segundos = (ahora - inicio_p).total_seconds()
+            
+    # GUARDAR ENH LA TABLA DE TIEMPOS MUERTOS
+                                registro_parada = {
                                     "maquina": m,
-                                    "motivo": "TIEMPO LIBRE (ENTRE OPs)",
-                                    "inicio": fin_ultimo.isoformat(),
-                                    "fin": ahora_iso,
-                                    "duracion_segundos": ocio_segundos
+                                    "motivo": tr.get('motivo_pausa'),
+                                    "inicio": tr["inicio_pausa"],
+                                    "fin": ahora.isoformat(),
+                                    "duracion_segundos": pausa_segundos
                                 }
                                 try:
-                                    supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
+                                    supabase.table("paradas_maquina").insert(registro_parada).execute()
                                 except Exception:
-
                                     try:
-                                        registro_tiempo_libre.pop("duracion_segundos", None)
-                                        supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
+                                        registro_parada.pop("duracion_segundos", None)
+                                        supabase.table("paradas_maquina").insert(registro_parada).execute()
                                     except Exception:
                                         pass
 
-# INICIAR TRABAJO NORMAL
-                        registro_nuevo_trabajo = {
-                            "maquina": m,
-                            "area": area_act,
-                            "op": sel_op,
-                            "hora_inicio": ahora_iso,
-                            "pausado": False,
-                            "tiempo_pausa": 0,
-                            "inicio_pausa": None,
-                            "operario": st.session_state.get('nombre_usuario', 'Operario Planta')
-                        }
-                        try:
-                            supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
-                        except Exception:
-                            registro_nuevo_trabajo.pop("operario", None)
-                            supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
+    # ACTUALIZAR EL REGISTRO DE ACTIVOS PARA IR TRABAJANO
+                                nuevo_tiempo_acumulado = tr.get("tiempo_pausa", 0) + pausa_segundos
+                                supabase.table("trabajos_activos").update({
+                                    "pausado": False,
+                                    "tiempo_pausa": nuevo_tiempo_acumulado,
+                                    "inicio_pausa": None,
+                                    "motivo_pausa": None
+                                }).eq("maquina", m).execute()
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error: {e}")
+
+    #  BOTON FINALIZAR SIEMPRE VERLO
+                    if st.button(f"✅ FINALIZAR TRABAJO", key=f"f_{m}"):
+                        st.session_state.rep = tr
                         st.rerun()
+                else:
+                    st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
+                    ops_p = supabase.table("ordenes_planeadas").select("*").or_(f"proxima_area.eq.{area_act},estado_parcial.eq.ACTIVO EN {area_act}").execute().data
+                    if ops_p:
+                        op_dict = {f"{o['op']} - {o['nombre_trabajo']}": o['op'] for o in ops_p}
+
+                        sel_op_label = st.selectbox("Seleccionar OP", list(op_dict.keys()), key=f"s_{m}")
+                        sel_op = op_dict[sel_op_label]
+                    
+                        if st.button(f"🚀 INICIAR {m}", key=f"str_{m}"):
+                            ahora_iso = hora_colombia().isoformat()
+    
+    # BUSCAR CUANDO TERMINO REALMENTE EL ULTIMO TRABAJO DE ESTA MAQUINA
+                            fin_ultimo = obtener_ultima_actividad_maquina(m)
+    
+                            if fin_ultimo:
+                                ocio_segundos = (hora_colombia() - fin_ultimo).total_seconds()
+        
+    # GUARDA TIEMPO QUE ESTUVO LIBRE O SIN TRABAJO 
+                                if ocio_segundos > 10: # Ignora solo dobles-clics/parpadeos, no huecos reales
+                                    registro_tiempo_libre = {
+                                        "maquina": m,
+                                        "motivo": "TIEMPO LIBRE (ENTRE OPs)",
+                                        "inicio": fin_ultimo.isoformat(),
+                                        "fin": ahora_iso,
+                                        "duracion_segundos": ocio_segundos
+                                    }
+                                    try:
+                                        supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
+                                    except Exception:
+
+                                        try:
+                                            registro_tiempo_libre.pop("duracion_segundos", None)
+                                            supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
+                                        except Exception:
+                                            pass
+
+    # INICIAR TRABAJO NORMAL
+                            registro_nuevo_trabajo = {
+                                "maquina": m,
+                                "area": area_act,
+                                "op": sel_op,
+                                "hora_inicio": ahora_iso,
+                                "pausado": False,
+                                "tiempo_pausa": 0,
+                                "inicio_pausa": None,
+                                "operario": st.session_state.get('nombre_usuario', 'Operario Planta')
+                            }
+                            try:
+                                supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
+                            except Exception:
+                                registro_nuevo_trabajo.pop("operario", None)
+                                supabase.table("trabajos_activos").insert(registro_nuevo_trabajo).execute()
+                            st.rerun()
 
     if st.session_state.rep and st.session_state.rep["area"] == area_act:
         r = st.session_state.rep
