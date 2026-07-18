@@ -1214,6 +1214,18 @@ if not st.session_state.get('autenticado'):
                 st.error("Usuario o contraseña incorrectos")
     st.stop() 
 
+# FONDO DE MARCA PARA TODA LA APP (despues de iniciar sesion)
+# Degradado suave azul -> verde -> naranja, tomado de los colores de las 3 marcas.
+# Se usan tonos claros a proposito para que las tablas y textos sigan siendo legibles.
+st.markdown("""
+<style>
+.stApp { background: linear-gradient(135deg, #E3F0FF 0%, #E1F6EC 55%, #FFF1E1 100%); }
+section[data-testid="stSidebar"] { background: linear-gradient(180deg, #0D2E4E 0%, #0D47A1 60%, #0F8B6B 100%); }
+section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
+section[data-testid="stSidebar"] .stRadio [role="radiogroup"] label { background: rgba(255,255,255,0.08); border-radius: 8px; padding: 4px 8px; margin-bottom: 4px; }
+</style>
+""", unsafe_allow_html=True)
+
 # ESTRUCTURA DE MENU CON PERMISOS POR ROL
 with st.sidebar:
     st.title("🏭 C&B PAPELES DE COLOMBIA S.A.S")
