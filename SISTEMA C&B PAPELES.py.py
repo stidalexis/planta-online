@@ -1215,14 +1215,34 @@ if not st.session_state.get('autenticado'):
     st.stop() 
 
 # FONDO DE MARCA PARA TODA LA APP (despues de iniciar sesion)
-# Degradado suave azul -> verde -> naranja, tomado de los colores de las 3 marcas.
-# Se usan tonos claros a proposito para que las tablas y textos sigan siendo legibles.
+# Degradado azul -> verde -> naranja, tomado de los colores de las 3 marcas.
+# Las alertas/cajas nativas de Streamlit se refuerzan con fondo blanco y sombra
+# para que no se pierdan contra el degradado.
 st.markdown("""
 <style>
-.stApp { background: linear-gradient(135deg, #E3F0FF 0%, #E1F6EC 55%, #FFF1E1 100%); }
+.stApp { background: linear-gradient(135deg, #CFE6FF 0%, #CDEEDF 55%, #FFE3C2 100%); }
 section[data-testid="stSidebar"] { background: linear-gradient(180deg, #0D2E4E 0%, #0D47A1 60%, #0F8B6B 100%); }
 section[data-testid="stSidebar"] * { color: #FFFFFF !important; }
 section[data-testid="stSidebar"] .stRadio [role="radiogroup"] label { background: rgba(255,255,255,0.08); border-radius: 8px; padding: 4px 8px; margin-bottom: 4px; }
+
+/* Refuerzo de contraste: alertas, expanders y cajas de metricas quedan sobre tarjeta blanca */
+div[data-testid="stAlert"] {
+    background: #FFFFFF !important;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(13,44,78,0.18);
+    border-left: 5px solid #0D47A1;
+}
+div[data-testid="stExpander"] {
+    background: #FFFFFF;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(13,44,78,0.15);
+}
+div[data-testid="stMetric"] {
+    background: #FFFFFF;
+    border-radius: 10px;
+    padding: 10px 14px;
+    box-shadow: 0 2px 8px rgba(13,44,78,0.15);
+}
 </style>
 """, unsafe_allow_html=True)
 
