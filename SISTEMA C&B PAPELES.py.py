@@ -108,12 +108,10 @@ def _es_hash_bcrypt(valor) -> bool:
     """Detecta si un valor guardado en 'clave' ya es un hash bcrypt (vs texto plano antiguo)."""
     return isinstance(valor, str) and valor.startswith(("$2a$", "$2b$", "$2y$"))
 
-
 # Convierte una contrasena de texto plano en un hash seguro (bcrypt) para guardarla cifrada en la base de datos
 def _hashear_clave(clave_texto: str) -> str:
     """Genera un hash bcrypt seguro a partir de una clave en texto plano."""
     return bcrypt.hashpw(clave_texto.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
 
 # Valida usuario y clave contra la tabla de usuarios en Supabase.
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
@@ -268,7 +266,6 @@ def hora_colombia():
     return datetime.now(tz)
 
 # FUNCION CENTRAL DE FORMATO DE FECHAS: convierte cualquier fecha/hora que llegue de la base de datos
-# (con o sin zona horaria, con o sin segundos) al formato unico DD/MM/AAAA HH:MM en hora Colombia
 def fmt_fecha_hora(valor, con_hora=True):
     """
     Convierte CUALQUIER fecha/hora (string ISO con o sin zona horaria, en UTC,
@@ -367,6 +364,7 @@ def get_area_activa(area: str) -> bool:
               .eq("clave", f"area_activa_{area}").single().execute()
         activa = str(res.data.get("valor", "true")).lower() == "true"
     except Exception:
+
 # Si nunca se ha guardado un registro para esta area, se asume activa por defecto
         activa = True
     st.session_state[cache_key] = activa
@@ -990,8 +988,6 @@ def modal_detalle_op(row):
         for h in hist:
 
 # TARJETA ESPECIAL PARA EDICIONES (no es un paso de produccion, es un cambio en los datos de la OP)
-# Se usa startswith('EDIC') en vez de comparar el string completo, para que no falle
-# por temas de codificacion de tildes (Ó) que a veces llegan distinto desde la base de datos.
             if (h.get('area') or '').strip().upper().startswith('EDIC') or (h.get('tipo') or '').strip().upper().startswith('EDIC'):
                 motivo_edicion = (
                     h.get('observaciones')
@@ -1048,7 +1044,6 @@ if 'sel_tipo' not in st.session_state: st.session_state.sel_tipo = None
 if 'rep' not in st.session_state: st.session_state.rep = None
 
 # LOGIN PRINCIPAL  LOGUIN
-
 if not st.session_state.get('autenticado'):
 
 # ESTILOS DE LA PORTADA DE LOGIN (fondo de marca + tarjeta con los 3 logos)
@@ -1196,7 +1191,6 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
 
-
 # Calcula hace cuanto tiempo una maquina no tiene actividad, para sumar ese tiempo como "tiempo libre entre OPs" en las estadisticas
 def obtener_ultima_actividad_maquina(nombre_maquina):
     """
@@ -1239,10 +1233,7 @@ def obtener_ultima_actividad_maquina(nombre_maquina):
                     continue
     return ultima_fecha
 
-
 # RUTA DE LA OP DESPUES DE SER REVISADA EN AUDITORIA VENTAS
-# Es la misma logica que antes decidia la ruta inicial al crear la OP; ahora se usa
-# despues de que el auditor de ventas la marca como revisada, no en el momento de crearla.
 def ruta_despues_de_auditoria_ventas(tipo_orden):
     if tipo_orden == "FORMAS IMPRESAS":
         return "DISEÑO (AUDITORIA)"
@@ -1255,7 +1246,6 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
     elif tipo_orden == "REBOBINADO":
         return "REBOBINADORAS"
     return "IMPRESIÓN"
-
 
 # CALCULO DE TIEMPO EN AREA (desde que la OP entro al area actual hasta ahora o hasta que se cierra)
 def _ultima_fecha_relevante_historial(historial):
@@ -1282,7 +1272,6 @@ def _ultima_fecha_relevante_historial(historial):
             except Exception:
                 continue
     return None
-
 
 def calcular_tiempo_en_area(op_data):
     """
@@ -1311,8 +1300,6 @@ def calcular_tiempo_en_area(op_data):
 
 
 # RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
-# Se usa tanto en Diseño y Pre-Prensa como en Auditoria Ventas, para revisar la orden
-# antes de aprobarla o pasarla a la siguiente etapa.
 def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
 
@@ -1367,7 +1354,6 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             st.table(datos.get('detalles_partes_json'))
         else:
             st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
-
 
 # MODULO MONITOR 
 if menu == "🖥️ Monitor":
@@ -1470,7 +1456,7 @@ if menu == "🖥️ Monitor":
     if st.session_state.get('rol', '').lower() == 'admin':
         alertas_3d = []
 
-# CASO 1: OP ACTIVA EN UNA MAQUINA QUE LLEVA 3+ DIAS SIN FINALIZARSE
+#  OP ACTIVA EN UNA MAQUINA QUE LLEVA 3+ DIAS SIN FINALIZARSE
         for a in act_data:
             try:
                 if not diccionario_estados.get(a['maquina'], True):
@@ -1482,9 +1468,7 @@ if menu == "🖥️ Monitor":
             except Exception as e:
                 print(f"Error en alerta 3 dias (activa): {e}")
 
-# CASO 2: OP CREADA HACE 3+ DIAS QUE NUNCA HA ENTRADO A NINGUNA MAQUINA
-# OPTIMIZACION: se filtra "proxima_area != FINALIZADO" directo en la base de datos,
-# en vez de traer TAMBIEN todas las ordenes finalizadas historicas solo para descartarlas despues.
+# OP CREADA HACE 3+ DIAS QUE NUNCA HA ENTRADO A NINGUNA MAQUINA
         try:
             ops_espera = supabase.table("ordenes_planeadas").select(
                 "op,cliente,nombre_trabajo,proxima_area,historial_procesos,created_at,fecha_creacion"
@@ -1517,11 +1501,7 @@ if menu == "🖥️ Monitor":
                 for al in alertas_3d:
                     st.warning(al)
 
-# PREPARAR DATOS DE OPERACIONES 
-# OPTIMIZACION: antes se traia "op,nombre_trabajo" de TODAS las ordenes de toda la
-# historia solo para poder mostrar el nombre del trabajo en las tarjetas de maquinas
-# activas. Ahora solo se piden los nombres de las OPs que realmente estan activas
-# en alguna maquina en este momento (siempre son muy pocas).
+# PREPARAR DATOS DE OPERACIONES  OPTIMIZACION: antes se traia "op,nombre_trabajo" de TODAS las ordenes de toda la
     op_ids_activos = list({str(a['op']) for a in act_data}) if act_data else []
     if op_ids_activos:
         ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").in_("op", op_ids_activos).execute().data or []
@@ -1606,13 +1586,6 @@ elif menu == "🔍 Seguimiento":
     busqueda = st.text_input("🔍 Filtrar por OP, Cliente, Trabajo o Vendedor:", "")
 
 # OPTIMIZACION DE VELOCIDAD DE CARGA:
-# Antes este modulo traia TODAS las OPs (activas + finalizadas de toda la historia) con select("*")
-# y luego las separaba en Python. Eso significaba descargar y procesar tambien todas las OPs
-# finalizadas historicas solo para mostrar la pestaña de pendientes. Ahora:
-#  - Las PENDIENTES se piden directo filtradas en la base de datos (mucho mas liviano).
-#  - Las FINALIZADAS solo traen, por defecto, las 200 mas recientes; si el usuario busca algo
-#    especifico, la busqueda se hace directo en la base de datos sobre TODO el historico,
-#    para no perder la posibilidad de encontrar una OP finalizada antigua.
     try:
         ordenes_pendientes = (
             supabase.table("ordenes_planeadas")
@@ -1715,7 +1688,6 @@ elif menu == "🔍 Seguimiento":
             vendedor = row.get('vendedor', 'N/A')
             lugar = row.get('tipo_origen', 'N/A')
            
-
 # LOGICA DE FILTRADO
             if busqueda:
                 b = busqueda.lower()
@@ -1830,8 +1802,7 @@ elif menu == "🔍 Seguimiento":
                     if link_arte:
                         st.link_button("🎨 VER ARTE", link_arte, use_container_width=True)
 
-# El ticket ya no es un link: es un numero que el vendedor ingresa al crear la OP (num_ticket).
-# Se muestra en pantalla, debajo del link del arte, en vez del boton "VER TICKET" que ya no aplica.
+# El ticket es un numero que el vendedor ingresa al crear la OP (num_ticket).
                     if num_ticket_seg:
                         st.metric("🎫 TICKET", num_ticket_seg)
 
@@ -1925,10 +1896,7 @@ elif menu == "🔍 Seguimiento":
 elif menu == "🎨 Diseño y Pre-Prensa":
     st.title("🎨 Módulo de Diseño y Pre-Prensa")
 
-# CONTROL DE ACCESO POR ETAPA: los roles diseño1/diseño2/diseño3 solo pueden
-# INTERACTUAR con su propia pestaña (Auditoria/Pre-Prensa/Revision Final).
-# Los roles 'admin' y 'diseño' (genérico) siguen viendo y usando las 3 pestañas,
-# igual que antes, para no romper flujos existentes.
+# CONTROL DE ACCESO POR ETAPA: los roles diseño1/diseño2/diseño3 solo pueden INTERACTUAR con su propia pestaña (Auditoria/Pre-Prensa/Revision Final).
     _rol_diseno_actual = st.session_state.get('rol', '').lower()
     puede_tab1 = _rol_diseno_actual in ('admin', 'diseño', 'diseño1')
     puede_tab2 = _rol_diseno_actual in ('admin', 'diseño', 'diseño2')
@@ -1963,8 +1931,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}")
                 obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}")
                 
-# SI ES "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL.
-# SI ES "NUEVA" O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
+# SI ES "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL. SI ES "NUEVA" O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
                 tipo_origen_op = (datos_op.get('tipo_origen') or '').strip()
                 es_repeticion_exacta = (tipo_origen_op == "Repetición Exacta")
 
@@ -2062,8 +2029,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 st.warning(f"**Ticket:** {datos_op_3.get('num_ticket')} | **DATOS DE PLANCHAS A REVELAR:** {datos_op_3.get('observaciones_diseno2')}")
 
 # VER EL ARTE Y CORREGIR EL LINK SI QUEDO MAL CARGADO EN AUDITORIA TECNICA (tab1).
-# Esta es la ULTIMA oportunidad de corregirlo antes de que la orden pase a Impresión;
-# una vez en Impresión, el link ya no se puede editar desde este módulo.
                 link_actual_3 = datos_op_3.get('link_diseno', '') or ''
                 c_arte1, c_arte2 = st.columns([1, 2])
                 with c_arte1:
@@ -2095,7 +2060,6 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                     })
 
 # Actualizamos a IMPRESION para que pase a la planta (incluye el link del arte,
-# por si se corrigio aqui mismo antes de enviar)
                     supabase.table("ordenes_planeadas").update({
                         "proxima_area": "IMPRESIÓN",
                         "link_diseno": link_arte_final,
@@ -2213,6 +2177,7 @@ elif menu == "📅 Planificación":
                 st.markdown("**Edita los campos que necesitas corregir:**")
 
                 with st.form("form_editar_op"):
+
 #  DATOS GENERALES 
                     st.markdown("**📋 Datos Generales**")
                     ec1, ec2, ec3 = st.columns(3)
@@ -2313,7 +2278,7 @@ elif menu == "📅 Planificación":
                     btn_guardar_edit = st.form_submit_button("💾 GUARDAR CAMBIOS", use_container_width=True)
 
 # Al presionar GUARDAR CAMBIOS: arma el payload segun el tipo de orden (Formas/Rollos/Rebobinado),
-# actualiza la OP en Supabase y agrega la tarjeta de EDICION al historial_procesos para dejar trazabilidad
+
                     if btn_guardar_edit:
                         if not nueva_obs_gral.strip():
                             st.error("⚠️ Debes escribir el motivo del cambio.")
@@ -2657,9 +2622,6 @@ elif menu == "📅 Planificación":
                         st.stop()
 
 # DEFINIR AREA INICIAL: TODA OP NUEVA PASA PRIMERO POR AUDITORIA VENTAS,
-# sin importar su tipo (Formas/Rollos, Impresos/Blancos/Rebobinado).
-# La ruta que le corresponda segun su tipo (ruta_despues_de_auditoria_ventas)
-# se aplica solo cuando el Auditor de Ventas la marca como revisada.
                     ruta_inicial = "AUDITORIA VENTAS"
 
                     payload = {
@@ -2906,7 +2868,6 @@ elif menu == "📦 salida produccion P1":
             df_show = formatear_fechas_df(df_show)
 
 # SI LA REFERENCIA COMERCIAL VIENE VACIA (ordenes antiguas creadas antes de que
-# se empezara a guardar este dato), se muestra "-" en vez del texto "None"
             if 'ref_comercial' in df_show.columns:
                 df_show['ref_comercial'] = df_show['ref_comercial'].fillna('-').replace('', '-')
             
@@ -2952,8 +2913,7 @@ elif menu == "📊 Reportes Admin":
         
         with tab_historial:
             st.subheader("Historial de Movimientos de Bodega")
-# OPTIMIZACION: por defecto solo trae los 500 movimientos mas recientes (mucho mas
-# rapido); si se necesita revisar mas atras, el interruptor trae todo el historico.
+# OPTIMIZACION: por defecto solo trae los 500 movimientos mas recientes (mucho mas rapido); si se necesita revisar mas atras, el interruptor trae todo el historico.
             ver_todo_bodega = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_bodega")
             q_h = supabase.table("bodega_historial").select("*").order("fecha", desc=True)
             if not ver_todo_bodega:
@@ -2971,8 +2931,7 @@ elif menu == "📊 Reportes Admin":
         with tab_muertos:
             st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
 
-#  TOMA DE TIEMPOS DE MAQUIA LIBRE ENTRE UN AOP Y OTRA 
-# OPTIMIZACION: mismo criterio — 500 mas recientes por defecto, con opcion de ver todo.
+#  TOMA DE TIEMPOS DE MAQUIA LIBRE ENTRE UNA OP Y OTRA 
             ver_todo_muertos = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_muertos")
             q_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True)
             if not ver_todo_muertos:
@@ -2998,7 +2957,6 @@ elif menu == "📊 Reportes Admin":
             st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
 
 # AQUI S EMUESTRA PORQUE LA MAQUINA SE DERUBO 
-# OPTIMIZACION: mismo criterio — 500 mas recientes por defecto, con opcion de ver todo.
             ver_todo_paradas = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_paradas")
             q_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True)
             if not ver_todo_paradas:
@@ -3027,7 +2985,6 @@ elif menu == "📊 Reportes Admin":
             st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
 
 # SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-) PARA QUE SEA MAS FACIL
-# BUSCAR UNA TRAZABILIDAD ESPECIFICA SIN TENER QUE VER TODAS MEZCLADAS
             sub_ri, sub_rb, sub_fri, sub_frb, sub_rr = st.tabs([
                 "🧵 RI- (Rollos Impresos)", "🧻 RB- (Rollos Blancos)",
                 "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)"
@@ -3076,7 +3033,6 @@ elif menu == "📊 Reportes Admin":
                         historial = o.get("historial_procesos") or []
 
 # RESUMEN RAPIDO DE TIEMPOS POR AREA (areas ya completadas, en el orden que las paso)
-# Esto responde "cuanto duro en el area anterior" sin tener que abrir la linea de tiempo completa de abajo.
                         resumen_tiempos = []
                         for h in historial:
                             area_h = (h.get('area') or '').strip().upper()
@@ -3088,7 +3044,7 @@ elif menu == "📊 Reportes Admin":
                         if resumen_tiempos:
                             st.success("📊 Tiempo que duró en cada área anterior:  " + "   |   ".join(resumen_tiempos))
 
-    # TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado, se calcula en vivo)
+# TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado, se calcula en vivo)
                         if estado_actual != "FINALIZADO":
                             _, tiempo_actual_area = calcular_tiempo_en_area(o)
                             st.info(f"⏳ Lleva **{tiempo_actual_area}** en el área actual (**{estado_actual}**)")
@@ -3119,7 +3075,7 @@ elif menu == "📊 Reportes Admin":
                                     f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
                                     f"{paso.get('fecha','-')}  |  Duración trabajada: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
                                 )
-    # TIEMPO TOTAL QUE LA OP ESTUVO EN ESTA AREA (desde que entro hasta que salio, incluyendo esperas/pausas)
+# TIEMPO TOTAL QUE LA OP ESTUVO EN ESTA AREA (desde que entro hasta que salio, incluyendo esperas/pausas)
                                 if paso.get("tiempo_total_area"):
                                     st.caption(f"⏱️ Tiempo total en el área: {paso['tiempo_total_area']}")
                                 if paso.get("observaciones"):
@@ -3177,7 +3133,6 @@ elif menu == "📊 Reportes Admin":
                     st.caption(f"Total de usuarios registrados: {len(res_usuarios)}")
                 else:
                     st.info("No hay usuarios registrados.")
-
 
 # MODULO ALMACEN/DESPACHOS: registra entradas y salidas de producto terminado hasta que sale despachado al cliente
 elif menu == "📦 Almacen/Despachos":
@@ -3467,8 +3422,6 @@ elif menu == "📆 Cronograma Impresión":
 
     try:
 # OPTIMIZACION: el cronograma solo necesita ordenes que TODAVIA se puedan agendar/mover,
-# no hace falta traer tambien anos de ordenes ya finalizadas (que antes se descargaban
-# completas, con su historial_procesos, solo para descartarlas un renglon despues).
         todas_las_ops = supabase.table("ordenes_planeadas").select("*").neq("proxima_area", "FINALIZADO").execute().data or []
     except Exception as e:
         st.warning(f"No se pudieron cargar las órdenes planeadas: {e}")
@@ -3563,7 +3516,6 @@ elif menu == "📆 Cronograma Impresión":
     supa_key = str(KEY)
 
 # A partir de aqui se arma a mano el HTML/CSS/JS del calendario tipo Notion (libreria FullCalendar),
-# que luego se incrusta en la pagina de Streamlit con components.html(). Aqui vive todo el "dibujo" del cronograma.
     html_cal = (
         "<!DOCTYPE html><html><head>"
         "<link href='https://cdn.jsdelivr.net/npm/fullcalendar-scheduler@6.1.11/index.global.min.css' rel='stylesheet'/>"
@@ -3613,8 +3565,8 @@ elif menu == "📆 Cronograma Impresión":
         "</div></div></div>"
         "<div id='tooltip'></div>"
         "<script>"
-        # JAVASCRIPT: aqui vive toda la logica visual del calendario y el guardado automatico en Supabase
-        # cada vez que se arrastra, redimensiona o quita una orden del cronograma
+# JAVASCRIPT: aqui vive toda la logica visual del calendario y el guardado automatico en Supabase
+# cada vez que se arrastra, redimensiona o quita una orden del cronograma
         "var eventos    = " + eventos_str + ";"
         "var recursos   = " + recursos_str + ";"
         "var pendientes = " + pendientes_str + ";"
@@ -4176,10 +4128,6 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     }).eq("op", r['op']).execute()
 
 # INGRESO AUTOMATICO A INVENTARIO DE PRODUCTO TERMINADO (SOLO CORTE, AL FINALIZAR ROLLOS)
-# Cuando una OP de Rollos (Impresos o Blancos) termina en Corte, la cantidad de
-# "Total Rollos cortados" que el maquinista ya registró arriba en el formulario
-# se suma SOLA al inventario de producto terminado (📦 Salida producción P1),
-# sin que nadie tenga que volver a escribirla a mano en ese otro módulo.
                     if area_act == "CORTE" and n_area == "FINALIZADO":
                         try:
                             rollos_salida = int(datos_c.get('rollos_finales', 0) or 0)
@@ -4201,8 +4149,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                         "ultima_actualizacion": fecha_mov_auto,
                                         "observaciones": f"OP {r['op']} — ingreso automático desde Corte"
                                     }
-# SOLO SE ACTUALIZA LA REFERENCIA COMERCIAL SI LA OP TRAE UNA Y ES DISTINTA A LA
-# YA GUARDADA, PARA NO BORRAR UNA REFERENCIA CORRECTA CON UN VALOR VACIO
+# SOLO SE ACTUALIZA LA REFERENCIA COMERCIAL SI LA OP TRAE UNA Y ES DISTINTA A LA YA GUARDADA, PARA NO BORRAR UNA REFERENCIA CORRECTA CON UN VALOR VACIO
                                     if ref_comercial_bodega and prod_existente.get('ref_comercial') != ref_comercial_bodega:
                                         update_payload_bodega["ref_comercial"] = ref_comercial_bodega
                                     supabase.table("bodega_producto_terminado").update(
@@ -4219,8 +4166,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                         "observaciones": f"OP {r['op']} — ingreso automático desde Corte"
                                     }).execute()
 
-# TAMBIEN QUEDA EN EL HISTORIAL DE MOVIMIENTOS DE BODEGA, IGUAL QUE SI SE HUBIERA
-# INGRESADO A MANO, PARA QUE SE VEA EN REPORTES ADMIN Y EN SALIDA PRODUCCION P1
+# TAMBIEN QUEDA EN EL HISTORIAL DE MOVIMIENTOS DE BODEGA, IGUAL QUE SI SE HUBIERA INGRESADO A MANO, PARA QUE SE VEA EN REPORTES ADMIN Y EN SALIDA PRODUCCION P1
                                 supabase.table("bodega_historial").insert({
                                     "nombre_trabajo": nombre_trabajo_bodega,
                                     "tipo_movimiento": "ENTRADA",
