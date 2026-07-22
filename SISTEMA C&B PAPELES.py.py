@@ -14,7 +14,6 @@ import bcrypt
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
 
 #  LOGOS DE MARCA (para la portada de login) 
-# Convierte una imagen del disco a base64 para poder incrustarla directo en HTML/CSS
 def _logo_base64(nombre_archivo):
     ruta = os.path.join(os.path.dirname(__file__), "assets", nombre_archivo)
     try:
@@ -117,8 +116,6 @@ def _hashear_clave(clave_texto: str) -> str:
 
 
 # Valida usuario y clave contra la tabla de usuarios en Supabase.
-# Si la clave de ese usuario todavia estaba guardada sin cifrar (cuentas muy antiguas),
-# la cifra automaticamente con bcrypt la primera vez que valida bien, sin que el usuario haga nada.
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     """
     Valida usuario/clave contra Supabase usando hash bcrypt.
@@ -960,7 +957,7 @@ def modal_detalle_op(row):
             st.markdown(f"""
             <div class='metric-box'>
             📄 <b>Material:</b> {row.get('material')}<br>
-            📏 <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
+            ⚖️ <b>Gramaje:</b> {row.get('gramaje_rollos')}<br>
             📦 <b>unidades por caja:</b> {row.get('unidades_caja')}<br>
             🛍️ <b>unidades por bolsa:</b> {row.get('unidades_bolsa')}<br>
             📦 <b>Cantidad:</b> {row.get('cantidad_rollos')}
@@ -981,7 +978,7 @@ def modal_detalle_op(row):
             <div class='metric-box'>
             🎨 <b>Tintas F:</b> {row.get('tintas_frente_rollos')}<br>
             🎨 <b>Tintas R:</b> {row.get('tintas_respaldo_rollos')}<br>
-            🌀 <b>Core:</b> {row.get('core')}
+            ⭕ <b>Core:</b> {row.get('core')}
             </div>
             """, unsafe_allow_html=True)
 
@@ -1754,7 +1751,7 @@ elif menu == "🔍 Seguimiento":
                 color_tipo = "#1565C0"
                 borde_tipo = "#1565C0"
             elif "ROLLOS" in tipo_op:
-                icono_tipo = "🌀"
+                icono_tipo = "🧻"
                 etiqueta_tipo = "ROLLOS"
                 color_tipo = "#2E7D32"
                 borde_tipo = "#2E7D32"
@@ -1783,27 +1780,44 @@ elif menu == "🔍 Seguimiento":
                 with c1:
                     st.write("**👤 CLIENTE:**") 
                     st.info(cliente)
-                    st.write("**📅 FECHA:**")
-                    st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
-                    st.write("**🔙 ORDEN ANTERIOR:**")
-                    st.info(row.get('op_anterior', '')[:10])
-                with c2:
-                    st.write("**🏗️ AREA ACTUAL:**")
-                    st.info(area_destino)
-                    st.write("**📦 CANTIDAD SOLICITADA:**")
-                    st.info(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
-                    st.write("**📖 REFERENCIA COMERCIAL:**")
-                    st.info(row.get('ref_comercial', ''))
-                with c3:
-                    st.write("**📝 NOMBRE DE TRABAJO:**")
-                    st.info(nombre_t)
                     st.write("**⚙️ TIPO DE TRABAJO:**")
                     st.info(row.get('tipo_orden', 'N/A'))
+                    st.write("**📑 MATERIAL:**")
+                    st.info(row.get('material', 'N/A'))
+                    st.write("**🔙 ORDEN ANTERIOR:**")
+                    st.info(row.get('op_anterior', 'N/A')[:10])
+                    st.write("**🛍️ UNIDAD POR BOLSA:**")
+                    st.info(row.get('unidades_bolsa', 'N/A'))
+                    st.write("**🪚 PERFORACIONES:**")
+                    st.info(row.get('perforaciones_detalle', 'N/A'))
+                with c2:
+                    st.write("**📝 NOMBRE DE TRABAJO:**")
+                    st.info(nombre_t)
+                    st.write("**📦 CANTIDAD SOLICITADA:**")
+                    st.info(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
+                    st.write("**⚖️ GRAMAJE:**")
+                    st.info(row.get('gramaje_rollos', ''))
+                    st.write("**🎨 TINTAS FRENTE:**")
+                    st.info(row.get('tintas_frente_rollos', ''))
+                    st.write("**📦 UNIDAD POR CAJA:**")
+                    st.info(row.get('unidades_caja', 'N/A'))
                     st.write("**📋 OBSERVACIONES DE DISEÑO:**")
                     st.info(row.get('observaciones_diseno', 'N/A'))
+                with c3:
+                    st.write("**💼 VENDEDOR:**")
+                    st.info(row.get('vendedor', 'N/A'))
+                    st.write("**📖 REFERENCIA COMERCIAL:**")
+                    st.info(row.get('ref_comercial', 'N/A'))
+                    st.write("**⭕ CORE:**")
+                    st.info(row.get('core', 'N/A'))
+                    st.write("**🎨 TINTA RESPALDO:**")
+                    st.info(row.get('tintas_respaldo_rollos', ''))
+                    st.write("**📅 FECHA:**")
+                    st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
+                    st.write("**📋 OBSERVACIONES PLANCHAS:**")
+                    st.info(row.get('observaciones_diseno2', 'N/A'))
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
-
 
 # BOTON DE READIOGRAFIA
                     if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
@@ -1851,7 +1865,7 @@ elif menu == "🔍 Seguimiento":
 # RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
         with tab_pendientes:
             sub_formas_p, sub_rblancos_p, sub_rebob_p, sub_rimpresos_p = st.tabs(
-                ["📄 Formas", "🌀 Rollos Blancos", "🔄 Rebobinado", "🌀 Rollos Impresos"]
+                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos"]
             )
             pendientes_formas = [r for r in ordenes_pendientes if _categoria_op(r) == "FORMAS"]
             pendientes_rblancos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_BLANCOS"]
@@ -1880,7 +1894,7 @@ elif menu == "🔍 Seguimiento":
 
         with tab_finalizadas:
             sub_formas_f, sub_rblancos_f, sub_rebob_f, sub_rimpresos_f = st.tabs(
-                ["📄 Formas", "🌀 Rollos Blancos", "🔄 Rebobinado", "🌀 Rollos Impresos"]
+                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos"]
             )
             finalizadas_formas = [r for r in ordenes_finalizadas if _categoria_op(r) == "FORMAS"]
             finalizadas_rblancos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS_BLANCOS"]
@@ -2254,7 +2268,7 @@ elif menu == "📅 Planificación":
 
 #  ROLLOS IMPRESOS / BLANCOS 
                     elif tipo_op in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS"]:
-                        st.markdown("**🌀 Datos de Rollos**")
+                        st.markdown("**🧻 Datos de Rollos**")
                         er1, er2, er3 = st.columns(3)
                         nuevo_mat   = er1.text_input("Material Base:", value=op_edit.get('material','') or '')
                         nuevo_gram  = er2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
@@ -2384,7 +2398,7 @@ elif menu == "📅 Planificación":
 #  SELECTOR OTIGEN DE OP
         st.markdown("<div class='section-header'>📂 ORIGEN DE LA INFORMACIÓN</div>", unsafe_allow_html=True)
         origen = st.radio("¿Cómo desea ingresar la orden?", 
-                        ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
+                        ["✨ Nueva (Desde cero)", "🔁 Repetición Exacta", "📝 Repetición con Cambios"], 
                         horizontal=True)
     
 # VARIABLE PARA ALMACENAR DATOS RECUPERADOS
@@ -2413,9 +2427,9 @@ elif menu == "📅 Planificación":
         c1, c2, c3, c4, c5 = st.columns(5)
         if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
         if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
-        if c3.button("🌀 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
-        if c4.button("⚪ ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
-        if c5.button("🌀 REBOBINADO"):st.session_state.sel_tipo = "REBOBINADO"
+        if c3.button("🧵 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
+        if c4.button("🧻 ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
+        if c5.button("🔄 REBOBINADO"):st.session_state.sel_tipo = "REBOBINADO"
 
         if st.session_state.sel_tipo:
             t = st.session_state.sel_tipo
@@ -3015,7 +3029,7 @@ elif menu == "📊 Reportes Admin":
 # SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-) PARA QUE SEA MAS FACIL
 # BUSCAR UNA TRAZABILIDAD ESPECIFICA SIN TENER QUE VER TODAS MEZCLADAS
             sub_ri, sub_rb, sub_fri, sub_frb, sub_rr = st.tabs([
-                "🌀 RI- (Rollos Impresos)", "⚪ RB- (Rollos Blancos)",
+                "🧵 RI- (Rollos Impresos)", "🧻 RB- (Rollos Blancos)",
                 "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)"
             ])
 
@@ -3937,7 +3951,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 col_inv1, col_inv2 = st.columns(2)
                 
                 with col_inv1:
-                    st.subheader("🌀 CONSUMO DE CORES")
+                    st.subheader("⭕ CONSUMO DE CORES")
                     cores_res = supabase.table("inventario_cores").select("id, nombre_core").execute().data
                     dict_cores = {c['nombre_core']: c['id'] for c in cores_res}
                     tubo_usado = st.selectbox("¿Qué TUBO/CORE utilizó?", ["Seleccione..."] + list(dict_cores.keys()))
