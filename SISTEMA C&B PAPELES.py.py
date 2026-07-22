@@ -9,7 +9,6 @@ import base64
 from fpdf import FPDF
 import pytz
 import bcrypt
-import qrcode
 
 #  CONFIGURACION DE PAGINA 
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
@@ -186,7 +185,7 @@ def _fecha_creacion_legible(row):
     except Exception:
         return fecha_dd_mm_aaaa or "-"
 
-# Dibuja en el PDF la cajita con la fecha de creacion de la orden (se usa en rotulos y ordenes de produccion)
+# Dibuja en el PDF la cajita con la fecha de creacion de la orden (se usa en ordenes de produccion)
 def dibujar_caja_fecha_creacion(pdf, row, x=145, y=4, w=63, h=16):
     """Escribe la fecha de creacion de la OP en la esquina opuesta al logo,
     solo como texto (sin caja ni fondo), a juego con el resto del encabezado.
@@ -427,104 +426,6 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
     total_segundos = max(0, total.total_seconds() - tiempo_pausa_segundos)
     return str(timedelta(seconds=int(total_segundos)))
     
-#  ROTULO DE CAJA 100x150mm CON QR
-def generar_rotulo_pdf(row):
-    tipo = (row.get('tipo_orden') or '').upper()
-    if "FORMAS" in tipo:
-        titulo = f"FORMAS {row.get('presentacion','-') or '-'}"
-    elif "REBOBINADO" in tipo:
-        titulo = "REBOBINADO - MATERIAL"
-    else:
-        titulo = f"ROLLO {row.get('material','-') or '-'}"
-
-# GENERAR IMAGEN QR CON LA INFORMACION DE LA OP EN TEXTO PLANO
-# LA CANTIDAD SE TOMA DE UN CAMPO DISTINTO SEGUN EL TIPO DE ORDEN
-    if "FORMAS" in tipo:
-        cantidad_total = row.get('cantidad_formas', '-') or '-'
-    else:
-        cantidad_total = row.get('cantidad_rollos', '-') or '-'
-
-    texto_qr = (
-        "ORDEN DE PRODUCCION\n"
-        f"OP: {row.get('op','-')}\n"
-        f"Cliente: {row.get('cliente','-') or '-'}\n"
-        f"Trabajo: {row.get('nombre_trabajo','-') or '-'}\n"
-        f"Referencia: {row.get('ref_comercial','-') or '-'}\n"
-        f"Tipo: {row.get('tipo_orden','-') or '-'}\n"
-        f"Unidades x Caja: {row.get('unidades_caja','-') or '-'}\n"
-        f"Cantidad Total: {cantidad_total}"
-    )
-    qr_img = qrcode.make(texto_qr)
-    qr_buffer = io.BytesIO()
-    qr_img.save(qr_buffer, format="PNG")
-    qr_buffer.seek(0)
-    qr_path_temp = f"/tmp/qr_{row.get('op','x')}.png"
-    with open(qr_path_temp, "wb") as f_qr:
-        f_qr.write(qr_buffer.getvalue())
-
-    pdf = FPDF(orientation="P", unit="mm", format=(100, 150))
-    pdf.add_page()
-    pdf.set_margins(4, 4, 4)
-
-# TITULO Y NUMERO DE OP
-    pdf.set_font("Arial", "B", 22)
-    pdf.set_xy(4, 8)
-    pdf.cell(92, 11, titulo, align="C")
-
-    pdf.set_font("Arial", "", 11)
-    pdf.set_xy(4, 19)
-    pdf.cell(92, 6, f"OP: {row.get('op','-')}", align="C")
-
-    pdf.set_line_width(0.6)
-    pdf.line(4, 28, 96, 28)
-
-    y = 34
-    def campo(label, valor, tam_valor=18):
-        nonlocal y
-        pdf.set_xy(4, y)
-        pdf.set_font("Arial", "", 10)
-        pdf.cell(92, 5, label)
-        y += 6
-        pdf.set_xy(4, y)
-        pdf.set_font("Arial", "B", tam_valor)
-        pdf.cell(92, 9, str(valor)[:40])
-        y += 13
-
-    campo("REFERENCIA COMERCIAL", row.get('ref_comercial', '') or '-')
-    campo("UNIDADES POR CAJA", row.get('unidades_caja', '') or '-')
-
-    pdf.line(4, y, 96, y)
-    y += 6
-
-# ZONA INFERIOR: IZQUIERDA INFO, DERECHA QR
-    pdf.set_xy(4, y)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(58, 5, "NOMBRE TRABAJO")
-    pdf.set_xy(4, y + 6)
-    pdf.set_font("Arial", "B", 13)
-    pdf.multi_cell(58, 7, str(row.get('nombre_trabajo', '') or '-')[:60])
-
-    y2 = y + 28
-    pdf.set_xy(4, y2)
-    pdf.set_font("Arial", "", 10)
-    pdf.cell(58, 5, "FECHA DE DESCARGA")
-    pdf.set_xy(4, y2 + 6)
-    pdf.set_font("Arial", "B", 14)
-    pdf.cell(58, 8, hora_colombia().strftime("%d/%m/%Y"))
-
-    pdf.image(qr_path_temp, x=62, y=y + 3, w=34, h=34)
-    pdf.set_xy(62, y + 38)
-    pdf.set_font("Arial", "", 8)
-    pdf.cell(34, 4, "INFORMACION OP", align="C")
-
-    try:
-        import os
-        os.remove(qr_path_temp)
-    except Exception:
-        pass
-
-    return bytes(pdf.output())
-
 # GENERA EL PDF DE ORDEN DE PRODUCCION — version base/generica (encabezado y estructura comun del documento)
 def generar_pdf_op(row):
     pdf = FPDF()
@@ -1947,19 +1848,6 @@ elif menu == "🔍 Seguimiento":
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
 
-# BOTON DE DESCARGA DEL ROTULO PARA CAJAS (100x150mm con QR)
-                    try:
-                        st.download_button(
-                            label=f"🏷️ Descargar Rótulo para Cajas {op_id}",
-                            data=generar_rotulo_pdf(row),
-                            file_name=f"rotulo_OP_{op_id}.pdf",
-                            mime="application/pdf",
-                            key=f"dl_rotulo_{op_id}",
-                            use_container_width=True
-                        )
-                    except Exception as e:
-                        st.error(f"No se pudo generar el rótulo: {e}")
-
 # RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
         with tab_pendientes:
             sub_formas_p, sub_rblancos_p, sub_rebob_p, sub_rimpresos_p = st.tabs(
@@ -2061,7 +1949,18 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}")
                 obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}")
                 
-                if st.button("✅ ENVIAR A PRE-PRENSA", use_container_width=True):
+# SI ES "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL.
+# SI ES "NUEVA" O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
+                tipo_origen_op = (datos_op.get('tipo_origen') or '').strip()
+                es_repeticion_exacta = (tipo_origen_op == "Repetición Exacta")
+
+                if es_repeticion_exacta:
+                    st.info("🔁 Esta OP es **Repetición Exacta**: al enviarla saltará Pre-Prensa e irá directo a Revisión Final.")
+                    label_boton = "🚀 ENVIAR DIRECTO A REVISIÓN FINAL (Repetición Exacta)"
+                else:
+                    label_boton = "✅ ENVIAR A PRE-PRENSA"
+
+                if st.button(label_boton, use_container_width=True):
                     if link_arte:
                         _, tiempo_area_txt = calcular_tiempo_en_area(datos_op)
                         hist_dis = datos_op.get('historial_procesos') or []
@@ -2073,17 +1972,22 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                             "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
                             "duracion": tiempo_area_txt,
                             "tiempo_total_area": tiempo_area_txt,
-                            "observaciones": obs_dis
+                            "observaciones": obs_dis if not es_repeticion_exacta else (obs_dis + " [Se saltó Pre-Prensa por ser Repetición Exacta]").strip()
                         })
+                        destino_siguiente = "REVISION_FINAL" if es_repeticion_exacta else "PRE-PRENSA"
                         update_data = {
                             "link_diseno": link_arte, 
                             "observaciones_diseno": obs_dis,
                             "observaciones_diseno2": obs_dise,  
-                            "proxima_area": "PRE-PRENSA",
+                            "proxima_area": destino_siguiente,
                             "historial_procesos": hist_dis
                         }
                         supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
-                        st.success("Enviado a Pre-Prensa."); time.sleep(1); st.rerun()
+                        if es_repeticion_exacta:
+                            st.success("Repetición Exacta: enviada directo a Revisión Final (se saltó Pre-Prensa).")
+                        else:
+                            st.success("Enviado a Pre-Prensa.")
+                        time.sleep(1); st.rerun()
                     else:
                         st.error("El link del ARTE es obligatorio.")
 
@@ -2235,24 +2139,6 @@ elif menu == "🧐 Auditoría Ventas":
 # MODULO PLANIFICACION 
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
-
-# SI SE ACABA DE CREAR UNA OP, OFRECER DESCARGAR SU ROTULO PARA CAJAS
-    if st.session_state.get('ultima_op_creada'):
-        op_recien_creada = st.session_state['ultima_op_creada']
-        st.success(f"✅ Orden {op_recien_creada.get('op')} creada correctamente.")
-        c_rot1, c_rot2 = st.columns([3, 1])
-        with c_rot1:
-            st.download_button(
-                "📥 Descargar Rótulo para Cajas (100x150mm)",
-                data=generar_rotulo_pdf(op_recien_creada),
-                file_name=f"rotulo_OP_{op_recien_creada.get('op')}.pdf",
-                mime="application/pdf",
-                key="dl_rotulo_nueva_op"
-            )
-        with c_rot2:
-            if st.button("✖️ Cerrar aviso", key="cerrar_aviso_rotulo"):
-                st.session_state['ultima_op_creada'] = None
-                st.rerun()
 
 # Estados donde la OP aún no ha sido procesada por ningún área
     ESTADOS_EDITABLES = [
@@ -2826,7 +2712,6 @@ elif menu == "📅 Planificación":
                         payload.pop("creado_por", None)
                         supabase.table("ordenes_planeadas").insert(payload).execute()
 
-                    st.session_state['ultima_op_creada'] = payload
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
 
