@@ -612,11 +612,13 @@ def generar_op_rollos(row):
     pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
 
     pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Material: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('material','')}", 1, 0)
+    pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('material','')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Gramaje: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('gramaje_rollos','')} GRS", 1, 0)
+    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('gramaje_rollos','')} GRS", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Core: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(44, 7, f"{row.get('core','')}", 1, 1) 
+    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('core','')}", 1, 0) 
+    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Op Anterior: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('op_anterior','')}", 1, 1) 
     pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Cant. Rollos: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('cantidad_rollos','')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Unid. Bolsa: ", 1, 0, fill=True)
@@ -2926,6 +2928,12 @@ elif menu == "📊 Reportes Admin":
                     st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre:.1f} min")
                     df_m = df_m.drop(columns=['duracion_segundos'])
                 df_m = formatear_fechas_df(df_m)
+
+# RENOMBRAR COLUMNAS PARA QUE QUEDE CLARO QUE YA ESTA EN MINUTOS (no segundos)
+                df_m = df_m.rename(columns={
+                    'maquina': 'MÁQUINA', 'motivo': 'MOTIVO', 'inicio': 'INICIO',
+                    'fin': 'FIN', 'fecha': 'FECHA', 'duracion_min': 'DURACIÓN (MIN)'
+                })
                 st.dataframe(df_m, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay registros de tiempo libre.")
@@ -2952,6 +2960,12 @@ elif menu == "📊 Reportes Admin":
                     df_p = df_p.drop(columns=['duracion_segundos'])
                 
                 df_p = formatear_fechas_df(df_p)
+
+# RENOMBRAR COLUMNAS PARA QUE QUEDE CLARO QUE YA ESTA EN MINUTOS (no segundos)
+                df_p = df_p.rename(columns={
+                    'maquina': 'MÁQUINA', 'motivo': 'MOTIVO', 'inicio': 'INICIO',
+                    'fin': 'FIN', 'fecha': 'FECHA', 'duracion_min': 'DURACIÓN (MIN)'
+                })
                 st.dataframe(df_p, use_container_width=True, hide_index=True)
             else:
                 st.info("No hay reportes de fallas técnicos.")
@@ -3764,16 +3778,19 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                     "motivo": tr.get('motivo_pausa'),
                                     "inicio": tr["inicio_pausa"],
                                     "fin": ahora.isoformat(),
+                                    "fecha": ahora.isoformat(),
                                     "duracion_segundos": pausa_segundos
                                 }
                                 try:
                                     supabase.table("paradas_maquina").insert(registro_parada).execute()
-                                except Exception:
+                                except Exception as e_parada:
                                     try:
                                         registro_parada.pop("duracion_segundos", None)
                                         supabase.table("paradas_maquina").insert(registro_parada).execute()
-                                    except Exception:
-                                        pass
+                                    except Exception as e_parada2:
+# Si vuelve a fallar, se deja constancia en consola para poder diagnosticarlo
+# (antes se ignoraba en silencio y por eso nunca se sabia que fallaba)
+                                        print(f"Error al guardar en paradas_maquina: {e_parada} / {e_parada2}")
 
     # ACTUALIZAR EL REGISTRO DE ACTIVOS PARA IR TRABAJANO
                                 nuevo_tiempo_acumulado = tr.get("tiempo_pausa", 0) + pausa_segundos
@@ -3816,17 +3833,20 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                         "motivo": "TIEMPO LIBRE (ENTRE OPs)",
                                         "inicio": fin_ultimo.isoformat(),
                                         "fin": ahora_iso,
+                                        "fecha": ahora_iso,
                                         "duracion_segundos": ocio_segundos
                                     }
                                     try:
                                         supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
-                                    except Exception:
+                                    except Exception as e_libre:
 
                                         try:
                                             registro_tiempo_libre.pop("duracion_segundos", None)
                                             supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
-                                        except Exception:
-                                            pass
+                                        except Exception as e_libre2:
+# Si vuelve a fallar, se deja constancia en consola para poder diagnosticarlo
+# (antes se ignoraba en silencio y por eso nunca se sabia que fallaba)
+                                            print(f"Error al guardar en tiempos_muertos: {e_libre} / {e_libre2}")
 
     # INICIAR TRABAJO NORMAL
                             registro_nuevo_trabajo = {
@@ -4503,4 +4523,3 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
-                
