@@ -4503,3 +4503,4 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
+                
