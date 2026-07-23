@@ -2703,41 +2703,6 @@ elif menu == "📅 Planificación":
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
 
-                    try:
-                        existe_en_bodega = supabase.table("bodega_producto_terminado")\
-                            .select("id, ref_comercial").eq("nombre_trabajo", trab).execute().data
-                        if existe_en_bodega:
-# YA EXISTE — no crear otro, solo actualizar la referencia si cambió
-                            if ref_c and existe_en_bodega[0].get("ref_comercial") != ref_c:
-                                try:
-                                    supabase.table("bodega_producto_terminado")\
-                                        .update({"ref_comercial": ref_c})\
-                                        .eq("nombre_trabajo", trab).execute()
-                                except Exception:
-                                    pass
-                        else:
-# NO EXISTE — crear el registro por primera vez
-                            tipo_b = "IMPRESO" if "IMPRESO" in (t or "").upper() else (
-                                "REBOBINADO" if "REBOBINADO" in (t or "").upper() else "BLANCO"
-                            )
-                            registro_bodega_nuevo = {
-                                "nombre_trabajo": trab,
-                                "tipo_producto": tipo_b,
-                                "stock_cajas": 0,
-                                "stock_rollos": 0,
-                                "ultima_actualizacion": hora_colombia().isoformat(),
-                                "observaciones": "Creado automáticamente al generar la OP",
-                                "ref_comercial": ref_c
-                            }
-                            try:
-                                supabase.table("bodega_producto_terminado").insert(registro_bodega_nuevo).execute()
-                            except Exception:
-# Compatibilidad: si la columna ref_comercial aun no existe
-                                registro_bodega_nuevo.pop("ref_comercial", None)
-                                supabase.table("bodega_producto_terminado").insert(registro_bodega_nuevo).execute()
-                    except Exception:
-                        pass
-
                     time.sleep(1.5)
                     st.rerun()
 
