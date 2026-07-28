@@ -927,7 +927,9 @@ def generar_op_rebobinado(row):
 
     return bytes(pdf.output())
 
-# GENERAR PDF BOLSAS (basado en el boceto 
+# GENERAR PDF BOLSAS (basado en el boceto compartido: especificaciones de la
+# bolsa con checkboxes tipo formulario, especificaciones de produccion,
+# configuracion de empaque y firmas).
 def generar_op_bolsas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -986,7 +988,9 @@ def generar_op_bolsas(row):
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "ESPECIFICACIONES DE LA BOLSA", 0, 1, "C", fill=True)
 
-# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA BOLSA
+# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA
+# BOLSA A LA DERECHA, A LA MISMA ALTURA (el diagrama va en el espacio que
+# queda libre entre el borde derecho de la tabla y el margen de la hoja).
     y_inicio_specs = pdf.get_y()
 
     pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (C) Largo Total De La Bolsa: ", 1, 0, fill=True)
@@ -1017,6 +1021,9 @@ def generar_op_bolsas(row):
     y_fin_specs = pdf.get_y()
 
 # DIAGRAMA DE LA BOLSA (W, C, c, H, h) EN EL ESPACIO LIBRE A LA DERECHA DE LA
+# TABLA. La tabla ocupa hasta x=130 aprox (60+60mm), asi que el diagrama va
+# desde x=132 hasta el margen derecho (x=200), con la misma altura que la
+# tabla completa, sin deformarse (se respeta la proporcion de la imagen).
     alto_disponible_diagrama = y_fin_specs - y_inicio_specs - 2
     try:
         pdf.image("bolsa_diagrama.png", x=133, y=y_inicio_specs + 1, h=alto_disponible_diagrama)
@@ -1050,23 +1057,27 @@ def generar_op_bolsas(row):
     pdf.cell(w_prod, 8, f"{row.get('bolsa_rodillo_impresion', '')}", 1, 0, "C")
     pdf.cell(w_prod, 8, f"{row.get('bolsa_metros_rebobinado', '')}", 1, 1, "C")
 
+    pdf.ln(2)
+    pdf.set_font("Arial", "B", 9)
+    pdf.cell(60, 8, " Bolsas Producidas:", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.cell(50, 8, f"{row.get('bolsa_producidas', '')}", 1, 1, "C")
+
 # CONFIGURACION DE EMPAQUE
     pdf.ln(3)
     pdf.set_fill_color(250, 224, 196)
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "CONFIGURACIÓN DE EMPAQUE", 0, 1, "C", fill=True)
 
-    w_emp = 190 / 4
+    w_emp = 190 / 3
     pdf.set_font("Arial", "B", 8)
     pdf.cell(w_emp, 7, "BOLSAS POR CAJA", 1, 0, "C", fill=True)
     pdf.cell(w_emp, 7, "CAJAS EN TOTAL", 1, 0, "C", fill=True)
-    pdf.cell(w_emp, 7, "CAJAS POR ESTIBA", 1, 0, "C", fill=True)
-    pdf.cell(w_emp, 7, " TOTAL BOLSAS:", 1, 1, fill=True)
+    pdf.cell(w_emp, 7, "CAJAS POR ESTIBA", 1, 1, "C", fill=True)
     pdf.set_font("Arial", "", 10)
     pdf.cell(w_emp, 10, f"{row.get('bolsa_por_caja', '')}", 1, 0, "C")
     pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_total', '')}", 1, 0, "C")
-    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_por_estiba', '')}", 1, 0, "C")
-    pdf.cell(w_emp, 10, f"{row.get('bolsa_producidas', '')}", 1, 1, "C")
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_por_estiba', '')}", 1, 1, "C")
 
 # FIRMAS
     pdf.ln(6)
@@ -1494,6 +1505,8 @@ def calcular_tiempo_en_area(op_data):
 def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
 
+    es_bolsa_radio = datos.get('tipo_orden') in ("BOLSA IMPRESA", "BOLSA BLANCA")
+
     with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
         c1, c2, c3, c4 = st.columns(4)
         c1.write(f"**OP #:**\n{datos.get('op')}")
@@ -1502,8 +1515,45 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
         c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
         c3.write(f"**FECHA DE CREACION:**\n{fmt_fecha_hora(datos.get('created_at'))}")
         c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
-        c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
-        c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
+        if es_bolsa_radio:
+            c4.write(f"**MATERIAL PARA BOLSA:**\n{datos.get('bolsa_material')}")
+            c4.write(f"**GRAMAJE:**\n{datos.get('bolsa_gramaje')}")
+        else:
+            c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
+            c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
+
+    if es_bolsa_radio:
+# ESPECIFICACIONES TECNICAS DE BOLSAS (mismo formato que rollos/formas, pero
+# con los campos propios de bolsas: medidas, manija, base, FSC, impresion, tintas)
+        with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown("**MEDIDAS DE LA BOLSA**")
+                st.write(f"C (Largo total): {datos.get('bolsa_c_largo_total')}")
+                st.write(f"c (Largo útil): {datos.get('bolsa_c_largo_util')}")
+                st.write(f"W (Ancho): {datos.get('bolsa_w_ancho')}")
+                st.write(f"H (Fuelle de fondo): {datos.get('bolsa_h_fuelle')}")
+                st.write(f"h (Pestaña de fondo): {datos.get('bolsa_h_pestana')}")
+            with c2:
+                st.markdown("**ESTRUCTURA**")
+                st.write(f"Tipo de manija: {datos.get('bolsa_tipo_manija')}")
+                st.write(f"Base: {datos.get('bolsa_base')}")
+                st.write(f"Certificación FSC: {datos.get('bolsa_certificacion_fsc')}")
+                st.write(f"Repetición: {datos.get('tipo_origen')}")
+            with c3:
+                st.markdown("**IMPRESIÓN**")
+                st.write(f"Impresión: {datos.get('bolsa_impresion')}")
+                st.write(f"Tintas — Número: {datos.get('bolsa_tintas_num')}")
+                st.write(f"Tintas — Color: {datos.get('bolsa_tintas_color')}")
+            with c4:
+                st.markdown("**CANTIDADES**")
+                st.write(f"Cantidad de bolsas: {datos.get('bolsa_cantidad')}")
+                st.write(f"Ref. Comercial: {datos.get('ref_comercial')}")
+
+        st.info(f"**📝 OBSERVACIONES DE BOLSA:**\n{datos.get('observaciones_bolsa', 'Sin observaciones')}")
+        if mostrar_obs_auditoria1:
+            st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
+        return
 
     with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
         c1, c2, c3, c4 = st.columns(4)
@@ -1952,7 +2002,7 @@ elif menu == "🔍 Seguimiento":
             fecha_fmt = fmt_fecha_hora(fecha_raw, con_hora=False) if fecha_raw else ''
             if fecha_fmt == '-':
                 fecha_fmt = ''
-            titulo_unico = f"{icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 💼 {vendedor} | 📅 {fecha_fmt} | {texto_estatus}"
+            titulo_unico = f"{icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 🛠️ {nombre_t} | 💼 {vendedor} | 📅 {fecha_fmt} | {texto_estatus}"
             
             with st.expander(titulo_unico):
                 st.write("Detalles internos de la OP...")
