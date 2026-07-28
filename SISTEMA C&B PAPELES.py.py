@@ -86,6 +86,12 @@ MAQUINAS = {
     "COLECTORAS": ["COL-01", "COL-02"],
     "ENCUADERNACIÓN": ["JINNA", "KELLY", "VIVIANA", "ROSMIA", "ANGIE", "JOHANA.N", "MARTHA", "OLGA", "J0HANA.R", "ANY"],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
+# AREA DE BOLSAS: se divide en 2 sub-areas para efectos de la ruta de la OP
+# (FLEXO imprime, luego pasa a ARMADORAS; las bolsas blancas van directo a
+# ARMADORAS), pero ambas se muestran juntas en un solo modulo/pantalla
+# ("👜 Bolsas"), ya que son pocas maquinas en total.
+    "BOLSAS - FLEXO": ["FLEXO 1-Y2", "FLEXO 2-Y4"],
+    "BOLSAS - ARMADORAS": ["450TF", "450B", "250B", "220", "350"],
 }
 
 # RELACION INVERSA: dado el nombre de una maquina, saber a que area pertenece
@@ -98,6 +104,9 @@ AREA_A_MENU = {
     "COLECTORAS":     "📥 Colectoras",
     "ENCUADERNACIÓN": "📕 Encuadernación",
     "REBOBINADORAS":  "🌀 Rebobinadoras",
+# Las 2 sub-areas de Bolsas apuntan al MISMO modulo combinado
+    "BOLSAS - FLEXO":     "👜 Bolsas",
+    "BOLSAS - ARMADORAS": "👜 Bolsas",
 }
 PRESENTACIONES = ["BLOCK", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS", "CAJAS", "FAJILLAS", "FORMA CONTINUA"]
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
@@ -612,13 +621,11 @@ def generar_op_rollos(row):
     pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
 
     pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Material: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('material','')}", 1, 0)
+    pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('material','')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Gramaje: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('gramaje_rollos','')} GRS", 1, 0)
+    pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('gramaje_rollos','')} GRS", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Core: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('core','')}", 1, 0) 
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Op Anterior: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('op_anterior','')}", 1, 1) 
+    pdf.set_font("Arial", "", 10);  pdf.cell(44, 7, f"{row.get('core','')}", 1, 1) 
     pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Cant. Rollos: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('cantidad_rollos','')}", 1, 0)
     pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Unid. Bolsa: ", 1, 0, fill=True)
@@ -920,6 +927,174 @@ def generar_op_rebobinado(row):
 
     return bytes(pdf.output())
 
+# GENERAR PDF BOLSAS (basado en el boceto 
+def generar_op_bolsas(row):
+    pdf = FPDF()
+    pdf.add_page()
+
+# LOGICA DE COLOR SEGUN ORDEN (misma logica que los demas PDF)
+    tipo_op = row.get('tipo_origen', '').upper()
+    if "NUEVA" in tipo_op:
+        r, g, b = (40, 167, 69)      # VERDE
+    elif "CAMBIOS" in tipo_op:
+        r, g, b = (255, 0, 0)       # ROJO
+    else:
+        r, g, b = (13, 71, 161)     # AZUL
+
+#  ENCABEZADO
+    pdf.set_fill_color(r, g, b)
+    pdf.rect(0, 0, 210, 35, 'F')
+    pdf.image("logo_cb.png", 2, 2, 60)
+    dibujar_caja_fecha_creacion(pdf, row)
+
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 18, "ORDEN DE PRODUCCION - BOLSAS", 0, 1, "C")
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 5, f"OP: {row['op']}   |   {row['tipo_origen']}", 0, 1, "C")
+
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(4)
+
+# INFORMACION GENERAL
+    pdf.set_fill_color(250, 224, 196)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
+
+    pdf.set_fill_color(250, 224, 196)
+    fila_grid(pdf, [
+        {"ancho": 20, "texto": " Cliente: ", "negrita": True, "fill": True},
+        {"ancho": 95, "texto": row.get('cliente',''), "negrita": False, "fill": False},
+        {"ancho": 20, "texto": " Vendedor: ", "negrita": True, "fill": True},
+        {"ancho": 55, "texto": row.get('vendedor',''), "negrita": False, "fill": False},
+    ])
+    fila_grid(pdf, [
+        {"ancho": 20, "texto": " Trabajo: ", "negrita": True, "fill": True},
+        {"ancho": 100, "texto": row.get('nombre_trabajo',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Op Anterior: ", "negrita": True, "fill": True},
+        {"ancho": 45, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
+    ])
+    fila_grid(pdf, [
+        {"ancho": 40, "texto": " Cantidad De Bolsas: ", "negrita": True, "fill": True},
+        {"ancho": 80, "texto": row.get('bolsa_cantidad',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Ticket: ", "negrita": True, "fill": True},
+        {"ancho": 45, "texto": row.get('num_ticket',''), "negrita": False, "fill": False},
+    ])
+
+# ESPECIFICACIONES DE LA BOLSA
+    pdf.set_fill_color(250, 224, 196)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "ESPECIFICACIONES DE LA BOLSA", 0, 1, "C", fill=True)
+
+# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA BOLSA
+    y_inicio_specs = pdf.get_y()
+
+    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (C) Largo Total De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_c_largo_total','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (c) Largo Util De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_c_largo_util','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (W) Ancho De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_w_ancho','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (H) Fuelle De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_w_ancho','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (h) Pestaña De Fondo: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_h_pestana','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Tipo De Manija: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('bolsa_tipo_manija','')}", 1, 0)
+    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Base De Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('bolsa_base','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " Material Para Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_material','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " Gramaje Del Material: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_gramaje','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(40, 7, " Certificacion FSC: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('bolsa_certificacion_fsc','')}", 1, 0)
+    pdf.set_font("Arial", "B", 10); pdf.cell(40, 7, "Cantidad De Tintas: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('bolsa_tintas_num','')}", 1, 1)
+    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Colores: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(90, 7, f"{row.get('bolsa_tintas_color','')}", 1, 1)
+
+    y_fin_specs = pdf.get_y()
+
+# DIAGRAMA DE LA BOLSA (W, C, c, H, h) EN EL ESPACIO LIBRE A LA DERECHA DE LA
+    alto_disponible_diagrama = y_fin_specs - y_inicio_specs - 2
+    try:
+        pdf.image("bolsa_diagrama.png", x=133, y=y_inicio_specs + 1, h=alto_disponible_diagrama)
+    except Exception:
+        pass  # si la imagen no esta disponible en el servidor, el PDF se genera igual sin el diagrama
+
+    pdf.set_y(y_fin_specs)
+
+
+# OBSERVACIONES
+    pdf.ln(3)
+    pdf.set_fill_color(250, 224, 196)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "OBSERVACIONES", 0, 1, "C", fill=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.multi_cell(190, 7, row.get('observaciones_bolsa', '') or "Sin observaciones", 1)
+
+# ESPECIFICACIONES PRODUCCION
+    pdf.ln(3)
+    pdf.set_fill_color(250, 224, 196)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "ESPECIFICACIONES PRODUCCIÓN", 0, 1, "C", fill=True)
+
+    w_prod = 190 / 3
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(w_prod, 7, " Ancho de la bobina", 1, 0, fill=True)
+    pdf.cell(w_prod, 7, " Rodillo de Impresión", 1, 0, fill=True)
+    pdf.cell(w_prod, 7, " Metros Rebobinado", 1, 1, fill=True)
+    pdf.set_font("Arial", "", 9)
+    pdf.cell(w_prod, 8, f"{row.get('bolsa_ancho_bobina', '')}", 1, 0, "C")
+    pdf.cell(w_prod, 8, f"{row.get('bolsa_rodillo_impresion', '')}", 1, 0, "C")
+    pdf.cell(w_prod, 8, f"{row.get('bolsa_metros_rebobinado', '')}", 1, 1, "C")
+
+# CONFIGURACION DE EMPAQUE
+    pdf.ln(3)
+    pdf.set_fill_color(250, 224, 196)
+    pdf.set_font("Arial", "B", 11)
+    pdf.cell(0, 8, "CONFIGURACIÓN DE EMPAQUE", 0, 1, "C", fill=True)
+
+    w_emp = 190 / 4
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(w_emp, 7, "BOLSAS POR CAJA", 1, 0, "C", fill=True)
+    pdf.cell(w_emp, 7, "CAJAS EN TOTAL", 1, 0, "C", fill=True)
+    pdf.cell(w_emp, 7, "CAJAS POR ESTIBA", 1, 0, "C", fill=True)
+    pdf.cell(w_emp, 7, " TOTAL BOLSAS:", 1, 1, fill=True)
+    pdf.set_font("Arial", "", 10)
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_por_caja', '')}", 1, 0, "C")
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_total', '')}", 1, 0, "C")
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_por_estiba', '')}", 1, 0, "C")
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_producidas', '')}", 1, 1, "C")
+
+# FIRMAS
+    pdf.ln(6)
+    pdf.set_fill_color(230, 230, 230)
+    pdf.set_font("Arial", "B", 6)
+    w_firma = 190 / 3
+    pdf.cell(w_firma, 6, "FIRMA COORDINADORA COMERCIAL", 1, 0, "C", fill=True)
+    pdf.cell(w_firma, 6, "FIRMA ASESOR", 1, 0, "C", fill=True)
+    pdf.cell(w_firma, 6, "FIRMA JEFE DE DISEÑO", 1, 1, "C", fill=True)
+    pdf.cell(w_firma, 18, "", 1, 0)
+    pdf.cell(w_firma, 18, "", 1, 0)
+    pdf.cell(w_firma, 18, "", 1, 1)
+
+    pdf.set_font("Arial", "B", 6)
+    pdf.cell(w_firma, 6, "FIRMA COTIZADORA", 1, 0, "C", fill=True)
+    pdf.cell(w_firma, 6, "FIRMA JEFE DE ÁREA DE PRODUCCIÓN", 1, 0, "C", fill=True)
+    pdf.cell(w_firma, 6, "FIRMA DE OPERARIO DE MÁQUINA", 1, 1, "C", fill=True)
+    pdf.cell(w_firma, 18, "", 1, 0)
+    pdf.cell(w_firma, 18, "", 1, 0)
+    pdf.cell(w_firma, 18, "", 1, 1)
+
+# PIE
+    pdf.set_font("Arial", "I", 6)
+    pdf.cell(0, 8, f"SISTEMA C&B PAPELES - {hora_colombia().strftime('%d/%m/%Y %H:%M')}", 0, 1, "C")
+
+    return bytes(pdf.output())
+
+
 # RADIOGRAFIA TECNICA
 @st.dialog("📋 RADIOGRAFÍA TÉCNICA DE LA ORDEN", width="large")
 def modal_detalle_op(row):
@@ -1117,11 +1292,15 @@ with st.sidebar:
     
 # DEFINICION DE PERMISOS SEGUN ROL
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🧐 Auditoría Ventas", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
+        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🧐 Auditoría Ventas", "🧐 Auditoría Bolsas", "🧐 Auditoría Cartera", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "👜 Bolsas", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'aud_ventas':
         opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "🔍 Seguimiento"]
+    elif rol == 'aud_bolsas':
+        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento"]
+    elif rol == 'aud_cartera':
+        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Cartera", "🔍 Seguimiento"]
     elif rol == 'jefe_log':
         opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos"]
     elif rol == 'patinador_log':
@@ -1136,6 +1315,8 @@ with st.sidebar:
         opciones_menu = ["🖥️ Monitor", "📕 Encuadernación"]
     elif rol == 'supervisor_reb':
         opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
+    elif rol == 'supervisor_bolsas':
+        opciones_menu = ["🖥️ Monitor", "👜 Bolsas"]
     elif rol == 'patinador_roll':
         opciones_menu = ["📦 salida produccion P1"]
     elif rol == 'almacen':
@@ -1248,6 +1429,14 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
     elif tipo_orden == "REBOBINADO":
         return "REBOBINADORAS"
     return "IMPRESIÓN"
+
+# RUTA HACIA LA PLANTA DE PRODUCCION DE BOLSAS: las bolsas IMPRESAS pasan primero
+# por las maquinas FLEXO (imprimen) y de ahi a las armadoras; las bolsas BLANCAS
+# van directo a las armadoras porque no necesitan impresión.
+def ruta_planta_bolsas(tipo_orden):
+    if tipo_orden == "BOLSA IMPRESA":
+        return "BOLSAS - FLEXO"
+    return "BOLSAS - ARMADORAS"
 
 # CALCULO DE TIEMPO EN AREA (desde que la OP entro al area actual hasta ahora o hasta que se cierra)
 def _ultima_fecha_relevante_historial(historial):
@@ -1682,10 +1871,12 @@ elif menu == "🔍 Seguimiento":
                     for al in alertas_quietas:
                         st.warning(al)
 
-# SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
+# SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS / BOLSAS
         def _categoria_op(row):
             tipo = (row.get('tipo_orden') or '').upper()
-            if "FORMAS" in tipo:
+            if "BOLSA" in tipo:
+                return "BOLSAS"
+            elif "FORMAS" in tipo:
                 return "FORMAS"
             elif "REBOBINADO" in tipo:
                 return "REBOBINADO"
@@ -1731,7 +1922,12 @@ elif menu == "🔍 Seguimiento":
 
 #  DISEÑO DE TARJETA 
             tipo_op = row.get('tipo_orden', '')
-            if "FORMAS" in tipo_op:
+            if "BOLSA" in tipo_op.upper():
+                icono_tipo = "👜"
+                etiqueta_tipo = "BOLSAS"
+                color_tipo = "#E65100"
+                borde_tipo = "#E65100"
+            elif "FORMAS" in tipo_op:
                 icono_tipo = "📄"
                 etiqueta_tipo = "FORMAS"
                 color_tipo = "#1565C0"
@@ -1829,7 +2025,9 @@ elif menu == "🔍 Seguimiento":
                 if st.session_state.get('rol') in ['admin', 'ventas', 'diseño']:
                     try:
                         tipo = row.get('tipo_orden', '')
-                        if "FORMAS" in tipo:
+                        if "BOLSA" in tipo:
+                            pdf_data = generar_op_bolsas(row)
+                        elif "FORMAS" in tipo:
                             pdf_data = generar_op_formas(row)
                         elif "ROLLOS" in tipo:
                             pdf_data = generar_op_rollos(row)
@@ -1847,15 +2045,16 @@ elif menu == "🔍 Seguimiento":
                     except Exception as e:
                         st.error(f"No se pudo generar el PDF: {e}")
 
-# RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS
+# RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS / BOLSAS
         with tab_pendientes:
-            sub_formas_p, sub_rblancos_p, sub_rebob_p, sub_rimpresos_p = st.tabs(
-                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos"]
+            sub_formas_p, sub_rblancos_p, sub_rebob_p, sub_rimpresos_p, sub_bolsas_p = st.tabs(
+                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos", "👜 Bolsas"]
             )
             pendientes_formas = [r for r in ordenes_pendientes if _categoria_op(r) == "FORMAS"]
             pendientes_rblancos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_BLANCOS"]
             pendientes_rebob = [r for r in ordenes_pendientes if _categoria_op(r) == "REBOBINADO"]
             pendientes_rimpresos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_IMPRESOS"]
+            pendientes_bolsas = [r for r in ordenes_pendientes if _categoria_op(r) == "BOLSAS"]
             with sub_formas_p:
                 if not pendientes_formas:
                     st.info("No hay órdenes de FORMAS pendientes o en proceso.")
@@ -1876,15 +2075,21 @@ elif menu == "🔍 Seguimiento":
                     st.info("No hay órdenes de ROLLOS IMPRESOS pendientes o en proceso.")
                 for row in pendientes_rimpresos:
                     pintar_tarjeta_op(row)
+            with sub_bolsas_p:
+                if not pendientes_bolsas:
+                    st.info("No hay órdenes de BOLSAS pendientes o en proceso.")
+                for row in pendientes_bolsas:
+                    pintar_tarjeta_op(row)
 
         with tab_finalizadas:
-            sub_formas_f, sub_rblancos_f, sub_rebob_f, sub_rimpresos_f = st.tabs(
-                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos"]
+            sub_formas_f, sub_rblancos_f, sub_rebob_f, sub_rimpresos_f, sub_bolsas_f = st.tabs(
+                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos", "👜 Bolsas"]
             )
             finalizadas_formas = [r for r in ordenes_finalizadas if _categoria_op(r) == "FORMAS"]
             finalizadas_rblancos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS_BLANCOS"]
             finalizadas_rebob = [r for r in ordenes_finalizadas if _categoria_op(r) == "REBOBINADO"]
             finalizadas_rimpresos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS_IMPRESOS"]
+            finalizadas_bolsas = [r for r in ordenes_finalizadas if _categoria_op(r) == "BOLSAS"]
             with sub_formas_f:
                 if not finalizadas_formas:
                     st.info("No hay órdenes de FORMAS finalizadas.")
@@ -1904,6 +2109,11 @@ elif menu == "🔍 Seguimiento":
                 if not finalizadas_rimpresos:
                     st.info("No hay órdenes de ROLLOS IMPRESOS finalizadas.")
                 for row in finalizadas_rimpresos:
+                    pintar_tarjeta_op(row)
+            with sub_bolsas_f:
+                if not finalizadas_bolsas:
+                    st.info("No hay órdenes de BOLSAS finalizadas.")
+                for row in finalizadas_bolsas:
                     pintar_tarjeta_op(row)
 
 # MODULO DE DISEÑO
@@ -1945,11 +2155,21 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}")
                 obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}")
                 
-# SI ES "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL. SI ES "NUEVA" O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
+# SI ES BOLSA (Impresa o Blanca), AL APROBARSE VA DIRECTO A LA PLANTA DE
+# PRODUCCION DE BOLSAS, SIN PASAR POR PRE-PRENSA NI REVISION FINAL (esas 2
+# etapas no aplican para bolsas). Si no es bolsa, sigue la logica normal:
+# "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL; "NUEVA"
+# O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
+                tipo_orden_op = datos_op.get('tipo_orden', '')
+                es_bolsa_diseno = tipo_orden_op in ("BOLSA IMPRESA", "BOLSA BLANCA")
                 tipo_origen_op = (datos_op.get('tipo_origen') or '').strip()
                 es_repeticion_exacta = (tipo_origen_op == "Repetición Exacta")
 
-                if es_repeticion_exacta:
+                if es_bolsa_diseno:
+                    ruta_bolsa_destino = ruta_planta_bolsas(tipo_orden_op)
+                    st.info(f"👜 Esta OP es de **Bolsas**: al enviarla irá directo a planta ({ruta_bolsa_destino}), sin pasar por Pre-Prensa ni Revisión Final.")
+                    label_boton = "🚀 ENVIAR A PLANTA DE PRODUCCIÓN (Bolsas)"
+                elif es_repeticion_exacta:
                     st.info("🔁 Esta OP es **Repetición Exacta**: al enviarla saltará Pre-Prensa e irá directo a Revisión Final.")
                     label_boton = "🚀 ENVIAR DIRECTO A REVISIÓN FINAL (Repetición Exacta)"
                 else:
@@ -1969,7 +2189,12 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                             "tiempo_total_area": tiempo_area_txt,
                             "observaciones": obs_dis if not es_repeticion_exacta else (obs_dis + " [Se saltó Pre-Prensa por ser Repetición Exacta]").strip()
                         })
-                        destino_siguiente = "REVISION_FINAL" if es_repeticion_exacta else "PRE-PRENSA"
+                        if es_bolsa_diseno:
+                            destino_siguiente = ruta_bolsa_destino
+                        elif es_repeticion_exacta:
+                            destino_siguiente = "REVISION_FINAL"
+                        else:
+                            destino_siguiente = "PRE-PRENSA"
                         update_data = {
                             "link_diseno": link_arte, 
                             "observaciones_diseno": obs_dis,
@@ -1978,7 +2203,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                             "historial_procesos": hist_dis
                         }
                         supabase.table("ordenes_planeadas").update(update_data).eq("op", op_id).execute()
-                        if es_repeticion_exacta:
+                        if es_bolsa_diseno:
+                            st.success(f"Enviado a planta de producción de Bolsas ({destino_siguiente}).")
+                        elif es_repeticion_exacta:
                             st.success("Repetición Exacta: enviada directo a Revisión Final (se saltó Pre-Prensa).")
                         else:
                             st.success("Enviado a Pre-Prensa.")
@@ -2128,6 +2355,101 @@ elif menu == "🧐 Auditoría Ventas":
                 time.sleep(1.2)
                 st.rerun()
 
+# MODULO AUDITORIA BOLSAS (primer paso del flujo especial de Bolsas)
+elif menu == "🧐 Auditoría Bolsas":
+    st.title("👜 Auditoría de Bolsas")
+    st.caption("Toda OP de Bolsas (Impresa o Blanca) pasa primero por aquí. Si es Repetición Exacta, va directo a planta; si es Nueva o Repetición con Cambios, sigue a Auditoría Cartera.")
+
+    op_pendientes_ab = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "AUDITORIA BOLSAS").execute().data
+
+    if not op_pendientes_ab:
+        st.info("No hay órdenes de Bolsas pendientes de auditoría en este momento.")
+    else:
+        op_sel_ab = st.selectbox(
+            "Seleccione OP a revisar:",
+            [f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}" for o in op_pendientes_ab],
+            key="aud_bolsas_sel"
+        )
+        op_id_ab = op_sel_ab.split(" - ")[0]
+        datos_op_ab = next((o for o in op_pendientes_ab if str(o['op']) == str(op_id_ab)), None)
+
+        if datos_op_ab:
+            radiografia_completa_op(datos_op_ab, mostrar_obs_auditoria1=False)
+            st.divider()
+
+# SI ES REPETICION EXACTA, SE VA DIRECTO A PLANTA. SI ES NUEVA O REPETICION
+# CON CAMBIOS, PRIMERO PASA POR AUDITORIA CARTERA.
+            es_repeticion_exacta_bolsa = (datos_op_ab.get('tipo_origen', '') == "Repetición Exacta")
+            if es_repeticion_exacta_bolsa:
+                ruta_siguiente_ab = ruta_planta_bolsas(datos_op_ab.get('tipo_orden', ''))
+            else:
+                ruta_siguiente_ab = "AUDITORIA CARTERA"
+
+            st.info(f"➡️ Al aprobarse, esta orden seguirá su ruta hacia: **{ruta_siguiente_ab}**")
+
+            if st.button("✅ MARCAR COMO REVISADO — CONTINUAR RUTA", use_container_width=True, key="btn_aprobar_aud_bolsas"):
+                _, tiempo_area_txt_ab = calcular_tiempo_en_area(datos_op_ab)
+                hist_ab = datos_op_ab.get('historial_procesos') or []
+                hist_ab.append({
+                    "area": "AUDITORIA BOLSAS",
+                    "maquina": "—",
+                    "tipo": "AUDITORIA_BOLSAS",
+                    "operario": st.session_state.get('nombre_usuario', '?'),
+                    "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                    "duracion": tiempo_area_txt_ab,
+                    "tiempo_total_area": tiempo_area_txt_ab
+                })
+                supabase.table("ordenes_planeadas").update({
+                    "proxima_area": ruta_siguiente_ab,
+                    "historial_procesos": hist_ab
+                }).eq("op", op_id_ab).execute()
+                st.success(f"✅ OP {op_id_ab} revisada. Continúa hacia {ruta_siguiente_ab}.")
+                time.sleep(1.2)
+                st.rerun()
+
+# MODULO AUDITORIA CARTERA (segundo paso del flujo especial de Bolsas)
+elif menu == "🧐 Auditoría Cartera":
+    st.title("💼 Auditoría de Cartera")
+    st.caption("Segundo filtro para OPs de Bolsas Nuevas o con Repetición con Cambios. Al aprobarse, sigue hacia Diseño (Auditoría Técnica).")
+
+    op_pendientes_ac = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "AUDITORIA CARTERA").execute().data
+
+    if not op_pendientes_ac:
+        st.info("No hay órdenes pendientes de auditoría de cartera en este momento.")
+    else:
+        op_sel_ac = st.selectbox(
+            "Seleccione OP a revisar:",
+            [f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}" for o in op_pendientes_ac],
+            key="aud_cartera_sel"
+        )
+        op_id_ac = op_sel_ac.split(" - ")[0]
+        datos_op_ac = next((o for o in op_pendientes_ac if str(o['op']) == str(op_id_ac)), None)
+
+        if datos_op_ac:
+            radiografia_completa_op(datos_op_ac, mostrar_obs_auditoria1=False)
+            st.divider()
+            st.info("➡️ Al aprobarse, esta orden seguirá su ruta hacia: **DISEÑO (AUDITORIA)**")
+
+            if st.button("✅ MARCAR COMO REVISADO — CONTINUAR RUTA", use_container_width=True, key="btn_aprobar_aud_cartera"):
+                _, tiempo_area_txt_ac = calcular_tiempo_en_area(datos_op_ac)
+                hist_ac = datos_op_ac.get('historial_procesos') or []
+                hist_ac.append({
+                    "area": "AUDITORIA CARTERA",
+                    "maquina": "—",
+                    "tipo": "AUDITORIA_CARTERA",
+                    "operario": st.session_state.get('nombre_usuario', '?'),
+                    "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                    "duracion": tiempo_area_txt_ac,
+                    "tiempo_total_area": tiempo_area_txt_ac
+                })
+                supabase.table("ordenes_planeadas").update({
+                    "proxima_area": "DISEÑO (AUDITORIA)",
+                    "historial_procesos": hist_ac
+                }).eq("op", op_id_ac).execute()
+                st.success(f"✅ OP {op_id_ac} revisada. Continúa hacia DISEÑO (AUDITORIA).")
+                time.sleep(1.2)
+                st.rerun()
+
 # MODULO PLANIFICACION 
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
@@ -2135,7 +2457,8 @@ elif menu == "📅 Planificación":
 # Estados donde la OP aún no ha sido procesada por ningún área
     ESTADOS_EDITABLES = [
         "AUDITORIA VENTAS", "DISEÑO (AUDITORIA)", "IMPRESIÓN", "CORTE", "REBOBINADORAS",
-        "ESPERA DE AUDITORIA", "ESPERA DE CORTE", "ESPERA DE IMPRESIÓN"
+        "ESPERA DE AUDITORIA", "ESPERA DE CORTE", "ESPERA DE IMPRESIÓN",
+        "AUDITORIA BOLSAS", "AUDITORIA CARTERA", "BOLSAS - FLEXO", "BOLSAS - ARMADORAS"
     ]
 
     tab_nueva, tab_editar = st.tabs(["➕ Nueva / Repetición", "✏️ Editar OP Existente"])
@@ -2285,6 +2608,56 @@ elif menu == "📅 Planificación":
                         nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '')
                         nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '')
 
+#  BOLSAS (IMPRESA / BLANCA) 
+                    elif tipo_op in ("BOLSA IMPRESA", "BOLSA BLANCA"):
+                        es_bolsa_impresa_edit = (tipo_op == "BOLSA IMPRESA")
+                        st.markdown("**👜 Especificaciones de la Bolsa**")
+                        em1, em2, em3, em4, em5 = st.columns(5)
+                        nuevo_bolsa_C = em1.number_input("C (Largo total)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_c_largo_total', 0) or 0))
+                        nuevo_bolsa_c = em2.number_input("c (Largo útil)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_c_largo_util', 0) or 0))
+                        nuevo_bolsa_W = em3.number_input("W (Ancho)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_w_ancho', 0) or 0))
+                        nuevo_bolsa_H = em4.number_input("H (Fuelle de fondo)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_h_fuelle', 0) or 0))
+                        nuevo_bolsa_h = em5.number_input("h (Pestaña de fondo)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_h_pestana', 0) or 0))
+
+                        em6, em7, em8, em9 = st.columns(4)
+                        op_manija_e = ["Plana", "Cordón", "N/A"]
+                        nuevo_bolsa_manija = em6.selectbox("Tipo de manija", op_manija_e, index=op_manija_e.index(op_edit['bolsa_tipo_manija']) if op_edit.get('bolsa_tipo_manija') in op_manija_e else 0)
+                        op_base_e = ["Cuadrada", "En \"V\""]
+                        nuevo_bolsa_base = em7.selectbox("Base", op_base_e, index=op_base_e.index(op_edit['bolsa_base']) if op_edit.get('bolsa_base') in op_base_e else 0)
+                        op_material_e = ["Blanco", "Natural"]
+                        nuevo_bolsa_material = em8.selectbox("Material", op_material_e, index=op_material_e.index(op_edit['bolsa_material']) if op_edit.get('bolsa_material') in op_material_e else 0)
+                        nuevo_bolsa_gramaje = em9.number_input("Gramaje", min_value=0, step=1, value=int(op_edit.get('bolsa_gramaje', 0) or 0))
+
+                        em10 = st.columns(1)[0]
+                        op_fsc_e = ["SI", "N/A"]
+                        nuevo_bolsa_fsc = em10.selectbox("Certificación FSC", op_fsc_e, index=op_fsc_e.index(op_edit['bolsa_certificacion_fsc']) if op_edit.get('bolsa_certificacion_fsc') in op_fsc_e else 0)
+
+                        nuevo_bolsa_impresion = "SI" if es_bolsa_impresa_edit else "N/A"
+                        st.info(f"🖨️ Impresión (según tipo de OP): **{nuevo_bolsa_impresion}**")
+
+                        if es_bolsa_impresa_edit:
+                            emt1, emt2 = st.columns(2)
+                            nuevo_bolsa_tintas_num = emt1.number_input("Tintas — Número", min_value=0, step=1, value=int(op_edit.get('bolsa_tintas_num', 0) or 0))
+                            nuevo_bolsa_tintas_color = emt2.text_input("Tintas — Color", value=op_edit.get('bolsa_tintas_color','') or '')
+                        else:
+                            nuevo_bolsa_tintas_num, nuevo_bolsa_tintas_color = 0, "N/A"
+
+                        nuevo_bolsa_cantidad = st.number_input("Cantidad de bolsas", min_value=0, step=1, value=int(op_edit.get('bolsa_cantidad', 0) or 0))
+                        nuevas_obs = st.text_area("Observaciones:", value=op_edit.get('observaciones_bolsa','') or '')
+
+                        st.markdown("**⚙️ Especificaciones Producción**")
+                        ep_b1, ep_b2, ep_b3, ep_b4 = st.columns(4)
+                        nuevo_bolsa_ancho_bobina = ep_b1.number_input("Ancho de la bobina", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_ancho_bobina', 0) or 0))
+                        nuevo_bolsa_rodillo = ep_b2.text_input("Rodillo de Impresión", value=op_edit.get('bolsa_rodillo_impresion','') or '')
+                        nuevo_bolsa_metros_rebob = ep_b3.number_input("Metros Rebobinado", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_metros_rebobinado', 0) or 0))
+                        nuevo_bolsa_producidas = ep_b4.number_input("Bolsas Producidas", min_value=0, step=1, value=int(op_edit.get('bolsa_producidas', 0) or 0))
+
+                        st.markdown("**📦 Configuración de Empaque**")
+                        ee_b1, ee_b2, ee_b3 = st.columns(3)
+                        nuevo_bolsa_por_caja = ee_b1.number_input("Bolsas por caja", min_value=0, step=1, value=int(op_edit.get('bolsa_por_caja', 0) or 0))
+                        nuevo_bolsa_cajas_total = ee_b2.number_input("Cajas en total", min_value=0, step=1, value=int(op_edit.get('bolsa_cajas_total', 0) or 0))
+                        nuevo_bolsa_cajas_estiba = ee_b3.number_input("Cajas por estiba", min_value=0, step=1, value=int(op_edit.get('bolsa_cajas_por_estiba', 0) or 0))
+
                     st.markdown("---")
 # Este campo es obligatorio: el motivo queda guardado en el historial como una tarjeta especial de EDICION
                     nueva_obs_gral = st.text_area("📝 Motivo del cambio (queda registrado):",
@@ -2341,6 +2714,31 @@ elif menu == "📅 Planificación":
                                         "cantidad_rollos":      nueva_cant_r,
                                         "objetivo_rebobinado":  nuevo_obj,
                                         "observaciones_rollos": nuevas_obs,
+                                    })
+                                elif tipo_op in ("BOLSA IMPRESA", "BOLSA BLANCA"):
+                                    update_payload.update({
+                                        "bolsa_c_largo_total": nuevo_bolsa_C,
+                                        "bolsa_c_largo_util": nuevo_bolsa_c,
+                                        "bolsa_w_ancho": nuevo_bolsa_W,
+                                        "bolsa_h_fuelle": nuevo_bolsa_H,
+                                        "bolsa_h_pestana": nuevo_bolsa_h,
+                                        "bolsa_tipo_manija": nuevo_bolsa_manija,
+                                        "bolsa_base": nuevo_bolsa_base,
+                                        "bolsa_material": nuevo_bolsa_material,
+                                        "bolsa_gramaje": nuevo_bolsa_gramaje,
+                                        "bolsa_certificacion_fsc": nuevo_bolsa_fsc,
+                                        "bolsa_impresion": nuevo_bolsa_impresion,
+                                        "bolsa_tintas_num": int(nuevo_bolsa_tintas_num),
+                                        "bolsa_tintas_color": nuevo_bolsa_tintas_color,
+                                        "bolsa_cantidad": int(nuevo_bolsa_cantidad),
+                                        "observaciones_bolsa": nuevas_obs,
+                                        "bolsa_ancho_bobina": nuevo_bolsa_ancho_bobina,
+                                        "bolsa_rodillo_impresion": nuevo_bolsa_rodillo,
+                                        "bolsa_metros_rebobinado": nuevo_bolsa_metros_rebob,
+                                        "bolsa_producidas": int(nuevo_bolsa_producidas),
+                                        "bolsa_por_caja": int(nuevo_bolsa_por_caja),
+                                        "bolsa_cajas_total": int(nuevo_bolsa_cajas_total),
+                                        "bolsa_cajas_por_estiba": int(nuevo_bolsa_cajas_estiba),
                                     })
 
                                 supabase.table("ordenes_planeadas").update(update_payload)\
@@ -2403,16 +2801,18 @@ elif menu == "📅 Planificación":
         st.divider()
 
 # SELECTOR DE TIPO DE PRODUCTO
-        c1, c2, c3, c4, c5 = st.columns(5)
+        c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
         if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
         if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
         if c3.button("🧵 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
         if c4.button("🧻 ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
         if c5.button("🔄 REBOBINADO"):st.session_state.sel_tipo = "REBOBINADO"
+        if c6.button("👜 BOLSA IMPRESA"): st.session_state.sel_tipo = "BOLSA IMPRESA"
+        if c7.button("🛍️ BOLSA BLANCA"): st.session_state.sel_tipo = "BOLSA BLANCA"
 
         if st.session_state.sel_tipo:
             t = st.session_state.sel_tipo
-            prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-"}.get(t, "")
+            prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-", "BOLSA IMPRESA": "BI-", "BOLSA BLANCA": "BB-"}.get(t, "")
             p1, p2, p3, p4 = st.columns(4)
 
 #  PERFORACIONES TODOS
@@ -2575,7 +2975,69 @@ elif menu == "📅 Planificación":
                     objetivo = r5.text_input("Objetivo del Rebobinado")
 
                     obs = st.text_area("Observaciones Rebobinado")
-                    
+
+                elif t in ("BOLSA IMPRESA", "BOLSA BLANCA"):
+
+# SECCION: BOLSAS (basado en el boceto de PDF compartido)
+                    es_bolsa_impresa_form = (t == "BOLSA IMPRESA")
+
+                    st.markdown("##### 👜 Especificaciones de la Bolsa")
+                    bm1, bm2, bm3, bm4, bm5 = st.columns(5)
+                    bolsa_C = bm1.number_input("C (Largo total)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_c_largo_total', 0) or 0))
+                    bolsa_c = bm2.number_input("c (Largo útil)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_c_largo_util', 0) or 0))
+                    bolsa_W = bm3.number_input("W (Ancho)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_w_ancho', 0) or 0))
+                    bolsa_H = bm4.number_input("H (Fuelle de fondo)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_h_fuelle', 0) or 0))
+                    bolsa_h = bm5.number_input("h (Pestaña de fondo)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_h_pestana', 0) or 0))
+
+                    bm6, bm7, bm8, bm9 = st.columns(4)
+                    op_manija = ["Plana", "Cordón", "N/A"]
+                    idx_manija = op_manija.index(datos_rec['bolsa_tipo_manija']) if datos_rec.get('bolsa_tipo_manija') in op_manija else 0
+                    bolsa_manija = bm6.selectbox("Tipo de manija", op_manija, index=idx_manija)
+
+                    op_base = ["Cuadrada", "En \"V\""]
+                    idx_base = op_base.index(datos_rec['bolsa_base']) if datos_rec.get('bolsa_base') in op_base else 0
+                    bolsa_base = bm7.selectbox("Base", op_base, index=idx_base)
+
+                    op_material_b = ["Blanco", "Natural"]
+                    idx_material_b = op_material_b.index(datos_rec['bolsa_material']) if datos_rec.get('bolsa_material') in op_material_b else 0
+                    bolsa_material = bm8.selectbox("Material", op_material_b, index=idx_material_b)
+
+                    bolsa_gramaje = bm9.number_input("Gramaje", min_value=0, step=1, value=int(datos_rec.get('bolsa_gramaje', 0) or 0))
+
+                    bm10, bm11 = st.columns(2)
+                    op_fsc = ["SI", "N/A"]
+                    idx_fsc = op_fsc.index(datos_rec['bolsa_certificacion_fsc']) if datos_rec.get('bolsa_certificacion_fsc') in op_fsc else 0
+                    bolsa_fsc = bm10.selectbox("Certificación FSC", op_fsc, index=idx_fsc)
+
+# LA IMPRESION SE DEFINE SOLA SEGUN EL TIPO DE BOLSA ELEGIDO ARRIBA (evita
+# contradicciones entre "tipo de OP" y este campo)
+                    bolsa_impresion = "SI" if es_bolsa_impresa_form else "N/A"
+                    bm11.metric("Impresión (según tipo de OP)", bolsa_impresion)
+
+                    if es_bolsa_impresa_form:
+                        bt1, bt2 = st.columns(2)
+                        bolsa_tintas_num = bt1.number_input("Tintas — Número", min_value=0, step=1, value=int(datos_rec.get('bolsa_tintas_num', 0) or 0))
+                        bolsa_tintas_color = bt2.text_input("Tintas — Color", value=datos_rec.get('bolsa_tintas_color', ""))
+                    else:
+                        bolsa_tintas_num, bolsa_tintas_color = 0, "N/A"
+
+                    bolsa_cantidad = st.number_input("Cantidad de bolsas", min_value=0, step=1, value=int(datos_rec.get('bolsa_cantidad', 0) or 0))
+
+                    obs = st.text_area("Observaciones", value=datos_rec.get('observaciones_bolsa', ""))
+
+                    st.markdown("##### ⚙️ Especificaciones Producción")
+                    bp1, bp2, bp3, bp4 = st.columns(4)
+                    bolsa_ancho_bobina = bp1.number_input("Ancho de la bobina", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_ancho_bobina', 0) or 0))
+                    bolsa_rodillo = bp2.text_input("Rodillo de Impresión", value=datos_rec.get('bolsa_rodillo_impresion', ""))
+                    bolsa_metros_rebob = bp3.number_input("Metros Rebobinado", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_metros_rebobinado', 0) or 0))
+                    bolsa_producidas = bp4.number_input("Bolsas Producidas", min_value=0, step=1, value=int(datos_rec.get('bolsa_producidas', 0) or 0))
+
+                    st.markdown("##### 📦 Configuración de Empaque")
+                    be1, be2, be3 = st.columns(3)
+                    bolsa_por_caja = be1.number_input("Bolsas por caja", min_value=0, step=1, value=int(datos_rec.get('bolsa_por_caja', 0) or 0))
+                    bolsa_cajas_total = be2.number_input("Cajas en total", min_value=0, step=1, value=int(datos_rec.get('bolsa_cajas_total', 0) or 0))
+                    bolsa_cajas_estiba = be3.number_input("Cajas por estiba", min_value=0, step=1, value=int(datos_rec.get('bolsa_cajas_por_estiba', 0) or 0))
+
                 else: 
 
 #  SECCION: ROLLOS 
@@ -2636,7 +3098,11 @@ elif menu == "📅 Planificación":
                         st.stop()
 
 # DEFINIR AREA INICIAL: TODA OP NUEVA PASA PRIMERO POR AUDITORIA VENTAS,
-                    ruta_inicial = "AUDITORIA VENTAS"
+# EXCEPTO LAS BOLSAS, QUE TIENEN SU PROPIO FLUJO Y VAN PRIMERO A AUDITORIA BOLSAS.
+                    if t in ("BOLSA IMPRESA", "BOLSA BLANCA"):
+                        ruta_inicial = "AUDITORIA BOLSAS"
+                    else:
+                        ruta_inicial = "AUDITORIA VENTAS"
 
                     payload = {
                         "op": op_final,
@@ -2679,6 +3145,32 @@ elif menu == "📅 Planificación":
                             "objetivo_rebobinado": objetivo,
                             "observaciones_rollos": obs
                     })
+
+                    elif t in ("BOLSA IMPRESA", "BOLSA BLANCA"):
+                        payload.update({
+                            "bolsa_c_largo_total": bolsa_C,
+                            "bolsa_c_largo_util": bolsa_c,
+                            "bolsa_w_ancho": bolsa_W,
+                            "bolsa_h_fuelle": bolsa_H,
+                            "bolsa_h_pestana": bolsa_h,
+                            "bolsa_tipo_manija": bolsa_manija,
+                            "bolsa_base": bolsa_base,
+                            "bolsa_material": bolsa_material,
+                            "bolsa_gramaje": bolsa_gramaje,
+                            "bolsa_certificacion_fsc": bolsa_fsc,
+                            "bolsa_impresion": bolsa_impresion,
+                            "bolsa_tintas_num": int(bolsa_tintas_num),
+                            "bolsa_tintas_color": bolsa_tintas_color,
+                            "bolsa_cantidad": int(bolsa_cantidad),
+                            "observaciones_bolsa": obs,
+                            "bolsa_ancho_bobina": bolsa_ancho_bobina,
+                            "bolsa_rodillo_impresion": bolsa_rodillo,
+                            "bolsa_metros_rebobinado": bolsa_metros_rebob,
+                            "bolsa_producidas": int(bolsa_producidas),
+                            "bolsa_por_caja": int(bolsa_por_caja),
+                            "bolsa_cajas_total": int(bolsa_cajas_total),
+                            "bolsa_cajas_por_estiba": int(bolsa_cajas_estiba),
+                        })
 
                     else:
                         payload.update({
@@ -2975,10 +3467,11 @@ elif menu == "📊 Reportes Admin":
             st.subheader("🗂️ Trazabilidad Completa de Órdenes de Producción")
             st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
 
-# SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-) PARA QUE SEA MAS FACIL
-            sub_ri, sub_rb, sub_fri, sub_frb, sub_rr = st.tabs([
+# SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-, BI-, BB-) PARA QUE SEA MAS FACIL
+            sub_ri, sub_rb, sub_fri, sub_frb, sub_rr, sub_bi, sub_bb = st.tabs([
                 "🧵 RI- (Rollos Impresos)", "🧻 RB- (Rollos Blancos)",
-                "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)"
+                "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)",
+                "👜 BI- (Bolsas Impresas)", "🛍️ BB- (Bolsas Blancas)"
             ])
 
             def _tab_trazabilidad_por_prefijo(prefijo, key_sufijo):
@@ -3089,6 +3582,10 @@ elif menu == "📊 Reportes Admin":
                 _tab_trazabilidad_por_prefijo("FRB-", "frb")
             with sub_rr:
                 _tab_trazabilidad_por_prefijo("RR-", "rr")
+            with sub_bi:
+                _tab_trazabilidad_por_prefijo("BI-", "bi")
+            with sub_bb:
+                _tab_trazabilidad_por_prefijo("BB-", "bb")
 
 #  TAB NUEVA: MOVIMIENTOS DEL SISTEMA (coins, usuarios, etc) 
         with tab_movs:
@@ -3413,7 +3910,14 @@ elif menu == "📆 Cronograma Impresión":
 
     try:
 # OPTIMIZACION: el cronograma solo necesita ordenes que TODAVIA se puedan agendar/mover,
-        todas_las_ops = supabase.table("ordenes_planeadas").select("*").neq("proxima_area", "FINALIZADO").execute().data or []
+# y ademas se excluyen las ordenes de Bolsas: este cronograma es especifico
+# para las maquinas de Impresion de Rollos/Formas, y Bolsas tiene su propio
+# flujo y sus propias maquinas (Flexo/Armadoras), asi que no deberian
+# mezclarse aqui aunque tecnicamente tambien esten "sin finalizar".
+        todas_las_ops = supabase.table("ordenes_planeadas").select("*")\
+            .neq("proxima_area", "FINALIZADO")\
+            .not_.in_("proxima_area", ["AUDITORIA BOLSAS", "AUDITORIA CARTERA", "BOLSAS - FLEXO", "BOLSAS - ARMADORAS"])\
+            .execute().data or []
     except Exception as e:
         st.warning(f"No se pudieron cargar las órdenes planeadas: {e}")
         todas_las_ops = []
@@ -4282,6 +4786,212 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             except Exception as e:
                 st.error(f"Error al procesar la entrega parcial: {e}")
 
+# MODULO COMBINADO DE PRODUCCION DE BOLSAS (FLEXO + ARMADORAS EN UNA SOLA PANTALLA)
+# Se hizo por separado del panel generico de arriba porque Bolsas tiene 2
+# sub-areas con reglas de ruta distintas (Flexo -> Armadoras -> Finalizado),
+# pero el pedido fue mostrar TODAS las maquinas de bolsas juntas en una sola
+# pantalla, sin pestañas, ya que son pocas maquinas en total.
+# Los formularios de cierre aqui son intencionalmente simples (cantidad
+# producida + observaciones), para ajustarlos despues con mas detalle.
+elif menu == "👜 Bolsas":
+    st.markdown("<div class='title-area'>PANEL DE PRODUCCIÓN: BOLSAS</div>", unsafe_allow_html=True)
+
+    rol_bolsas_actual = st.session_state.get("rol", "operario").lower()
+
+    PERMISOS_BOLSAS = {
+        "admin": ["TODOS"],
+        "ventas": ["TODOS"],
+        "supervisor_bolsas": ["BOLSAS - FLEXO", "BOLSAS - ARMADORAS"],
+    }
+    permisos_bolsas_usuario = PERMISOS_BOLSAS.get(rol_bolsas_actual, [])
+
+    mi_maquina_bolsas = None
+    if rol_bolsas_actual == "maquinista":
+        mi_maquina_bolsas = st.session_state.get("maquina_asignada")
+        if MAQUINA_A_AREA.get(mi_maquina_bolsas) not in ("BOLSAS - FLEXO", "BOLSAS - ARMADORAS"):
+            st.error("⛔ No tienes una máquina de Bolsas asignada. Contacta al administrador.")
+            st.stop()
+    elif "TODOS" not in permisos_bolsas_usuario and not permisos_bolsas_usuario:
+        st.error(f"⛔ El rol '{rol_bolsas_actual}' no tiene permiso para el área de Bolsas")
+        st.stop()
+
+    activos_bolsas_data = supabase.table("trabajos_activos").select("*")\
+        .in_("area", ["BOLSAS - FLEXO", "BOLSAS - ARMADORAS"]).execute().data
+    activos_bolsas = {a['maquina']: a for a in activos_bolsas_data}
+
+# GRUPOS DE MAQUINAS A MOSTRAR: si es maquinista, solo su maquina (en el grupo
+# que le corresponda); si no, las 2 sub-areas completas, una debajo de la otra.
+    if rol_bolsas_actual == "maquinista":
+        area_de_mi_maquina = MAQUINA_A_AREA.get(mi_maquina_bolsas)
+        grupos_bolsas = [(area_de_mi_maquina, [mi_maquina_bolsas])]
+    else:
+        grupos_bolsas = [
+            ("BOLSAS - FLEXO", MAQUINAS["BOLSAS - FLEXO"]),
+            ("BOLSAS - ARMADORAS", MAQUINAS["BOLSAS - ARMADORAS"]),
+        ]
+
+    for area_bolsa_grupo, maquinas_bolsa_grupo in grupos_bolsas:
+        etiqueta_grupo = "🖨️ Flexo (Impresión de Bolsas)" if area_bolsa_grupo == "BOLSAS - FLEXO" else "🛍️ Armadoras (Formado de Bolsas)"
+        st.subheader(etiqueta_grupo)
+
+# Igual que en los demas paneles: una fila de columnas nueva por cada bloque
+# de 3 maquinas, para que el orden se vea bien en computador y en celular.
+        for inicio_fila_b in range(0, len(maquinas_bolsa_grupo), 3):
+            fila_maquinas_b = maquinas_bolsa_grupo[inicio_fila_b:inicio_fila_b + 3]
+            cols_b = st.columns(3)
+            for idx_b, m in enumerate(fila_maquinas_b):
+                with cols_b[idx_b]:
+                    if m in activos_bolsas:
+                        tr_b = activos_bolsas[m]
+
+                        st.markdown(f"<div class='card-produccion'>🟡 EN PROCESO<br>{m}<br>OP: {tr_b['op']}</div>", unsafe_allow_html=True)
+
+                        if not tr_b.get("pausado"):
+                            with st.popover("🚨 REGISTRAR PARADA"):
+                                motivo_b = st.selectbox("Motivo de parada:", MOTIVOS_PARADA, key=f"mot_b_{m}")
+                                if st.button("Confirmar Parada", key=f"btn_pb_{m}", type="primary"):
+                                    supabase.table("trabajos_activos").update({
+                                        "pausado": True,
+                                        "inicio_pausa": hora_colombia().isoformat(),
+                                        "motivo_pausa": motivo_b
+                                    }).eq("maquina", m).execute()
+                                    st.rerun()
+                        else:
+                            st.error(f"DETENIDA POR: {tr_b.get('motivo_pausa', 'Sin motivo')}")
+                            if st.button("▶️ REANUDAR TRABAJO", key=f"r_b_{m}", type="secondary"):
+                                try:
+                                    inicio_pb = datetime.fromisoformat(tr_b["inicio_pausa"].replace("Z", "+00:00"))
+                                    ahora_b = hora_colombia()
+                                    pausa_segundos_b = (ahora_b - inicio_pb).total_seconds()
+
+                                    registro_parada_b = {
+                                        "maquina": m,
+                                        "motivo": tr_b.get('motivo_pausa'),
+                                        "inicio": tr_b["inicio_pausa"],
+                                        "fin": ahora_b.isoformat(),
+                                        "fecha": ahora_b.isoformat(),
+                                        "duracion_segundos": pausa_segundos_b
+                                    }
+                                    try:
+                                        supabase.table("paradas_maquina").insert(registro_parada_b).execute()
+                                    except Exception:
+                                        pass
+
+                                    nuevo_tiempo_acum_b = tr_b.get("tiempo_pausa", 0) + pausa_segundos_b
+                                    supabase.table("trabajos_activos").update({
+                                        "pausado": False,
+                                        "tiempo_pausa": nuevo_tiempo_acum_b,
+                                        "inicio_pausa": None,
+                                        "motivo_pausa": None
+                                    }).eq("maquina", m).execute()
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error: {e}")
+
+                        if st.button("✅ FINALIZAR TRABAJO", key=f"f_b_{m}"):
+                            st.session_state.rep_bolsas = tr_b
+                            st.rerun()
+                    else:
+                        st.markdown(f"<div class='card-vacia'>⚪ DISPONIBLE<br>{m}</div>", unsafe_allow_html=True)
+
+                        ops_bolsas_pend = supabase.table("ordenes_planeadas").select("*")\
+                            .eq("proxima_area", area_bolsa_grupo).execute().data
+                        if ops_bolsas_pend:
+                            op_dict_b = {f"{o['op']} - {o['nombre_trabajo']}": o['op'] for o in ops_bolsas_pend}
+                            sel_op_label_b = st.selectbox("Seleccionar OP", list(op_dict_b.keys()), key=f"s_b_{m}")
+                            sel_op_b = op_dict_b[sel_op_label_b]
+
+                            if st.button(f"🚀 INICIAR {m}", key=f"str_b_{m}"):
+                                ahora_iso_b = hora_colombia().isoformat()
+
+# BUSCAR CUANDO TERMINO REALMENTE EL ULTIMO TRABAJO DE ESTA MAQUINA, IGUAL QUE
+# EN EL PANEL GENERICO, PARA QUE "⏳ MAQUINA LIBRE" TAMBIEN FUNCIONE PARA BOLSAS
+                                fin_ultimo_b = obtener_ultima_actividad_maquina(m)
+                                if fin_ultimo_b:
+                                    ocio_segundos_b = (hora_colombia() - fin_ultimo_b).total_seconds()
+                                    if ocio_segundos_b > 10:
+                                        registro_tiempo_libre_b = {
+                                            "maquina": m,
+                                            "motivo": "TIEMPO LIBRE (ENTRE OPs)",
+                                            "inicio": fin_ultimo_b.isoformat(),
+                                            "fin": ahora_iso_b,
+                                            "fecha": ahora_iso_b,
+                                            "duracion_segundos": ocio_segundos_b
+                                        }
+                                        try:
+                                            supabase.table("tiempos_muertos").insert(registro_tiempo_libre_b).execute()
+                                        except Exception as e_libre_b:
+                                            print(f"Error al guardar en tiempos_muertos (bolsas): {e_libre_b}")
+
+                                registro_nuevo_trabajo_b = {
+                                    "maquina": m,
+                                    "area": area_bolsa_grupo,
+                                    "op": sel_op_b,
+                                    "hora_inicio": ahora_iso_b,
+                                    "pausado": False,
+                                    "tiempo_pausa": 0,
+                                    "inicio_pausa": None,
+                                    "operario": st.session_state.get('nombre_usuario', 'Operario Bolsas')
+                                }
+                                try:
+                                    supabase.table("trabajos_activos").insert(registro_nuevo_trabajo_b).execute()
+                                except Exception:
+                                    registro_nuevo_trabajo_b.pop("operario", None)
+                                    supabase.table("trabajos_activos").insert(registro_nuevo_trabajo_b).execute()
+                                st.rerun()
+
+        st.divider()
+
+# FORMULARIO SIMPLE DE CIERRE (se abre cuando se presiona FINALIZAR TRABAJO
+# en alguna maquina de bolsas). Intencionalmente simple: cantidad producida +
+# observaciones. Se puede ampliar despues con mas campos tecnicos.
+    if st.session_state.get('rep_bolsas'):
+        tr_cierre_b = st.session_state.rep_bolsas
+        area_cierre_b = tr_cierre_b['area']
+        with st.form(key="form_cierre_bolsas"):
+            st.subheader(f"REGISTRO DE CIERRE — {tr_cierre_b['maquina']} (OP {tr_cierre_b['op']})")
+            operario_b = st.text_input("Operario", value=st.session_state.get('nombre_usuario', '') if rol_bolsas_actual == 'maquinista' else "")
+            auxiliar_b = st.text_input("Auxiliar (opcional)")
+            cantidad_b = st.number_input("Cantidad Producida (unidades/paquetes)", min_value=0, step=1)
+            obs_cierre_b = st.text_area("Observaciones")
+
+            if st.form_submit_button("✅ CONFIRMAR CIERRE"):
+                inicio_b = datetime.fromisoformat(tr_cierre_b["hora_inicio"].replace("Z", "+00:00"))
+                fin_b = hora_colombia()
+                segundos_trabajados_b = (fin_b - inicio_b).total_seconds() - tr_cierre_b.get("tiempo_pausa", 0)
+                duracion_b = str(timedelta(seconds=max(0, int(segundos_trabajados_b))))
+
+                d_op_b = supabase.table("ordenes_planeadas").select("*").eq("op", tr_cierre_b['op']).single().execute().data
+                hist_b = (d_op_b.get('historial_procesos') or []) if d_op_b else []
+                _, tiempo_area_b = calcular_tiempo_en_area(d_op_b or {})
+
+# SI TERMINA EN FLEXO, SIGUE A ARMADORAS. SI TERMINA EN ARMADORAS, LA OP FINALIZA.
+                siguiente_area_b = "BOLSAS - ARMADORAS" if area_cierre_b == "BOLSAS - FLEXO" else "FINALIZADO"
+
+                hist_b.append({
+                    "area": area_cierre_b,
+                    "maquina": tr_cierre_b['maquina'],
+                    "operario": operario_b or "Operario Bolsas",
+                    "auxiliar": auxiliar_b,
+                    "fecha": fin_b.strftime("%d/%m/%Y %H:%M"),
+                    "duracion": duracion_b,
+                    "tiempo_total_area": tiempo_area_b,
+                    "tipo": "FINAL",
+                    "datos_cierre": {"cantidad_producida": cantidad_b},
+                    "observaciones": obs_cierre_b
+                })
+
+                supabase.table("ordenes_planeadas").update({
+                    "proxima_area": siguiente_area_b,
+                    "historial_procesos": hist_b
+                }).eq("op", tr_cierre_b['op']).execute()
+
+                supabase.table("trabajos_activos").delete().eq("maquina", tr_cierre_b['maquina']).execute()
+                st.session_state.rep_bolsas = None
+                st.success(f"✅ Cierre registrado. La OP {tr_cierre_b['op']} continúa hacia: {siguiente_area_b}")
+                time.sleep(1.2)
+                st.rerun()
+
 if st.session_state.get('rol') == 'admin':
 
 # BLOQUE INTERRUPTORES DE MAQUINAS
@@ -4323,7 +5033,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "aud_bolsas", "aud_cartera", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "supervisor_bolsas",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
 
 # SI EL ROL ES MAQUINISTA, PEDIR A QUE MAQUINA ESPECIFICA QUEDA ASIGNADO
         nueva_maquina_asignada = None
