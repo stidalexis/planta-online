@@ -349,14 +349,30 @@ def get_planta_activa() -> bool:
 # Enciende o apaga el interruptor general de planta (solo lo usa el administrador, ej: para almuerzo general o corte de energia)
 def set_planta_activa(estado: bool, usuario: str = "admin"):
     """Activa o desactiva la planta globalmente. Usa upsert por si la fila no existe."""
+    ahora_cambio = hora_colombia().isoformat()
     supabase.table("configuracion_sistema").upsert({
         "id":         1,
         "clave":      "planta_activa",
         "valor":      "true" if estado else "false",
-        "updated_at": hora_colombia().isoformat(),
+        "updated_at": ahora_cambio,
         "updated_by": usuario
     }).execute()
-    
+
+# DEJA CONSTANCIA CON FECHA EXACTA DE ESTE CAMBIO. Esto es lo que permite
+# despues calcular con precision cuanto tiempo estuvo detenida la planta
+# DENTRO de un intervalo especifico (ej: mientras una OP estaba en Diseño),
+# sin importar si para cuando se cierra el trabajo la planta ya esta
+# reactivada de nuevo.
+    try:
+        supabase.table("estado_historial").insert({
+            "clave": "planta_activa",
+            "estado": estado,
+            "fecha": ahora_cambio,
+            "usuario": usuario
+        }).execute()
+    except Exception as e:
+        print(f"Error al guardar historial de planta_activa: {e}")
+
     st.session_state.pop('_planta_activa_cache', None)
     st.session_state.pop('_planta_activa_ts', None)
 
@@ -388,10 +404,11 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     para la fila de 'planta_activa'. Por eso aqui se calcula manualmente un id
     libre antes de insertar, en vez de confiar en el default de la base de datos."""
     clave = f"area_activa_{area}"
+    ahora_cambio = hora_colombia().isoformat()
     payload = {
         "clave":      clave,
         "valor":      "true" if estado else "false",
-        "updated_at": hora_colombia().isoformat(),
+        "updated_at": ahora_cambio,
         "updated_by": usuario
     }
     try:
@@ -408,26 +425,117 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     except Exception as e:
         st.error(f"Error al guardar el estado del área {area}: {e}")
 
+# MISMO REGISTRO DE HISTORIAL QUE PLANTA_ACTIVA, PERO POR AREA
+    try:
+        supabase.table("estado_historial").insert({
+            "clave": clave,
+            "estado": estado,
+            "fecha": ahora_cambio,
+            "usuario": usuario
+        }).execute()
+    except Exception as e:
+        print(f"Error al guardar historial de {clave}: {e}")
+
     st.session_state.pop(f'_area_activa_cache_{area}', None)
     st.session_state.pop(f'_area_activa_ts_{area}', None)
 
+# CALCULA CUANTOS SEGUNDOS ESTUVO "DETENIDA" UNA CLAVE (planta_activa o
+# area_activa_XXX) DENTRO DE UN INTERVALO ESPECIFICO [inicio, fin].
+# Esto es lo que permite restar con precision el tiempo detenido de un
+# trabajo, sin importar si para cuando se cierra el trabajo la planta ya
+# esta reactivada de nuevo (a diferencia de solo mirar el estado actual).
+def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, estado_por_defecto: bool = True) -> float:
+    """
+    'estado_por_defecto' se usa SOLO si todavia no existe ningun evento en el
+    historial de esta clave anterior a 'inicio' (por ejemplo, una maquina que
+    ya estaba apagada desde antes de que existiera este historial). En ese
+    caso, en vez de asumir ciegamente que estaba activa, se usa el estado
+    real actual como mejor aproximacion de lo que paso antes de tener
+    registros. Una vez el sistema lleve un tiempo funcionando, todas las
+    claves ya van a tener sus propios eventos y este valor por defecto deja
+    de ser relevante.
+    """
+    if fin <= inicio:
+        return 0.0
+    tz = pytz.timezone("America/Bogota")
+
+    try:
+# TODOS los cambios de estado de esta clave que hayan ocurrido antes del fin
+# del intervalo (se necesitan los anteriores al inicio tambien, para saber
+# en que estado empezaba el intervalo).
+        eventos = supabase.table("estado_historial").select("estado,fecha")\
+            .eq("clave", clave).lte("fecha", fin.isoformat())\
+            .order("fecha", desc=False).execute().data or []
+    except Exception:
+        return 0.0
+
+    def _parsear_fecha(raw):
+        try:
+            dt = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+            return dt.astimezone(tz) if dt.tzinfo else tz.localize(dt)
+        except Exception:
+            return None
+
+# ESTADO AL INICIO DEL INTERVALO: el ultimo evento ANTES de 'inicio' (si no
+# hay ninguno todavia registrado, se usa 'estado_por_defecto').
+    estado_actual = estado_por_defecto
+    puntos = []  # lista de (fecha, nuevo_estado) que caen DENTRO del intervalo
+    for ev in eventos:
+        f_ev = _parsear_fecha(ev.get("fecha"))
+        if f_ev is None:
+            continue
+        if f_ev <= inicio:
+            estado_actual = bool(ev.get("estado", True))
+        elif f_ev < fin:
+            puntos.append((f_ev, bool(ev.get("estado", True))))
+
+# RECORRE LOS CAMBIOS DE ESTADO DENTRO DEL INTERVALO, SUMANDO LOS TRAMOS
+# DONDE LA CLAVE ESTUVO INACTIVA (estado_actual == False)
+    segundos_inactivo = 0.0
+    cursor = inicio
+    for f_ev, nuevo_estado in puntos:
+        if not estado_actual:
+            segundos_inactivo += (f_ev - cursor).total_seconds()
+        cursor = f_ev
+        estado_actual = nuevo_estado
+
+# TRAMO FINAL: desde el ultimo cambio (o el inicio, si no hubo ninguno) hasta 'fin'
+    if not estado_actual:
+        segundos_inactivo += (fin - cursor).total_seconds()
+
+    return max(0.0, segundos_inactivo)
+
 # FUNCION DE DURACION 
 def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_segundos=0):
-    """Calcula tiempo trabajado descontando pausas individuales y respetando estado de planta."""
+    """
+    Calcula tiempo trabajado descontando pausas individuales y el tiempo real
+    que la planta, el area de la maquina, Y LA MAQUINA INDIVIDUAL estuvieron
+    detenidas DENTRO del intervalo [inicio, fin] — sin importar si para
+    cuando se cierra el trabajo ya estan todas reactivadas de nuevo. Antes
+    esta funcion solo miraba el estado ACTUAL (en el momento de cerrar) y
+    ponia todo en "0:00:00" si en ese instante estaba detenida, lo cual no
+    era correcto si se detuvo y reactivo DURANTE el trabajo.
+    """
+    total_segundos = (fin - inicio).total_seconds()
+    if total_segundos < 0:
+        return "0:00:00"
+
+# TIEMPO DETENIDO DE PLANTA (interruptor general) DENTRO DEL INTERVALO REAL
+    segundos_detenido = segundos_inactivo_en_periodo("planta_activa", inicio, fin)
+
+# TIEMPO DETENIDO DEL AREA ESPECIFICA DE LA MAQUINA (ej: solo Corte), Y DE LA
+# MAQUINA INDIVIDUAL PUNTUAL (ej: solo COR-05), AMBOS DENTRO DEL INTERVALO
     if nombre_maquina:
-        if not obtener_estado_maquina(nombre_maquina):
-            return "0:00:00"
         area_de_maquina = MAQUINA_A_AREA.get(nombre_maquina)
-        if area_de_maquina and not get_area_activa(area_de_maquina):
-            return "0:00:00"
-    if not get_planta_activa():
-        return "0:00:00"
-    total = fin - inicio
-    if total.total_seconds() < 0:
-        return "0:00:00"
-    
-# Descontar pausas acumuladas 
-    total_segundos = max(0, total.total_seconds() - tiempo_pausa_segundos)
+        if area_de_maquina:
+            segundos_detenido += segundos_inactivo_en_periodo(f"area_activa_{area_de_maquina}", inicio, fin)
+        segundos_detenido += segundos_inactivo_en_periodo(
+            f"maquina_activa_{nombre_maquina}", inicio, fin,
+            estado_por_defecto=obtener_estado_maquina(nombre_maquina)
+        )
+
+# Descontar pausas individuales + tiempo detenido de planta/area/maquina
+    total_segundos = max(0, total_segundos - tiempo_pausa_segundos - segundos_detenido)
     return str(timedelta(seconds=int(total_segundos)))
     
 # GENERA EL PDF DE ORDEN DE PRODUCCION — version base/generica (encabezado y estructura comun del documento)
@@ -1375,15 +1483,31 @@ def obtener_estado_maquina(nombre_maquina):
         return True
 
 # Cambia el estado ON/OFF de UNA maquina puntual (activa <-> fuera de servicio), usado por el administrador desde el Monitor
-def cambiar_estado_maquina(nombre_maquina, nuevo_estado):
+def cambiar_estado_maquina(nombre_maquina, nuevo_estado, usuario="admin"):
+    ahora_cambio_maq = hora_colombia().isoformat()
     try:
         supabase.table("estado_maquinas").upsert({
             "maquina": nombre_maquina,
             "estado": nuevo_estado,
-            "ultima_modificacion": hora_colombia().isoformat()
+            "ultima_modificacion": ahora_cambio_maq
         }).execute()
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
+
+# MISMO REGISTRO DE HISTORIAL QUE PLANTA_ACTIVA / AREA_ACTIVA, PERO POR MAQUINA
+# INDIVIDUAL. Esto permite que, igual que con la planta, si esta maquina
+# puntual se apaga y se vuelve a encender DURANTE un trabajo, se reste con
+# precision solo el tiempo real que estuvo apagada — sin importar si para
+# cuando se cierra el trabajo la maquina ya esta reactivada de nuevo.
+    try:
+        supabase.table("estado_historial").insert({
+            "clave": f"maquina_activa_{nombre_maquina}",
+            "estado": nuevo_estado,
+            "fecha": ahora_cambio_maq,
+            "usuario": usuario
+        }).execute()
+    except Exception as e:
+        print(f"Error al guardar historial de maquina_activa_{nombre_maquina}: {e}")
 
 # Calcula hace cuanto tiempo una maquina no tiene actividad, para sumar ese tiempo como "tiempo libre entre OPs" en las estadisticas
 def obtener_ultima_actividad_maquina(nombre_maquina):
@@ -1483,6 +1607,12 @@ def calcular_tiempo_en_area(op_data):
     guardar cuanto duró un area al cerrarla (Diseño, Auditoria Ventas, etc.)
     como para mostrar en Trazabilidad cuánto lleva esperando una OP en el area
     donde está en este momento.
+
+    SE RESTA CON PRECISION el tiempo real que la planta estuvo detenida
+    DENTRO del intervalo (desde que la OP entró al área hasta ahora),
+    consultando el historial de encendido/apagado — sin importar si para
+    cuando se hace este calculo la planta ya está reactivada de nuevo.
+
     Devuelve una tupla (segundos, texto 'H:MM:SS').
     """
     tz = pytz.timezone("America/Bogota")
@@ -1497,7 +1627,11 @@ def calcular_tiempo_en_area(op_data):
                 entrada = None
     if entrada is None:
         return 0, "N/A"
-    segundos = max(0, (hora_colombia() - entrada).total_seconds())
+
+    ahora = hora_colombia()
+    segundos_totales = max(0, (ahora - entrada).total_seconds())
+    segundos_detenido = segundos_inactivo_en_periodo("planta_activa", entrada, ahora)
+    segundos = max(0, segundos_totales - segundos_detenido)
     return segundos, str(timedelta(seconds=int(segundos)))
 
 
@@ -2829,8 +2963,15 @@ elif menu == "📅 Planificación":
                         horizontal=True)
     
 # VARIABLE PARA ALMACENAR DATOS RECUPERADOS
-        datos_rec = {}
-        
+# IMPORTANTE: 'datos_rec' tiene que sobrevivir a MAS DE UNA ejecucion del
+# script (ej: cuando el usuario cambia la cantidad, o cuando finalmente
+# presiona "GUARDAR"), no solo al instante exacto en que se hace clic en
+# "Buscar y Cargar". Por eso se guarda en st.session_state en vez de una
+# variable local: una variable local se reiniciaria vacia en CADA ejecucion
+# del script excepto en la que se presiona el boton de busqueda, y como el
+# formulario usa clear_on_submit=True, eso hacia que justo al presionar
+# GUARDAR los campos de Cliente/Vendedor/Trabajo se recargaran vacios
+# (porque en esa ejecucion puntual 'datos_rec' ya no tenia los datos).
         if "Repetición" in origen:
             col_busq1, col_busq2 = st.columns([3, 1])
             op_a_buscar = col_busq1.text_input("Ingrese el número de OP Anterior para buscar (Ej: FRI-100):")
@@ -2839,14 +2980,22 @@ elif menu == "📅 Planificación":
                     try:
                         res_busq = supabase.table("ordenes_planeadas").select("*").eq("op", op_a_buscar.upper()).execute()
                         if res_busq.data:
-                            datos_rec = res_busq.data[0]
-                            st.success(f"✅ Datos de '{datos_rec['nombre_trabajo']}' cargados correctamente.")
+                            st.session_state['datos_rec_cargados'] = res_busq.data[0]
+                            st.success(f"✅ Datos de '{res_busq.data[0]['nombre_trabajo']}' cargados correctamente.")
                         else:
+                            st.session_state['datos_rec_cargados'] = {}
                             st.error("No se encontró la OP. Verifique el prefijo y número.")
                     except Exception as e:
                         st.error(f"Error en la base de datos: {e}")
                 else:
                     st.warning("Por favor ingrese un número de OP.")
+            datos_rec = st.session_state.get('datos_rec_cargados', {})
+        else:
+# SI EL ORIGEN ES "NUEVA (DESDE CERO)", SE LIMPIA CUALQUIER DATO QUE HUBIERA
+# QUEDADO CARGADO DE UNA BUSQUEDA ANTERIOR, PARA QUE NO SE CUELE INFORMACION
+# VIEJA DE OTRA OP EN UNA ORDEN QUE SE SUPONE ES COMPLETAMENTE NUEVA.
+            st.session_state['datos_rec_cargados'] = {}
+            datos_rec = {}
 
         st.divider()
 
@@ -5066,7 +5215,7 @@ if st.session_state.get('rol') == 'admin':
                         nuevo_st = st.toggle(f"{maq}", value=estado_actual, key=f"switch_{maq}")
                         
                         if nuevo_st != estado_actual:
-                            cambiar_estado_maquina(maq, nuevo_st)
+                            cambiar_estado_maquina(maq, nuevo_st, st.session_state.get('nombre_usuario', 'admin'))
                             st.toast(f"Máquina {maq} {'ACTIVADA' if nuevo_st else 'DESACTIVADA'}")
                             time.sleep(0.5) 
                             st.rerun() 
