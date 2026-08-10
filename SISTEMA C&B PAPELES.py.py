@@ -86,10 +86,8 @@ MAQUINAS = {
     "COLECTORAS": ["COL-01", "COL-02"],
     "ENCUADERNACIÓN": ["JINNA", "KELLY", "VIVIANA", "ROSMIA", "ANGIE", "JOHANA.N", "MARTHA", "OLGA", "J0HANA.R", "ANY"],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
+
 # AREA DE BOLSAS: se divide en 2 sub-areas para efectos de la ruta de la OP
-# (FLEXO imprime, luego pasa a ARMADORAS; las bolsas blancas van directo a
-# ARMADORAS), pero ambas se muestran juntas en un solo modulo/pantalla
-# ("👜 Bolsas"), ya que son pocas maquinas en total.
     "BOLSAS - FLEXO": ["FLEXO 1-Y2", "FLEXO 2-Y4"],
     "BOLSAS - ARMADORAS": ["450TF", "450B", "250B", "220", "350"],
 }
@@ -274,6 +272,32 @@ def hora_colombia():
     tz = pytz.timezone("America/Bogota")
     return datetime.now(tz)
 
+#  SUBIDA DE EVIDENCIA FOTOGRAFICA A SUPABASE STORAGE 
+BUCKET_EVIDENCIAS = "evidencias-bodega"
+
+def subir_evidencia_foto(archivo_bytes, nombre_base):
+    """
+    Sube una foto (bytes) al bucket de evidencias en Supabase Storage y devuelve
+    la URL publica para guardarla en la base de datos. 'nombre_base' es un texto
+    para armar un nombre de archivo unico y legible (ej: nombre del trabajo o la OP).
+    Devuelve None si algo falla (nunca revienta el flujo de guardado del movimiento).
+    """
+    try:
+        limpio = "".join(c if c.isalnum() else "_" for c in str(nombre_base))[:60]
+        marca_tiempo = hora_colombia().strftime("%Y%m%d_%H%M%S")
+        ruta_archivo = f"entradas/{marca_tiempo}_{limpio}.jpg"
+
+        supabase.storage.from_(BUCKET_EVIDENCIAS).upload(
+            ruta_archivo,
+            archivo_bytes,
+            file_options={"content-type": "image/jpeg"}
+        )
+        return supabase.storage.from_(BUCKET_EVIDENCIAS).get_public_url(ruta_archivo)
+    except Exception as e:
+        st.warning(f"⚠️ No se pudo subir la foto de evidencia al almacenamiento ({e}). "
+                   f"El movimiento continuará sin la foto adjunta.")
+        return None
+
 # FUNCION CENTRAL DE FORMATO DE FECHAS: convierte cualquier fecha/hora que llegue de la base de datos
 def fmt_fecha_hora(valor, con_hora=True):
     """
@@ -359,10 +383,6 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
     }).execute()
 
 # DEJA CONSTANCIA CON FECHA EXACTA DE ESTE CAMBIO. Esto es lo que permite
-# despues calcular con precision cuanto tiempo estuvo detenida la planta
-# DENTRO de un intervalo especifico (ej: mientras una OP estaba en Diseño),
-# sin importar si para cuando se cierra el trabajo la planta ya esta
-# reactivada de nuevo.
     try:
         supabase.table("estado_historial").insert({
             "clave": "planta_activa",
@@ -414,9 +434,11 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     try:
         existente = supabase.table("configuracion_sistema").select("id").eq("clave", clave).execute().data
         if existente:
+
 # Ya existe esta clave -> solo actualizar, sin tocar el id
             supabase.table("configuracion_sistema").update(payload).eq("clave", clave).execute()
         else:
+
 # Clave nueva -> calcular un id libre (max id actual + 1) en vez de usar el default roto
             todos_ids = supabase.table("configuracion_sistema").select("id").execute().data or []
             siguiente_id = max([fila.get("id", 0) or 0 for fila in todos_ids], default=0) + 1
@@ -440,10 +462,6 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     st.session_state.pop(f'_area_activa_ts_{area}', None)
 
 # CALCULA CUANTOS SEGUNDOS ESTUVO "DETENIDA" UNA CLAVE (planta_activa o
-# area_activa_XXX) DENTRO DE UN INTERVALO ESPECIFICO [inicio, fin].
-# Esto es lo que permite restar con precision el tiempo detenido de un
-# trabajo, sin importar si para cuando se cierra el trabajo la planta ya
-# esta reactivada de nuevo (a diferencia de solo mirar el estado actual).
 def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, estado_por_defecto: bool = True) -> float:
     """
     'estado_por_defecto' se usa SOLO si todavia no existe ningun evento en el
@@ -461,8 +479,6 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
 
     try:
 # TODOS los cambios de estado de esta clave que hayan ocurrido antes del fin
-# del intervalo (se necesitan los anteriores al inicio tambien, para saber
-# en que estado empezaba el intervalo).
         eventos = supabase.table("estado_historial").select("estado,fecha")\
             .eq("clave", clave).lte("fecha", fin.isoformat())\
             .order("fecha", desc=False).execute().data or []
@@ -476,8 +492,7 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
         except Exception:
             return None
 
-# ESTADO AL INICIO DEL INTERVALO: el ultimo evento ANTES de 'inicio' (si no
-# hay ninguno todavia registrado, se usa 'estado_por_defecto').
+# ESTADO AL INICIO DEL INTERVALO: el ultimo evento ANTES de 'inicio' (si no hay ninguno todavia registrado, se usa 'estado_por_defecto').
     estado_actual = estado_por_defecto
     puntos = []  # lista de (fecha, nuevo_estado) que caen DENTRO del intervalo
     for ev in eventos:
@@ -489,8 +504,7 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
         elif f_ev < fin:
             puntos.append((f_ev, bool(ev.get("estado", True))))
 
-# RECORRE LOS CAMBIOS DE ESTADO DENTRO DEL INTERVALO, SUMANDO LOS TRAMOS
-# DONDE LA CLAVE ESTUVO INACTIVA (estado_actual == False)
+# RECORRE LOS CAMBIOS DE ESTADO DENTRO DEL INTERVALO, SUMANDO LOS TRAMOS DONDE LA CLAVE ESTUVO INACTIVA (estado_actual == False)
     segundos_inactivo = 0.0
     cursor = inicio
     for f_ev, nuevo_estado in puntos:
@@ -523,8 +537,7 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
 # TIEMPO DETENIDO DE PLANTA (interruptor general) DENTRO DEL INTERVALO REAL
     segundos_detenido = segundos_inactivo_en_periodo("planta_activa", inicio, fin)
 
-# TIEMPO DETENIDO DEL AREA ESPECIFICA DE LA MAQUINA (ej: solo Corte), Y DE LA
-# MAQUINA INDIVIDUAL PUNTUAL (ej: solo COR-05), AMBOS DENTRO DEL INTERVALO
+# TIEMPO DETENIDO DEL AREA ESPECIFICA DE LA MAQUINA (ej: solo Corte), Y DE LA MAQUINA INDIVIDUAL PUNTUAL (ej: solo COR-05), AMBOS DENTRO DEL INTERVALO
     if nombre_maquina:
         area_de_maquina = MAQUINA_A_AREA.get(nombre_maquina)
         if area_de_maquina:
@@ -1035,9 +1048,7 @@ def generar_op_rebobinado(row):
 
     return bytes(pdf.output())
 
-# GENERAR PDF BOLSAS (basado en el boceto compartido: especificaciones de la
-# bolsa con checkboxes tipo formulario, especificaciones de produccion,
-# configuracion de empaque y firmas).
+# GENERAR PDF BOLSAS especificaciones de la bolsa con checkboxes tipo formulario, especificaciones de produccion, configuracion de empaque y firmas).
 def generar_op_bolsas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -1096,9 +1107,7 @@ def generar_op_bolsas(row):
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "ESPECIFICACIONES DE LA BOLSA", 0, 1, "C", fill=True)
 
-# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA
-# BOLSA A LA DERECHA, A LA MISMA ALTURA (el diagrama va en el espacio que
-# queda libre entre el borde derecho de la tabla y el margen de la hoja).
+# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA BOLSA A LA DERECHA, A LA MISMA ALTURA (el diagrama va en el espacio que queda libre entre el borde derecho de la tabla y el margen de la hoja).
     y_inicio_specs = pdf.get_y()
 
     pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (C) Largo Total De La Bolsa: ", 1, 0, fill=True)
@@ -1128,10 +1137,7 @@ def generar_op_bolsas(row):
 
     y_fin_specs = pdf.get_y()
 
-# DIAGRAMA DE LA BOLSA (W, C, c, H, h) EN EL ESPACIO LIBRE A LA DERECHA DE LA
-# TABLA. La tabla ocupa hasta x=130 aprox (60+60mm), asi que el diagrama va
-# desde x=132 hasta el margen derecho (x=200), con la misma altura que la
-# tabla completa, sin deformarse (se respeta la proporcion de la imagen).
+# DIAGRAMA DE LA BOLSA (W, C, c, H, h) EN EL ESPACIO LIBRE A LA DERECHA DE LA TABLA. La tabla ocupa hasta x=130 aprox (60+60mm), asi que el diagrama va desde x=132 hasta el margen derecho (x=200), con la misma altura que la tabla completa, sin deformarse (se respeta la proporcion de la imagen).
     alto_disponible_diagrama = y_fin_specs - y_inicio_specs - 2
     try:
         pdf.image("bolsa_diagrama.png", x=133, y=y_inicio_specs + 1, h=alto_disponible_diagrama)
@@ -1494,11 +1500,7 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado, usuario="admin"):
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
 
-# MISMO REGISTRO DE HISTORIAL QUE PLANTA_ACTIVA / AREA_ACTIVA, PERO POR MAQUINA
-# INDIVIDUAL. Esto permite que, igual que con la planta, si esta maquina
-# puntual se apaga y se vuelve a encender DURANTE un trabajo, se reste con
-# precision solo el tiempo real que estuvo apagada — sin importar si para
-# cuando se cierra el trabajo la maquina ya esta reactivada de nuevo.
+# MISMO REGISTRO DE HISTORIAL QUE PLANTA_ACTIVA / AREA_ACTIVA, PERO POR MAQUINA INDIVIDUAL. Esto permite que, igual que con la planta, si esta maquina puntual se apaga y se vuelve a encender DURANTE un trabajo, se reste con
     try:
         supabase.table("estado_historial").insert({
             "clave": f"maquina_activa_{nombre_maquina}",
@@ -1565,9 +1567,7 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
         return "REBOBINADORAS"
     return "IMPRESIÓN"
 
-# RUTA HACIA LA PLANTA DE PRODUCCION DE BOLSAS: las bolsas IMPRESAS pasan primero
-# por las maquinas FLEXO (imprimen) y de ahi a las armadoras; las bolsas BLANCAS
-# van directo a las armadoras porque no necesitan impresión.
+# RUTA HACIA LA PLANTA DE PRODUCCION DE BOLSAS: las bolsas IMPRESAS pasan primero por las maquinas FLEXO 
 def ruta_planta_bolsas(tipo_orden):
     if tipo_orden == "BOLSA IMPRESA":
         return "BOLSAS - FLEXO"
@@ -1634,7 +1634,6 @@ def calcular_tiempo_en_area(op_data):
     segundos = max(0, segundos_totales - segundos_detenido)
     return segundos, str(timedelta(seconds=int(segundos)))
 
-
 # RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
 def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
@@ -1657,8 +1656,7 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
     if es_bolsa_radio:
-# ESPECIFICACIONES TECNICAS DE BOLSAS (mismo formato que rollos/formas, pero
-# con los campos propios de bolsas: medidas, manija, base, FSC, impresion, tintas)
+# ESPECIFICACIONES TECNICAS DE BOLSAS (mismo formato que rollos/formas, pero con los campos propios de bolsas: medidas, manija, base, FSC, impresion, tintas)
         with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
@@ -1847,7 +1845,7 @@ if menu == "🖥️ Monitor":
         try:
             ops_espera = supabase.table("ordenes_planeadas").select(
                 "op,cliente,nombre_trabajo,proxima_area,historial_procesos,created_at,fecha_creacion"
-            ).neq("proxima_area", "FINALIZADO").execute().data or []
+            ).neq("proxima_area", "FINALIZADO").neq("proxima_area", "ANULADA").execute().data or []
         except Exception:
             ops_espera = []
 
@@ -1879,30 +1877,23 @@ if menu == "🖥️ Monitor":
 # PREPARAR DATOS DE OPERACIONES  OPTIMIZACION: antes se traia "op,nombre_trabajo" de TODAS las ordenes de toda la
     op_ids_activos = list({str(a['op']) for a in act_data}) if act_data else []
     if op_ids_activos:
-        ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo").in_("op", op_ids_activos).execute().data or []
+        ops = supabase.table("ordenes_planeadas").select("op,nombre_trabajo,cliente").in_("op", op_ids_activos).execute().data or []
     else:
         ops = []
     map_ops = {o['op']: o['nombre_trabajo'] for o in ops}
+    map_clientes = {o['op']: o.get('cliente', 'SIN CLIENTE') for o in ops}
 
     act = {}
     for a in act_data:
         op = a['op']
         a['nombre_trabajo'] = map_ops.get(op, "SIN NOMBRE")
+        a['cliente'] = map_clientes.get(op, "SIN CLIENTE")
         act[a['maquina']] = a
         
 #  DIBUJAR INTERFAZ (Con logica de colores) 
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
 
-# Se recorre la lista de maquinas en BLOQUES DE 4 (una fila de columnas nueva
-# por cada bloque), en vez de crear las 4 columnas UNA sola vez para toda el
-# area y repartir las maquinas segun su posicion "indice % 4". Esa forma
-# anterior se veia bien en computador (las 4 columnas quedan lado a lado),
-# pero en celular o tablet, donde Streamlit APILA las columnas una debajo de
-# otra en vez de ponerlas lado a lado, se notaba el desorden 1,5,9,13,2,6,...
-# porque primero se dibujaba toda la columna 0, luego toda la columna 1, etc.
-# Con una fila de 4 columnas por cada bloque de 4 maquinas en su orden normal,
-# el celular las apila ya en el orden correcto: 1,2,3,4,5,6,7,8...
         for inicio_fila in range(0, len(maquinas), 4):
             fila_maquinas = maquinas[inicio_fila:inicio_fila + 4]
             cols = st.columns(4)
@@ -1928,7 +1919,7 @@ if menu == "🖥️ Monitor":
 
 # TARJETA  produccion
                         st.markdown(
-                            f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>{act[m]['nombre_trabajo']}</div>",
+                            f"<div class='card-produccion'>{m}<br>OP: {act[m]['op']}<br>👤 {act[m]['cliente']}<br>{act[m]['nombre_trabajo']}</div>",
                             unsafe_allow_html=True
                         )
                     else:
@@ -2090,7 +2081,11 @@ elif menu == "🔍 Seguimiento":
                     return
 
 # LOGICA DE ESTATUS MEJORADA
-            if area_destino == "FINALIZADO":
+            esta_anulada = bool(row.get('anulada'))
+            if esta_anulada:
+                texto_estatus = "🚫 ORDEN ANULADA"
+                color_texto = "red"
+            elif area_destino == "FINALIZADO":
                 
                 texto_estatus = "🔵 ORDEN FINALIZADA (BODEGA / DESPACHOS)"
                 color_texto = "blue"
@@ -2137,8 +2132,36 @@ elif menu == "🔍 Seguimiento":
             if fecha_fmt == '-':
                 fecha_fmt = ''
             titulo_unico = f"{icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 🛠️ {nombre_t} | 💼 {vendedor} | 📅 {fecha_fmt} | {texto_estatus}"
-            
-            with st.expander(titulo_unico):
+
+            if esta_anulada:
+                titulo_unico = f"🚫🔴 ORDEN ANULADA 🔴🚫 | {icono_tipo} {etiqueta_tipo} | OP {op_id} | {cliente} | 🛠️ {nombre_t} | 📅 {fecha_fmt}"
+# TARJETA COMPLETA EN ROJO PARA RESALTAR SOBRE LAS DEMAS (bloque HTML autocontenido)
+                st.markdown(f"""
+                <div style="background-color:#FDECEA; border:2px solid #C62828; border-left:10px solid #C62828;
+                            border-radius:8px; padding:12px 16px; margin-bottom:6px;">
+                  <div style="color:#B71C1C; font-weight:800; font-size:15px; margin-bottom:6px;">{titulo_unico}</div>
+                  <div style="color:#B71C1C; font-size:13.5px;">
+                    <b>Motivo de anulación:</b> {row.get('motivo_anulacion', 'Sin motivo registrado')}<br>
+                    <b>Anulada por:</b> {row.get('anulada_por', 'N/A')} &nbsp;|&nbsp; <b>Fecha:</b> {row.get('fecha_anulacion', 'N/A')}
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                toggle_key = f"toggle_detalle_anulada_{op_id}"
+                if toggle_key not in st.session_state:
+                    st.session_state[toggle_key] = False
+                if st.button("🔍 Ver detalles de la orden anulada" if not st.session_state[toggle_key] else "🔽 Ocultar detalles",
+                             key=f"btn_{toggle_key}"):
+                    st.session_state[toggle_key] = not st.session_state[toggle_key]
+
+                if not st.session_state[toggle_key]:
+                    st.markdown("<div style='margin-bottom:14px;'></div>", unsafe_allow_html=True)
+                    return
+                contenedor_detalle = st.container()
+            else:
+                contenedor_detalle = st.expander(titulo_unico)
+
+            with contenedor_detalle:
                 st.write("Detalles internos de la OP...")
                 st.markdown(f"### ESTATUS DE TRABAJO: :{color_texto}[{texto_estatus}]")
                 
@@ -2339,11 +2362,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}")
                 obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}")
                 
-# SI ES BOLSA (Impresa o Blanca), AL APROBARSE VA DIRECTO A LA PLANTA DE
-# PRODUCCION DE BOLSAS, SIN PASAR POR PRE-PRENSA NI REVISION FINAL (esas 2
-# etapas no aplican para bolsas). Si no es bolsa, sigue la logica normal:
-# "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL; "NUEVA"
-# O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
+# SI ES BOLSA (Impresa o Blanca), AL APROBARSE VA DIRECTO A LA PLANTA DE PRODUCCION DE BOLSAS, 
                 tipo_orden_op = datos_op.get('tipo_orden', '')
                 es_bolsa_diseno = tipo_orden_op in ("BOLSA IMPRESA", "BOLSA BLANCA")
                 tipo_origen_op = (datos_op.get('tipo_origen') or '').strip()
@@ -2561,8 +2580,7 @@ elif menu == "🧐 Auditoría Bolsas":
             radiografia_completa_op(datos_op_ab, mostrar_obs_auditoria1=False)
             st.divider()
 
-# SI ES REPETICION EXACTA, SE VA DIRECTO A PLANTA. SI ES NUEVA O REPETICION
-# CON CAMBIOS, PRIMERO PASA POR AUDITORIA CARTERA.
+# SI ES REPETICION EXACTA, SE VA DIRECTO A PLANTA. SI ES NUEVA O REPETICION CON CAMBIOS, PRIMERO PASA POR AUDITORIA CARTERA.
             es_repeticion_exacta_bolsa = (datos_op_ab.get('tipo_origen', '') == "Repetición Exacta")
             if es_repeticion_exacta_bolsa:
                 ruta_siguiente_ab = ruta_planta_bolsas(datos_op_ab.get('tipo_orden', ''))
@@ -2645,7 +2663,7 @@ elif menu == "📅 Planificación":
         "AUDITORIA BOLSAS", "AUDITORIA CARTERA", "BOLSAS - FLEXO", "BOLSAS - ARMADORAS"
     ]
 
-    tab_nueva, tab_editar = st.tabs(["➕ Nueva / Repetición", "✏️ Editar OP Existente"])
+    tab_nueva, tab_editar, tab_anular = st.tabs(["➕ Nueva / Repetición", "✏️ Editar OP Existente", "🚫 Anular OP"])
 
     with tab_editar:
         st.markdown("<div class='section-header'>✏️ EDITAR ORDEN DE PRODUCCIÓN</div>", unsafe_allow_html=True)
@@ -2686,7 +2704,13 @@ elif menu == "📅 Planificación":
             </div>
             """, unsafe_allow_html=True)
 
-            if not es_editable and not es_admin:
+# UNA OP ANULADA NO SE PUEDE EDITAR (queda congelada como constancia)
+            if op_edit.get('anulada'):
+                st.error(f"🚫 Esta OP fue ANULADA el {op_edit.get('fecha_anulacion', 'N/A')} por {op_edit.get('anulada_por', 'N/A')}.")
+                st.caption(f"Motivo: {op_edit.get('motivo_anulacion', 'Sin motivo registrado')}")
+                st.info("Las OP anuladas no se pueden editar. Si necesitas este mismo número de OP, puedes crear una nueva orden desde la pestaña '➕ Nueva / Repetición': el sistema lo permite porque la anterior está anulada.")
+
+            elif not es_editable and not es_admin:
                 st.error(f"🔒 Esta OP ya fue tomada por producción ({estado_actual}) y no se puede editar.")
                 st.caption("Si necesitas hacer un cambio urgente, contacta al administrador.")
 
@@ -2953,6 +2977,95 @@ elif menu == "📅 Planificación":
 
                             except Exception as e:
                                 st.error(f"Error al guardar: {e}")
+
+    with tab_anular:
+        st.markdown("<div class='section-header'>🚫 ANULAR ORDEN DE PRODUCCIÓN</div>", unsafe_allow_html=True)
+        st.caption("Usa esto cuando una OP quedó mal creada y necesitas descartarla sin tener que borrarla manualmente en Supabase.")
+
+        rol_anular_actual = st.session_state.get('rol', '').lower()
+
+        if rol_anular_actual != 'admin':
+            st.warning("🔒 Solo el administrador puede anular órdenes de producción.")
+        else:
+            col_a1, col_a2 = st.columns([3, 1])
+            op_buscar_anular = col_a1.text_input("Número de OP a anular (Ej: FRI-101):", key="op_anular_buscar")
+
+            if col_a2.button("🔍 Buscar", key="btn_buscar_anular"):
+                if op_buscar_anular:
+                    res_anular = supabase.table("ordenes_planeadas").select("*")\
+                        .eq("op", op_buscar_anular.upper().strip()).execute()
+                    if res_anular.data:
+                        st.session_state['op_anular_data'] = res_anular.data[0]
+                    else:
+                        st.error("❌ No se encontró esa OP.")
+                        st.session_state.pop('op_anular_data', None)
+                else:
+                    st.warning("Ingresa el número de OP.")
+
+            op_anular = st.session_state.get('op_anular_data')
+
+            if op_anular:
+                estado_anular_actual = op_anular.get('proxima_area', '')
+
+                st.markdown(f"""
+                <div class='metric-box'>
+                  <b>📋 OP:</b> {op_anular.get('op')} &nbsp;&nbsp;
+                  <b>👤 Cliente:</b> {op_anular.get('cliente')} &nbsp;&nbsp;
+                  <b>📝 Trabajo:</b> {op_anular.get('nombre_trabajo')} &nbsp;&nbsp;
+                  <b>🏷️ Tipo:</b> {op_anular.get('tipo_orden')} &nbsp;&nbsp;
+                  <b>📍 Estado actual:</b> <code>{estado_anular_actual}</code>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if op_anular.get('anulada'):
+                    st.info(f"ℹ️ Esta OP ya está ANULADA desde el {op_anular.get('fecha_anulacion', 'N/A')} "
+                            f"por {op_anular.get('anulada_por', 'N/A')}. Motivo: {op_anular.get('motivo_anulacion', 'N/A')}")
+                else:
+# AVISAR SI LA OP YA ESTA ACTIVA (SIENDO TRABAJADA) EN UNA MAQUINA EN ESTE MOMENTO
+                    activa_en_maquina = supabase.table("trabajos_activos").select("*").eq("op", op_anular['op']).execute().data
+                    if activa_en_maquina:
+                        maquina_activa_txt = activa_en_maquina[0].get('maquina', '?')
+                        st.warning(f"⚠️ Esta OP está ACTIVA en este momento en la máquina **{maquina_activa_txt}**. "
+                                   f"Si la anulas, esa máquina quedará libre automáticamente y el trabajo en curso se descartará.")
+
+                    st.markdown("---")
+                    motivo_anulacion_txt = st.text_area("✍️ Motivo de la anulación (obligatorio):", key="motivo_anular_txt")
+                    confirmar_anulacion = st.checkbox(f"Confirmo que deseo ANULAR la OP {op_anular.get('op')}. Esta acción no se puede deshacer.", key="confirmar_anular_chk")
+
+                    if st.button("🚫 ANULAR ESTA OP", type="primary", use_container_width=True, disabled=not confirmar_anulacion):
+                        if not motivo_anulacion_txt.strip():
+                            st.error("Debes escribir un motivo antes de anular la OP.")
+                        else:
+                            try:
+                                hist_anular = op_anular.get('historial_procesos') or []
+                                hist_anular.append({
+                                    "area": "ANULACIÓN",
+                                    "maquina": "—",
+                                    "tipo": "ANULADA",
+                                    "operario": st.session_state.get('nombre_usuario', '?'),
+                                    "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                                    "observaciones": f"OP anulada. Estaba en '{estado_anular_actual}'. Motivo: {motivo_anulacion_txt}"
+                                })
+
+                                supabase.table("ordenes_planeadas").update({
+                                    "anulada": True,
+                                    "motivo_anulacion": motivo_anulacion_txt,
+                                    "fecha_anulacion": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                                    "anulada_por": st.session_state.get('nombre_usuario', '?'),
+                                    "proxima_area": "ANULADA",
+                                    "historial_procesos": hist_anular
+                                }).eq("op", op_anular['op']).execute()
+
+# SI LA OP ESTABA ACTIVA EN UNA MAQUINA, SE LIBERA AUTOMATICAMENTE
+                                supabase.table("trabajos_activos").delete().eq("op", op_anular['op']).execute()
+
+                                st.success(f"🚫 OP {op_anular['op']} anulada correctamente. Ya no aparece en ninguna ruta ni área, "
+                                           f"y puedes crear una nueva OP con ese mismo número cuando quieras.")
+                                st.session_state.pop('op_anular_data', None)
+                                time.sleep(1.8)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error al anular: {e}")
 
     with tab_nueva:
     
@@ -3287,14 +3400,21 @@ elif menu == "📅 Planificación":
                     op_final = f"{prefijo}{op_input.upper()}"
 
 #  VALIDAR OP DUPLICADA
+# EXCEPCION: si el/los registro(s) que ya existen con ese numero estan
+# ANULADOS, se permite crear una OP nueva con el mismo numero (el registro
+# anulado se conserva intacto en la base de datos como constancia).
                     existe_op = supabase.table("ordenes_planeadas") \
-                    .select("op") \
+                    .select("op, anulada") \
                     .eq("op", op_final) \
                     .execute()
 
-                    if existe_op.data:
-                        st.error(f"❌ La OP {op_final} ya existe. No se puede duplicar.")
+                    existe_op_activa = [o for o in (existe_op.data or []) if not o.get("anulada")]
+
+                    if existe_op_activa:
+                        st.error(f"❌ La OP {op_final} ya existe y no está anulada. No se puede duplicar.")
                         st.stop()
+                    elif existe_op.data:
+                        st.info(f"ℹ️ El número {op_final} ya existía pero estaba ANULADO — se creará una OP nueva con ese mismo número.")
 
 # DEFINIR AREA INICIAL: TODA OP NUEVA PASA PRIMERO POR AUDITORIA VENTAS,
 # EXCEPTO LAS BOLSAS, QUE TIENEN SU PROPIO FLUJO Y VAN PRIMERO A AUDITORIA BOLSAS.
@@ -3314,7 +3434,8 @@ elif menu == "📅 Planificación":
                         "proxima_area": ruta_inicial,
                         "historial_procesos": [],
                         "creado_por": st.session_state.get('nombre_usuario', ''),
-                        "num_ticket": int(num_ticket_creacion)
+                        "num_ticket": int(num_ticket_creacion),
+                        "anulada": False
                     }
 
                     if "FORMAS" in t:
@@ -3390,8 +3511,14 @@ elif menu == "📅 Planificación":
                     try:
                         supabase.table("ordenes_planeadas").insert(payload).execute()
                     except Exception:
-                        payload.pop("creado_por", None)
-                        supabase.table("ordenes_planeadas").insert(payload).execute()
+                        try:
+                            payload.pop("creado_por", None)
+                            supabase.table("ordenes_planeadas").insert(payload).execute()
+                        except Exception:
+# Si la columna "anulada" todavia no existe en Supabase, se reintenta sin
+# ella para no romper la creacion de OPs (ver nota en el manual de cambios).
+                            payload.pop("anulada", None)
+                            supabase.table("ordenes_planeadas").insert(payload).execute()
 
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
@@ -3451,22 +3578,46 @@ elif menu == "📦 salida produccion P1":
                     c_rollos = st.number_input("Cantidad de Rollos", min_value=0, step=1)
                     notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
 
+# EVIDENCIA FOTOGRAFICA OBLIGATORIA SOLO PARA ENTRADAS: garantiza el estado
+# en el que la mercancia llega a bodega desde produccion.
+                foto_camara = None
+                foto_archivo = None
+                if "ENTRADA" in tipo_accion:
+                    st.markdown("---")
+                    st.markdown("**📷 Evidencia fotográfica de la mercancía (obligatoria)**")
+                    st.caption("Toma una foto con la cámara o sube una imagen desde el dispositivo. Con una de las dos es suficiente.")
+                    col_foto1, col_foto2 = st.columns(2)
+                    with col_foto1:
+                        foto_camara = st.camera_input("Tomar foto con cámara", key="foto_camara_entrada")
+                    with col_foto2:
+                        foto_archivo = st.file_uploader("O subir imagen desde archivo", type=["jpg", "jpeg", "png"], key="foto_archivo_entrada")
+
 # BOTON DINAMICO DE REGISTRO A INGRESOS
                 texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
                 btn_procesar = st.form_submit_button(texto_boton)
 
                 if btn_procesar:
+                    es_entrada_chk = "ENTRADA" in tipo_accion
+                    foto_para_subir = foto_camara if foto_camara is not None else foto_archivo
+
                     if not nom_trabajo or nom_trabajo == "":
                         st.error("Debe especificar el nombre del trabajo.")
                     elif c_cajas == 0 and c_rollos == 0:
                         st.warning("Ingrese una cantidad válida de cajas o rollos.")
+                    elif es_entrada_chk and foto_para_subir is None:
+                        st.error("📷 Debes adjuntar una foto de la mercancía (con la cámara o subiendo un archivo) antes de registrar la entrada.")
                     else:
                         fecha_mov = hora_colombia().isoformat()
                         producto_actual = next((p for p in productos_db if p['nombre_trabajo'] == nom_trabajo), None)
                         
 # LOGICA DE SUMA Y RESTA
-                        es_entrada = "ENTRADA" in tipo_accion
+                        es_entrada = es_entrada_chk
                         factor = 1 if es_entrada else -1
+
+# SUBIR LA FOTO DE EVIDENCIA (solo aplica en entradas)
+                        url_foto_evidencia = None
+                        if es_entrada and foto_para_subir is not None:
+                            url_foto_evidencia = subir_evidencia_foto(foto_para_subir.getvalue(), nom_trabajo)
 
 # VALIDACION DE STOCK PARA SALIDAS
                         if not es_entrada:
@@ -3484,28 +3635,46 @@ elif menu == "📦 salida produccion P1":
 # ACTUALIZAR EXISTENTE
                                 nuevo_stk_cajas = producto_actual['stock_cajas'] + (c_cajas * factor)
                                 nuevo_stk_rollos = producto_actual['stock_rollos'] + (c_rollos * factor)
-                                
-                                supabase.table("bodega_producto_terminado").update({
+
+                                datos_update = {
                                     "stock_cajas": nuevo_stk_cajas,
                                     "stock_rollos": nuevo_stk_rollos,
                                     "ultima_actualizacion": fecha_mov,
                                     "observaciones": notas  
-                                }).eq("id", producto_actual['id']).execute()
+                                }
+                                if url_foto_evidencia:
+                                    datos_update["foto_evidencia"] = url_foto_evidencia
+
+                                try:
+                                    supabase.table("bodega_producto_terminado").update(datos_update).eq("id", producto_actual['id']).execute()
+                                except Exception:
+# Si la columna "foto_evidencia" todavia no existe en Supabase, se reintenta sin ella.
+                                    datos_update.pop("foto_evidencia", None)
+                                    supabase.table("bodega_producto_terminado").update(datos_update).eq("id", producto_actual['id']).execute()
                             
                             elif es_entrada:
 
 # INSERTAR NUEVO (Solo si es entrada)
-                                supabase.table("bodega_producto_terminado").insert({
+                                datos_insert = {
                                     "nombre_trabajo": nom_trabajo,
                                     "tipo_producto": tipo_prod,
                                     "stock_cajas": c_cajas,
                                     "stock_rollos": c_rollos,
                                     "ultima_actualizacion": fecha_mov,
                                     "observaciones": notas
-                                }).execute()
+                                }
+                                if url_foto_evidencia:
+                                    datos_insert["foto_evidencia"] = url_foto_evidencia
+
+                                try:
+                                    supabase.table("bodega_producto_terminado").insert(datos_insert).execute()
+                                except Exception:
+# Si la columna "foto_evidencia" todavia no existe en Supabase, se reintenta sin ella.
+                                    datos_insert.pop("foto_evidencia", None)
+                                    supabase.table("bodega_producto_terminado").insert(datos_insert).execute()
 
 #  REGISTRAR SIEMPRE EN HISTORIAL 
-                            supabase.table("bodega_historial").insert({
+                            datos_historial = {
                                 "nombre_trabajo": nom_trabajo,
                                 "tipo_movimiento": "ENTRADA" if es_entrada else "SALIDA",
                                 "cajas": c_cajas,
@@ -3513,7 +3682,16 @@ elif menu == "📦 salida produccion P1":
                                 "fecha": fecha_mov,
                                 "usuario": st.session_state.get('nombre_usuario', 'Sistema'),
                                 "observaciones": notas
-                            }).execute()
+                            }
+                            if url_foto_evidencia:
+                                datos_historial["foto_evidencia"] = url_foto_evidencia
+
+                            try:
+                                supabase.table("bodega_historial").insert(datos_historial).execute()
+                            except Exception:
+# Si la columna "foto_evidencia" todavia no existe en Supabase, se reintenta sin ella.
+                                datos_historial.pop("foto_evidencia", None)
+                                supabase.table("bodega_historial").insert(datos_historial).execute()
 
                             st.success(f"✅ {texto_boton} exitoso para: {nom_trabajo}")
                             time.sleep(1.2)
@@ -3531,7 +3709,7 @@ elif menu == "📦 salida produccion P1":
         if res_bodega:
             df_bodega = pd.DataFrame(res_bodega)
             
-            cols_esperadas = ['nombre_trabajo', 'ref_comercial', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion', 'observaciones']
+            cols_esperadas = ['nombre_trabajo', 'ref_comercial', 'tipo_producto', 'stock_cajas', 'stock_rollos', 'ultima_actualizacion', 'observaciones', 'foto_evidencia']
             cols_finales = [c for c in cols_esperadas if c in df_bodega.columns]
             
             df_show = df_bodega[cols_finales].copy()
@@ -3549,7 +3727,8 @@ elif menu == "📦 salida produccion P1":
                 'stock_cajas': 'CAJAS',
                 'stock_rollos': 'ROLLOS',
                 'ultima_actualizacion': 'ÚLT. MOVIMIENTO',
-                'observaciones': 'OBSERVACIONES'
+                'observaciones': 'OBSERVACIONES',
+                'foto_evidencia': 'EVIDENCIA FOTO'
             }
             df_show.rename(columns=nombres_columnas, inplace=True)
             
@@ -3557,9 +3736,16 @@ elif menu == "📦 salida produccion P1":
             busqueda_b = st.text_input("🔍 Filtrar inventario por nombre...")
             if busqueda_b:
                 df_show = df_show[df_show['TRABAJO'].str.contains(busqueda_b.upper(), na=False)]
+
+# SI HAY FOTOS DE EVIDENCIA, SE MUESTRAN COMO ENLACE CLICABLE "Ver Foto"
+            config_columnas_inv = {}
+            if 'EVIDENCIA FOTO' in df_show.columns:
+                config_columnas_inv['EVIDENCIA FOTO'] = st.column_config.LinkColumn(
+                    "📷 Evidencia", display_text="Ver Foto"
+                )
             
 # MOSTRAR TABLAS 
-            st.dataframe(df_show, use_container_width=True, hide_index=True)
+            st.dataframe(df_show, use_container_width=True, hide_index=True, column_config=config_columnas_inv)
             
 # ALERTAS D ESTOCK BAJO 
             if 'CAJAS' in df_show.columns:
@@ -3594,7 +3780,13 @@ elif menu == "📊 Reportes Admin":
                     st.caption(f"Mostrando los {len(res_h)} movimientos más recientes.")
                 df_h = pd.DataFrame(res_h)
                 df_h = formatear_fechas_df(df_h)
-                st.dataframe(df_h, use_container_width=True, hide_index=True)
+# SI HAY FOTOS DE EVIDENCIA, SE MUESTRAN COMO ENLACE CLICABLE "Ver Foto"
+                config_columnas_h = {}
+                if 'foto_evidencia' in df_h.columns:
+                    config_columnas_h['foto_evidencia'] = st.column_config.LinkColumn(
+                        "📷 Evidencia", display_text="Ver Foto"
+                    )
+                st.dataframe(df_h, use_container_width=True, hide_index=True, column_config=config_columnas_h)
             else:
                 st.info("Sin registros en bodega.")
 
@@ -3705,8 +3897,17 @@ elif menu == "📊 Reportes Admin":
 # 'creado_por' solo existe en ordenes creadas despues de activar esta funcion
                     creador = o.get("creado_por") or "No registrado (orden anterior a esta función)"
                     estado_actual = o.get("proxima_area", "Sin estado")
+                    esta_anulada = bool(o.get("anulada"))
+                    titulo_expander = f"📋 OP {o.get('op')} | {o.get('cliente','')} | Estado: {estado_actual}"
+                    if esta_anulada:
+                        titulo_expander = f"🚫 [ANULADA] {titulo_expander}"
 
-                    with st.expander(f"📋 OP {o.get('op')} | {o.get('cliente','')} | Estado: {estado_actual}"):
+                    with st.expander(titulo_expander):
+                        if esta_anulada:
+                            st.error(
+                                f"🚫 Esta OP fue ANULADA el {o.get('fecha_anulacion', 'N/A')} por {o.get('anulada_por', 'N/A')}. "
+                                f"Motivo: {o.get('motivo_anulacion', 'Sin motivo registrado')}"
+                            )
                         c1, c2, c3 = st.columns(3)
                         c1.markdown(f"**Vendedor:** {o.get('vendedor','-')}")
                         c2.markdown(f"**Creado por:** {creador}")
@@ -3727,8 +3928,8 @@ elif menu == "📊 Reportes Admin":
                         if resumen_tiempos:
                             st.success("📊 Tiempo que duró en cada área anterior:  " + "   |   ".join(resumen_tiempos))
 
-# TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado, se calcula en vivo)
-                        if estado_actual != "FINALIZADO":
+# TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado ni fue anulada, se calcula en vivo)
+                        if estado_actual != "FINALIZADO" and not esta_anulada:
                             _, tiempo_actual_area = calcular_tiempo_en_area(o)
                             st.info(f"⏳ Lleva **{tiempo_actual_area}** en el área actual (**{estado_actual}**)")
 
@@ -4115,6 +4316,7 @@ elif menu == "📆 Cronograma Impresión":
 # mezclarse aqui aunque tecnicamente tambien esten "sin finalizar".
         todas_las_ops = supabase.table("ordenes_planeadas").select("*")\
             .neq("proxima_area", "FINALIZADO")\
+            .neq("proxima_area", "ANULADA")\
             .not_.in_("proxima_area", ["AUDITORIA BOLSAS", "AUDITORIA CARTERA", "BOLSAS - FLEXO", "BOLSAS - ARMADORAS"])\
             .execute().data or []
     except Exception as e:
@@ -4833,57 +5035,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         "estado_parcial": None
                     }).eq("op", r['op']).execute()
 
-# INGRESO AUTOMATICO A INVENTARIO DE PRODUCTO TERMINADO (SOLO CORTE, AL FINALIZAR ROLLOS)
-                    if area_act == "CORTE" and n_area == "FINALIZADO":
-                        try:
-                            rollos_salida = int(datos_c.get('rollos_finales', 0) or 0)
-                            cajas_salida = int(datos_c.get('cajas_totales', 0) or 0)
-                            if rollos_salida > 0 or cajas_salida > 0:
-                                nombre_trabajo_bodega = d_op.get('nombre_trabajo') or f"OP {r['op']}"
-                                tipo_prod_bodega = "IMPRESO" if tipo == "ROLLOS IMPRESOS" else "BLANCO"
-                                ref_comercial_bodega = d_op.get('ref_comercial') or ''
-                                fecha_mov_auto = hora_colombia().isoformat()
-
-                                prod_existente_list = supabase.table("bodega_producto_terminado")\
-                                    .select("*").eq("nombre_trabajo", nombre_trabajo_bodega).execute().data
-                                prod_existente = prod_existente_list[0] if prod_existente_list else None
-
-                                if prod_existente:
-                                    update_payload_bodega = {
-                                        "stock_cajas": prod_existente.get('stock_cajas', 0) + cajas_salida,
-                                        "stock_rollos": prod_existente.get('stock_rollos', 0) + rollos_salida,
-                                        "ultima_actualizacion": fecha_mov_auto,
-                                        "observaciones": f"OP {r['op']} — ingreso automático desde Corte"
-                                    }
-# SOLO SE ACTUALIZA LA REFERENCIA COMERCIAL SI LA OP TRAE UNA Y ES DISTINTA A LA YA GUARDADA, PARA NO BORRAR UNA REFERENCIA CORRECTA CON UN VALOR VACIO
-                                    if ref_comercial_bodega and prod_existente.get('ref_comercial') != ref_comercial_bodega:
-                                        update_payload_bodega["ref_comercial"] = ref_comercial_bodega
-                                    supabase.table("bodega_producto_terminado").update(
-                                        update_payload_bodega
-                                    ).eq("id", prod_existente['id']).execute()
-                                else:
-                                    supabase.table("bodega_producto_terminado").insert({
-                                        "nombre_trabajo": nombre_trabajo_bodega,
-                                        "tipo_producto": tipo_prod_bodega,
-                                        "ref_comercial": ref_comercial_bodega,
-                                        "stock_cajas": cajas_salida,
-                                        "stock_rollos": rollos_salida,
-                                        "ultima_actualizacion": fecha_mov_auto,
-                                        "observaciones": f"OP {r['op']} — ingreso automático desde Corte"
-                                    }).execute()
-
-# TAMBIEN QUEDA EN EL HISTORIAL DE MOVIMIENTOS DE BODEGA, IGUAL QUE SI SE HUBIERA INGRESADO A MANO, PARA QUE SE VEA EN REPORTES ADMIN Y EN SALIDA PRODUCCION P1
-                                supabase.table("bodega_historial").insert({
-                                    "nombre_trabajo": nombre_trabajo_bodega,
-                                    "tipo_movimiento": "ENTRADA",
-                                    "cajas": cajas_salida,
-                                    "rollos": rollos_salida,
-                                    "fecha": fecha_mov_auto,
-                                    "usuario": op_name,
-                                    "observaciones": f"Ingreso automático al finalizar OP {r['op']} en Corte"
-                                }).execute()
-                        except Exception as e:
-                            print(f"Error al ingresar automáticamente a bodega desde Corte: {e}")
+# NOTA: el ingreso a Inventario de Producto Terminado (Salida Producción P1) ya
+# NO se hace automaticamente al finalizar Corte. Ahora es 100% manual: el
+# encargado debe registrarlo el mismo desde "📦 Salida Producción P1 → Movimientos
+# → Entrada" (incluyendo la foto de evidencia obligatoria de la mercancia).
 
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
