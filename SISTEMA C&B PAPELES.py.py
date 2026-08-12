@@ -1654,7 +1654,10 @@ def calcular_tiempo_en_area(op_data):
 def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
 
-    es_bolsa_radio = datos.get('tipo_orden') in ("BOLSA IMPRESA", "BOLSA BLANCA")
+    tipo_radio = datos.get('tipo_orden', '')
+    es_bolsa_radio = tipo_radio in ("BOLSA IMPRESA", "BOLSA BLANCA")
+    es_formas_radio = tipo_radio in ("FORMAS IMPRESAS", "FORMAS BLANCAS")
+    es_rebobinado_radio = tipo_radio == "REBOBINADO"
 
     with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
         c1, c2, c3, c4 = st.columns(4)
@@ -1667,13 +1670,15 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
         if es_bolsa_radio:
             c4.write(f"**MATERIAL PARA BOLSA:**\n{datos.get('bolsa_material')}")
             c4.write(f"**GRAMAJE:**\n{datos.get('bolsa_gramaje')}")
+        elif es_formas_radio:
+            c4.write(f"**PRESENTACIÓN:**\n{datos.get('presentacion')}")
+            c4.write(f"**N.° DE PARTES:**\n{datos.get('num_partes')}")
         else:
             c4.write(f"**MATERIAL BASE:**\n{datos.get('material')}")
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
+# BOLSAS: SOLO CAMPOS PROPIOS DE BOLSAS (medidas, manija, base, FSC, impresion, tintas)
     if es_bolsa_radio:
-# ESPECIFICACIONES TECNICAS DE BOLSAS (mismo formato que rollos/formas, pero
-# con los campos propios de bolsas: medidas, manija, base, FSC, impresion, tintas)
         with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
@@ -1704,46 +1709,75 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
         return
 
+# FORMAS: SOLO CAMPOS PROPIOS DE FORMAS (cantidad, partes, presentacion, perforaciones, codigo de barras, numeracion)
+    if es_formas_radio:
+        with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown("**CANTIDADES**")
+                st.write(f"Número de Formas: {datos.get('cantidad_formas', 0)}")
+                st.write(f"Número de Partes: {datos.get('num_partes', 0)}")
+            with c2:
+                st.markdown("**PRESENTACIÓN**")
+                st.write(f"Presentación: {datos.get('presentacion')}")
+                st.write(f"Encolada o Grapada Por: {datos.get('presentacion2', 0)}")
+            with c3:
+                st.markdown("**PERFORACIONES Y CÓDIGO**")
+                st.write(f"Perforaciones: {datos.get('perforaciones_detalle')}")
+                st.write(f"Código de Barras: {datos.get('codigo_barras_detalle')}")
+            with c4:
+                st.markdown("**NUMERACIÓN**")
+                st.write(f"Numeración Inicial: {datos.get('num_id')}")
+                st.write(f"Numeración Final: {datos.get('num_fd')}")
+                st.write(f"Repetición: {datos.get('tipo_origen')}")
+
+        c_obs1, c_obs2 = st.columns(2)
+        with c_obs1:
+            st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
+            if mostrar_obs_auditoria1:
+                st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
+        with c_obs2:
+            if datos.get('detalles_partes_json'):
+                st.write("**📑 Estructura de Partes (Papel/Tintas):**")
+                st.table(datos.get('detalles_partes_json'))
+        return
+
+# ROLLOS (IMPRESOS/BLANCOS) Y REBOBINADO: SOLO CAMPOS PROPIOS DE ROLLOS
     with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
         c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.markdown("**ADICIONALES ROLLOS**")
-            st.write(f"**Tintas Frente:** {datos.get('tintas_frente_rollos')}")
-            st.write(f"Tintas Respaldo: {datos.get('tintas_respaldo_rollos')}")
-            st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
-            st.write(f"Core: {datos.get('core')}")
-        with c2:
-            st.markdown("**ADICIONALES ROLLOS**")
-            st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
-            st.write(f"Unidades Por Bolsa: {datos.get('unidades_bolsa')}")
-            st.write(f"Unidades Por Caja: {datos.get('unidades_caja')}")
-            st.write(f"Repeticion : {datos.get('tipo_origen')}")
-        with c3:
-            st.markdown("**ADICIONALES FORMAS**")
-            st.write(f"Perforaciones: {datos.get('perforaciones_detalle')}")
-            st.write(f"Codigo De Barras: {datos.get('codigo_barras_detalle')}")
-            st.write(f"Numeracion Inicial: {datos.get('num_id')}")
-            st.write(f"Numeracion Final: {datos.get('num_fd')}")
-
-        with c4:
-            st.markdown("**ADICIONALES DE FORMAS**")
-            st.write(f"Presentacion: {datos.get('presentacion')}")
-            st.write(f"Encolada O Grapada Por: {datos.get('presentacion2', 0)}")
-            st.write(f"Numero De Partes: {datos.get('num_partes', 0)}")
-            st.write(f"Numero De Formas: {datos.get('cantidad_formas', 0)}")
-
-    c_obs1, c_obs2 = st.columns(2)
-    with c_obs1:
-        st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
-        st.info(f"**📝 OBSERVACIONES DE FORMAS:**\n{datos.get('observaciones_formas', 'Sin observaciones')}")
-        if mostrar_obs_auditoria1:
-            st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
-    with c_obs2:
-        if datos.get('detalles_partes_json'):
-            st.write("**📑 Estructura de Partes (Papel/Tintas):**")
-            st.table(datos.get('detalles_partes_json'))
+        if es_rebobinado_radio:
+            with c1:
+                st.markdown("**CANTIDADES**")
+                st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
+                st.write(f"Ancho Base: {datos.get('ancho_base')}")
+            with c2:
+                st.markdown("**OBJETIVO**")
+                st.write(f"Objetivo del Rebobinado: {datos.get('objetivo_rebobinado')}")
+                st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
+            with c3:
+                st.markdown("**ORIGEN**")
+                st.write(f"Repetición: {datos.get('tipo_origen')}")
         else:
-            st.write("**Tipo de Producto:** ROLLOS IMPRESOS")
+            with c1:
+                st.markdown("**IMPRESIÓN**")
+                st.write(f"Tintas Frente: {datos.get('tintas_frente_rollos')}")
+                st.write(f"Tintas Respaldo: {datos.get('tintas_respaldo_rollos')}")
+            with c2:
+                st.markdown("**CANTIDADES**")
+                st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
+                st.write(f"Core: {datos.get('core')}")
+            with c3:
+                st.markdown("**EMPAQUE**")
+                st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
+                st.write(f"Unidades Por Bolsa: {datos.get('unidades_bolsa')}")
+                st.write(f"Unidades Por Caja: {datos.get('unidades_caja')}")
+            with c4:
+                st.markdown("**ORIGEN**")
+                st.write(f"Repetición: {datos.get('tipo_origen')}")
+
+    st.info(f"**📝 OBSERVACIONES DE ROLLOS:**\n{datos.get('observaciones_rollos', 'Sin observaciones')}")
+    if mostrar_obs_auditoria1:
+        st.info(f"**📝 OBSERVACIONES DE AUDITORIA 1:**\n{datos.get('observaciones_diseno', 'Sin observaciones')}")
 
 # MODULO MONITOR 
 if menu == "🖥️ Monitor":
@@ -2188,49 +2222,134 @@ elif menu == "🔍 Seguimiento":
                 contenedor_detalle = st.expander(titulo_unico)
 
             with contenedor_detalle:
-                st.write("Detalles internos de la OP...")
                 st.markdown(f"### ESTATUS DE TRABAJO: :{color_texto}[{texto_estatus}]")
-                
-                c1, c2, c3, c4 = st.columns(4)
-                with c1:
-                    st.write("**👤 CLIENTE:**") 
-                    st.info(cliente)
-                    st.write("**⚙️ TIPO DE TRABAJO:**")
-                    st.info(row.get('tipo_orden', 'N/A'))
-                    st.write("**📑 MATERIAL:**")
-                    st.info(row.get('material', 'N/A'))
-                    st.write("**🔙 ORDEN ANTERIOR:**")
-                    st.info(row.get('op_anterior', 'N/A')[:10])
-                    st.write("**🛍️ UNIDAD POR BOLSA:**")
-                    st.info(row.get('unidades_bolsa', 'N/A'))
-                    st.write("**🪚 PERFORACIONES:**")
-                    st.info(row.get('perforaciones_detalle', 'N/A'))
-                with c2:
-                    st.write("**📝 NOMBRE DE TRABAJO:**")
-                    st.info(nombre_t)
-                    st.write("**📦 CANTIDAD SOLICITADA:**")
-                    st.info(row.get('cantidad_formas') if "FORMAS" in row.get('tipo_orden','') else row.get('cantidad_rollos','0'))
-                    st.write("**⚖️ GRAMAJE:**")
-                    st.info(row.get('gramaje_rollos', ''))
-                    st.write("**🎨 TINTAS FRENTE:**")
-                    st.info(row.get('tintas_frente_rollos', ''))
-                    st.write("**📦 UNIDAD POR CAJA:**")
-                    st.info(row.get('unidades_caja', 'N/A'))
-                    st.write("**📋 OBSERVACIONES DE DISEÑO:**")
-                    st.info(row.get('observaciones_diseno', 'N/A'))
-                with c3:
-                    st.write("**💼 VENDEDOR:**")
-                    st.info(row.get('vendedor', 'N/A'))
-                    st.write("**📖 REFERENCIA COMERCIAL:**")
-                    st.info(row.get('ref_comercial', 'N/A'))
-                    st.write("**⭕ CORE:**")
-                    st.info(row.get('core', 'N/A'))
-                    st.write("**🎨 TINTA RESPALDO:**")
-                    st.info(row.get('tintas_respaldo_rollos', ''))
-                    st.write("**📅 FECHA:**")
-                    st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
-                    st.write("**📋 OBSERVACIONES PLANCHAS:**")
-                    st.info(row.get('observaciones_diseno2', 'N/A'))
+                st.divider()
+
+                tipo_op_actual = row.get('tipo_orden', '')
+
+                if tipo_op_actual in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1:
+                        st.write("**👤 CLIENTE:**")
+                        st.info(cliente)
+                        st.write("**⚙️ TIPO DE TRABAJO:**")
+                        st.info(tipo_op_actual)
+                        st.write("**📦 CANTIDAD SOLICITADA:**")
+                        st.info(row.get('cantidad_formas', 'N/A'))
+                        st.write("**🔢 NÚMERO DE PARTES:**")
+                        st.info(row.get('num_partes', 'N/A'))
+                    with c2:
+                        st.write("**📝 NOMBRE DE TRABAJO:**")
+                        st.info(nombre_t)
+                        st.write("**📑 PRESENTACIÓN:**")
+                        st.info(row.get('presentacion', 'N/A'))
+                        st.write("**📎 ENCOLADO / GRAPADO:**")
+                        st.info(row.get('presentacion2', 'N/A'))
+                        st.write("**🪚 PERFORACIONES:**")
+                        st.info(row.get('perforaciones_detalle', 'N/A'))
+                    with c3:
+                        st.write("**💼 VENDEDOR:**")
+                        st.info(row.get('vendedor', 'N/A'))
+                        st.write("**📅 FECHA:**")
+                        st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
+                        st.write("**🏷️ CÓDIGO DE BARRAS:**")
+                        st.info(row.get('codigo_barras_detalle', 'N/A'))
+                        st.write("**🔢 NUMERACIÓN (DESDE / HASTA):**")
+                        st.info(f"{row.get('num_id','-')} / {row.get('num_fd','-')}")
+                        st.write("**📋 OBSERVACIONES:**")
+                        st.info(row.get('observaciones_formas', 'N/A'))
+
+                elif tipo_op_actual in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS", "REBOBINADO"]:
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1:
+                        st.write("**👤 CLIENTE:**")
+                        st.info(cliente)
+                        st.write("**⚙️ TIPO DE TRABAJO:**")
+                        st.info(tipo_op_actual)
+                        st.write("**📑 MATERIAL:**")
+                        st.info(row.get('material', 'N/A'))
+                        st.write("**⚖️ GRAMAJE:**")
+                        st.info(row.get('gramaje_rollos', 'N/A'))
+                    with c2:
+                        st.write("**📝 NOMBRE DE TRABAJO:**")
+                        st.info(nombre_t)
+                        st.write("**📦 CANTIDAD DE ROLLOS:**")
+                        st.info(row.get('cantidad_rollos', 'N/A'))
+                        if tipo_op_actual == "REBOBINADO":
+                            st.write("**↔️ ANCHO BASE:**")
+                            st.info(row.get('ancho_base', 'N/A'))
+                            st.write("**🎯 OBJETIVO DEL REBOBINADO:**")
+                            st.info(row.get('objetivo_rebobinado', 'N/A'))
+                        else:
+                            st.write("**⭕ CORE:**")
+                            st.info(row.get('core', 'N/A'))
+                            st.write("**📖 REFERENCIA COMERCIAL:**")
+                            st.info(row.get('ref_comercial', 'N/A'))
+                    with c3:
+                        st.write("**💼 VENDEDOR:**")
+                        st.info(row.get('vendedor', 'N/A'))
+                        st.write("**📅 FECHA:**")
+                        st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
+                        if tipo_op_actual != "REBOBINADO":
+                            st.write("**🎨 TINTAS FRENTE / RESPALDO:**")
+                            st.info(f"{row.get('tintas_frente_rollos','-')} / {row.get('tintas_respaldo_rollos','-')}")
+                            st.write("**📦 UNIDAD BOLSA / CAJA:**")
+                            st.info(f"{row.get('unidades_bolsa','-')} / {row.get('unidades_caja','-')}")
+                        st.write("**📋 OBSERVACIONES:**")
+                        st.info(row.get('observaciones_rollos', 'N/A'))
+
+                elif tipo_op_actual in ["BOLSA IMPRESA", "BOLSA BLANCA"]:
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1:
+                        st.write("**👤 CLIENTE:**")
+                        st.info(cliente)
+                        st.write("**⚙️ TIPO DE TRABAJO:**")
+                        st.info(tipo_op_actual)
+                        st.write("**📑 MATERIAL:**")
+                        st.info(row.get('bolsa_material', 'N/A'))
+                        st.write("**⚖️ GRAMAJE:**")
+                        st.info(row.get('bolsa_gramaje', 'N/A'))
+                        st.write("**🖐️ TIPO DE MANIJA:**")
+                        st.info(row.get('bolsa_tipo_manija', 'N/A'))
+                    with c2:
+                        st.write("**📝 NOMBRE DE TRABAJO:**")
+                        st.info(nombre_t)
+                        st.write("**📐 MEDIDAS (C / c / W):**")
+                        st.info(f"{row.get('bolsa_c_largo_total','-')} / {row.get('bolsa_c_largo_util','-')} / {row.get('bolsa_w_ancho','-')}")
+                        st.write("**📐 FUELLE / PESTAÑA (H / h):**")
+                        st.info(f"{row.get('bolsa_h_fuelle','-')} / {row.get('bolsa_h_pestana','-')}")
+                        st.write("**⬛ BASE:**")
+                        st.info(row.get('bolsa_base', 'N/A'))
+                    with c3:
+                        st.write("**💼 VENDEDOR:**")
+                        st.info(row.get('vendedor', 'N/A'))
+                        st.write("**📅 FECHA:**")
+                        st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
+                        st.write("**📦 CANTIDAD DE BOLSAS:**")
+                        st.info(row.get('bolsa_cantidad', 'N/A'))
+                        st.write("**🎨 TINTAS (N.° / COLOR):**")
+                        st.info(f"{row.get('bolsa_tintas_num','-')} / {row.get('bolsa_tintas_color','-')}")
+                        st.write("**♻️ CERTIFICACIÓN FSC:**")
+                        st.info(row.get('bolsa_certificacion_fsc', 'N/A'))
+                        st.write("**📋 OBSERVACIONES:**")
+                        st.info(row.get('observaciones_bolsa', 'N/A'))
+
+                else:
+                    c1, c2, c3, c4 = st.columns(4)
+                    with c1:
+                        st.write("**👤 CLIENTE:**")
+                        st.info(cliente)
+                        st.write("**⚙️ TIPO DE TRABAJO:**")
+                        st.info(tipo_op_actual or 'N/A')
+                    with c2:
+                        st.write("**📝 NOMBRE DE TRABAJO:**")
+                        st.info(nombre_t)
+                    with c3:
+                        st.write("**💼 VENDEDOR:**")
+                        st.info(row.get('vendedor', 'N/A'))
+                        st.write("**📅 FECHA:**")
+                        st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
+
                 with c4:
                     st.write("**🛠️ ACCIONES Y ENLACES:**")
 
@@ -2238,7 +2357,7 @@ elif menu == "🔍 Seguimiento":
                     if st.button(f"📋 VER RADIOGRAFIA OP {op_id}", key=f"btn_seg_{op_id}", use_container_width=True):
                         modal_detalle_op(row)
 
- # MOSTRAR      
+# MOSTRAR      
                     link_arte = row.get('link_diseno')
                     num_ticket_seg = row.get('num_ticket')
 
