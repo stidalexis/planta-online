@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from supabase import create_client
-from datetime import datetime, timedelta, time as time_cls 
+from datetime import datetime, timedelta
 import time
 import io
 import os
@@ -81,13 +81,15 @@ st.markdown("""
 
 #  CONSTANTES 
 MAQUINAS = {
-    "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "POLO-2", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
+    "IMPRESIÓN": ["HR-22", "ATF-22", "HR-17", "DID-11", "HMT-22", "POLO-1", "MTY-1", "MTY-2", "RYO-1", "FLX-1"],
     "CORTE": [f"COR-{i:02d}" for i in range(1, 15)],
     "COLECTORAS": ["COL-01", "COL-02"],
     "ENCUADERNACIÓN": ["JINNA", "KELLY", "VIVIANA", "ROSMIA", "ANGIE", "JOHANA.N", "MARTHA", "OLGA", "J0HANA.R", "ANY"],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
-
 # AREA DE BOLSAS: se divide en 2 sub-areas para efectos de la ruta de la OP
+# (FLEXO imprime, luego pasa a ARMADORAS; las bolsas blancas van directo a
+# ARMADORAS), pero ambas se muestran juntas en un solo modulo/pantalla
+# ("👜 Bolsas"), ya que son pocas maquinas en total.
     "BOLSAS - FLEXO": ["FLEXO 1-Y2", "FLEXO 2-Y4"],
     "BOLSAS - ARMADORAS": ["450TF", "450B", "250B", "220", "350"],
 }
@@ -110,17 +112,14 @@ PRESENTACIONES = ["BLOCK", "LIBRETA LICOM", "HOJAS SUELTAS", "PAQUETES", "TACOS"
 PRESENTACIONES2 = ["POR CABEZA", "IZQUIERDA", "DERECHA", "PATA", "N/A", ]
 MOTIVOS_PARADA = ["Mantenimiento", "Falta de Material", "falta operario", "Limpieza", "Falla Electrica", "desayuno/desdcanso",]
 
-#  USUARIOS ORGANIZADOS POR ROL 
 def _es_hash_bcrypt(valor) -> bool:
     """Detecta si un valor guardado en 'clave' ya es un hash bcrypt (vs texto plano antiguo)."""
     return isinstance(valor, str) and valor.startswith(("$2a$", "$2b$", "$2y$"))
 
-# Convierte una contrasena de texto plano en un hash seguro (bcrypt) para guardarla cifrada en la base de datos
 def _hashear_clave(clave_texto: str) -> str:
     """Genera un hash bcrypt seguro a partir de una clave en texto plano."""
     return bcrypt.hashpw(clave_texto.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
-# Valida usuario y clave contra la tabla de usuarios en Supabase.
 def validar_usuario_supabase(usuario_ingresado, clave_ingresada):
     """
     Valida usuario/clave contra Supabase usando hash bcrypt.
@@ -174,7 +173,6 @@ MESES_ES = {
     7: "Julio", 8: "Agosto", 9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"
 }
 
-# Devuelve la fecha de creacion de una orden ya formateada como DD/MM/AAAA, lista para mostrar o imprimir
 def _fecha_creacion_legible(row):
     """Devuelve la fecha de creacion de la OP en formato 'Mes DD del AAAA', en español (hora Colombia)."""
     raw = row.get('created_at') or row.get('fecha_creacion') or ''
@@ -187,7 +185,6 @@ def _fecha_creacion_legible(row):
     except Exception:
         return fecha_dd_mm_aaaa or "-"
 
-# Dibuja en el PDF la cajita con la fecha de creacion de la orden (se usa en ordenes de produccion)
 def dibujar_caja_fecha_creacion(pdf, row, x=145, y=4, w=63, h=16):
     """Escribe la fecha de creacion de la OP en la esquina opuesta al logo,
     solo como texto (sin caja ni fondo), a juego con el resto del encabezado.
@@ -214,7 +211,6 @@ def cell_fit(pdf, w, h, text, border=1):
 
     pdf.cell(w, h, text, border)
 
-# Divide un texto largo en varias lineas para que quepa dentro del ancho (en mm) disponible en el PDF
 def _lineas_ajustadas(pdf, texto, ancho_mm):
     """Parte un texto en lineas que caben dentro de ancho_mm con la fuente actual de pdf."""
     texto = str(texto) if texto is not None else ""
@@ -234,7 +230,6 @@ def _lineas_ajustadas(pdf, texto, ancho_mm):
         lineas.append(actual)
     return lineas if lineas else [""]
 
-# Dibuja una fila de celdas alineadas, tipo tabla, dentro del PDF
 def fila_grid(pdf, celdas, h_linea=7):
     """
     Dibuja una fila de celdas lado a lado tipo grilla (como pdf.cell en serie),
@@ -273,6 +268,8 @@ def hora_colombia():
     return datetime.now(tz)
 
 #  SUBIDA DE EVIDENCIA FOTOGRAFICA A SUPABASE STORAGE 
+# Bucket usado para guardar las fotos de evidencia de mercancia entregada a bodega.
+# Debe existir en Supabase Storage un bucket PUBLICO llamado exactamente "evidencias-bodega".
 BUCKET_EVIDENCIAS = "evidencias-bodega"
 
 def subir_evidencia_foto(archivo_bytes, nombre_base):
@@ -298,7 +295,6 @@ def subir_evidencia_foto(archivo_bytes, nombre_base):
                    f"El movimiento continuará sin la foto adjunta.")
         return None
 
-# FUNCION CENTRAL DE FORMATO DE FECHAS: convierte cualquier fecha/hora que llegue de la base de datos
 def fmt_fecha_hora(valor, con_hora=True):
     """
     Convierte CUALQUIER fecha/hora (string ISO con o sin zona horaria, en UTC,
@@ -334,7 +330,6 @@ def fmt_fecha_hora(valor, con_hora=True):
     except Exception:
         return valor
 
-# Aplica fmt_fecha_hora a todas las columnas de fecha de una tabla (DataFrame) para mostrarla legible en pantalla
 def formatear_fechas_df(df, columnas=None):
     """
     Aplica fmt_fecha_hora a las columnas de fecha de un DataFrame. Si no se
@@ -352,7 +347,6 @@ def formatear_fechas_df(df, columnas=None):
             df[c] = df[c].apply(fmt_fecha_hora)
     return df
 
-# Consulta si la PLANTA ENTERA esta ACTIVA o DETENIDA (interruptor general que pausa el conteo de tiempos de todas las maquinas)
 def get_planta_activa() -> bool:
     """Consulta si la planta está activa en Supabase. Cache 10 segundos."""
     cache_key = '_planta_activa_cache'
@@ -370,7 +364,6 @@ def get_planta_activa() -> bool:
     st.session_state[cache_ts]  = ahora
     return activa
 
-# Enciende o apaga el interruptor general de planta (solo lo usa el administrador, ej: para almuerzo general o corte de energia)
 def set_planta_activa(estado: bool, usuario: str = "admin"):
     """Activa o desactiva la planta globalmente. Usa upsert por si la fila no existe."""
     ahora_cambio = hora_colombia().isoformat()
@@ -383,6 +376,10 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
     }).execute()
 
 # DEJA CONSTANCIA CON FECHA EXACTA DE ESTE CAMBIO. Esto es lo que permite
+# despues calcular con precision cuanto tiempo estuvo detenida la planta
+# DENTRO de un intervalo especifico (ej: mientras una OP estaba en Diseño),
+# sin importar si para cuando se cierra el trabajo la planta ya esta
+# reactivada de nuevo.
     try:
         supabase.table("estado_historial").insert({
             "clave": "planta_activa",
@@ -396,7 +393,6 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
     st.session_state.pop('_planta_activa_cache', None)
     st.session_state.pop('_planta_activa_ts', None)
 
-# Consulta si un area especifica (Impresion, Corte, etc.) esta activa o detenida en este momento
 def get_area_activa(area: str) -> bool:
     """Consulta si un AREA especifica esta activa (independiente del interruptor general). Cache 10 segundos."""
     cache_key = f'_area_activa_cache_{area}'
@@ -416,7 +412,6 @@ def get_area_activa(area: str) -> bool:
     st.session_state[cache_ts]  = ahora
     return activa
 
-# Enciende o apaga el interruptor de UN AREA especifica, sin afectar a las demas (solo administrador)
 def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     """Activa o desactiva UN AREA especifica.
     NOTA TECNICA: la columna 'id' de esta tabla tiene un valor por defecto fijo
@@ -434,11 +429,9 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     try:
         existente = supabase.table("configuracion_sistema").select("id").eq("clave", clave).execute().data
         if existente:
-
 # Ya existe esta clave -> solo actualizar, sin tocar el id
             supabase.table("configuracion_sistema").update(payload).eq("clave", clave).execute()
         else:
-
 # Clave nueva -> calcular un id libre (max id actual + 1) en vez de usar el default roto
             todos_ids = supabase.table("configuracion_sistema").select("id").execute().data or []
             siguiente_id = max([fila.get("id", 0) or 0 for fila in todos_ids], default=0) + 1
@@ -462,6 +455,9 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     st.session_state.pop(f'_area_activa_ts_{area}', None)
 
 # CALCULA CUANTOS SEGUNDOS ESTUVO "DETENIDA" UNA CLAVE (planta_activa o
+# area_activa_XXX) DENTRO DE UN INTERVALO ESPECIFICO [inicio, fin].
+# Esto es lo que permite restar con precision el tiempo detenido de un
+# trabajo, sin importar si para cuando se cierra el trabajo la planta ya
 def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, estado_por_defecto: bool = True) -> float:
     """
     'estado_por_defecto' se usa SOLO si todavia no existe ningun evento en el
@@ -479,6 +475,8 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
 
     try:
 # TODOS los cambios de estado de esta clave que hayan ocurrido antes del fin
+# del intervalo (se necesitan los anteriores al inicio tambien, para saber
+# en que estado empezaba el intervalo).
         eventos = supabase.table("estado_historial").select("estado,fecha")\
             .eq("clave", clave).lte("fecha", fin.isoformat())\
             .order("fecha", desc=False).execute().data or []
@@ -492,7 +490,8 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
         except Exception:
             return None
 
-# ESTADO AL INICIO DEL INTERVALO: el ultimo evento ANTES de 'inicio' (si no hay ninguno todavia registrado, se usa 'estado_por_defecto').
+# ESTADO AL INICIO DEL INTERVALO: el ultimo evento ANTES de 'inicio' (si no
+# hay ninguno todavia registrado, se usa 'estado_por_defecto').
     estado_actual = estado_por_defecto
     puntos = []  # lista de (fecha, nuevo_estado) que caen DENTRO del intervalo
     for ev in eventos:
@@ -504,7 +503,8 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
         elif f_ev < fin:
             puntos.append((f_ev, bool(ev.get("estado", True))))
 
-# RECORRE LOS CAMBIOS DE ESTADO DENTRO DEL INTERVALO, SUMANDO LOS TRAMOS DONDE LA CLAVE ESTUVO INACTIVA (estado_actual == False)
+# RECORRE LOS CAMBIOS DE ESTADO DENTRO DEL INTERVALO, SUMANDO LOS TRAMOS
+# DONDE LA CLAVE ESTUVO INACTIVA (estado_actual == False)
     segundos_inactivo = 0.0
     cursor = inicio
     for f_ev, nuevo_estado in puntos:
@@ -519,7 +519,6 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
 
     return max(0.0, segundos_inactivo)
 
-# FUNCION DE DURACION 
 def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_segundos=0):
     """
     Calcula tiempo trabajado descontando pausas individuales y el tiempo real
@@ -537,7 +536,8 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
 # TIEMPO DETENIDO DE PLANTA (interruptor general) DENTRO DEL INTERVALO REAL
     segundos_detenido = segundos_inactivo_en_periodo("planta_activa", inicio, fin)
 
-# TIEMPO DETENIDO DEL AREA ESPECIFICA DE LA MAQUINA (ej: solo Corte), Y DE LA MAQUINA INDIVIDUAL PUNTUAL (ej: solo COR-05), AMBOS DENTRO DEL INTERVALO
+# TIEMPO DETENIDO DEL AREA ESPECIFICA DE LA MAQUINA (ej: solo Corte), Y DE LA
+# MAQUINA INDIVIDUAL PUNTUAL (ej: solo COR-05), AMBOS DENTRO DEL INTERVALO
     if nombre_maquina:
         area_de_maquina = MAQUINA_A_AREA.get(nombre_maquina)
         if area_de_maquina:
@@ -1048,7 +1048,9 @@ def generar_op_rebobinado(row):
 
     return bytes(pdf.output())
 
-# GENERAR PDF BOLSAS especificaciones de la bolsa con checkboxes tipo formulario, especificaciones de produccion, configuracion de empaque y firmas).
+# GENERAR PDF BOLSAS (basado en el boceto compartido: especificaciones de la
+# bolsa con checkboxes tipo formulario, especificaciones de produccion,
+# configuracion de empaque y firmas).
 def generar_op_bolsas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -1107,7 +1109,9 @@ def generar_op_bolsas(row):
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "ESPECIFICACIONES DE LA BOLSA", 0, 1, "C", fill=True)
 
-# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA BOLSA A LA DERECHA, A LA MISMA ALTURA (el diagrama va en el espacio que queda libre entre el borde derecho de la tabla y el margen de la hoja).
+# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA
+# BOLSA A LA DERECHA, A LA MISMA ALTURA (el diagrama va en el espacio que
+# queda libre entre el borde derecho de la tabla y el margen de la hoja).
     y_inicio_specs = pdf.get_y()
 
     pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (C) Largo Total De La Bolsa: ", 1, 0, fill=True)
@@ -1137,7 +1141,10 @@ def generar_op_bolsas(row):
 
     y_fin_specs = pdf.get_y()
 
-# DIAGRAMA DE LA BOLSA (W, C, c, H, h) EN EL ESPACIO LIBRE A LA DERECHA DE LA TABLA. La tabla ocupa hasta x=130 aprox (60+60mm), asi que el diagrama va desde x=132 hasta el margen derecho (x=200), con la misma altura que la tabla completa, sin deformarse (se respeta la proporcion de la imagen).
+# DIAGRAMA DE LA BOLSA (W, C, c, H, h) EN EL ESPACIO LIBRE A LA DERECHA DE LA
+# TABLA. La tabla ocupa hasta x=130 aprox (60+60mm), asi que el diagrama va
+# desde x=132 hasta el margen derecho (x=200), con la misma altura que la
+# tabla completa, sin deformarse (se respeta la proporcion de la imagen).
     alto_disponible_diagrama = y_fin_specs - y_inicio_specs - 2
     try:
         pdf.image("bolsa_diagrama.png", x=133, y=y_inicio_specs + 1, h=alto_disponible_diagrama)
@@ -1167,15 +1174,15 @@ def generar_op_bolsas(row):
     pdf.cell(w_prod, 7, " Rodillo de Impresión", 1, 0, fill=True)
     pdf.cell(w_prod, 7, " Metros Rebobinado", 1, 1, fill=True)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(w_prod, 8, f"{row.get('bolsa_ancho_bobina', '')}", 1, 0, "C")
-    pdf.cell(w_prod, 8, f"{row.get('bolsa_rodillo_impresion', '')}", 1, 0, "C")
-    pdf.cell(w_prod, 8, f"{row.get('bolsa_metros_rebobinado', '')}", 1, 1, "C")
+    pdf.cell(w_prod, 8, f"{row.get('bolsa_ancho_bobina') or ''}", 1, 0, "C")
+    pdf.cell(w_prod, 8, f"{row.get('bolsa_rodillo_impresion') or ''}", 1, 0, "C")
+    pdf.cell(w_prod, 8, f"{row.get('bolsa_metros_rebobinado') or ''}", 1, 1, "C")
 
     pdf.ln(2)
     pdf.set_font("Arial", "B", 9)
     pdf.cell(60, 8, " Bolsas Producidas:", 1, 0, fill=True)
     pdf.set_font("Arial", "", 9)
-    pdf.cell(50, 8, f"{row.get('bolsa_producidas', '')}", 1, 1, "C")
+    pdf.cell(50, 8, f"{row.get('bolsa_producidas') or ''}", 1, 1, "C")
 
 # CONFIGURACION DE EMPAQUE
     pdf.ln(3)
@@ -1189,9 +1196,9 @@ def generar_op_bolsas(row):
     pdf.cell(w_emp, 7, "CAJAS EN TOTAL", 1, 0, "C", fill=True)
     pdf.cell(w_emp, 7, "CAJAS POR ESTIBA", 1, 1, "C", fill=True)
     pdf.set_font("Arial", "", 10)
-    pdf.cell(w_emp, 10, f"{row.get('bolsa_por_caja', '')}", 1, 0, "C")
-    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_total', '')}", 1, 0, "C")
-    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_por_estiba', '')}", 1, 1, "C")
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_por_caja') or ''}", 1, 0, "C")
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_total') or ''}", 1, 0, "C")
+    pdf.cell(w_emp, 10, f"{row.get('bolsa_cajas_por_estiba') or ''}", 1, 1, "C")
 
 # FIRMAS
     pdf.ln(6)
@@ -1417,7 +1424,7 @@ with st.sidebar:
     
 # DEFINICION DE PERMISOS SEGUN ROL
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🧐 Auditoría Ventas", "🧐 Auditoría Bolsas", "🧐 Auditoría Cartera", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "👜 Bolsas", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
+        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🧐 Auditoría Ventas", "🧐 Auditoría Bolsas", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "👜 Bolsas", "📦 Inventario", "📦 salida produccion P1", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🛒 Mercado"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'aud_ventas':
@@ -1425,7 +1432,11 @@ with st.sidebar:
     elif rol == 'aud_bolsas':
         opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento"]
     elif rol == 'aud_cartera':
-        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Cartera", "🔍 Seguimiento"]
+# El modulo "Auditoría Cartera" ya no existe (se eliminó del flujo). Este rol
+# se deja solo con Monitor y Seguimiento para no romper el acceso de usuarios
+# ya creados con este rol; lo ideal es reasignarlos a otro rol desde el Panel
+# de Administración de Usuarios.
+        opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento"]
     elif rol == 'jefe_log':
         opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos"]
     elif rol == 'patinador_log':
@@ -1500,7 +1511,11 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado, usuario="admin"):
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
 
-# MISMO REGISTRO DE HISTORIAL QUE PLANTA_ACTIVA / AREA_ACTIVA, PERO POR MAQUINA INDIVIDUAL. Esto permite que, igual que con la planta, si esta maquina puntual se apaga y se vuelve a encender DURANTE un trabajo, se reste con
+# MISMO REGISTRO DE HISTORIAL QUE PLANTA_ACTIVA / AREA_ACTIVA, PERO POR MAQUINA
+# INDIVIDUAL. Esto permite que, igual que con la planta, si esta maquina
+# puntual se apaga y se vuelve a encender DURANTE un trabajo, se reste con
+# precision solo el tiempo real que estuvo apagada — sin importar si para
+# cuando se cierra el trabajo la maquina ya esta reactivada de nuevo.
     try:
         supabase.table("estado_historial").insert({
             "clave": f"maquina_activa_{nombre_maquina}",
@@ -1511,7 +1526,6 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado, usuario="admin"):
     except Exception as e:
         print(f"Error al guardar historial de maquina_activa_{nombre_maquina}: {e}")
 
-# Calcula hace cuanto tiempo una maquina no tiene actividad, para sumar ese tiempo como "tiempo libre entre OPs" en las estadisticas
 def obtener_ultima_actividad_maquina(nombre_maquina):
     """
     Busca en el historial de ordenes RECIENTES cual fue la ultima vez que esta
@@ -1567,13 +1581,14 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
         return "REBOBINADORAS"
     return "IMPRESIÓN"
 
-# RUTA HACIA LA PLANTA DE PRODUCCION DE BOLSAS: las bolsas IMPRESAS pasan primero por las maquinas FLEXO 
+# RUTA HACIA LA PLANTA DE PRODUCCION DE BOLSAS: las bolsas IMPRESAS pasan primero
+# por las maquinas FLEXO (imprimen) y de ahi a las armadoras; las bolsas BLANCAS
+# van directo a las armadoras porque no necesitan impresión.
 def ruta_planta_bolsas(tipo_orden):
     if tipo_orden == "BOLSA IMPRESA":
         return "BOLSAS - FLEXO"
     return "BOLSAS - ARMADORAS"
 
-# CALCULO DE TIEMPO EN AREA (desde que la OP entro al area actual hasta ahora o hasta que se cierra)
 def _ultima_fecha_relevante_historial(historial):
     """
     Devuelve el datetime (hora Colombia) del ultimo paso 'real' del historial de una OP,
@@ -1634,6 +1649,7 @@ def calcular_tiempo_en_area(op_data):
     segundos = max(0, segundos_totales - segundos_detenido)
     return segundos, str(timedelta(seconds=int(segundos)))
 
+
 # RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
 def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
@@ -1656,7 +1672,8 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             c4.write(f"**GRAMAJE:**\n{datos.get('gramaje_rollos')}")
 
     if es_bolsa_radio:
-# ESPECIFICACIONES TECNICAS DE BOLSAS (mismo formato que rollos/formas, pero con los campos propios de bolsas: medidas, manija, base, FSC, impresion, tintas)
+# ESPECIFICACIONES TECNICAS DE BOLSAS (mismo formato que rollos/formas, pero
+# con los campos propios de bolsas: medidas, manija, base, FSC, impresion, tintas)
         with st.expander("⚙️ ESPECIFICACIONES TECNICAS", expanded=True):
             c1, c2, c3, c4 = st.columns(4)
             with c1:
@@ -1894,6 +1911,15 @@ if menu == "🖥️ Monitor":
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
 
+# Se recorre la lista de maquinas en BLOQUES DE 4 (una fila de columnas nueva
+# por cada bloque), en vez de crear las 4 columnas UNA sola vez para toda el
+# area y repartir las maquinas segun su posicion "indice % 4". Esa forma
+# anterior se veia bien en computador (las 4 columnas quedan lado a lado),
+# pero en celular o tablet, donde Streamlit APILA las columnas una debajo de
+# otra en vez de ponerlas lado a lado, se notaba el desorden 1,5,9,13,2,6,...
+# porque primero se dibujaba toda la columna 0, luego toda la columna 1, etc.
+# Con una fila de 4 columnas por cada bloque de 4 maquinas en su orden normal,
+# el celular las apila ya en el orden correcto: 1,2,3,4,5,6,7,8...
         for inicio_fila in range(0, len(maquinas), 4):
             fila_maquinas = maquinas[inicio_fila:inicio_fila + 4]
             cols = st.columns(4)
@@ -2362,7 +2388,11 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}")
                 obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}")
                 
-# SI ES BOLSA (Impresa o Blanca), AL APROBARSE VA DIRECTO A LA PLANTA DE PRODUCCION DE BOLSAS, 
+# SI ES BOLSA (Impresa o Blanca), AL APROBARSE VA DIRECTO A LA PLANTA DE
+# PRODUCCION DE BOLSAS, SIN PASAR POR PRE-PRENSA NI REVISION FINAL (esas 2
+# etapas no aplican para bolsas). Si no es bolsa, sigue la logica normal:
+# "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL; "NUEVA"
+# O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
                 tipo_orden_op = datos_op.get('tipo_orden', '')
                 es_bolsa_diseno = tipo_orden_op in ("BOLSA IMPRESA", "BOLSA BLANCA")
                 tipo_origen_op = (datos_op.get('tipo_origen') or '').strip()
@@ -2561,7 +2591,7 @@ elif menu == "🧐 Auditoría Ventas":
 # MODULO AUDITORIA BOLSAS (primer paso del flujo especial de Bolsas)
 elif menu == "🧐 Auditoría Bolsas":
     st.title("👜 Auditoría de Bolsas")
-    st.caption("Toda OP de Bolsas (Impresa o Blanca) pasa primero por aquí. Si es Repetición Exacta, va directo a planta; si es Nueva o Repetición con Cambios, sigue a Auditoría Cartera.")
+    st.caption("Toda OP de Bolsas (Impresa o Blanca) pasa primero por aquí. Si es Repetición Exacta, va directo a planta; si es Nueva o Repetición con Cambios, sigue a Diseño (Auditoría Técnica).")
 
     op_pendientes_ab = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "AUDITORIA BOLSAS").execute().data
 
@@ -2580,12 +2610,13 @@ elif menu == "🧐 Auditoría Bolsas":
             radiografia_completa_op(datos_op_ab, mostrar_obs_auditoria1=False)
             st.divider()
 
-# SI ES REPETICION EXACTA, SE VA DIRECTO A PLANTA. SI ES NUEVA O REPETICION CON CAMBIOS, PRIMERO PASA POR AUDITORIA CARTERA.
+# SI ES REPETICION EXACTA, SE VA DIRECTO A PLANTA. SI ES NUEVA O REPETICION
+# CON CAMBIOS, VA DIRECTO A DISEÑO (AUDITORIA TECNICA).
             es_repeticion_exacta_bolsa = (datos_op_ab.get('tipo_origen', '') == "Repetición Exacta")
             if es_repeticion_exacta_bolsa:
                 ruta_siguiente_ab = ruta_planta_bolsas(datos_op_ab.get('tipo_orden', ''))
             else:
-                ruta_siguiente_ab = "AUDITORIA CARTERA"
+                ruta_siguiente_ab = "DISEÑO (AUDITORIA)"
 
             st.info(f"➡️ Al aprobarse, esta orden seguirá su ruta hacia: **{ruta_siguiente_ab}**")
 
@@ -2609,48 +2640,10 @@ elif menu == "🧐 Auditoría Bolsas":
                 time.sleep(1.2)
                 st.rerun()
 
-# MODULO AUDITORIA CARTERA (segundo paso del flujo especial de Bolsas)
-elif menu == "🧐 Auditoría Cartera":
-    st.title("💼 Auditoría de Cartera")
-    st.caption("Segundo filtro para OPs de Bolsas Nuevas o con Repetición con Cambios. Al aprobarse, sigue hacia Diseño (Auditoría Técnica).")
-
-    op_pendientes_ac = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "AUDITORIA CARTERA").execute().data
-
-    if not op_pendientes_ac:
-        st.info("No hay órdenes pendientes de auditoría de cartera en este momento.")
-    else:
-        op_sel_ac = st.selectbox(
-            "Seleccione OP a revisar:",
-            [f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}" for o in op_pendientes_ac],
-            key="aud_cartera_sel"
-        )
-        op_id_ac = op_sel_ac.split(" - ")[0]
-        datos_op_ac = next((o for o in op_pendientes_ac if str(o['op']) == str(op_id_ac)), None)
-
-        if datos_op_ac:
-            radiografia_completa_op(datos_op_ac, mostrar_obs_auditoria1=False)
-            st.divider()
-            st.info("➡️ Al aprobarse, esta orden seguirá su ruta hacia: **DISEÑO (AUDITORIA)**")
-
-            if st.button("✅ MARCAR COMO REVISADO — CONTINUAR RUTA", use_container_width=True, key="btn_aprobar_aud_cartera"):
-                _, tiempo_area_txt_ac = calcular_tiempo_en_area(datos_op_ac)
-                hist_ac = datos_op_ac.get('historial_procesos') or []
-                hist_ac.append({
-                    "area": "AUDITORIA CARTERA",
-                    "maquina": "—",
-                    "tipo": "AUDITORIA_CARTERA",
-                    "operario": st.session_state.get('nombre_usuario', '?'),
-                    "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
-                    "duracion": tiempo_area_txt_ac,
-                    "tiempo_total_area": tiempo_area_txt_ac
-                })
-                supabase.table("ordenes_planeadas").update({
-                    "proxima_area": "DISEÑO (AUDITORIA)",
-                    "historial_procesos": hist_ac
-                }).eq("op", op_id_ac).execute()
-                st.success(f"✅ OP {op_id_ac} revisada. Continúa hacia DISEÑO (AUDITORIA).")
-                time.sleep(1.2)
-                st.rerun()
+# NOTA: el modulo "Auditoría Cartera" fue ELIMINADO del sistema. El flujo de
+# Bolsas Nuevas / Repetición con Cambios sigue exactamente igual, solo que
+# ahora pasan directo de Auditoría Bolsas a Diseño (Auditoría Técnica), sin
+# este paso intermedio (ver ruta_siguiente_ab más arriba).
 
 # MODULO PLANIFICACION 
 elif menu == "📅 Planificación":
@@ -2821,11 +2814,11 @@ elif menu == "📅 Planificación":
                         es_bolsa_impresa_edit = (tipo_op == "BOLSA IMPRESA")
                         st.markdown("**👜 Especificaciones de la Bolsa**")
                         em1, em2, em3, em4, em5 = st.columns(5)
-                        nuevo_bolsa_C = em1.number_input("C (Largo total)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_c_largo_total', 0) or 0))
-                        nuevo_bolsa_c = em2.number_input("c (Largo útil)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_c_largo_util', 0) or 0))
-                        nuevo_bolsa_W = em3.number_input("W (Ancho)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_w_ancho', 0) or 0))
-                        nuevo_bolsa_H = em4.number_input("H (Fuelle de fondo)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_h_fuelle', 0) or 0))
-                        nuevo_bolsa_h = em5.number_input("h (Pestaña de fondo)", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_h_pestana', 0) or 0))
+                        nuevo_bolsa_C = em1.number_input("C (Largo total)", min_value=0, step=1, value=int(op_edit.get('bolsa_c_largo_total', 0) or 0))
+                        nuevo_bolsa_c = em2.number_input("c (Largo útil)", min_value=0, step=1, value=int(op_edit.get('bolsa_c_largo_util', 0) or 0))
+                        nuevo_bolsa_W = em3.number_input("W (Ancho)", min_value=0, step=1, value=int(op_edit.get('bolsa_w_ancho', 0) or 0))
+                        nuevo_bolsa_H = em4.number_input("H (Fuelle de fondo)", min_value=0, step=1, value=int(op_edit.get('bolsa_h_fuelle', 0) or 0))
+                        nuevo_bolsa_h = em5.number_input("h (Pestaña de fondo)", min_value=0, step=1, value=int(op_edit.get('bolsa_h_pestana', 0) or 0))
 
                         em6, em7, em8, em9 = st.columns(4)
                         op_manija_e = ["Plana", "Cordón", "N/A"]
@@ -2853,18 +2846,16 @@ elif menu == "📅 Planificación":
                         nuevo_bolsa_cantidad = st.number_input("Cantidad de bolsas", min_value=0, step=1, value=int(op_edit.get('bolsa_cantidad', 0) or 0))
                         nuevas_obs = st.text_area("Observaciones:", value=op_edit.get('observaciones_bolsa','') or '')
 
-                        st.markdown("**⚙️ Especificaciones Producción**")
-                        ep_b1, ep_b2, ep_b3, ep_b4 = st.columns(4)
-                        nuevo_bolsa_ancho_bobina = ep_b1.number_input("Ancho de la bobina", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_ancho_bobina', 0) or 0))
-                        nuevo_bolsa_rodillo = ep_b2.text_input("Rodillo de Impresión", value=op_edit.get('bolsa_rodillo_impresion','') or '')
-                        nuevo_bolsa_metros_rebob = ep_b3.number_input("Metros Rebobinado", min_value=0.0, step=0.1, value=float(op_edit.get('bolsa_metros_rebobinado', 0) or 0))
-                        nuevo_bolsa_producidas = ep_b4.number_input("Bolsas Producidas", min_value=0, step=1, value=int(op_edit.get('bolsa_producidas', 0) or 0))
-
-                        st.markdown("**📦 Configuración de Empaque**")
-                        ee_b1, ee_b2, ee_b3 = st.columns(3)
-                        nuevo_bolsa_por_caja = ee_b1.number_input("Bolsas por caja", min_value=0, step=1, value=int(op_edit.get('bolsa_por_caja', 0) or 0))
-                        nuevo_bolsa_cajas_total = ee_b2.number_input("Cajas en total", min_value=0, step=1, value=int(op_edit.get('bolsa_cajas_total', 0) or 0))
-                        nuevo_bolsa_cajas_estiba = ee_b3.number_input("Cajas por estiba", min_value=0, step=1, value=int(op_edit.get('bolsa_cajas_por_estiba', 0) or 0))
+# LAS SECCIONES "ESPECIFICACIONES PRODUCCIÓN" Y "CONFIGURACIÓN DE EMPAQUE"
+# NO SE EDITAN EN PANTALLA (se llenan a mano en la orden impresa). Se
+# conserva lo que ya haya en la base de datos, sin mostrar los campos aquí.
+                        nuevo_bolsa_ancho_bobina = op_edit.get('bolsa_ancho_bobina')
+                        nuevo_bolsa_rodillo = op_edit.get('bolsa_rodillo_impresion')
+                        nuevo_bolsa_metros_rebob = op_edit.get('bolsa_metros_rebobinado')
+                        nuevo_bolsa_producidas = op_edit.get('bolsa_producidas')
+                        nuevo_bolsa_por_caja = op_edit.get('bolsa_por_caja')
+                        nuevo_bolsa_cajas_total = op_edit.get('bolsa_cajas_total')
+                        nuevo_bolsa_cajas_estiba = op_edit.get('bolsa_cajas_por_estiba')
 
                     st.markdown("---")
 # Este campo es obligatorio: el motivo queda guardado en el historial como una tarjeta especial de EDICION
@@ -2925,11 +2916,11 @@ elif menu == "📅 Planificación":
                                     })
                                 elif tipo_op in ("BOLSA IMPRESA", "BOLSA BLANCA"):
                                     update_payload.update({
-                                        "bolsa_c_largo_total": nuevo_bolsa_C,
-                                        "bolsa_c_largo_util": nuevo_bolsa_c,
-                                        "bolsa_w_ancho": nuevo_bolsa_W,
-                                        "bolsa_h_fuelle": nuevo_bolsa_H,
-                                        "bolsa_h_pestana": nuevo_bolsa_h,
+                                        "bolsa_c_largo_total": int(nuevo_bolsa_C),
+                                        "bolsa_c_largo_util": int(nuevo_bolsa_c),
+                                        "bolsa_w_ancho": int(nuevo_bolsa_W),
+                                        "bolsa_h_fuelle": int(nuevo_bolsa_H),
+                                        "bolsa_h_pestana": int(nuevo_bolsa_h),
                                         "bolsa_tipo_manija": nuevo_bolsa_manija,
                                         "bolsa_base": nuevo_bolsa_base,
                                         "bolsa_material": nuevo_bolsa_material,
@@ -2943,10 +2934,10 @@ elif menu == "📅 Planificación":
                                         "bolsa_ancho_bobina": nuevo_bolsa_ancho_bobina,
                                         "bolsa_rodillo_impresion": nuevo_bolsa_rodillo,
                                         "bolsa_metros_rebobinado": nuevo_bolsa_metros_rebob,
-                                        "bolsa_producidas": int(nuevo_bolsa_producidas),
-                                        "bolsa_por_caja": int(nuevo_bolsa_por_caja),
-                                        "bolsa_cajas_total": int(nuevo_bolsa_cajas_total),
-                                        "bolsa_cajas_por_estiba": int(nuevo_bolsa_cajas_estiba),
+                                        "bolsa_producidas": nuevo_bolsa_producidas,
+                                        "bolsa_por_caja": nuevo_bolsa_por_caja,
+                                        "bolsa_cajas_total": nuevo_bolsa_cajas_total,
+                                        "bolsa_cajas_por_estiba": nuevo_bolsa_cajas_estiba,
                                     })
 
                                 supabase.table("ordenes_planeadas").update(update_payload)\
@@ -3295,11 +3286,11 @@ elif menu == "📅 Planificación":
 
                     st.markdown("##### 👜 Especificaciones de la Bolsa")
                     bm1, bm2, bm3, bm4, bm5 = st.columns(5)
-                    bolsa_C = bm1.number_input("C (Largo total)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_c_largo_total', 0) or 0))
-                    bolsa_c = bm2.number_input("c (Largo útil)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_c_largo_util', 0) or 0))
-                    bolsa_W = bm3.number_input("W (Ancho)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_w_ancho', 0) or 0))
-                    bolsa_H = bm4.number_input("H (Fuelle de fondo)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_h_fuelle', 0) or 0))
-                    bolsa_h = bm5.number_input("h (Pestaña de fondo)", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_h_pestana', 0) or 0))
+                    bolsa_C = bm1.number_input("C (Largo total)", min_value=0, step=1, value=int(datos_rec.get('bolsa_c_largo_total', 0) or 0))
+                    bolsa_c = bm2.number_input("c (Largo útil)", min_value=0, step=1, value=int(datos_rec.get('bolsa_c_largo_util', 0) or 0))
+                    bolsa_W = bm3.number_input("W (Ancho)", min_value=0, step=1, value=int(datos_rec.get('bolsa_w_ancho', 0) or 0))
+                    bolsa_H = bm4.number_input("H (Fuelle de fondo)", min_value=0, step=1, value=int(datos_rec.get('bolsa_h_fuelle', 0) or 0))
+                    bolsa_h = bm5.number_input("h (Pestaña de fondo)", min_value=0, step=1, value=int(datos_rec.get('bolsa_h_pestana', 0) or 0))
 
                     bm6, bm7, bm8, bm9 = st.columns(4)
                     op_manija = ["Plana", "Cordón", "N/A"]
@@ -3337,18 +3328,17 @@ elif menu == "📅 Planificación":
 
                     obs = st.text_area("Observaciones", value=datos_rec.get('observaciones_bolsa', ""))
 
-                    st.markdown("##### ⚙️ Especificaciones Producción")
-                    bp1, bp2, bp3, bp4 = st.columns(4)
-                    bolsa_ancho_bobina = bp1.number_input("Ancho de la bobina", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_ancho_bobina', 0) or 0))
-                    bolsa_rodillo = bp2.text_input("Rodillo de Impresión", value=datos_rec.get('bolsa_rodillo_impresion', ""))
-                    bolsa_metros_rebob = bp3.number_input("Metros Rebobinado", min_value=0.0, step=0.1, value=float(datos_rec.get('bolsa_metros_rebobinado', 0) or 0))
-                    bolsa_producidas = bp4.number_input("Bolsas Producidas", min_value=0, step=1, value=int(datos_rec.get('bolsa_producidas', 0) or 0))
-
-                    st.markdown("##### 📦 Configuración de Empaque")
-                    be1, be2, be3 = st.columns(3)
-                    bolsa_por_caja = be1.number_input("Bolsas por caja", min_value=0, step=1, value=int(datos_rec.get('bolsa_por_caja', 0) or 0))
-                    bolsa_cajas_total = be2.number_input("Cajas en total", min_value=0, step=1, value=int(datos_rec.get('bolsa_cajas_total', 0) or 0))
-                    bolsa_cajas_estiba = be3.number_input("Cajas por estiba", min_value=0, step=1, value=int(datos_rec.get('bolsa_cajas_por_estiba', 0) or 0))
+# LAS SECCIONES "ESPECIFICACIONES PRODUCCIÓN" Y "CONFIGURACIÓN DE EMPAQUE"
+# YA NO SE DILIGENCIAN EN PANTALLA: quedan en blanco en la OP impresa (PDF)
+# para llenarse a mano en planta con el dato real de producción.
+                    st.info("ℹ️ Las secciones **Especificaciones Producción** y **Configuración de Empaque** no se llenan aquí — quedan en blanco en la orden impresa (PDF) para diligenciarse a mano en planta.")
+                    bolsa_ancho_bobina = None
+                    bolsa_rodillo = None
+                    bolsa_metros_rebob = None
+                    bolsa_producidas = None
+                    bolsa_por_caja = None
+                    bolsa_cajas_total = None
+                    bolsa_cajas_estiba = None
 
                 else: 
 
@@ -3468,11 +3458,11 @@ elif menu == "📅 Planificación":
 
                     elif t in ("BOLSA IMPRESA", "BOLSA BLANCA"):
                         payload.update({
-                            "bolsa_c_largo_total": bolsa_C,
-                            "bolsa_c_largo_util": bolsa_c,
-                            "bolsa_w_ancho": bolsa_W,
-                            "bolsa_h_fuelle": bolsa_H,
-                            "bolsa_h_pestana": bolsa_h,
+                            "bolsa_c_largo_total": int(bolsa_C),
+                            "bolsa_c_largo_util": int(bolsa_c),
+                            "bolsa_w_ancho": int(bolsa_W),
+                            "bolsa_h_fuelle": int(bolsa_H),
+                            "bolsa_h_pestana": int(bolsa_h),
                             "bolsa_tipo_manija": bolsa_manija,
                             "bolsa_base": bolsa_base,
                             "bolsa_material": bolsa_material,
@@ -3486,10 +3476,10 @@ elif menu == "📅 Planificación":
                             "bolsa_ancho_bobina": bolsa_ancho_bobina,
                             "bolsa_rodillo_impresion": bolsa_rodillo,
                             "bolsa_metros_rebobinado": bolsa_metros_rebob,
-                            "bolsa_producidas": int(bolsa_producidas),
-                            "bolsa_por_caja": int(bolsa_por_caja),
-                            "bolsa_cajas_total": int(bolsa_cajas_total),
-                            "bolsa_cajas_por_estiba": int(bolsa_cajas_estiba),
+                            "bolsa_producidas": bolsa_producidas,
+                            "bolsa_por_caja": bolsa_por_caja,
+                            "bolsa_cajas_total": bolsa_cajas_total,
+                            "bolsa_cajas_por_estiba": bolsa_cajas_estiba,
                         })
 
                     else:
@@ -4317,7 +4307,7 @@ elif menu == "📆 Cronograma Impresión":
         todas_las_ops = supabase.table("ordenes_planeadas").select("*")\
             .neq("proxima_area", "FINALIZADO")\
             .neq("proxima_area", "ANULADA")\
-            .not_.in_("proxima_area", ["AUDITORIA BOLSAS", "AUDITORIA CARTERA", "BOLSAS - FLEXO", "BOLSAS - ARMADORAS"])\
+            .not_.in_("proxima_area", ["AUDITORIA BOLSAS", "BOLSAS - FLEXO", "BOLSAS - ARMADORAS"])\
             .execute().data or []
     except Exception as e:
         st.warning(f"No se pudieron cargar las órdenes planeadas: {e}")
@@ -4986,9 +4976,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 #  RUTAS 
                     if tipo in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                         if area_act == "IMPRESIÓN":
-                            if r['maquina'] in ["MTY-1", "MTY-2"]:
+                            if r['maquina'] in ["MTY-1", "MTY-2", "POLO-1"]:
 
-# LAS MAQUINAS MTY-1 Y MTY-2 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
+# LAS MAQUINAS MTY-1, MTY-2 Y POLO-1 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
                                 n_area = "ENCUADERNACIÓN"
                             else:
                                 n_area = "COLECTORAS"
@@ -5100,9 +5090,9 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             n_area_parcial = "FINALIZADO"
             if tipo_p in ["FORMAS IMPRESAS", "FORMAS BLANCAS"]:
                 if area_act == "IMPRESIÓN":
-                    if r['maquina'] in ["MTY-1", "MTY-2"]:
+                    if r['maquina'] in ["MTY-1", "MTY-2", "POLO-1"]:
 
-# LAS MAQUINAS MTY-1 Y MTY-2 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
+# LAS MAQUINAS MTY-1, MTY-2 Y POLO-1 NO PASAN POR COLECTORAS, VAN DIRECTO A ENCUADERNACIÓN
                         n_area_parcial = "ENCUADERNACIÓN"
                     else:
                         n_area_parcial = "COLECTORAS"
@@ -5387,7 +5377,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n")
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "aud_bolsas", "aud_cartera", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "supervisor_bolsas",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "aud_bolsas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "supervisor_bolsas",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
 
 # SI EL ROL ES MAQUINISTA, PEDIR A QUE MAQUINA ESPECIFICA QUEDA ASIGNADO
         nueva_maquina_asignada = None
@@ -5419,7 +5409,6 @@ if st.session_state.get('rol') == 'admin':
             else:
                 st.warning("Por favor, completa todos los campos.")
 
-#  FUNCIONES DE MERCADO DE AVATARES C&B  
 def mercado_obtener_coins(usuario):
     """Retorna los coins actuales de un usuario."""
     try:
