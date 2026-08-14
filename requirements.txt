@@ -10,3 +10,4 @@ streamlit-autorefresh
 bcrypt
 Pillow
 qrcode
+plotly
