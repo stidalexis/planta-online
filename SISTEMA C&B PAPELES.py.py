@@ -10,6 +10,16 @@ from fpdf import FPDF
 import pytz
 import bcrypt
 
+# GRAFICOS (anillos/donut y barras) PARA EL REPORTE DE RENDIMIENTO DE MAQUINISTAS.
+# Si plotly no esta instalado, el reporte sigue funcionando pero solo con tablas
+# y las barras nativas de Streamlit (sin anillos). Para tener los graficos de
+# anillos, instalar con:  pip install plotly
+try:
+    import plotly.express as px
+    PLOTLY_DISPONIBLE = True
+except ImportError:
+    PLOTLY_DISPONIBLE = False
+
 #  CONFIGURACION DE PAGINA 
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
 
@@ -1017,7 +1027,7 @@ def generar_op_rebobinado(row):
 #  MATERIAL Y DIMENCIONES
     pdf.cell(63,7,f"Material Base: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}g",1)
-    pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
+    pdf.cell(64,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1,1)
 
 # CANTIDADES
     pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
@@ -1651,6 +1661,45 @@ def calcular_tiempo_en_area(op_data):
 
 
 # RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
+#  DATOS CACHEADOS PARA EL REPORTE DE RENDIMIENTO DE MAQUINISTAS 
+# Se arma "aplanando" el historial_procesos de TODAS las ordenes (cada paso de
+# cada OP se vuelve una fila: quien la trabajo, en que maquina/area, cuando y
+# cuanto duro). Se cachea 2 minutos para no golpear la base de datos cada vez
+# que el admin cambia el operario/maquina seleccionado en el reporte.
+@st.cache_data(ttl=120, show_spinner="Cargando historial de producción...")
+def _cargar_historial_para_rendimiento():
+    data = supabase.table("ordenes_planeadas").select("op,tipo_orden,historial_procesos").execute().data or []
+    filas = []
+    for o in data:
+        for paso in (o.get('historial_procesos') or []):
+            maquina_paso = paso.get('maquina', '')
+            if not maquina_paso or maquina_paso == '—':
+                continue
+            filas.append({
+                "op": o.get('op'),
+                "tipo_orden": o.get('tipo_orden'),
+                "area": paso.get('area', ''),
+                "maquina": maquina_paso,
+                "operario": (paso.get('operario') or '').strip(),
+                "auxiliar": paso.get('auxiliar', ''),
+                "fecha_txt": paso.get('fecha', ''),
+                "duracion_txt": paso.get('duracion', ''),
+            })
+    df = pd.DataFrame(filas)
+    if df.empty:
+        return df
+    df['fecha_dt'] = pd.to_datetime(df['fecha_txt'], format='%d/%m/%Y %H:%M', errors='coerce')
+    df['duracion_td'] = pd.to_timedelta(df['duracion_txt'], errors='coerce')
+    return df
+
+def _formatear_duracion_horas(td_total):
+    """Convierte una suma de timedeltas a un texto legible tipo '12h 35min'."""
+    if pd.isna(td_total):
+        return "0h 00min"
+    total_min = int(td_total.total_seconds() // 60)
+    h, m = divmod(total_min, 60)
+    return f"{h}h {m:02d}min"
+
 def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
 
@@ -1749,7 +1798,7 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             with c1:
                 st.markdown("**CANTIDADES**")
                 st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
-                st.write(f"Ancho Base: {datos.get('ancho_base')}")
+                st.write(f"Ancho Base: {datos.get('ref_comercial')}")
             with c2:
                 st.markdown("**OBJETIVO**")
                 st.write(f"Objetivo del Rebobinado: {datos.get('objetivo_rebobinado')}")
@@ -2277,7 +2326,7 @@ elif menu == "🔍 Seguimiento":
                         st.info(row.get('cantidad_rollos', 'N/A'))
                         if tipo_op_actual == "REBOBINADO":
                             st.write("**↔️ ANCHO BASE:**")
-                            st.info(row.get('ancho_base', 'N/A'))
+                            st.info(row.get('ref_comercial', 'N/A'))
                             st.write("**🎯 OBJETIVO DEL REBOBINADO:**")
                             st.info(row.get('objetivo_rebobinado', 'N/A'))
                         else:
@@ -2922,7 +2971,7 @@ elif menu == "📅 Planificación":
                         eb1, eb2, eb3 = st.columns(3)
                         nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '')
                         nuevo_gram    = eb2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ancho_base','') or '')
+                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '')
                         eb4, eb5 = st.columns(2)
                         nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
                         nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '')
@@ -3028,7 +3077,7 @@ elif menu == "📅 Planificación":
                                     update_payload.update({
                                         "material":             nuevo_mat,
                                         "gramaje_rollos":       nuevo_gram,
-                                        "ancho_base":           nuevo_ancho,
+                                        "ref_comercial":           nuevo_ancho,
                                         "cantidad_rollos":      nueva_cant_r,
                                         "objetivo_rebobinado":  nuevo_obj,
                                         "observaciones_rollos": nuevas_obs,
@@ -3568,7 +3617,7 @@ elif menu == "📅 Planificación":
                         payload.update({
                             "material": mat,
                             "gramaje_rollos": gram,
-                            "ancho_base": ancho,
+                            "ref_comercial": ancho,
                             "tipo_origen": origen,
                             "cantidad_rollos": int(cant_r),
                             "objetivo_rebobinado": objetivo,
@@ -3868,11 +3917,12 @@ elif menu == "📦 salida produccion P1":
 elif menu == "📊 Reportes Admin":
         st.title("📊 Panel de Control y Reportes")
         
-        tab_historial, tab_muertos, tab_paradas, tab_traza, tab_movs = st.tabs([
+        tab_historial, tab_muertos, tab_paradas, tab_traza, tab_rendimiento, tab_movs = st.tabs([
             "📦 Historial de Bodega", 
             "⏳ Disponibilidad (Máquina Libre)", 
             "🛑 Reporte de Paradas (Fallas)",
             "🗂️ Trazabilidad de OPs",
+            "👷 Rendimiento Maquinistas",
             "🛠️ Movimientos del Sistema"
         ])
         
@@ -4096,6 +4146,156 @@ elif menu == "📊 Reportes Admin":
             with sub_bb:
                 _tab_trazabilidad_por_prefijo("BB-", "bb")
 
+#  TAB NUEVA: RENDIMIENTO DE MAQUINISTAS (por operario y por maquina, dia por dia) 
+        with tab_rendimiento:
+            st.subheader("👷 Rendimiento de Maquinistas")
+            st.caption("Se arma con el historial real de cada OP (quién trabajó qué, en qué máquina, cuánto tiempo) y, para Corte, con el detalle de varillas de Seguimiento Cortadoras.")
+            if not PLOTLY_DISPONIBLE:
+                st.info("ℹ️ Para ver los gráficos de anillo instala Plotly en el servidor: `pip install plotly`. Mientras tanto, se muestran tablas y barras nativas.")
+
+            df_hist_rend = _cargar_historial_para_rendimiento()
+
+            if df_hist_rend.empty:
+                st.info("Todavía no hay historial de producción registrado.")
+            else:
+                sub_op_rend, sub_maq_rend = st.tabs(["🙋 Por Operario", "⚙️ Por Máquina"])
+
+# ==================== POR OPERARIO ====================
+                with sub_op_rend:
+                    operarios_lista = sorted([o for o in df_hist_rend['operario'].unique() if o])
+                    if not operarios_lista:
+                        st.info("No hay operarios registrados todavía en el historial.")
+                    else:
+                        colf1, colf2, colf3 = st.columns([2, 1, 1])
+                        operario_sel = colf1.selectbox("👤 Selecciona el operario / maquinista:", operarios_lista, key="op_sel_rend")
+                        fecha_ini_op = colf2.date_input("Desde", value=hora_colombia().date() - timedelta(days=30), key="fecha_ini_op_rend")
+                        fecha_fin_op = colf3.date_input("Hasta", value=hora_colombia().date(), key="fecha_fin_op_rend")
+
+                        df_op = df_hist_rend[
+                            (df_hist_rend['operario'] == operario_sel) &
+                            (df_hist_rend['fecha_dt'].dt.date >= fecha_ini_op) &
+                            (df_hist_rend['fecha_dt'].dt.date <= fecha_fin_op)
+                        ].sort_values('fecha_dt', ascending=False)
+
+                        if df_op.empty:
+                            st.warning(f"{operario_sel} no tiene trabajos registrados en ese rango de fechas.")
+                        else:
+                            tiempo_total_op = df_op['duracion_td'].sum()
+                            k1, k2, k3, k4 = st.columns(4)
+                            k1.metric("📋 Trabajos Realizados", len(df_op))
+                            k2.metric("⏱️ Tiempo Total Trabajado", _formatear_duracion_horas(tiempo_total_op))
+                            k3.metric("📊 Promedio por Trabajo", _formatear_duracion_horas(tiempo_total_op / len(df_op)))
+                            k4.metric("⚙️ Máquinas Distintas", df_op['maquina'].nunique())
+
+                            g1, g2 = st.columns(2)
+                            with g1:
+                                st.markdown("##### ⏱️ Tiempo por máquina")
+                                resumen_maq_op = df_op.groupby('maquina')['duracion_td'].sum().reset_index()
+                                resumen_maq_op['horas'] = resumen_maq_op['duracion_td'].dt.total_seconds() / 3600
+                                if PLOTLY_DISPONIBLE:
+                                    fig_anillo_op = px.pie(resumen_maq_op, values='horas', names='maquina', hole=0.55)
+                                    fig_anillo_op.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                    st.plotly_chart(fig_anillo_op, use_container_width=True)
+                                else:
+                                    st.bar_chart(resumen_maq_op.set_index('maquina')['horas'])
+                            with g2:
+                                st.markdown("##### 📅 Trabajos por día")
+                                resumen_dia_op = df_op.groupby(df_op['fecha_dt'].dt.date).size().reset_index(name='trabajos')
+                                resumen_dia_op.columns = ['fecha', 'trabajos']
+                                if PLOTLY_DISPONIBLE:
+                                    fig_barras_op = px.bar(resumen_dia_op, x='fecha', y='trabajos')
+                                    fig_barras_op.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                    st.plotly_chart(fig_barras_op, use_container_width=True)
+                                else:
+                                    st.bar_chart(resumen_dia_op.set_index('fecha')['trabajos'])
+
+                            st.markdown("##### 📋 Detalle día por día")
+                            df_op_mostrar = df_op[['fecha_txt', 'op', 'tipo_orden', 'area', 'maquina', 'duracion_txt']].rename(columns={
+                                'fecha_txt': 'Fecha', 'op': 'OP', 'tipo_orden': 'Tipo', 'area': 'Área',
+                                'maquina': 'Máquina', 'duracion_txt': 'Duración'
+                            })
+                            st.dataframe(df_op_mostrar, use_container_width=True, hide_index=True)
+
+# DETALLE DE VARILLAS (SOLO SI EL OPERARIO HA TRABAJADO EN CORTE)
+                            if (df_op['area'] == 'CORTE').any():
+                                try:
+                                    res_vari = supabase.table("seguimiento_cortadoras").select("*")\
+                                        .eq("operario", operario_sel)\
+                                        .gte("fecha", fecha_ini_op.strftime("%Y-%m-%d"))\
+                                        .lte("fecha", fecha_fin_op.strftime("%Y-%m-%d"))\
+                                        .order("fecha", desc=True).execute().data or []
+                                    if res_vari:
+                                        st.markdown("##### 🔩 Detalle de Varillas y Cajas (Corte)")
+                                        df_vari = pd.DataFrame(res_vari)
+                                        cols_vari = [c for c in ["fecha", "turno", "maquina", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio"] if c in df_vari.columns]
+                                        st.dataframe(
+                                            df_vari[cols_vari].rename(columns={
+                                                "fecha": "Fecha", "turno": "Turno", "maquina": "Máquina", "op": "OP",
+                                                "nombre_trabajo": "Trabajo", "num_cajas": "Cajas", "num_varillas": "Varillas",
+                                                "peso_desperdicio": "Desp. (KG)"
+                                            }),
+                                            use_container_width=True, hide_index=True
+                                        )
+                                except Exception:
+                                    st.caption("ℹ️ El detalle de varillas por operario requiere la columna 'operario' en la tabla seguimiento_cortadoras.")
+
+# ==================== POR MAQUINA ====================
+                with sub_maq_rend:
+                    todas_las_maquinas = sorted({m for lista in MAQUINAS.values() for m in lista})
+                    colm1, colm2, colm3 = st.columns([2, 1, 1])
+                    maquina_sel = colm1.selectbox("⚙️ Selecciona la máquina:", todas_las_maquinas, key="maq_sel_rend")
+                    fecha_ini_maq = colm2.date_input("Desde", value=hora_colombia().date() - timedelta(days=30), key="fecha_ini_maq_rend")
+                    fecha_fin_maq = colm3.date_input("Hasta", value=hora_colombia().date(), key="fecha_fin_maq_rend")
+
+                    df_maq = df_hist_rend[
+                        (df_hist_rend['maquina'] == maquina_sel) &
+                        (df_hist_rend['fecha_dt'].dt.date >= fecha_ini_maq) &
+                        (df_hist_rend['fecha_dt'].dt.date <= fecha_fin_maq)
+                    ].sort_values('fecha_dt', ascending=False)
+
+                    if df_maq.empty:
+                        st.warning(f"La máquina {maquina_sel} no tiene trabajos registrados en ese rango de fechas.")
+                    else:
+                        tiempo_total_maq = df_maq['duracion_td'].sum()
+                        km1, km2, km3 = st.columns(3)
+                        km1.metric("📋 Trabajos Realizados", len(df_maq))
+                        km2.metric("⏱️ Tiempo Total Trabajado", _formatear_duracion_horas(tiempo_total_maq))
+                        km3.metric("👷 Operarios Distintos", df_maq['operario'].nunique())
+
+                        gm1, gm2 = st.columns(2)
+                        with gm1:
+                            st.markdown("##### 👷 Reparto de trabajo por operario")
+                            resumen_op_maq = df_maq.groupby('operario')['duracion_td'].sum().reset_index()
+                            resumen_op_maq['horas'] = resumen_op_maq['duracion_td'].dt.total_seconds() / 3600
+                            if PLOTLY_DISPONIBLE:
+                                fig_anillo_maq = px.pie(resumen_op_maq, values='horas', names='operario', hole=0.55)
+                                fig_anillo_maq.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                st.plotly_chart(fig_anillo_maq, use_container_width=True)
+                            else:
+                                st.bar_chart(resumen_op_maq.set_index('operario')['horas'])
+                        with gm2:
+                            st.markdown("##### 📅 Trabajos por día")
+                            resumen_dia_maq = df_maq.groupby(df_maq['fecha_dt'].dt.date).size().reset_index(name='trabajos')
+                            resumen_dia_maq.columns = ['fecha', 'trabajos']
+                            if PLOTLY_DISPONIBLE:
+                                fig_barras_maq = px.bar(resumen_dia_maq, x='fecha', y='trabajos')
+                                fig_barras_maq.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                st.plotly_chart(fig_barras_maq, use_container_width=True)
+                            else:
+                                st.bar_chart(resumen_dia_maq.set_index('fecha')['trabajos'])
+
+                        st.markdown("##### 📅 Qué hizo la máquina, día por día")
+                        for fecha_dia in sorted(df_maq['fecha_dt'].dt.date.unique(), reverse=True):
+                            trabajos_del_dia = df_maq[df_maq['fecha_dt'].dt.date == fecha_dia]
+                            with st.expander(f"📅 {fecha_dia.strftime('%d/%m/%Y')} — {len(trabajos_del_dia)} trabajo(s)"):
+                                st.dataframe(
+                                    trabajos_del_dia[['op', 'tipo_orden', 'area', 'operario', 'duracion_txt']].rename(columns={
+                                        'op': 'OP', 'tipo_orden': 'Tipo', 'area': 'Área',
+                                        'operario': 'Operario', 'duracion_txt': 'Duración'
+                                    }),
+                                    use_container_width=True, hide_index=True
+                                )
+
 #  TAB NUEVA: MOVIMIENTOS DEL SISTEMA (coins, usuarios, etc) 
         with tab_movs:
             st.subheader("🛠️ Movimientos y Actividad del Sistema")
@@ -4300,11 +4500,15 @@ elif menu == "⏱️ Seguimiento Cortadoras":
         st.header("⏱️ Seguimiento Horario de Cortadoras")
         
         maq_sel = st.selectbox("Seleccione la Máquina", MAQUINAS["CORTE"])
-        
+
         t1, t2 = st.tabs(["📝 Registro", "📋 Historial"])
         
         with t1:
             with st.form("f_seg_hor", clear_on_submit=True):
+                op_operario = st.text_input(
+                    "👤 Operario / Maquinista",
+                    value=st.session_state.get('nombre_usuario', '') if st.session_state.get('rol') == 'maquinista' else ""
+                )
                 ca, cb, cc = st.columns(3)
                 with ca:
                     op_s = st.text_input("OP")
@@ -4341,6 +4545,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                                 "hora_registro": hora_colombia().strftime("%H:%M"),
                                 "turno": turno_s, 
                                 "maquina": maq_sel, 
+                                "operario": op_operario,
                                 "op": str(op_s), 
                                 "nombre_trabajo": nt_s,
                                 "tipo_papel": tipo_p, 
@@ -4356,7 +4561,13 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                                 "total_varillas_sacadas": v_t
                             }
                             
-                            supabase.table("seguimiento_cortadoras").insert(datos_insertar).execute()
+                            try:
+                                supabase.table("seguimiento_cortadoras").insert(datos_insertar).execute()
+                            except Exception:
+# Si la columna "operario" todavia no existe en Supabase, se reintenta sin ella.
+                                datos_insertar.pop("operario", None)
+                                supabase.table("seguimiento_cortadoras").insert(datos_insertar).execute()
+
                             st.success(f"🎉 Avance de la máquina {maq_sel} guardado exitosamente en la nube.")
                             time.sleep(1)
                             st.rerun()
@@ -4373,13 +4584,15 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     df_h = pd.DataFrame(respuesta.data)
                     df_h = formatear_fechas_df(df_h, columnas=['fecha'])
                     
-                    columnas_visibles = ["fecha", "hora_registro", "turno", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
+                    columnas_visibles = ["fecha", "hora_registro", "turno", "operario", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
+                    columnas_visibles = [c for c in columnas_visibles if c in df_h.columns]
                     
 # Renombrar las columnas para que se vea estetico en pantalla
                     df_mostrar = df_h[columnas_visibles].rename(columns={
                         "fecha": "Fecha",
                         "hora_registro": "Hora",
                         "turno": "Turno",
+                        "operario": "Operario",
                         "op": "OP",
                         "nombre_trabajo": "Trabajo",
                         "num_cajas": "Cajas",
