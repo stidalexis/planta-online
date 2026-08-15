@@ -1,4 +1,4 @@
-import streamlit as st
+1import streamlit as st
 import pandas as pd
 from supabase import create_client
 from datetime import datetime, timedelta
@@ -1438,7 +1438,7 @@ with st.sidebar:
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'aud_ventas':
-        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "🔍 Seguimiento"]
+        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'aud_bolsas':
         opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento"]
     elif rol == 'aud_cartera':
