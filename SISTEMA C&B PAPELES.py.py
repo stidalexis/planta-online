@@ -1,4 +1,4 @@
-1import streamlit as st
+import streamlit as st
 import pandas as pd
 from supabase import create_client
 from datetime import datetime, timedelta
@@ -276,6 +276,19 @@ def fila_grid(pdf, celdas, h_linea=7):
 def hora_colombia():
     tz = pytz.timezone("America/Bogota")
     return datetime.now(tz)
+
+#  LISTA ESTANDARIZADA DE MAQUINISTAS (perfiles reales creados en el sistema) 
+# Se usa en los formularios de cierre para que el nombre del operario SIEMPRE
+# salga de un selector con los perfiles ya creados, en vez de escribirse a
+# mano (lo cual generaba variantes distintas del mismo nombre y dañaba los
+# reportes de rendimiento). Cacheado 5 min para no consultar Supabase cada rerun.
+@st.cache_data(ttl=300)
+def _lista_nombres_maquinistas():
+    try:
+        datos = supabase.table("usuarios").select("nombre, rol").eq("rol", "maquinista").execute().data or []
+        return sorted({u['nombre'] for u in datos if u.get('nombre')})
+    except Exception:
+        return []
 
 #  SUBIDA DE EVIDENCIA FOTOGRAFICA A SUPABASE STORAGE 
 # Bucket usado para guardar las fotos de evidencia de mercancia entregada a bodega.
@@ -1027,7 +1040,7 @@ def generar_op_rebobinado(row):
 #  MATERIAL Y DIMENCIONES
     pdf.cell(63,7,f"Material Base: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}g",1)
-    pdf.cell(64,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1,1)
+    pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
 
 # CANTIDADES
     pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
@@ -1438,7 +1451,7 @@ with st.sidebar:
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'aud_ventas':
-        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "🔍 Seguimiento", "📅 Planificación"]
+        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "📅 Planificación", "🔍 Seguimiento"]
     elif rol == 'aud_bolsas':
         opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento"]
     elif rol == 'aud_cartera':
@@ -1668,7 +1681,7 @@ def calcular_tiempo_en_area(op_data):
 # que el admin cambia el operario/maquina seleccionado en el reporte.
 @st.cache_data(ttl=120, show_spinner="Cargando historial de producción...")
 def _cargar_historial_para_rendimiento():
-    data = supabase.table("ordenes_planeadas").select("op,tipo_orden,historial_procesos").execute().data or []
+    data = supabase.table("ordenes_planeadas").select("op,tipo_orden,nombre_trabajo,cliente,historial_procesos").execute().data or []
     filas = []
     for o in data:
         for paso in (o.get('historial_procesos') or []):
@@ -1678,6 +1691,8 @@ def _cargar_historial_para_rendimiento():
             filas.append({
                 "op": o.get('op'),
                 "tipo_orden": o.get('tipo_orden'),
+                "nombre_trabajo": o.get('nombre_trabajo', ''),
+                "cliente": o.get('cliente', ''),
                 "area": paso.get('area', ''),
                 "maquina": maquina_paso,
                 "operario": (paso.get('operario') or '').strip(),
@@ -1798,7 +1813,7 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             with c1:
                 st.markdown("**CANTIDADES**")
                 st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
-                st.write(f"Ancho Base: {datos.get('ref_comercial')}")
+                st.write(f"Ancho Base: {datos.get('ancho_base')}")
             with c2:
                 st.markdown("**OBJETIVO**")
                 st.write(f"Objetivo del Rebobinado: {datos.get('objetivo_rebobinado')}")
@@ -2326,7 +2341,7 @@ elif menu == "🔍 Seguimiento":
                         st.info(row.get('cantidad_rollos', 'N/A'))
                         if tipo_op_actual == "REBOBINADO":
                             st.write("**↔️ ANCHO BASE:**")
-                            st.info(row.get('ref_comercial', 'N/A'))
+                            st.info(row.get('ancho_base', 'N/A'))
                             st.write("**🎯 OBJETIVO DEL REBOBINADO:**")
                             st.info(row.get('objetivo_rebobinado', 'N/A'))
                         else:
@@ -2971,7 +2986,7 @@ elif menu == "📅 Planificación":
                         eb1, eb2, eb3 = st.columns(3)
                         nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '')
                         nuevo_gram    = eb2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '')
+                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ancho_base','') or '')
                         eb4, eb5 = st.columns(2)
                         nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
                         nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '')
@@ -3077,7 +3092,7 @@ elif menu == "📅 Planificación":
                                     update_payload.update({
                                         "material":             nuevo_mat,
                                         "gramaje_rollos":       nuevo_gram,
-                                        "ref_comercial":           nuevo_ancho,
+                                        "ancho_base":           nuevo_ancho,
                                         "cantidad_rollos":      nueva_cant_r,
                                         "objetivo_rebobinado":  nuevo_obj,
                                         "observaciones_rollos": nuevas_obs,
@@ -3142,9 +3157,10 @@ elif menu == "📅 Planificación":
         st.caption("Usa esto cuando una OP quedó mal creada y necesitas descartarla sin tener que borrarla manualmente en Supabase.")
 
         rol_anular_actual = st.session_state.get('rol', '').lower()
+        roles_pueden_anular = ('admin', 'aud_ventas')
 
-        if rol_anular_actual != 'admin':
-            st.warning("🔒 Solo el administrador puede anular órdenes de producción.")
+        if rol_anular_actual not in roles_pueden_anular:
+            st.warning("🔒 Solo el administrador o Auditoría Ventas pueden anular órdenes de producción.")
         else:
             col_a1, col_a2 = st.columns([3, 1])
             op_buscar_anular = col_a1.text_input("Número de OP a anular (Ej: FRI-101):", key="op_anular_buscar")
@@ -3617,7 +3633,7 @@ elif menu == "📅 Planificación":
                         payload.update({
                             "material": mat,
                             "gramaje_rollos": gram,
-                            "ref_comercial": ancho,
+                            "ancho_base": ancho,
                             "tipo_origen": origen,
                             "cantidad_rollos": int(cant_r),
                             "objetivo_rebobinado": objetivo,
@@ -4162,9 +4178,9 @@ elif menu == "📊 Reportes Admin":
 
 # ==================== POR OPERARIO ====================
                 with sub_op_rend:
-                    operarios_lista = sorted([o for o in df_hist_rend['operario'].unique() if o])
+                    operarios_lista = _lista_nombres_maquinistas()
                     if not operarios_lista:
-                        st.info("No hay operarios registrados todavía en el historial.")
+                        st.info("Todavía no hay perfiles de maquinista creados en el Panel de Administración de Usuarios.")
                     else:
                         colf1, colf2, colf3 = st.columns([2, 1, 1])
                         operario_sel = colf1.selectbox("👤 Selecciona el operario / maquinista:", operarios_lista, key="op_sel_rend")
@@ -4210,9 +4226,9 @@ elif menu == "📊 Reportes Admin":
                                     st.bar_chart(resumen_dia_op.set_index('fecha')['trabajos'])
 
                             st.markdown("##### 📋 Detalle día por día")
-                            df_op_mostrar = df_op[['fecha_txt', 'op', 'tipo_orden', 'area', 'maquina', 'duracion_txt']].rename(columns={
-                                'fecha_txt': 'Fecha', 'op': 'OP', 'tipo_orden': 'Tipo', 'area': 'Área',
-                                'maquina': 'Máquina', 'duracion_txt': 'Duración'
+                            df_op_mostrar = df_op[['fecha_txt', 'op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'maquina', 'duracion_txt']].rename(columns={
+                                'fecha_txt': 'Fecha', 'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo',
+                                'tipo_orden': 'Tipo', 'area': 'Área', 'maquina': 'Máquina', 'duracion_txt': 'Duración'
                             })
                             st.dataframe(df_op_mostrar, use_container_width=True, hide_index=True)
 
@@ -4289,8 +4305,8 @@ elif menu == "📊 Reportes Admin":
                             trabajos_del_dia = df_maq[df_maq['fecha_dt'].dt.date == fecha_dia]
                             with st.expander(f"📅 {fecha_dia.strftime('%d/%m/%Y')} — {len(trabajos_del_dia)} trabajo(s)"):
                                 st.dataframe(
-                                    trabajos_del_dia[['op', 'tipo_orden', 'area', 'operario', 'duracion_txt']].rename(columns={
-                                        'op': 'OP', 'tipo_orden': 'Tipo', 'area': 'Área',
+                                    trabajos_del_dia[['op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'operario', 'duracion_txt']].rename(columns={
+                                        'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo', 'tipo_orden': 'Tipo', 'area': 'Área',
                                         'operario': 'Operario', 'duracion_txt': 'Duración'
                                     }),
                                     use_container_width=True, hide_index=True
@@ -4505,10 +4521,18 @@ elif menu == "⏱️ Seguimiento Cortadoras":
         
         with t1:
             with st.form("f_seg_hor", clear_on_submit=True):
-                op_operario = st.text_input(
-                    "👤 Operario / Maquinista",
-                    value=st.session_state.get('nombre_usuario', '') if st.session_state.get('rol') == 'maquinista' else ""
-                )
+                if st.session_state.get('rol') == 'maquinista':
+                    op_operario = st.session_state.get('nombre_usuario', '')
+                    st.info(f"👤 Operario registrado automáticamente: **{op_operario}**")
+                else:
+# SE SELECCIONA DE LOS PERFILES DE MAQUINISTA YA CREADOS (estandariza el nombre)
+                    lista_maq_seg = _lista_nombres_maquinistas()
+                    if lista_maq_seg:
+                        op_operario = st.selectbox("👤 Operario / Maquinista", ["-- Selecciona --"] + lista_maq_seg)
+                        if op_operario == "-- Selecciona --":
+                            op_operario = ""
+                    else:
+                        op_operario = st.text_input("👤 Operario / Maquinista")
                 ca, cb, cc = st.columns(3)
                 with ca:
                     op_s = st.text_input("OP")
@@ -5104,7 +5128,16 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 op_name = st.session_state.get('nombre_usuario', '')
                 st.info(f"👤 Operario registrado automáticamente: **{op_name}**")
             else:
-                op_name = st.text_input("Nombre del Operario *")
+# SE SELECCIONA DE LOS PERFILES DE MAQUINISTA YA CREADOS (no se escribe a mano,
+# para que el nombre siempre quede estandarizado en los reportes de rendimiento)
+                lista_maq_disp = _lista_nombres_maquinistas()
+                if lista_maq_disp:
+                    op_name = st.selectbox("👤 Operario / Maquinista *", ["-- Selecciona --"] + lista_maq_disp)
+                    if op_name == "-- Selecciona --":
+                        op_name = ""
+                else:
+                    st.warning("⚠️ No hay perfiles de maquinista creados todavía. Pídele al admin que los cree en el Panel de Administración de Usuarios.")
+                    op_name = st.text_input("Nombre del Operario *")
             auxiliar = st.text_input("Auxiliar")
             datos_c = {}
             
@@ -5626,7 +5659,18 @@ elif menu == "👜 Bolsas":
         area_cierre_b = tr_cierre_b['area']
         with st.form(key="form_cierre_bolsas"):
             st.subheader(f"REGISTRO DE CIERRE — {tr_cierre_b['maquina']} (OP {tr_cierre_b['op']})")
-            operario_b = st.text_input("Operario", value=st.session_state.get('nombre_usuario', '') if rol_bolsas_actual == 'maquinista' else "")
+            if rol_bolsas_actual == 'maquinista':
+                operario_b = st.session_state.get('nombre_usuario', '')
+                st.info(f"👤 Operario registrado automáticamente: **{operario_b}**")
+            else:
+# SE SELECCIONA DE LOS PERFILES DE MAQUINISTA YA CREADOS (estandariza el nombre)
+                lista_maq_b = _lista_nombres_maquinistas()
+                if lista_maq_b:
+                    operario_b = st.selectbox("👤 Operario", ["-- Selecciona --"] + lista_maq_b)
+                    if operario_b == "-- Selecciona --":
+                        operario_b = ""
+                else:
+                    operario_b = st.text_input("Operario")
             auxiliar_b = st.text_input("Auxiliar (opcional)")
             cantidad_b = st.number_input("Cantidad Producida (unidades/paquetes)", min_value=0, step=1)
             obs_cierre_b = st.text_area("Observaciones")
