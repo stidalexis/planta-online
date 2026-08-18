@@ -1040,7 +1040,7 @@ def generar_op_rebobinado(row):
 #  MATERIAL Y DIMENCIONES
     pdf.cell(63,7,f"Material Base: {row.get('material','')}",1)
     pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}g",1)
-    pdf.cell(64,7,f"Referencia Comercial: {row.get('ancho_base','')}",1,1)
+    pdf.cell(64,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1,1)
 
 # CANTIDADES
     pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
@@ -1813,7 +1813,7 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
             with c1:
                 st.markdown("**CANTIDADES**")
                 st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
-                st.write(f"Ancho Base: {datos.get('ancho_base')}")
+                st.write(f"Ancho Base: {datos.get('ref_comercial')}")
             with c2:
                 st.markdown("**OBJETIVO**")
                 st.write(f"Objetivo del Rebobinado: {datos.get('objetivo_rebobinado')}")
@@ -2340,8 +2340,8 @@ elif menu == "🔍 Seguimiento":
                         st.write("**📦 CANTIDAD DE ROLLOS:**")
                         st.info(row.get('cantidad_rollos', 'N/A'))
                         if tipo_op_actual == "REBOBINADO":
-                            st.write("**↔️ ANCHO BASE:**")
-                            st.info(row.get('ancho_base', 'N/A'))
+                            st.write("**↔️ REFERENCIA COMERCIAL:**")
+                            st.info(row.get('ref_comercial', 'N/A'))
                             st.write("**🎯 OBJETIVO DEL REBOBINADO:**")
                             st.info(row.get('objetivo_rebobinado', 'N/A'))
                         else:
@@ -2986,7 +2986,7 @@ elif menu == "📅 Planificación":
                         eb1, eb2, eb3 = st.columns(3)
                         nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '')
                         nuevo_gram    = eb2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ancho_base','') or '')
+                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '')
                         eb4, eb5 = st.columns(2)
                         nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
                         nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '')
@@ -3092,7 +3092,7 @@ elif menu == "📅 Planificación":
                                     update_payload.update({
                                         "material":             nuevo_mat,
                                         "gramaje_rollos":       nuevo_gram,
-                                        "ancho_base":           nuevo_ancho,
+                                        "ref_comercial":           nuevo_ancho,
                                         "cantidad_rollos":      nueva_cant_r,
                                         "objetivo_rebobinado":  nuevo_obj,
                                         "observaciones_rollos": nuevas_obs,
@@ -3574,9 +3574,10 @@ elif menu == "📅 Planificación":
                     op_final = f"{prefijo}{op_input.upper()}"
 
 #  VALIDAR OP DUPLICADA
-# EXCEPCION: si el/los registro(s) que ya existen con ese numero estan
-# ANULADOS, se permite crear una OP nueva con el mismo numero (el registro
-# anulado se conserva intacto en la base de datos como constancia).
+# LA REGLA DEFINITIVA ES: NO se puede repetir un numero de OP, EXCEPTO cuando
+# el registro que ya existe con ese numero esta ANULADO — en ese caso si se
+# permite crear una OP nueva con el mismo numero (el anulado se conserva
+# intacto en la base de datos, con el MISMO numero, como constancia).
                     existe_op = supabase.table("ordenes_planeadas") \
                     .select("op, anulada") \
                     .eq("op", op_final) \
@@ -3633,7 +3634,7 @@ elif menu == "📅 Planificación":
                         payload.update({
                             "material": mat,
                             "gramaje_rollos": gram,
-                            "ancho_base": ancho,
+                            "ref_comercial": ancho,
                             "tipo_origen": origen,
                             "cantidad_rollos": int(cant_r),
                             "objetivo_rebobinado": objetivo,
@@ -3682,17 +3683,40 @@ elif menu == "📅 Planificación":
                             "destino_rollos": dest_f if t_trans_f == "SI" else None,
                         })
 
+                    def _insertar_op_con_reintentos(payload_op):
+                        try:
+                            supabase.table("ordenes_planeadas").insert(payload_op).execute()
+                            return
+                        except Exception as e1:
+# RED DE SEGURIDAD: si en Supabase todavia existe la restriccion antigua de
+# unicidad sobre "op" (impide 2 filas con el mismo numero asi una este
+# anulada), se archiva el registro anulado viejo (cambiandole el numero a
+# algo como "FRB-1447-ANULADA-20260815143000", sin borrarlo) para poder
+# reutilizar el numero. Esto NO deberia pasar si ya se quitó esa restricción
+# en Supabase (ver nota de la conversación) — ahí este bloque nunca se activa.
+                            if "duplicate key value" in str(e1) and "_op_key" in str(e1):
+                                sufijo_archivo = hora_colombia().strftime("%Y%m%d%H%M%S")
+                                viejas = supabase.table("ordenes_planeadas").select("op")\
+                                    .eq("op", payload_op["op"]).eq("anulada", True).execute().data or []
+                                for op_vieja in viejas:
+                                    supabase.table("ordenes_planeadas").update({
+                                        "op": f"{op_vieja['op']}-ANULADA-{sufijo_archivo}"
+                                    }).eq("op", op_vieja['op']).eq("anulada", True).execute()
+                                supabase.table("ordenes_planeadas").insert(payload_op).execute()
+                            else:
+                                raise e1
+
                     try:
-                        supabase.table("ordenes_planeadas").insert(payload).execute()
+                        _insertar_op_con_reintentos(payload)
                     except Exception:
                         try:
                             payload.pop("creado_por", None)
-                            supabase.table("ordenes_planeadas").insert(payload).execute()
+                            _insertar_op_con_reintentos(payload)
                         except Exception:
 # Si la columna "anulada" todavia no existe en Supabase, se reintenta sin
 # ella para no romper la creacion de OPs (ver nota en el manual de cambios).
                             payload.pop("anulada", None)
-                            supabase.table("ordenes_planeadas").insert(payload).execute()
+                            _insertar_op_con_reintentos(payload)
 
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
