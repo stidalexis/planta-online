@@ -86,6 +86,15 @@ st.markdown("""
         grid-template-columns: 1fr 1fr;
         gap: 10px;
     }
+
+    /* TODO TEXTO ESCRITO POR TECLADO SE VE EN MAYUSCULA MIENTRAS SE ESCRIBE
+       (el dato que se guarda tambien queda en mayuscula, ver .upper() en cada
+       campo). Se excluyen los campos de contraseña para no confundir al
+       usuario sobre lo que realmente esta escribiendo. */
+    div[data-testid="stTextInput"] input:not([type="password"]),
+    div[data-testid="stTextArea"] textarea {
+        text-transform: uppercase;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -2568,8 +2577,8 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 with col_inputs[1]:
                     st.metric("🎫 NÚMERO DE TICKET (asignado por ventas)", datos_op.get('num_ticket', 0) or 0)
                 
-                obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}")
-                obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}")
+                obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}").upper()
+                obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}").upper()
                 
 # SI ES BOLSA (Impresa o Blanca), AL APROBARSE VA DIRECTO A LA PLANTA DE
 # PRODUCCION DE BOLSAS, SIN PASAR POR PRE-PRENSA NI REVISION FINAL (esas 2
@@ -2697,7 +2706,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                         key=f"link_final_{op_id_3}"
                     )
 
-                num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:", key=f"num_plancha_{op_id_3}")
+                num_plancha = st.text_input("ESPESIFIQUE LAS PLANCHAS REVELADAS:", key=f"num_plancha_{op_id_3}").upper()
                 
                 radiografia_completa_op(datos_op_3)
 
@@ -2902,9 +2911,9 @@ elif menu == "📅 Planificación":
 #  DATOS GENERALES 
                     st.markdown("**📋 Datos Generales**")
                     ec1, ec2, ec3 = st.columns(3)
-                    nuevo_cliente  = ec1.text_input("Cliente:", value=op_edit.get('cliente', ''))
-                    nuevo_vendedor = ec2.text_input("Vendedor:", value=op_edit.get('vendedor', ''))
-                    nuevo_trabajo  = ec3.text_input("Nombre del Trabajo:", value=op_edit.get('nombre_trabajo', ''))
+                    nuevo_cliente  = ec1.text_input("Cliente:", value=op_edit.get('cliente', '')).upper()
+                    nuevo_vendedor = ec2.text_input("Vendedor:", value=op_edit.get('vendedor', '')).upper()
+                    nuevo_trabajo  = ec3.text_input("Nombre del Trabajo:", value=op_edit.get('nombre_trabajo', '')).upper()
 
                     tipo_op = op_edit.get('tipo_orden', '')
 
@@ -2919,14 +2928,14 @@ elif menu == "📅 Planificación":
 
                         ep1, ep2, ep3, ep4 = st.columns(4)
                         t_perf_e  = ep1.selectbox("¿Perforaciones?", ["NO","SI"], index=1 if op_edit.get('perforaciones_detalle') and op_edit.get('perforaciones_detalle') != 'NO' else 0)
-                        perf_det_e= ep1.text_area("Detalle Perforación:", value=op_edit.get('perforaciones_detalle','') or '') if t_perf_e == "SI" else "NO"
+                        perf_det_e= ep1.text_area("Detalle Perforación:", value=op_edit.get('perforaciones_detalle','') or '').upper() if t_perf_e == "SI" else "NO"
                         t_barr_e  = ep2.selectbox("¿Código de Barras?", ["NO","SI"], index=1 if op_edit.get('codigo_barras_detalle') and op_edit.get('codigo_barras_detalle') != 'NO' else 0)
-                        barr_det_e= ep2.text_area("Detalle Barras:", value=op_edit.get('codigo_barras_detalle','') or '') if t_barr_e == "SI" else "NO"
+                        barr_det_e= ep2.text_area("Detalle Barras:", value=op_edit.get('codigo_barras_detalle','') or '').upper() if t_barr_e == "SI" else "NO"
                         t_num_e   = ep3.selectbox("¿Numeración?", ["NO","SI"], index=1 if op_edit.get('num_id') and op_edit.get('num_id') != 'NO' else 0)
-                        num_id_e  = ep3.text_input("Desde:", value=op_edit.get('num_id','') or '') if t_num_e == "SI" else "NO"
-                        num_fd_e  = ep3.text_input("Hasta:", value=op_edit.get('num_fd','') or '') if t_num_e == "SI" else "NO"
+                        num_id_e  = ep3.text_input("Desde:", value=op_edit.get('num_id','') or '').upper() if t_num_e == "SI" else "NO"
+                        num_fd_e  = ep3.text_input("Hasta:", value=op_edit.get('num_fd','') or '').upper() if t_num_e == "SI" else "NO"
                         nueva_trans_f = ep4.selectbox("¿Transportadora?", ["NO","SI"], index=1 if op_edit.get('transportadora_formas') else 0)
-                        nuevo_dest_f  = ep4.text_input("Ciudad destino:", value=op_edit.get('destino_formas','') or '') if nueva_trans_f == "SI" else "NO"
+                        nuevo_dest_f  = ep4.text_input("Ciudad destino:", value=op_edit.get('destino_formas','') or '').upper() if nueva_trans_f == "SI" else "NO"
 
 # Partes de la forma
                         st.markdown("**📄 Detalle de Partes**")
@@ -2936,29 +2945,29 @@ elif menu == "📅 Planificación":
                             p_data_e = rec_partes_e[i-1] if i <= len(rec_partes_e) else {}
                             st.markdown(f"*Parte {i}*")
                             d1,d2,d3,d4,d5,d6 = st.columns(6)
-                            anc_e = d1.text_input(f"Ancho P{i}",  key=f"ea_{i}", value=p_data_e.get('anc',''))
-                            lar_e = d2.text_input(f"Largo P{i}",  key=f"el_{i}", value=p_data_e.get('lar',''))
-                            pap_e = d3.text_input(f"Papel P{i}",  key=f"ep_{i}", value=p_data_e.get('papel',''))
-                            fon_e = d4.text_input(f"Fondo P{i}",  key=f"ef_{i}", value=p_data_e.get('color_fondo',''))
-                            gra_e = d5.text_input(f"Gramos P{i}", key=f"eg_{i}", value=p_data_e.get('gramos',''))
-                            tra_e = d6.text_input(f"Tráfico P{i}",key=f"et_{i}", value=p_data_e.get('trafico',''))
+                            anc_e = d1.text_input(f"Ancho P{i}",  key=f"ea_{i}", value=p_data_e.get('anc','')).upper()
+                            lar_e = d2.text_input(f"Largo P{i}",  key=f"el_{i}", value=p_data_e.get('lar','')).upper()
+                            pap_e = d3.text_input(f"Papel P{i}",  key=f"ep_{i}", value=p_data_e.get('papel','')).upper()
+                            fon_e = d4.text_input(f"Fondo P{i}",  key=f"ef_{i}", value=p_data_e.get('color_fondo','')).upper()
+                            gra_e = d5.text_input(f"Gramos P{i}", key=f"eg_{i}", value=p_data_e.get('gramos','')).upper()
+                            tra_e = d6.text_input(f"Tráfico P{i}",key=f"et_{i}", value=p_data_e.get('trafico','')).upper()
                             tf_e, tr_e, obe_e = "N/A", "N/A", ""
                             if tipo_op == "FORMAS IMPRESAS":
                                 t1e,t2e,t3e = st.columns(3)
-                                tf_e  = t1e.text_input(f"Tintas Frente P{i}",   key=f"etf_{i}", value=p_data_e.get('tf',''))
-                                tr_e  = t2e.text_input(f"Tintas Respaldo P{i}", key=f"etr_{i}", value=p_data_e.get('tr',''))
-                                obe_e = t3e.text_input(f"Obs. Especial P{i}",   key=f"eob_{i}", value=p_data_e.get('obs_parte',''))
+                                tf_e  = t1e.text_input(f"Tintas Frente P{i}",   key=f"etf_{i}", value=p_data_e.get('tf','')).upper()
+                                tr_e  = t2e.text_input(f"Tintas Respaldo P{i}", key=f"etr_{i}", value=p_data_e.get('tr','')).upper()
+                                obe_e = t3e.text_input(f"Obs. Especial P{i}",   key=f"eob_{i}", value=p_data_e.get('obs_parte','')).upper()
                             lista_p_e.append({"p":i,"anc":anc_e,"lar":lar_e,"papel":pap_e,"color_fondo":fon_e,"gramos":gra_e,"tf":tf_e,"tr":tr_e,"trafico":tra_e,"obs_parte":obe_e})
 
-                        nuevas_obs = st.text_area("Observaciones Generales:", value=op_edit.get('observaciones_formas','') or '')
+                        nuevas_obs = st.text_area("Observaciones Generales:", value=op_edit.get('observaciones_formas','') or '').upper()
 
 #  ROLLOS IMPRESOS / BLANCOS 
                     elif tipo_op in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS"]:
                         st.markdown("**🧻 Datos de Rollos**")
                         er1, er2, er3 = st.columns(3)
-                        nuevo_mat   = er1.text_input("Material Base:", value=op_edit.get('material','') or '')
+                        nuevo_mat   = er1.text_input("Material Base:", value=op_edit.get('material','') or '').upper()
                         nuevo_gram  = er2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ref   = er3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '')
+                        nuevo_ref   = er3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '').upper()
 
                         er4, er5 = st.columns(2)
                         nueva_cant_r = er4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
@@ -2967,8 +2976,8 @@ elif menu == "📅 Planificación":
 
                         if tipo_op == "ROLLOS IMPRESOS":
                             ct1, ct2 = st.columns(2)
-                            nuevo_tf_r = ct1.text_input("Tintas Frente:", value=op_edit.get('tintas_frente_rollos','') or '')
-                            nuevo_tr_r = ct2.text_input("Tintas Respaldo:", value=op_edit.get('tintas_respaldo_rollos','') or '')
+                            nuevo_tf_r = ct1.text_input("Tintas Frente:", value=op_edit.get('tintas_frente_rollos','') or '').upper()
+                            nuevo_tr_r = ct2.text_input("Tintas Respaldo:", value=op_edit.get('tintas_respaldo_rollos','') or '').upper()
                         else:
                             nuevo_tf_r, nuevo_tr_r = "N/A", "N/A"
 
@@ -2977,20 +2986,20 @@ elif menu == "📅 Planificación":
                         nueva_uds_c = er7.number_input("Unidades x Caja:",  value=int(op_edit.get('unidades_caja',  0) or 0), min_value=0)
 
                         nueva_trans_r = st.selectbox("¿Transportadora?", ["NO","SI"], index=1 if op_edit.get('transportadora_rollos') else 0)
-                        nuevo_dest_r  = st.text_input("Ciudad destino:", value=op_edit.get('destino_rollos','') or '') if nueva_trans_r == "SI" else "NO"
-                        nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '')
+                        nuevo_dest_r  = st.text_input("Ciudad destino:", value=op_edit.get('destino_rollos','') or '').upper() if nueva_trans_r == "SI" else "NO"
+                        nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '').upper()
 
 #  REBOBINADO 
                     elif tipo_op == "REBOBINADO":
                         st.markdown("**🌀 Datos de Rebobinado**")
                         eb1, eb2, eb3 = st.columns(3)
-                        nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '')
+                        nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '').upper()
                         nuevo_gram    = eb2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '')
+                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '').upper()
                         eb4, eb5 = st.columns(2)
                         nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
-                        nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '')
-                        nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '')
+                        nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '').upper()
+                        nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '').upper()
 
 #  BOLSAS (IMPRESA / BLANCA) 
                     elif tipo_op in ("BOLSA IMPRESA", "BOLSA BLANCA"):
@@ -3022,12 +3031,12 @@ elif menu == "📅 Planificación":
                         if es_bolsa_impresa_edit:
                             emt1, emt2 = st.columns(2)
                             nuevo_bolsa_tintas_num = emt1.number_input("Tintas — Número", min_value=0, step=1, value=int(op_edit.get('bolsa_tintas_num', 0) or 0))
-                            nuevo_bolsa_tintas_color = emt2.text_input("Tintas — Color", value=op_edit.get('bolsa_tintas_color','') or '')
+                            nuevo_bolsa_tintas_color = emt2.text_input("Tintas — Color", value=op_edit.get('bolsa_tintas_color','') or '').upper()
                         else:
                             nuevo_bolsa_tintas_num, nuevo_bolsa_tintas_color = 0, "N/A"
 
                         nuevo_bolsa_cantidad = st.number_input("Cantidad de bolsas", min_value=0, step=1, value=int(op_edit.get('bolsa_cantidad', 0) or 0))
-                        nuevas_obs = st.text_area("Observaciones:", value=op_edit.get('observaciones_bolsa','') or '')
+                        nuevas_obs = st.text_area("Observaciones:", value=op_edit.get('observaciones_bolsa','') or '').upper()
 
 # LAS SECCIONES "ESPECIFICACIONES PRODUCCIÓN" Y "CONFIGURACIÓN DE EMPAQUE"
 # NO SE EDITAN EN PANTALLA (se llenan a mano en la orden impresa). Se
@@ -3043,7 +3052,7 @@ elif menu == "📅 Planificación":
                     st.markdown("---")
 # Este campo es obligatorio: el motivo queda guardado en el historial como una tarjeta especial de EDICION
                     nueva_obs_gral = st.text_area("📝 Motivo del cambio (queda registrado):",
-                                        placeholder="Ej: Cliente solicitó cambio de cantidad...", key="motivo_edit")
+                                        placeholder="Ej: Cliente solicitó cambio de cantidad...", key="motivo_edit").upper()
                     btn_guardar_edit = st.form_submit_button("💾 GUARDAR CAMBIOS", use_container_width=True)
 
 # Al presionar GUARDAR CAMBIOS: arma el payload segun el tipo de orden (Formas/Rollos/Rebobinado),
@@ -3204,7 +3213,7 @@ elif menu == "📅 Planificación":
                                    f"Si la anulas, esa máquina quedará libre automáticamente y el trabajo en curso se descartará.")
 
                     st.markdown("---")
-                    motivo_anulacion_txt = st.text_area("✍️ Motivo de la anulación (obligatorio):", key="motivo_anular_txt")
+                    motivo_anulacion_txt = st.text_area("✍️ Motivo de la anulación (obligatorio):", key="motivo_anular_txt").upper()
                     confirmar_anulacion = st.checkbox(f"Confirmo que deseo ANULAR la OP {op_anular.get('op')}. Esta acción no se puede deshacer.", key="confirmar_anular_chk")
 
                     if st.button("🚫 ANULAR ESTA OP", type="primary", use_container_width=True, disabled=not confirmar_anulacion):
@@ -3306,7 +3315,7 @@ elif menu == "📅 Planificación":
             t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
 
             if t_perf == "SI":
-                perf_d = p1.text_area("Detalle Perforación", key="perf_det")
+                perf_d = p1.text_area("Detalle Perforación", key="perf_det").upper()
             else:
                 perf_d = "NO"
 
@@ -3342,7 +3351,7 @@ elif menu == "📅 Planificación":
                 t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
 
                 if t_barr == "SI":
-                    barr_d = p2.text_area("Detalle Barras", key="barr_det")
+                    barr_d = p2.text_area("Detalle Barras", key="barr_det").upper()
                 else:
                     barr_d = "NO"
 
@@ -3350,8 +3359,8 @@ elif menu == "📅 Planificación":
                 t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], key="num_select")
 
                 if t_num == "SI":
-                    num_id = p3.text_input("Desde", key="num_desde")
-                    num_fd = p3.text_input("Hasta", key="num_hasta")
+                    num_id = p3.text_input("Desde", key="num_desde").upper()
+                    num_fd = p3.text_input("Hasta", key="num_hasta").upper()
                 else:
                     num_id = "NO"
                     num_fd = "NO"
@@ -3364,7 +3373,7 @@ elif menu == "📅 Planificación":
             t_trans_f = p4.selectbox("¿Transportadora?", ["NO","SI"], key="trans_select")
 
             if t_trans_f == "SI":
-                dest_f = p4.text_area("Ciudad destino", key="dest_trans")
+                dest_f = p4.text_area("Ciudad destino", key="dest_trans").upper()
             else:
                 dest_f = "NO"
             partes = st.session_state.get("partes_sel", 1)
@@ -3395,17 +3404,17 @@ elif menu == "📅 Planificación":
                 
 # SECCION: DATOS GENERALES 
                 f1, f2, f3 = st.columns(3)
-                op_input = f1.text_input("Número de Nueva OP (Solo número) *")
+                op_input = f1.text_input("Número de Nueva OP (Solo número) *").upper()
                 
 # SI ES REPETICION SUGERIR LA OP ANTERIOR BUSCADA
                 val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
-                op_a = f2.text_input("OP Anterior", value=val_op_ant)
+                op_a = f2.text_input("OP Anterior", value=val_op_ant).upper()
                 
-                cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', ""))
+                cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', "")).upper()
                 
                 f4, f5, f6 = st.columns(3)
-                vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', ""))
-                trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', ""))
+                vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', "")).upper()
+                trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', "")).upper()
                 num_ticket_creacion = f6.number_input("Número de Ticket", value=int(datos_rec.get('num_ticket', 0) or 0), min_value=0, step=1)
 
                 if "FORMAS" in t:
@@ -3419,20 +3428,20 @@ elif menu == "📅 Planificación":
                         
                         st.markdown(f"**PARTE {i}**")
                         d1, d2, d3, d4, d5, d6 = st.columns(6)
-                        anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}", value=p_data.get('anc', ""))
-                        lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', ""))
-                        pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', ""))
-                        fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")) 
-                        gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', ""))
-                        tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', ""))
+                        anc = d1.text_input(f"Ancho P{i}", key=f"a_{i}", value=p_data.get('anc', "")).upper()
+                        lar = d2.text_input(f"Largo P{i}", key=f"l_{i}", value=p_data.get('lar', "")).upper()
+                        pap = d3.text_input(f"Papel P{i}", key=f"p_{i}", value=p_data.get('papel', "")).upper()
+                        fon = d4.text_input(f"Color Fondo P{i}", key=f"f_{i}", value=p_data.get('color_fondo', "")).upper() 
+                        gra = d5.text_input(f"Gramos P{i}", key=f"g_{i}", value=p_data.get('gramos', "")).upper()
+                        tra = d6.text_input(f"Tráfico P{i}", key=f"t_{i}", value=p_data.get('trafico', "")).upper()
                         
                         tf, tr = "N/A", "N/A"
                         obe = ""
                         if t == "FORMAS IMPRESAS":
                             t1, t2, t3 = st.columns(3)
-                            tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', ""))
-                            tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', ""))
-                            obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}", value=p_data.get('obs_parte',""))
+                            tf = t1.text_input(f"Tintas Frente P{i}", key=f"tf_{i}", value=p_data.get('tf', "")).upper()
+                            tr = t2.text_input(f"Tintas Respaldo P{i}", key=f"tr_{i}", value=p_data.get('tr', "")).upper()
+                            obe = t3.text_input(f"Obs. Especial P{i}", key=f"obe_{i}", value=p_data.get('obs_parte',"")).upper()
                         
                         lista_p.append({
                             "p": i,
@@ -3447,21 +3456,21 @@ elif menu == "📅 Planificación":
                             "obs_parte": obe
                         })
                     
-                    obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', ""))
+                    obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', "")).upper()
                 elif t == "REBOBINADO":
 
                     r1, r2, r3 = st.columns(3)
 
-                    mat = r1.text_input("Material / Papel")
+                    mat = r1.text_input("Material / Papel").upper()
                     gram = r2.number_input("Gramaje", 0)
-                    ancho = r3.text_input("Referencia Comercial",)
+                    ancho = r3.text_input("Referencia Comercial",).upper()
 
                     r4, r5 = st.columns(2)
 
                     cant_r = r4.number_input("Cantidad Rollos Solicitada", 0)
-                    objetivo = r5.text_input("Objetivo del Rebobinado")
+                    objetivo = r5.text_input("Objetivo del Rebobinado").upper()
 
-                    obs = st.text_area("Observaciones Rebobinado")
+                    obs = st.text_area("Observaciones Rebobinado").upper()
 
                 elif t in ("BOLSA IMPRESA", "BOLSA BLANCA"):
 
@@ -3504,13 +3513,13 @@ elif menu == "📅 Planificación":
                     if es_bolsa_impresa_form:
                         bt1, bt2 = st.columns(2)
                         bolsa_tintas_num = bt1.number_input("Tintas — Número", min_value=0, step=1, value=int(datos_rec.get('bolsa_tintas_num', 0) or 0))
-                        bolsa_tintas_color = bt2.text_input("Tintas — Color", value=datos_rec.get('bolsa_tintas_color', ""))
+                        bolsa_tintas_color = bt2.text_input("Tintas — Color", value=datos_rec.get('bolsa_tintas_color', "")).upper()
                     else:
                         bolsa_tintas_num, bolsa_tintas_color = 0, "N/A"
 
                     bolsa_cantidad = st.number_input("Cantidad de bolsas", min_value=0, step=1, value=int(datos_rec.get('bolsa_cantidad', 0) or 0))
 
-                    obs = st.text_area("Observaciones", value=datos_rec.get('observaciones_bolsa', ""))
+                    obs = st.text_area("Observaciones", value=datos_rec.get('observaciones_bolsa', "")).upper()
 
 # LAS SECCIONES "ESPECIFICACIONES PRODUCCIÓN" Y "CONFIGURACIÓN DE EMPAQUE"
 # YA NO SE DILIGENCIAN EN PANTALLA: quedan en blanco en la OP impresa (PDF)
@@ -3528,9 +3537,9 @@ elif menu == "📅 Planificación":
 
 #  SECCION: ROLLOS 
                     r1, r2, r3 = st.columns(3)
-                    mat = r1.text_input("Material Base", value=datos_rec.get('material', ""))
+                    mat = r1.text_input("Material Base", value=datos_rec.get('material', "")).upper()
                     gram = r2.number_input("Gramaje", 0, value=int(datos_rec.get('gramaje_rollos', 0)))
-                    ref_c = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', ""))
+                    ref_c = r3.text_input("Referencia Comercial", value=datos_rec.get('ref_comercial', "")).upper()
                     
                     r4, r5, r6 = st.columns(3)
                     cant_r = r4.number_input("Cantidad Rollos", 0, value=int(datos_rec.get('cantidad_rollos', 0)))
@@ -3542,13 +3551,13 @@ elif menu == "📅 Planificación":
                     tf_r, tr_r = "N/A", "N/A"
                     if t == "ROLLOS IMPRESOS":
                         ct1, ct2 = st.columns(2)
-                        tf_r = ct1.text_input("Tintas Frente", value=datos_rec.get('tintas_frente_rollos', ""))
-                        tr_r = ct2.text_input("Tintas Respaldo", value=datos_rec.get('tintas_respaldo_rollos', ""))
+                        tf_r = ct1.text_input("Tintas Frente", value=datos_rec.get('tintas_frente_rollos', "")).upper()
+                        tr_r = ct2.text_input("Tintas Respaldo", value=datos_rec.get('tintas_respaldo_rollos', "")).upper()
                     
                     r7, r8 = st.columns(2)
                     ub = r7.number_input("Unidades x Bolsa", 0, value=int(datos_rec.get('unidades_bolsa', 0)))
                     uc = r8.number_input("Unidades x Caja", 0, value=int(datos_rec.get('unidades_caja', 0)))
-                    obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', ""))
+                    obs = st.text_area("Observaciones Generales Rollos", value=datos_rec.get('observaciones_rollos', "")).upper()
 
 #  ERROR SI TIENE CAMPOS SIN LLENAR 
                 if st.form_submit_button("🚀 GUARDAR PLANIFICACIÓN"):
@@ -3774,7 +3783,7 @@ elif menu == "📦 salida produccion P1":
                 with col2:
                     c_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
                     c_rollos = st.number_input("Cantidad de Rollos", min_value=0, step=1)
-                    notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
+                    notas = st.text_input("Observaciones (Ej: Factura # o Cliente)").upper()
 
 # EVIDENCIA FOTOGRAFICA OBLIGATORIA SOLO PARA ENTRADAS: garantiza el estado
 # en el que la mercancia llega a bodega desde produccion.
@@ -4421,7 +4430,7 @@ elif menu == "📦 Almacen/Despachos":
                 with col2:
                     c_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
                     c_rollos = st.number_input("Cantidad de Rollos", min_value=0, step=1)
-                    notas = st.text_input("Observaciones (Ej: Factura # o Cliente)")
+                    notas = st.text_input("Observaciones (Ej: Factura # o Cliente)").upper()
 
 # BOTON DINAMICO DE REGISTRO A INGRESOS
                 texto_boton = "🚀 REGISTRAR ENTRADA" if "ENTRADA" in tipo_accion else "🚚 REGISTRAR SALIDA"
@@ -4549,30 +4558,25 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     op_operario = st.session_state.get('nombre_usuario', '')
                     st.info(f"👤 Operario registrado automáticamente: **{op_operario}**")
                 else:
-# SE SELECCIONA DE LOS PERFILES DE MAQUINISTA YA CREADOS (estandariza el nombre)
-                    lista_maq_seg = _lista_nombres_maquinistas()
-                    if lista_maq_seg:
-                        op_operario = st.selectbox("👤 Operario / Maquinista", ["-- Selecciona --"] + lista_maq_seg)
-                        if op_operario == "-- Selecciona --":
-                            op_operario = ""
-                    else:
-                        op_operario = st.text_input("👤 Operario / Maquinista")
+# CUALQUIER PERFIL QUE NO SEA MAQUINISTA (supervisor, admin, etc.) escribe el
+# nombre del operario a mano — solo el perfil de maquinista se autocompleta.
+                    op_operario = st.text_input("👤 Operario / Maquinista").upper()
                 ca, cb, cc = st.columns(3)
                 with ca:
-                    op_s = st.text_input("OP")
-                    nt_s = st.text_input("Nombre Trabajo")
-                    tipo_p = st.text_input("Tipo de Papel / Material")
+                    op_s = st.text_input("OP").upper()
+                    nt_s = st.text_input("Nombre Trabajo").upper()
+                    tipo_p = st.text_input("Tipo de Papel / Material").upper()
                     turno_s = st.selectbox("Turno", ["Dia", "Mañana", "Tarde", "Noche"])
                 with cb:
                     m_r = st.number_input("Metros de Rollo", min_value=0, value=0)
-                    med_r = st.text_input("Medida de Rollo")
+                    med_r = st.text_input("Medida de Rollo").upper()
                     u_c = st.number_input("Unid/Caja", min_value=0, value=0)
                     n_c = st.number_input("Número Cajas", min_value=0, value=0)
                 with cc:
                     n_v = st.number_input("Varillas", min_value=0, value=0)
                     p_d = st.number_input("Desp. KG", min_value=0.0, value=0.0, step=0.1)
-                    mot_d = st.text_input("Motivo Desp.")
-                    obs = st.text_area("Observaciones")
+                    mot_d = st.text_input("Motivo Desp.").upper()
+                    obs = st.text_area("Observaciones").upper()
                 
 # Campos de cierre de turno opcionales
                 st.markdown("---")
@@ -5152,22 +5156,15 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 op_name = st.session_state.get('nombre_usuario', '')
                 st.info(f"👤 Operario registrado automáticamente: **{op_name}**")
             else:
-# SE SELECCIONA DE LOS PERFILES DE MAQUINISTA YA CREADOS (no se escribe a mano,
-# para que el nombre siempre quede estandarizado en los reportes de rendimiento)
-                lista_maq_disp = _lista_nombres_maquinistas()
-                if lista_maq_disp:
-                    op_name = st.selectbox("👤 Operario / Maquinista *", ["-- Selecciona --"] + lista_maq_disp)
-                    if op_name == "-- Selecciona --":
-                        op_name = ""
-                else:
-                    st.warning("⚠️ No hay perfiles de maquinista creados todavía. Pídele al admin que los cree en el Panel de Administración de Usuarios.")
-                    op_name = st.text_input("Nombre del Operario *")
-            auxiliar = st.text_input("Auxiliar")
+# CUALQUIER PERFIL QUE NO SEA MAQUINISTA (supervisor, admin, etc.) escribe el
+# nombre del operario a mano — solo el perfil de maquinista se autocompleta.
+                op_name = st.text_input("Nombre del Operario *").upper()
+            auxiliar = st.text_input("Auxiliar").upper()
             datos_c = {}
             
             if area_act == "IMPRESIÓN":
                 c1, c2, c3 = st.columns(3)
-                datos_c['marca_papel_i'] = c1.text_input("marca de papel",)
+                datos_c['marca_papel_i'] = c1.text_input("marca de papel",).upper()
                 datos_c['medida_papel'] = c2.number_input("medida de papel", 0)
                 datos_c['metros_impresos'] = c3.number_input("Metros", 0)
                 datos_c['imagenes_impresas'] = c1.number_input("n° imagenes ", 0)
@@ -5176,8 +5173,8 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 
             elif area_act == "CORTE":
                 c1, c2, c3 = st.columns(3)
-                datos_c['tipo_papel'] = c1.text_input("Tipo de papel")
-                datos_c['marca_papel_c'] = c2.text_input("Marca de papel")
+                datos_c['tipo_papel'] = c1.text_input("Tipo de papel").upper()
+                datos_c['marca_papel_c'] = c2.text_input("Marca de papel").upper()
                 datos_c['ancho_bobina'] = c3.number_input("Ancho de bobina", 0)
                 
                 datos_c['imagenes_corte'] = c1.number_input("Imágenes/Bobina", 0)
@@ -5233,7 +5230,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 # COLECTORAS
             elif area_act == "COLECTORAS":
                 c1, c2, c3 = st.columns(3) 
-                datos_c['tipo_papel'] = c1.text_input("tipo de papel")
+                datos_c['tipo_papel'] = c1.text_input("tipo de papel").upper()
                 datos_c['formas_colectadas'] = c2.number_input("total formas colectadas", 0)
                 datos_c['partes'] = c3.number_input("total partes colectadas", 0)
                 
@@ -5261,11 +5258,11 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 st.markdown("---")
                 
                 datos_c['formas_dañadas'] = c2.number_input("formas dañadas", 0)
-                datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva")
+                datos_c['tipo_pegado'] = c3.text_input("que tipo de pegue lleva").upper()
 
             elif area_act == "ENCUADERNACIÓN":
                 c1, c2, c3 = st.columns(3)
-                datos_c['tipo_presentacion'] = c1.text_input("presentacion final")
+                datos_c['tipo_presentacion'] = c1.text_input("presentacion final").upper()
                 datos_c['unidades_caja'] = c2.number_input("cantidad por caja", 0)
                 
 #  CONSUMO DE CAJAS EN ENCUADERNACION
@@ -5284,13 +5281,13 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                     datos_c['cajas_totales'] = st.number_input("Total Cajas Empacadas", 0, key="cant_enc")
                 st.markdown("---")
 
-                datos_c['tipo_pegado'] = c1.text_input("lugar de pegado")
+                datos_c['tipo_pegado'] = c1.text_input("lugar de pegado").upper()
                 datos_c['desperdicio'] = c2.number_input("peso desperdicio", 0)
                 datos_c['total_formas'] = c3.number_input("total formas procesadas", 0)
 
             elif area_act == "REBOBINADORAS":
                 c1, c2, c3 = st.columns(3)
-                datos_c['tipo_papel'] = c1.text_input("Tipo de papel")
+                datos_c['tipo_papel'] = c1.text_input("Tipo de papel").upper()
                 datos_c['ancho_entrada'] = c2.number_input("Gramaje", 0)
                 datos_c['ancho_salida'] = c3.number_input("Ancho salida (si es un corte ponga las medidas)", 0)
                 datos_c['metros_procesados'] = c1.number_input("Metros procesados", 0)
@@ -5298,12 +5295,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 datos_c['empalmes'] = c3.number_input("Empalmes(defina un total o promedio)", 0)
                 datos_c['desperdicio_kg'] = c1.number_input("Desperdicio Kg", 0)
                  
-            obs_prod = st.text_area("Observaciones de producción / saldos ")
+            obs_prod = st.text_area("Observaciones de producción / saldos ").upper()
 
 #  ENTREGA PARCIAL
             st.markdown("### 📦 ENTREGA PARCIAL (OPCIONAL)")
             cantidad_parcial = st.number_input("Cantidad parcial producida", 0)
-            obs_parcial = st.text_input("Observación parcial")
+            obs_parcial = st.text_input("Observación parcial").upper()
 
             col_f1, col_f2 = st.columns(2)
             finalizar = col_f1.form_submit_button("🏁 FINALIZAR Y MOVER")
@@ -5687,17 +5684,12 @@ elif menu == "👜 Bolsas":
                 operario_b = st.session_state.get('nombre_usuario', '')
                 st.info(f"👤 Operario registrado automáticamente: **{operario_b}**")
             else:
-# SE SELECCIONA DE LOS PERFILES DE MAQUINISTA YA CREADOS (estandariza el nombre)
-                lista_maq_b = _lista_nombres_maquinistas()
-                if lista_maq_b:
-                    operario_b = st.selectbox("👤 Operario", ["-- Selecciona --"] + lista_maq_b)
-                    if operario_b == "-- Selecciona --":
-                        operario_b = ""
-                else:
-                    operario_b = st.text_input("Operario")
-            auxiliar_b = st.text_input("Auxiliar (opcional)")
+# CUALQUIER PERFIL QUE NO SEA MAQUINISTA (supervisor, admin, etc.) escribe el
+# nombre del operario a mano — solo el perfil de maquinista se autocompleta.
+                operario_b = st.text_input("Operario").upper()
+            auxiliar_b = st.text_input("Auxiliar (opcional)").upper()
             cantidad_b = st.number_input("Cantidad Producida (unidades/paquetes)", min_value=0, step=1)
-            obs_cierre_b = st.text_area("Observaciones")
+            obs_cierre_b = st.text_area("Observaciones").upper()
 
             if st.form_submit_button("✅ CONFIRMAR CIERRE"):
                 inicio_b = datetime.fromisoformat(tr_cierre_b["hora_inicio"].replace("Z", "+00:00"))
@@ -5776,7 +5768,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_u = st.text_input("Usuario (Login)", key="admin_u")
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
-            nuevo_n = st.text_input("Nombre Completo", key="admin_n")
+            nuevo_n = st.text_input("Nombre Completo", key="admin_n").upper()
             nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "aud_bolsas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "supervisor_bolsas",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "maquinista" ], key="admin_r")
 
 # SI EL ROL ES MAQUINISTA, PEDIR A QUE MAQUINA ESPECIFICA QUEDA ASIGNADO
@@ -5897,7 +5889,7 @@ if menu == "🛒 Mercado":
                 with c2:
                     cantidad_coins = st.number_input("Cantidad de Coins (+/-)", min_value=-9999, max_value=9999, value=10, step=5, key="admin_coins_amt")
                 with c3:
-                    motivo_coins = st.text_input("Motivo / Descripción", placeholder="Ej: Cumplimiento meta semana", key="admin_coins_mot")
+                    motivo_coins = st.text_input("Motivo / Descripción", placeholder="Ej: Cumplimiento meta semana", key="admin_coins_mot").upper()
 
                 if sel_u:
                     u_key = opciones_u[sel_u]
