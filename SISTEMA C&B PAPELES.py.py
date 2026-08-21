@@ -1431,7 +1431,7 @@ with st.sidebar:
     elif rol == 'aud_ventas':
         opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "📅 Planificación", "🔍 Seguimiento"]
     elif rol == 'aud_bolsas':
-        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento"]
+        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'aud_cartera':
 # Auditoría Cartera ya no existe; este rol queda solo con Monitor y Seguimiento hasta reasignarlo.
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento"]
