@@ -869,8 +869,8 @@ def generar_op_formas(row):
     fila_grid(pdf, [
         {"ancho": 25, "texto": " OP Anterior: ", "negrita": True, "fill": True},
         {"ancho": 70, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
-        {"ancho": 25, "texto": " Fecha: ", "negrita": True, "fill": True},
-        {"ancho": 70, "texto": fmt_fecha_hora(row.get('created_at'), con_hora=False), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Ticket: ", "negrita": True, "fill": True},
+        {"ancho": 70, "texto": fmt_fecha_hora(row.get('num_ticket'), con_hora=False), "negrita": False, "fill": False},
     ])
 
 # ESPECIFICACIONES GENERALES Y ACABADOS 
