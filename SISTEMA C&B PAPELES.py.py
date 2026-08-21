@@ -10,10 +10,7 @@ from fpdf import FPDF
 import pytz
 import bcrypt
 
-# GRAFICOS (anillos/donut y barras) PARA EL REPORTE DE RENDIMIENTO DE MAQUINISTAS.
-# Si plotly no esta instalado, el reporte sigue funcionando pero solo con tablas
-# y las barras nativas de Streamlit (sin anillos). Para tener los graficos de
-# anillos, instalar con:  pip install plotly
+# Gráficos de anillos/barras para Rendimiento Maquinistas; si no hay plotly instalado, usa tablas y barras nativas.
 try:
     import plotly.express as px
     PLOTLY_DISPONIBLE = True
@@ -105,10 +102,7 @@ MAQUINAS = {
     "COLECTORAS": ["COL-01", "COL-02"],
     "ENCUADERNACIÓN": ["JINNA", "KELLY", "VIVIANA", "ROSMIA", "ANGIE", "JOHANA.N", "MARTHA", "OLGA", "J0HANA.R", "ANY"],
     "REBOBINADORAS": ["REB-01", "REB-02", "REB-03"],
-# AREA DE BOLSAS: se divide en 2 sub-areas para efectos de la ruta de la OP
-# (FLEXO imprime, luego pasa a ARMADORAS; las bolsas blancas van directo a
-# ARMADORAS), pero ambas se muestran juntas en un solo modulo/pantalla
-# ("👜 Bolsas"), ya que son pocas maquinas en total.
+# Bolsas se maneja en 2 sub-áreas (Flexo → Armadoras) pero se muestran juntas en un solo módulo.
     "BOLSAS - FLEXO": ["FLEXO 1-Y2", "FLEXO 2-Y4"],
     "BOLSAS - ARMADORAS": ["450TF", "450B", "250B", "220", "350"],
 }
@@ -286,11 +280,7 @@ def hora_colombia():
     tz = pytz.timezone("America/Bogota")
     return datetime.now(tz)
 
-#  LISTA ESTANDARIZADA DE MAQUINISTAS (perfiles reales creados en el sistema) 
-# Se usa en los formularios de cierre para que el nombre del operario SIEMPRE
-# salga de un selector con los perfiles ya creados, en vez de escribirse a
-# mano (lo cual generaba variantes distintas del mismo nombre y dañaba los
-# reportes de rendimiento). Cacheado 5 min para no consultar Supabase cada rerun.
+# Nombres de maquinistas (perfiles reales) para los selectores de operario al cerrar trabajos; cache 5 min.
 @st.cache_data(ttl=300)
 def _lista_nombres_maquinistas():
     try:
@@ -299,9 +289,7 @@ def _lista_nombres_maquinistas():
     except Exception:
         return []
 
-#  SUBIDA DE EVIDENCIA FOTOGRAFICA A SUPABASE STORAGE 
-# Bucket usado para guardar las fotos de evidencia de mercancia entregada a bodega.
-# Debe existir en Supabase Storage un bucket PUBLICO llamado exactamente "evidencias-bodega".
+# Bucket de Supabase Storage para las fotos de evidencia de bodega (debe llamarse 'evidencias-bodega').
 BUCKET_EVIDENCIAS = "evidencias-bodega"
 
 def subir_evidencia_foto(archivo_bytes, nombre_base):
@@ -407,11 +395,7 @@ def set_planta_activa(estado: bool, usuario: str = "admin"):
         "updated_by": usuario
     }).execute()
 
-# DEJA CONSTANCIA CON FECHA EXACTA DE ESTE CAMBIO. Esto es lo que permite
-# despues calcular con precision cuanto tiempo estuvo detenida la planta
-# DENTRO de un intervalo especifico (ej: mientras una OP estaba en Diseño),
-# sin importar si para cuando se cierra el trabajo la planta ya esta
-# reactivada de nuevo.
+# Registra la fecha exacta del cambio, para poder calcular después el tiempo detenido dentro de un intervalo.
     try:
         supabase.table("estado_historial").insert({
             "clave": "planta_activa",
@@ -486,10 +470,7 @@ def set_area_activa(area: str, estado: bool, usuario: str = "admin"):
     st.session_state.pop(f'_area_activa_cache_{area}', None)
     st.session_state.pop(f'_area_activa_ts_{area}', None)
 
-# CALCULA CUANTOS SEGUNDOS ESTUVO "DETENIDA" UNA CLAVE (planta_activa o
-# area_activa_XXX) DENTRO DE UN INTERVALO ESPECIFICO [inicio, fin].
-# Esto es lo que permite restar con precision el tiempo detenido de un
-# trabajo, sin importar si para cuando se cierra el trabajo la planta ya
+# Calcula cuántos segundos estuvo detenida una clave (planta/área) dentro de un intervalo [inicio, fin].
 def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, estado_por_defecto: bool = True) -> float:
     """
     'estado_por_defecto' se usa SOLO si todavia no existe ningun evento en el
@@ -506,9 +487,7 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
     tz = pytz.timezone("America/Bogota")
 
     try:
-# TODOS los cambios de estado de esta clave que hayan ocurrido antes del fin
-# del intervalo (se necesitan los anteriores al inicio tambien, para saber
-# en que estado empezaba el intervalo).
+# Trae los cambios de estado de la clave ocurridos dentro (y justo antes) del intervalo.
         eventos = supabase.table("estado_historial").select("estado,fecha")\
             .eq("clave", clave).lte("fecha", fin.isoformat())\
             .order("fecha", desc=False).execute().data or []
@@ -522,8 +501,7 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
         except Exception:
             return None
 
-# ESTADO AL INICIO DEL INTERVALO: el ultimo evento ANTES de 'inicio' (si no
-# hay ninguno todavia registrado, se usa 'estado_por_defecto').
+# Estado al inicio del intervalo: el último evento antes de 'inicio', o el valor por defecto.
     estado_actual = estado_por_defecto
     puntos = []  # lista de (fecha, nuevo_estado) que caen DENTRO del intervalo
     for ev in eventos:
@@ -535,8 +513,7 @@ def segundos_inactivo_en_periodo(clave: str, inicio: datetime, fin: datetime, es
         elif f_ev < fin:
             puntos.append((f_ev, bool(ev.get("estado", True))))
 
-# RECORRE LOS CAMBIOS DE ESTADO DENTRO DEL INTERVALO, SUMANDO LOS TRAMOS
-# DONDE LA CLAVE ESTUVO INACTIVA (estado_actual == False)
+# Suma los tramos del intervalo donde la clave estuvo inactiva.
     segundos_inactivo = 0.0
     cursor = inicio
     for f_ev, nuevo_estado in puntos:
@@ -568,8 +545,7 @@ def calcular_duracion_laboral(inicio, fin, nombre_maquina=None, tiempo_pausa_seg
 # TIEMPO DETENIDO DE PLANTA (interruptor general) DENTRO DEL INTERVALO REAL
     segundos_detenido = segundos_inactivo_en_periodo("planta_activa", inicio, fin)
 
-# TIEMPO DETENIDO DEL AREA ESPECIFICA DE LA MAQUINA (ej: solo Corte), Y DE LA
-# MAQUINA INDIVIDUAL PUNTUAL (ej: solo COR-05), AMBOS DENTRO DEL INTERVALO
+# Tiempo detenido del área específica y de la máquina puntual, ambos dentro del intervalo.
     if nombre_maquina:
         area_de_maquina = MAQUINA_A_AREA.get(nombre_maquina)
         if area_de_maquina:
@@ -1080,9 +1056,7 @@ def generar_op_rebobinado(row):
 
     return bytes(pdf.output())
 
-# GENERAR PDF BOLSAS (basado en el boceto compartido: especificaciones de la
-# bolsa con checkboxes tipo formulario, especificaciones de produccion,
-# configuracion de empaque y firmas).
+# Genera el PDF de Bolsas: especificaciones, producción, empaque y firmas.
 def generar_op_bolsas(row):
     pdf = FPDF()
     pdf.add_page()
@@ -1141,9 +1115,7 @@ def generar_op_bolsas(row):
     pdf.set_font("Arial", "B", 11)
     pdf.cell(0, 8, "ESPECIFICACIONES DE LA BOLSA", 0, 1, "C", fill=True)
 
-# SE GUARDA LA POSICION DONDE EMPIEZA LA TABLA, PARA PONER EL DIAGRAMA DE LA
-# BOLSA A LA DERECHA, A LA MISMA ALTURA (el diagrama va en el espacio que
-# queda libre entre el borde derecho de la tabla y el margen de la hoja).
+# Guarda dónde empieza la tabla, para ubicar el diagrama de la bolsa a la derecha, a la misma altura.
     y_inicio_specs = pdf.get_y()
 
     pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (C) Largo Total De La Bolsa: ", 1, 0, fill=True)
@@ -1173,10 +1145,7 @@ def generar_op_bolsas(row):
 
     y_fin_specs = pdf.get_y()
 
-# DIAGRAMA DE LA BOLSA (W, C, c, H, h) EN EL ESPACIO LIBRE A LA DERECHA DE LA
-# TABLA. La tabla ocupa hasta x=130 aprox (60+60mm), asi que el diagrama va
-# desde x=132 hasta el margen derecho (x=200), con la misma altura que la
-# tabla completa, sin deformarse (se respeta la proporcion de la imagen).
+# Dibuja el diagrama de la bolsa (W, C, c, H, h) en el espacio libre a la derecha de la tabla.
     alto_disponible_diagrama = y_fin_specs - y_inicio_specs - 2
     try:
         pdf.image("bolsa_diagrama.png", x=133, y=y_inicio_specs + 1, h=alto_disponible_diagrama)
@@ -1464,10 +1433,7 @@ with st.sidebar:
     elif rol == 'aud_bolsas':
         opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento"]
     elif rol == 'aud_cartera':
-# El modulo "Auditoría Cartera" ya no existe (se eliminó del flujo). Este rol
-# se deja solo con Monitor y Seguimiento para no romper el acceso de usuarios
-# ya creados con este rol; lo ideal es reasignarlos a otro rol desde el Panel
-# de Administración de Usuarios.
+# Auditoría Cartera ya no existe; este rol queda solo con Monitor y Seguimiento hasta reasignarlo.
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento"]
     elif rol == 'jefe_log':
         opciones_menu = ["📦 salida produccion P1", "📊 Reportes Admin", "📦 Almacen/Despachos"]
@@ -1498,7 +1464,8 @@ with st.sidebar:
         mi_area = MAQUINA_A_AREA.get(mi_maquina)
         mi_menu = AREA_A_MENU.get(mi_area)
         if mi_menu:
-            opciones_menu = ["🖥️ Monitor", mi_menu]
+# Se quita Monitor del menú del maquinista para que entre directo a su panel de trabajo.
+            opciones_menu = [mi_menu]
         else:
             st.error("⛔ Este usuario no tiene una máquina asignada válida. Contacta al administrador.")
             opciones_menu = ["🖥️ Monitor"]
@@ -1543,11 +1510,7 @@ def cambiar_estado_maquina(nombre_maquina, nuevo_estado, usuario="admin"):
     except Exception as e:
         st.error(f"Error al cambiar estado: {e}")
 
-# MISMO REGISTRO DE HISTORIAL QUE PLANTA_ACTIVA / AREA_ACTIVA, PERO POR MAQUINA
-# INDIVIDUAL. Esto permite que, igual que con la planta, si esta maquina
-# puntual se apaga y se vuelve a encender DURANTE un trabajo, se reste con
-# precision solo el tiempo real que estuvo apagada — sin importar si para
-# cuando se cierra el trabajo la maquina ya esta reactivada de nuevo.
+# Igual que planta_activa/area_activa pero por máquina individual, para restar con precisión su tiempo apagado.
     try:
         supabase.table("estado_historial").insert({
             "clave": f"maquina_activa_{nombre_maquina}",
@@ -1613,9 +1576,7 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
         return "REBOBINADORAS"
     return "IMPRESIÓN"
 
-# RUTA HACIA LA PLANTA DE PRODUCCION DE BOLSAS: las bolsas IMPRESAS pasan primero
-# por las maquinas FLEXO (imprimen) y de ahi a las armadoras; las bolsas BLANCAS
-# van directo a las armadoras porque no necesitan impresión.
+# Ruta a planta de Bolsas: Impresas pasan por Flexo y luego Armadoras; Blancas van directo a Armadoras.
 def ruta_planta_bolsas(tipo_orden):
     if tipo_orden == "BOLSA IMPRESA":
         return "BOLSAS - FLEXO"
@@ -1682,12 +1643,7 @@ def calcular_tiempo_en_area(op_data):
     return segundos, str(timedelta(seconds=int(segundos)))
 
 
-# RADIOGRAFIA COMPLETA DE UNA OP (vista de solo lectura con todos sus datos de creacion)
-#  DATOS CACHEADOS PARA EL REPORTE DE RENDIMIENTO DE MAQUINISTAS 
-# Se arma "aplanando" el historial_procesos de TODAS las ordenes (cada paso de
-# cada OP se vuelve una fila: quien la trabajo, en que maquina/area, cuando y
-# cuanto duro). Se cachea 2 minutos para no golpear la base de datos cada vez
-# que el admin cambia el operario/maquina seleccionado en el reporte.
+# Historial aplanado de todas las OPs (una fila por paso) para Rendimiento Maquinistas; cache 2 min.
 @st.cache_data(ttl=120, show_spinner="Cargando historial de producción...")
 def _cargar_historial_para_rendimiento():
     data = supabase.table("ordenes_planeadas").select("op,tipo_orden,nombre_trabajo,cliente,historial_procesos").execute().data or []
@@ -1697,6 +1653,21 @@ def _cargar_historial_para_rendimiento():
             maquina_paso = paso.get('maquina', '')
             if not maquina_paso or maquina_paso == '—':
                 continue
+            datos_cierre_paso = paso.get('datos_cierre') or {}
+# ROLLOS: puede venir de Corte (rollos_finales) o de Rebobinadoras (rollos_finales tambien)
+            rollos_paso = datos_cierre_paso.get('rollos_finales')
+            cajas_paso = datos_cierre_paso.get('cajas_totales')
+
+# Tipo de cierre: FINAL = avanzó de una vez / PARCIAL = entrega parcial o cambio de turno (sigue en la misma área).
+            tipo_cierre_paso = paso.get('tipo', 'FINAL')
+            if tipo_cierre_paso == 'PARCIAL':
+                cantidad_parcial_paso = (paso.get('datos_cierre') or {}).get('cantidad_parcial_entregada', 0) or 0
+                texto_cierre_paso = "🔄 Parcial / Cambio de Turno" if cantidad_parcial_paso <= 0 else "📦 Entrega Parcial"
+            elif tipo_cierre_paso == 'FINAL':
+                texto_cierre_paso = "✅ Finalizado"
+            else:
+                texto_cierre_paso = tipo_cierre_paso.title() if tipo_cierre_paso else "—"
+
             filas.append({
                 "op": o.get('op'),
                 "tipo_orden": o.get('tipo_orden'),
@@ -1708,6 +1679,9 @@ def _cargar_historial_para_rendimiento():
                 "auxiliar": paso.get('auxiliar', ''),
                 "fecha_txt": paso.get('fecha', ''),
                 "duracion_txt": paso.get('duracion', ''),
+                "rollos": rollos_paso if rollos_paso else None,
+                "cajas": cajas_paso if cajas_paso else None,
+                "tipo_cierre": texto_cierre_paso,
             })
     df = pd.DataFrame(filas)
     if df.empty:
@@ -1724,6 +1698,7 @@ def _formatear_duracion_horas(td_total):
     h, m = divmod(total_min, 60)
     return f"{h}h {m:02d}min"
 
+# Radiografía completa de una OP: vista de solo lectura con todos sus datos de creación.
 def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     st.markdown("### 📋 RADIOGRAFIA COMPLETA DE CREACION")
 
@@ -2018,15 +1993,7 @@ if menu == "🖥️ Monitor":
     for area, maquinas in MAQUINAS.items():
         st.markdown(f"<div class='title-area'>{area}</div>", unsafe_allow_html=True)
 
-# Se recorre la lista de maquinas en BLOQUES DE 4 (una fila de columnas nueva
-# por cada bloque), en vez de crear las 4 columnas UNA sola vez para toda el
-# area y repartir las maquinas segun su posicion "indice % 4". Esa forma
-# anterior se veia bien en computador (las 4 columnas quedan lado a lado),
-# pero en celular o tablet, donde Streamlit APILA las columnas una debajo de
-# otra en vez de ponerlas lado a lado, se notaba el desorden 1,5,9,13,2,6,...
-# porque primero se dibujaba toda la columna 0, luego toda la columna 1, etc.
-# Con una fila de 4 columnas por cada bloque de 4 maquinas en su orden normal,
-# el celular las apila ya en el orden correcto: 1,2,3,4,5,6,7,8...
+# Fila de columnas nueva por cada bloque de 4 máquinas (no todas de una vez), para que el orden se vea bien también en celular.
         for inicio_fila in range(0, len(maquinas), 4):
             fila_maquinas = maquinas[inicio_fila:inicio_fila + 4]
             cols = st.columns(4)
@@ -2580,11 +2547,7 @@ elif menu == "🎨 Diseño y Pre-Prensa":
                 obs_dis = st.text_area("✍️ NOTAS PARA PRE-PRENSA:", value=datos_op.get('observaciones_diseno', '') or "", key=f"obs_dis_{op_id}").upper()
                 obs_dise = st.text_area("✍️ ESPECIFICACIONES PARA REVELAR PLANCHAS:", value=datos_op.get('observaciones_diseno2', '') or "", key=f"obs_dise_{op_id}").upper()
                 
-# SI ES BOLSA (Impresa o Blanca), AL APROBARSE VA DIRECTO A LA PLANTA DE
-# PRODUCCION DE BOLSAS, SIN PASAR POR PRE-PRENSA NI REVISION FINAL (esas 2
-# etapas no aplican para bolsas). Si no es bolsa, sigue la logica normal:
-# "REPETICIÓN EXACTA" SE SALTA PRE-PRENSA Y VA DIRECTO A REVISION FINAL; "NUEVA"
-# O "REPETICIÓN CON CAMBIOS" SIGUE EL FLUJO NORMAL POR PRE-PRENSA.
+# Bolsas van directo a planta al aprobarse (sin Pre-Prensa ni Revisión Final); lo demás sigue el flujo normal según repetición.
                 tipo_orden_op = datos_op.get('tipo_orden', '')
                 es_bolsa_diseno = tipo_orden_op in ("BOLSA IMPRESA", "BOLSA BLANCA")
                 tipo_origen_op = (datos_op.get('tipo_origen') or '').strip()
@@ -2802,8 +2765,7 @@ elif menu == "🧐 Auditoría Bolsas":
             radiografia_completa_op(datos_op_ab, mostrar_obs_auditoria1=False)
             st.divider()
 
-# SI ES REPETICION EXACTA, SE VA DIRECTO A PLANTA. SI ES NUEVA O REPETICION
-# CON CAMBIOS, VA DIRECTO A DISEÑO (AUDITORIA TECNICA).
+# Repetición Exacta va directo a planta; Nueva o con Cambios va a Diseño (Auditoría Técnica).
             es_repeticion_exacta_bolsa = (datos_op_ab.get('tipo_origen', '') == "Repetición Exacta")
             if es_repeticion_exacta_bolsa:
                 ruta_siguiente_ab = ruta_planta_bolsas(datos_op_ab.get('tipo_orden', ''))
@@ -2832,10 +2794,7 @@ elif menu == "🧐 Auditoría Bolsas":
                 time.sleep(1.2)
                 st.rerun()
 
-# NOTA: el modulo "Auditoría Cartera" fue ELIMINADO del sistema. El flujo de
-# Bolsas Nuevas / Repetición con Cambios sigue exactamente igual, solo que
-# ahora pasan directo de Auditoría Bolsas a Diseño (Auditoría Técnica), sin
-# este paso intermedio (ver ruta_siguiente_ab más arriba).
+# Auditoría Cartera fue eliminada: Bolsas Nuevas/con Cambios pasan directo de Auditoría Bolsas a Diseño.
 
 # MODULO PLANIFICACION 
 elif menu == "📅 Planificación":
@@ -3038,9 +2997,7 @@ elif menu == "📅 Planificación":
                         nuevo_bolsa_cantidad = st.number_input("Cantidad de bolsas", min_value=0, step=1, value=int(op_edit.get('bolsa_cantidad', 0) or 0))
                         nuevas_obs = st.text_area("Observaciones:", value=op_edit.get('observaciones_bolsa','') or '').upper()
 
-# LAS SECCIONES "ESPECIFICACIONES PRODUCCIÓN" Y "CONFIGURACIÓN DE EMPAQUE"
-# NO SE EDITAN EN PANTALLA (se llenan a mano en la orden impresa). Se
-# conserva lo que ya haya en la base de datos, sin mostrar los campos aquí.
+# Especificaciones Producción y Configuración de Empaque no se editan aquí: se llenan a mano en la orden impresa.
                         nuevo_bolsa_ancho_bobina = op_edit.get('bolsa_ancho_bobina')
                         nuevo_bolsa_rodillo = op_edit.get('bolsa_rodillo_impresion')
                         nuevo_bolsa_metros_rebob = op_edit.get('bolsa_metros_rebobinado')
@@ -3259,16 +3216,7 @@ elif menu == "📅 Planificación":
                         ["Nueva (Desde cero)", "Repetición Exacta", "Repetición con Cambios"], 
                         horizontal=True)
     
-# VARIABLE PARA ALMACENAR DATOS RECUPERADOS
-# IMPORTANTE: 'datos_rec' tiene que sobrevivir a MAS DE UNA ejecucion del
-# script (ej: cuando el usuario cambia la cantidad, o cuando finalmente
-# presiona "GUARDAR"), no solo al instante exacto en que se hace clic en
-# "Buscar y Cargar". Por eso se guarda en st.session_state en vez de una
-# variable local: una variable local se reiniciaria vacia en CADA ejecucion
-# del script excepto en la que se presiona el boton de busqueda, y como el
-# formulario usa clear_on_submit=True, eso hacia que justo al presionar
-# GUARDAR los campos de Cliente/Vendedor/Trabajo se recargaran vacios
-# (porque en esa ejecucion puntual 'datos_rec' ya no tenia los datos).
+# 'datos_rec' se guarda en session_state (no variable local) para sobrevivir a la recarga al buscar y luego guardar.
         if "Repetición" in origen:
             col_busq1, col_busq2 = st.columns([3, 1])
             op_a_buscar = col_busq1.text_input("Ingrese el número de OP Anterior para buscar (Ej: FRI-100):")
@@ -3288,9 +3236,7 @@ elif menu == "📅 Planificación":
                     st.warning("Por favor ingrese un número de OP.")
             datos_rec = st.session_state.get('datos_rec_cargados', {})
         else:
-# SI EL ORIGEN ES "NUEVA (DESDE CERO)", SE LIMPIA CUALQUIER DATO QUE HUBIERA
-# QUEDADO CARGADO DE UNA BUSQUEDA ANTERIOR, PARA QUE NO SE CUELE INFORMACION
-# VIEJA DE OTRA OP EN UNA ORDEN QUE SE SUPONE ES COMPLETAMENTE NUEVA.
+# Si el origen es 'Nueva', se limpia cualquier dato cargado de una búsqueda anterior.
             st.session_state['datos_rec_cargados'] = {}
             datos_rec = {}
 
@@ -3505,8 +3451,7 @@ elif menu == "📅 Planificación":
                     idx_fsc = op_fsc.index(datos_rec['bolsa_certificacion_fsc']) if datos_rec.get('bolsa_certificacion_fsc') in op_fsc else 0
                     bolsa_fsc = bm10.selectbox("Certificación FSC", op_fsc, index=idx_fsc)
 
-# LA IMPRESION SE DEFINE SOLA SEGUN EL TIPO DE BOLSA ELEGIDO ARRIBA (evita
-# contradicciones entre "tipo de OP" y este campo)
+# La impresión se define sola según el tipo de bolsa elegido arriba, para evitar contradicciones.
                     bolsa_impresion = "SI" if es_bolsa_impresa_form else "N/A"
                     bm11.metric("Impresión (según tipo de OP)", bolsa_impresion)
 
@@ -3521,9 +3466,7 @@ elif menu == "📅 Planificación":
 
                     obs = st.text_area("Observaciones", value=datos_rec.get('observaciones_bolsa', "")).upper()
 
-# LAS SECCIONES "ESPECIFICACIONES PRODUCCIÓN" Y "CONFIGURACIÓN DE EMPAQUE"
-# YA NO SE DILIGENCIAN EN PANTALLA: quedan en blanco en la OP impresa (PDF)
-# para llenarse a mano en planta con el dato real de producción.
+# Especificaciones Producción y Configuración de Empaque no se llenan en pantalla: quedan en blanco en el PDF para diligenciar a mano.
                     st.info("ℹ️ Las secciones **Especificaciones Producción** y **Configuración de Empaque** no se llenan aquí — quedan en blanco en la orden impresa (PDF) para diligenciarse a mano en planta.")
                     bolsa_ancho_bobina = None
                     bolsa_rodillo = None
@@ -3582,11 +3525,7 @@ elif menu == "📅 Planificación":
 
                     op_final = f"{prefijo}{op_input.upper()}"
 
-#  VALIDAR OP DUPLICADA
-# LA REGLA DEFINITIVA ES: NO se puede repetir un numero de OP, EXCEPTO cuando
-# el registro que ya existe con ese numero esta ANULADO — en ese caso si se
-# permite crear una OP nueva con el mismo numero (el anulado se conserva
-# intacto en la base de datos, con el MISMO numero, como constancia).
+# No se puede repetir un número de OP, excepto si el existente está ANULADO (ahí sí se permite reutilizarlo).
                     existe_op = supabase.table("ordenes_planeadas") \
                     .select("op, anulada") \
                     .eq("op", op_final) \
@@ -3600,8 +3539,7 @@ elif menu == "📅 Planificación":
                     elif existe_op.data:
                         st.info(f"ℹ️ El número {op_final} ya existía pero estaba ANULADO — se creará una OP nueva con ese mismo número.")
 
-# DEFINIR AREA INICIAL: TODA OP NUEVA PASA PRIMERO POR AUDITORIA VENTAS,
-# EXCEPTO LAS BOLSAS, QUE TIENEN SU PROPIO FLUJO Y VAN PRIMERO A AUDITORIA BOLSAS.
+# Toda OP nueva va primero a Auditoría Ventas, excepto Bolsas que van a Auditoría Bolsas.
                     if t in ("BOLSA IMPRESA", "BOLSA BLANCA"):
                         ruta_inicial = "AUDITORIA BOLSAS"
                     else:
@@ -3697,12 +3635,7 @@ elif menu == "📅 Planificación":
                             supabase.table("ordenes_planeadas").insert(payload_op).execute()
                             return
                         except Exception as e1:
-# RED DE SEGURIDAD: si en Supabase todavia existe la restriccion antigua de
-# unicidad sobre "op" (impide 2 filas con el mismo numero asi una este
-# anulada), se archiva el registro anulado viejo (cambiandole el numero a
-# algo como "FRB-1447-ANULADA-20260815143000", sin borrarlo) para poder
-# reutilizar el numero. Esto NO deberia pasar si ya se quitó esa restricción
-# en Supabase (ver nota de la conversación) — ahí este bloque nunca se activa.
+# Red de seguridad: si Supabase aún exige 'op' único, archiva el registro anulado viejo para poder reutilizar el número.
                             if "duplicate key value" in str(e1) and "_op_key" in str(e1):
                                 sufijo_archivo = hora_colombia().strftime("%Y%m%d%H%M%S")
                                 viejas = supabase.table("ordenes_planeadas").select("op")\
@@ -3722,8 +3655,7 @@ elif menu == "📅 Planificación":
                             payload.pop("creado_por", None)
                             _insertar_op_con_reintentos(payload)
                         except Exception:
-# Si la columna "anulada" todavia no existe en Supabase, se reintenta sin
-# ella para no romper la creacion de OPs (ver nota en el manual de cambios).
+# Si la columna 'anulada' aún no existe en Supabase, reintenta guardar sin ella.
                             payload.pop("anulada", None)
                             _insertar_op_con_reintentos(payload)
 
@@ -3785,8 +3717,7 @@ elif menu == "📦 salida produccion P1":
                     c_rollos = st.number_input("Cantidad de Rollos", min_value=0, step=1)
                     notas = st.text_input("Observaciones (Ej: Factura # o Cliente)").upper()
 
-# EVIDENCIA FOTOGRAFICA OBLIGATORIA SOLO PARA ENTRADAS: garantiza el estado
-# en el que la mercancia llega a bodega desde produccion.
+# Foto de evidencia obligatoria solo en entradas, para garantizar el estado de la mercancía que llega a bodega.
                 foto_camara = None
                 foto_archivo = None
                 if "ENTRADA" in tipo_accion:
@@ -4259,34 +4190,12 @@ elif menu == "📊 Reportes Admin":
                                     st.bar_chart(resumen_dia_op.set_index('fecha')['trabajos'])
 
                             st.markdown("##### 📋 Detalle día por día")
-                            df_op_mostrar = df_op[['fecha_txt', 'op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'maquina', 'duracion_txt']].rename(columns={
+                            df_op_mostrar = df_op[['fecha_txt', 'op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'maquina', 'rollos', 'tipo_cierre', 'duracion_txt']].rename(columns={
                                 'fecha_txt': 'Fecha', 'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo',
-                                'tipo_orden': 'Tipo', 'area': 'Área', 'maquina': 'Máquina', 'duracion_txt': 'Duración'
+                                'tipo_orden': 'Tipo', 'area': 'Área', 'maquina': 'Máquina', 'rollos': 'Rollos',
+                                'tipo_cierre': 'Cierre', 'duracion_txt': 'Duración'
                             })
                             st.dataframe(df_op_mostrar, use_container_width=True, hide_index=True)
-
-# DETALLE DE VARILLAS (SOLO SI EL OPERARIO HA TRABAJADO EN CORTE)
-                            if (df_op['area'] == 'CORTE').any():
-                                try:
-                                    res_vari = supabase.table("seguimiento_cortadoras").select("*")\
-                                        .eq("operario", operario_sel)\
-                                        .gte("fecha", fecha_ini_op.strftime("%Y-%m-%d"))\
-                                        .lte("fecha", fecha_fin_op.strftime("%Y-%m-%d"))\
-                                        .order("fecha", desc=True).execute().data or []
-                                    if res_vari:
-                                        st.markdown("##### 🔩 Detalle de Varillas y Cajas (Corte)")
-                                        df_vari = pd.DataFrame(res_vari)
-                                        cols_vari = [c for c in ["fecha", "turno", "maquina", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio"] if c in df_vari.columns]
-                                        st.dataframe(
-                                            df_vari[cols_vari].rename(columns={
-                                                "fecha": "Fecha", "turno": "Turno", "maquina": "Máquina", "op": "OP",
-                                                "nombre_trabajo": "Trabajo", "num_cajas": "Cajas", "num_varillas": "Varillas",
-                                                "peso_desperdicio": "Desp. (KG)"
-                                            }),
-                                            use_container_width=True, hide_index=True
-                                        )
-                                except Exception:
-                                    st.caption("ℹ️ El detalle de varillas por operario requiere la columna 'operario' en la tabla seguimiento_cortadoras.")
 
 # ==================== POR MAQUINA ====================
                 with sub_maq_rend:
@@ -4338,9 +4247,9 @@ elif menu == "📊 Reportes Admin":
                             trabajos_del_dia = df_maq[df_maq['fecha_dt'].dt.date == fecha_dia]
                             with st.expander(f"📅 {fecha_dia.strftime('%d/%m/%Y')} — {len(trabajos_del_dia)} trabajo(s)"):
                                 st.dataframe(
-                                    trabajos_del_dia[['op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'operario', 'duracion_txt']].rename(columns={
+                                    trabajos_del_dia[['op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'operario', 'rollos', 'tipo_cierre', 'duracion_txt']].rename(columns={
                                         'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo', 'tipo_orden': 'Tipo', 'area': 'Área',
-                                        'operario': 'Operario', 'duracion_txt': 'Duración'
+                                        'operario': 'Operario', 'rollos': 'Rollos', 'tipo_cierre': 'Cierre', 'duracion_txt': 'Duración'
                                     }),
                                     use_container_width=True, hide_index=True
                                 )
@@ -4558,8 +4467,7 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                     op_operario = st.session_state.get('nombre_usuario', '')
                     st.info(f"👤 Operario registrado automáticamente: **{op_operario}**")
                 else:
-# CUALQUIER PERFIL QUE NO SEA MAQUINISTA (supervisor, admin, etc.) escribe el
-# nombre del operario a mano — solo el perfil de maquinista se autocompleta.
+# Si no es maquinista (supervisor, admin, etc.) el nombre se escribe a mano; solo el maquinista se autocompleta.
                     op_operario = st.text_input("👤 Operario / Maquinista").upper()
                 ca, cb, cc = st.columns(3)
                 with ca:
@@ -4683,11 +4591,7 @@ elif menu == "📆 Cronograma Impresión":
         st.rerun()
 
     try:
-# OPTIMIZACION: el cronograma solo necesita ordenes que TODAVIA se puedan agendar/mover,
-# y ademas se excluyen las ordenes de Bolsas: este cronograma es especifico
-# para las maquinas de Impresion de Rollos/Formas, y Bolsas tiene su propio
-# flujo y sus propias maquinas (Flexo/Armadoras), asi que no deberian
-# mezclarse aqui aunque tecnicamente tambien esten "sin finalizar".
+# El cronograma solo trae OPs agendables y excluye Bolsas, que tiene su propio flujo y máquinas.
         todas_las_ops = supabase.table("ordenes_planeadas").select("*")\
             .neq("proxima_area", "FINALIZADO")\
             .neq("proxima_area", "ANULADA")\
@@ -4835,8 +4739,7 @@ elif menu == "📆 Cronograma Impresión":
         "</div></div></div>"
         "<div id='tooltip'></div>"
         "<script>"
-# JAVASCRIPT: aqui vive toda la logica visual del calendario y el guardado automatico en Supabase
-# cada vez que se arrastra, redimensiona o quita una orden del cronograma
+# JavaScript: lógica visual del calendario y guardado automático en Supabase al arrastrar/redimensionar/quitar una orden.
         "var eventos    = " + eventos_str + ";"
         "var recursos   = " + recursos_str + ";"
         "var pendientes = " + pendientes_str + ";"
@@ -5014,10 +4917,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 # SI ES MAQUINISTA, SOLO VE SU MAQUINA. SI NO, VE TODAS LAS DEL AREA (supervisor/admin)
     maquinas_a_mostrar = [mi_maquina_asignada] if rol_actual == "maquinista" else MAQUINAS[area_act]
 
-# Se recorre la lista de maquinas en BLOQUES DE 3 (una fila de columnas nueva
-# por cada bloque), igual que se hizo en el Monitor, para que el orden se vea
-# correcto tanto en computador como en celular/tablet (donde las columnas se
-# apilan en vez de quedar lado a lado).
+# Fila de columnas por cada bloque de 3 máquinas, para que el orden se vea bien también en celular/tablet.
     for inicio_fila_prod in range(0, len(maquinas_a_mostrar), 3):
         fila_maquinas_prod = maquinas_a_mostrar[inicio_fila_prod:inicio_fila_prod + 3]
         cols = st.columns(3)
@@ -5067,8 +4967,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                         registro_parada.pop("duracion_segundos", None)
                                         supabase.table("paradas_maquina").insert(registro_parada).execute()
                                     except Exception as e_parada2:
-# Si vuelve a fallar, se deja constancia en consola para poder diagnosticarlo
-# (antes se ignoraba en silencio y por eso nunca se sabia que fallaba)
+# Si vuelve a fallar, se deja constancia en consola para poder diagnosticarlo.
                                         print(f"Error al guardar en paradas_maquina: {e_parada} / {e_parada2}")
 
     # ACTUALIZAR EL REGISTRO DE ACTIVOS PARA IR TRABAJANO
@@ -5123,8 +5022,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                                             registro_tiempo_libre.pop("duracion_segundos", None)
                                             supabase.table("tiempos_muertos").insert(registro_tiempo_libre).execute()
                                         except Exception as e_libre2:
-# Si vuelve a fallar, se deja constancia en consola para poder diagnosticarlo
-# (antes se ignoraba en silencio y por eso nunca se sabia que fallaba)
+# Si vuelve a fallar, se deja constancia en consola para poder diagnosticarlo.
                                             print(f"Error al guardar en tiempos_muertos: {e_libre} / {e_libre2}")
 
     # INICIAR TRABAJO NORMAL
@@ -5156,8 +5054,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 op_name = st.session_state.get('nombre_usuario', '')
                 st.info(f"👤 Operario registrado automáticamente: **{op_name}**")
             else:
-# CUALQUIER PERFIL QUE NO SEA MAQUINISTA (supervisor, admin, etc.) escribe el
-# nombre del operario a mano — solo el perfil de maquinista se autocompleta.
+# Si no es maquinista (supervisor, admin, etc.) el nombre se escribe a mano; solo el maquinista se autocompleta.
                 op_name = st.text_input("Nombre del Operario *").upper()
             auxiliar = st.text_input("Auxiliar").upper()
             datos_c = {}
@@ -5297,14 +5194,21 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                  
             obs_prod = st.text_area("Observaciones de producción / saldos ").upper()
 
-#  ENTREGA PARCIAL
-            st.markdown("### 📦 ENTREGA PARCIAL (OPCIONAL)")
-            cantidad_parcial = st.number_input("Cantidad parcial producida", 0)
-            obs_parcial = st.text_input("Observación parcial").upper()
+# Cambio de Turno solo aplica a Corte (2 turnos por máquina); las demás áreas mantienen la entrega parcial clásica.
+            es_corte_panel = (area_act == "CORTE")
+            if es_corte_panel:
+                st.markdown("### 📦 ENTREGA PARCIAL / CAMBIO DE TURNO (OPCIONAL)")
+                st.caption("Úsalo cuando el trabajo no se terminó en tu turno: la máquina queda libre y la OP sigue disponible en esta misma área para que el siguiente turno la tome y continúe. Si ya hay unidades completas listas, indica la cantidad; si no, deja 0 y escribe en observaciones qué quedó pendiente.")
+                cantidad_parcial = st.number_input("Cantidad parcial producida (0 si nada quedó completo todavía)", 0)
+                obs_parcial = st.text_input("Observación parcial / qué queda pendiente para el siguiente turno").upper()
+            else:
+                st.markdown("### 📦 ENTREGA PARCIAL (OPCIONAL)")
+                cantidad_parcial = st.number_input("Cantidad parcial producida", 0)
+                obs_parcial = st.text_input("Observación parcial").upper()
 
             col_f1, col_f2 = st.columns(2)
             finalizar = col_f1.form_submit_button("🏁 FINALIZAR Y MOVER")
-            parcial = col_f2.form_submit_button("📦 ENTREGA PARCIAL")
+            parcial = col_f2.form_submit_button("📦 ENTREGA PARCIAL / CAMBIO DE TURNO" if es_corte_panel else "📦 ENTREGA PARCIAL")
 
 #  FINALIZAR TRABAJO ( LOGICA)
             if finalizar:
@@ -5411,20 +5315,24 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         "estado_parcial": None
                     }).eq("op", r['op']).execute()
 
-# NOTA: el ingreso a Inventario de Producto Terminado (Salida Producción P1) ya
-# NO se hace automaticamente al finalizar Corte. Ahora es 100% manual: el
-# encargado debe registrarlo el mismo desde "📦 Salida Producción P1 → Movimientos
-# → Entrada" (incluyendo la foto de evidencia obligatoria de la mercancia).
+# El ingreso a bodega ya no es automático al finalizar Corte: ahora se registra 100% manual desde Salida Producción P1.
 
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
                     st.session_state.rep = None
                     st.rerun()
 
-#  ENTREGAS PARCIALES 
+#  ENTREGAS PARCIALES / CAMBIO DE TURNO
         if parcial:
-            if cantidad_parcial <= 0:
-                st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
-                st.stop()
+            if es_corte_panel:
+# En Corte la cantidad parcial puede ser 0 (cambio de turno), pero exige una observación de qué quedó pendiente.
+                if cantidad_parcial <= 0 and not obs_parcial.strip():
+                    st.error("❌ Si no hay cantidad parcial entregada, escribe en 'Observación parcial' qué quedó pendiente para el siguiente turno.")
+                    st.stop()
+            else:
+# En las demás áreas la cantidad parcial debe ser mayor a 0, como funcionaba antes.
+                if cantidad_parcial <= 0:
+                    st.error("❌ Error: La cantidad parcial debe ser mayor a 0.")
+                    st.stop()
                 
 # Captura de tiempos
             inicio_raw = r['hora_inicio']
@@ -5466,7 +5374,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                 "tiempo_total_area": tiempo_area_parcial,
                 "tipo": "PARCIAL",
                 "datos_cierre": datos_c,
-                "observaciones": obs_parcial if obs_parcial else f"Entrega parcial de {cantidad_parcial} unidades."
+                "observaciones": obs_parcial if obs_parcial else (
+                    f"Entrega parcial de {cantidad_parcial} unidades." if cantidad_parcial > 0
+                    else "Cambio de turno: trabajo continúa en la misma área."
+                )
             })
             
 #  CAMBIO CLAVE SIMULTANEO 
@@ -5508,7 +5419,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 # Maquina queda LIBRE
                 supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
 
-                st.success(f"✅ Parcial enviado a {n_area_parcial}. La máquina {r['maquina']} quedó libre y la OP sigue activa en {area_act}.")
+                st.success(f"✅ Guardado. La máquina {r['maquina']} quedó libre. La OP sigue disponible en {area_act} (para que el siguiente turno la continúe) y también quedó activa en {n_area_parcial}.")
                 st.session_state.rep = None
                 time.sleep(1.5)
                 st.rerun()
@@ -5516,13 +5427,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             except Exception as e:
                 st.error(f"Error al procesar la entrega parcial: {e}")
 
-# MODULO COMBINADO DE PRODUCCION DE BOLSAS (FLEXO + ARMADORAS EN UNA SOLA PANTALLA)
-# Se hizo por separado del panel generico de arriba porque Bolsas tiene 2
-# sub-areas con reglas de ruta distintas (Flexo -> Armadoras -> Finalizado),
-# pero el pedido fue mostrar TODAS las maquinas de bolsas juntas en una sola
-# pantalla, sin pestañas, ya que son pocas maquinas en total.
-# Los formularios de cierre aqui son intencionalmente simples (cantidad
-# producida + observaciones), para ajustarlos despues con mas detalle.
+# Panel combinado de Bolsas (Flexo + Armadoras en una sola pantalla, sin pestañas); cierres simples por ahora.
 elif menu == "👜 Bolsas":
     st.markdown("<div class='title-area'>PANEL DE PRODUCCIÓN: BOLSAS</div>", unsafe_allow_html=True)
 
@@ -5549,8 +5454,7 @@ elif menu == "👜 Bolsas":
         .in_("area", ["BOLSAS - FLEXO", "BOLSAS - ARMADORAS"]).execute().data
     activos_bolsas = {a['maquina']: a for a in activos_bolsas_data}
 
-# GRUPOS DE MAQUINAS A MOSTRAR: si es maquinista, solo su maquina (en el grupo
-# que le corresponda); si no, las 2 sub-areas completas, una debajo de la otra.
+# Si es maquinista, solo su máquina; si no, las 2 sub-áreas completas, una debajo de la otra.
     if rol_bolsas_actual == "maquinista":
         area_de_mi_maquina = MAQUINA_A_AREA.get(mi_maquina_bolsas)
         grupos_bolsas = [(area_de_mi_maquina, [mi_maquina_bolsas])]
@@ -5564,8 +5468,7 @@ elif menu == "👜 Bolsas":
         etiqueta_grupo = "🖨️ Flexo (Impresión de Bolsas)" if area_bolsa_grupo == "BOLSAS - FLEXO" else "🛍️ Armadoras (Formado de Bolsas)"
         st.subheader(etiqueta_grupo)
 
-# Igual que en los demas paneles: una fila de columnas nueva por cada bloque
-# de 3 maquinas, para que el orden se vea bien en computador y en celular.
+# Fila de columnas por cada bloque de 3 máquinas, igual que en los demás paneles, para que se vea bien en celular.
         for inicio_fila_b in range(0, len(maquinas_bolsa_grupo), 3):
             fila_maquinas_b = maquinas_bolsa_grupo[inicio_fila_b:inicio_fila_b + 3]
             cols_b = st.columns(3)
@@ -5634,8 +5537,7 @@ elif menu == "👜 Bolsas":
                             if st.button(f"🚀 INICIAR {m}", key=f"str_b_{m}"):
                                 ahora_iso_b = hora_colombia().isoformat()
 
-# BUSCAR CUANDO TERMINO REALMENTE EL ULTIMO TRABAJO DE ESTA MAQUINA, IGUAL QUE
-# EN EL PANEL GENERICO, PARA QUE "⏳ MAQUINA LIBRE" TAMBIEN FUNCIONE PARA BOLSAS
+# Busca cuándo terminó el último trabajo de la máquina, para que 'Máquina Libre' también funcione en Bolsas.
                                 fin_ultimo_b = obtener_ultima_actividad_maquina(m)
                                 if fin_ultimo_b:
                                     ocio_segundos_b = (hora_colombia() - fin_ultimo_b).total_seconds()
@@ -5672,9 +5574,7 @@ elif menu == "👜 Bolsas":
 
         st.divider()
 
-# FORMULARIO SIMPLE DE CIERRE (se abre cuando se presiona FINALIZAR TRABAJO
-# en alguna maquina de bolsas). Intencionalmente simple: cantidad producida +
-# observaciones. Se puede ampliar despues con mas campos tecnicos.
+# Formulario simple de cierre de Bolsas: cantidad producida + observaciones; se puede ampliar más adelante.
     if st.session_state.get('rep_bolsas'):
         tr_cierre_b = st.session_state.rep_bolsas
         area_cierre_b = tr_cierre_b['area']
@@ -5684,8 +5584,7 @@ elif menu == "👜 Bolsas":
                 operario_b = st.session_state.get('nombre_usuario', '')
                 st.info(f"👤 Operario registrado automáticamente: **{operario_b}**")
             else:
-# CUALQUIER PERFIL QUE NO SEA MAQUINISTA (supervisor, admin, etc.) escribe el
-# nombre del operario a mano — solo el perfil de maquinista se autocompleta.
+# Si no es maquinista (supervisor, admin, etc.) el nombre se escribe a mano; solo el maquinista se autocompleta.
                 operario_b = st.text_input("Operario").upper()
             auxiliar_b = st.text_input("Auxiliar (opcional)").upper()
             cantidad_b = st.number_input("Cantidad Producida (unidades/paquetes)", min_value=0, step=1)
@@ -5737,10 +5636,7 @@ if st.session_state.get('rol') == 'admin':
         for area, lista_maquinas in MAQUINAS.items():
             st.subheader(f"Área: {area}")
 
-# MISMA CORRECCION QUE EN MONITOR Y PANEL DE PRODUCCION: se arma una fila de
-# columnas nueva por cada bloque de 4 maquinas (en vez de repartir por
-# "indice % 4" sobre 4 columnas creadas una sola vez), para que el orden se
-# vea correcto tambien en celular/tablet, donde las columnas se apilan.
+# Misma corrección que en Monitor: fila de columnas por cada bloque de 4 máquinas, para que se vea bien en celular.
             for inicio_fila_sw in range(0, len(lista_maquinas), 4):
                 fila_maquinas_sw = lista_maquinas[inicio_fila_sw:inicio_fila_sw + 4]
                 cols = st.columns(4)
