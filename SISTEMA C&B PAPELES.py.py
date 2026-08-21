@@ -2414,7 +2414,7 @@ elif menu == "🔍 Seguimiento":
                 st.divider()
 
 #  BOTONES DE DESCARGA ORDEN EN PDF
-                if st.session_state.get('rol') in ['admin', 'ventas', 'diseño']:
+                if st.session_state.get('rol') in ['admin', 'ventas', 'diseño', 'aud_bolsas']:
                     try:
                         tipo = row.get('tipo_orden', '')
                         if "BOLSA" in tipo:
