@@ -869,7 +869,7 @@ def generar_op_formas(row):
     fila_grid(pdf, [
         {"ancho": 25, "texto": " OP Anterior: ", "negrita": True, "fill": True},
         {"ancho": 70, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
-        {"ancho": 25, "texto": " Ticket: ", "negrita": True, "fill": True},
+        {"ancho": 25, "texto": " Ticket ", "negrita": True, "fill": True},
         {"ancho": 70, "texto": fmt_fecha_hora(row.get('num_ticket'), con_hora=False), "negrita": False, "fill": False},
     ])
 
@@ -1431,7 +1431,7 @@ with st.sidebar:
     elif rol == 'aud_ventas':
         opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Ventas", "📅 Planificación", "🔍 Seguimiento"]
     elif rol == 'aud_bolsas':
-        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento", "📅 Planificación"]
+        opciones_menu = ["🖥️ Monitor", "🧐 Auditoría Bolsas", "🔍 Seguimiento"]
     elif rol == 'aud_cartera':
 # Auditoría Cartera ya no existe; este rol queda solo con Monitor y Seguimiento hasta reasignarlo.
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento"]
@@ -2414,7 +2414,7 @@ elif menu == "🔍 Seguimiento":
                 st.divider()
 
 #  BOTONES DE DESCARGA ORDEN EN PDF
-                if st.session_state.get('rol') in ['admin', 'ventas', 'diseño', 'aud_bolsas']:
+                if st.session_state.get('rol') in ['admin', 'ventas', 'diseño']:
                     try:
                         tipo = row.get('tipo_orden', '')
                         if "BOLSA" in tipo:
@@ -5359,9 +5359,12 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             if obs_parcial:
                 datos_c['observacion_parcial'] = obs_parcial
                 
-# Recupera operario y auxiliar directamente del registro activo 'r'
-            operario_actual = r.get('operario', 'Operario Planta')
-            auxiliar_actual = r.get('auxiliar', '')
+# Se usa el operario que llenó ESTE cierre (op_name: automático si es
+# maquinista, o escrito a mano si es supervisor/admin) — NO el que inició la
+# máquina originalmente, para que el reporte de rendimiento siempre refleje
+# a quien realmente hizo el cierre.
+            operario_actual = op_name if op_name else r.get('operario', 'Operario Planta')
+            auxiliar_actual = auxiliar if auxiliar else r.get('auxiliar', '')
                 
 # Agrega al historial de forma segura
             hist.append({
