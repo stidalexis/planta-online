@@ -1125,7 +1125,7 @@ def generar_op_bolsas(row):
     pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (W) Ancho De La Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_w_ancho','')}", 1, 1)
     pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (H) Fuelle De La Bolsa: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_w_ancho','')}", 1, 1)
+    pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_h_fuelle','')}", 1, 1)
     pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (h) Pestaña De Fondo: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_h_pestana','')}", 1, 1)
     pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Tipo De Manija: ", 1, 0, fill=True)
