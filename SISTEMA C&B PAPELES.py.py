@@ -1047,14 +1047,14 @@ def generar_op_rebobinado(row):
     pdf.ln(5)
     pdf.set_font("Arial","B",12)
     pdf.set_text_color(255, 0, 0)
-    pdf.cell(0,9,"5. OBSERVACIONES GENERALES",0,1,fill=True)
+    pdf.cell(0,9,"3. OBSERVACIONES GENERALES",0,1,fill=True)
     pdf.set_font("Arial","",12)
     pdf.multi_cell(0,7,row.get("observaciones_rollos","Sin observaciones adicionales"), 1)
 
 # FIRMAS O SELLOS
     pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
-    pdf.cell(0, 8, "5. FIRMAS", 0, 1, fill=True)
+    pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
