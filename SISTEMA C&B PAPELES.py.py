@@ -779,13 +779,18 @@ def generar_op_rollos(row):
     pdf.cell(0, 8, "3. ADICIONALES Y OBSERVACIONES", 0, 1, fill=True)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 7, f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}", 1, 1)
+
+    pdf.ln(4)
+    pdf.set_font("Arial","B",11)
     pdf.set_text_color(255, 0, 0)
-    pdf.multi_cell(0, 7, f"Observaciones: {row.get('observaciones_rollos','')}", 1)
+    pdf.cell(0,8,"4. OBSERVACIONES GENERALES",0,1,fill=True)
+    pdf.set_font("Arial","",10)
+    pdf.multi_cell(0,7,row.get("observaciones_rollos","Sin observaciones adicionales"), 1)
 
 # FIRMAS O SELLOS
     pdf.set_text_color(0, 0, 0)
     pdf.ln(4); pdf.set_font("Arial", "B", 11); 
-    pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
+    pdf.cell(0, 8, "5. FIRMAS", 0, 1, fill=True)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
     pdf.set_fill_color(230, 230, 230)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
@@ -1000,49 +1005,83 @@ def generar_op_rebobinado(row):
 
 # INFORMACION GENERAL
     pdf.set_fill_color(230,230,230)
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"1. INFORMACION GENERAL",0,1,fill=True)
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","B",12)
+    pdf.cell(0,12,"1. INFORMACION GENERAL",0,1,fill=True)
+    pdf.set_font("Arial","",12)
 
+    pdf.set_fill_color(250, 224, 196)
     fila_grid(pdf, [
-        {"ancho": 95, "texto": f"Cliente: {row.get('cliente','')}", "negrita": False, "fill": False},
-        {"ancho": 95, "texto": f"Vendedor: {row.get('vendedor','')}", "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Cliente: ", "negrita": True, "fill": True},
+        {"ancho": 90, "texto": row.get('cliente',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Vendedor: ", "negrita": True, "fill": True},
+        {"ancho": 50, "texto": row.get('vendedor',''), "negrita": False, "fill": False},
     ])
     fila_grid(pdf, [
-        {"ancho": 95, "texto": f"Trabajo: {row.get('nombre_trabajo','')}", "negrita": False, "fill": False},
-        {"ancho": 95, "texto": f"OP Anterior: {row.get('op_anterior','N/A')}", "negrita": False, "fill": False},
-    ])
-    fila_grid(pdf, [
-        {"ancho": 190, "texto": f"Fecha de Creacion: {fmt_fecha_hora(row.get('created_at'), con_hora=False)}", "negrita": False, "fill": False},
+        {"ancho": 20, "texto": " Trabajo: ", "negrita": True, "fill": True},
+        {"ancho": 100, "texto": row.get('nombre_trabajo',''), "negrita": False, "fill": False},
+        {"ancho": 25, "texto": " Op Anterior: ", "negrita": True, "fill": True},
+        {"ancho": 45, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
     ])
 
-# DATOS TECNICOS DE ENTRADA Y OBJETIVO
     pdf.ln(4)
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"2. DATOS TECNICOS Y OBJETIVO DEL PROCESO",0,1,fill=True)
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 9, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
 
-#  MATERIAL Y DIMENCIONES
-    pdf.cell(63,7,f"Material Base: {row.get('material','')}",1)
-    pdf.cell(63,7,f"Gramaje: {row.get('gramaje_rollos','')}g",1)
-    pdf.cell(64,7,f"Referencia Comercial: {row.get('ref_comercial','')}",1,1)
+    pdf.set_font("Arial", "B", 12); pdf.cell(20, 9, " Material: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 12);  pdf.cell(75, 9, f"{row.get('material','')}", 1, 0)
+    pdf.set_font("Arial", "B", 12); pdf.cell(25, 9, " Gramaje: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 12);  pdf.cell(70, 9, f"{row.get('gramaje_rollos','')} GRS", 1, 1)
 
-# CANTIDADES
-    pdf.cell(95,7,f"Cantidad Rollos Solicitados: {row.get('cantidad_rollos','')}",1)
-    pdf.cell(95,7,f"Tipo de Creacion: {row.get('tipo_creacion','NUEVA')}",1,1)
+    pdf.set_font("Arial", "B", 12); pdf.cell(35, 9, " Ref. Comercial: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 12);  pdf.cell(95, 9, f"{row.get('ref_comercial','')}", 1, 0)
+    pdf.set_font("Arial", "B", 12); pdf.cell(30, 9, " Cant. Rollos: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 12);  pdf.cell(30, 9, f"{row.get('cantidad_rollos','')}", 1, 1)
 
-# OBJETIVO DE REBOBINADO (IMPRESION O PARA QUE )
-    pdf.set_font("Arial","B",10)
+
+    pdf.set_font("Arial","B",12)
     pdf.cell(190,7,"OBJETIVO PRINCIPAL DEL REBOBINADO:", "LTR", 1)
-    pdf.set_font("Arial","",10)
+    pdf.set_font("Arial","",12)
     pdf.multi_cell(190,7, row.get('objetivo_rebobinado','No especificado'), "LRB")
 
 # OBSERVACIONES DE PLANIFICACION
     pdf.ln(5)
-    pdf.set_font("Arial","B",11)
-    pdf.cell(0,8,"3. OBSERVACIONES ADICIONALES",0,1,fill=True)
-    pdf.set_font("Arial","",10)
-    pdf.multi_cell(0,7, row.get("observaciones_rollos","Sin observaciones adicionales"), 1)
+    pdf.set_font("Arial","B",12)
+    pdf.set_text_color(255, 0, 0)
+    pdf.cell(0,9,"5. OBSERVACIONES GENERALES",0,1,fill=True)
+    pdf.set_font("Arial","",12)
+    pdf.multi_cell(0,7,row.get("observaciones_rollos","Sin observaciones adicionales"), 1)
+
+# FIRMAS O SELLOS
+    pdf.set_text_color(0, 0, 0)
+    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    pdf.cell(0, 8, "5. FIRMAS", 0, 1, fill=True)
+    pdf.ln(1); pdf.set_font("Arial", "B", 6)
+    pdf.set_fill_color(230, 230, 230)
+    pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
+    pdf.cell(63, 6, "ASESOR", 1, 0, "C", fill=True) 
+    pdf.cell(64, 6, "SUPERVISOR DE PRODUCCION", 1, 1, "C", fill=True)
+    pdf.cell(63, 20, "", 1, 0); pdf.cell(63, 20, "", 1, 0); pdf.cell(64, 20, "", 1, 1)
+
+# DATOS DE ESTIBAS 
+    pdf.set_font("Arial", "", 11)
+    y_est = pdf.get_y() + 2
+    pdf.set_xy(10, y_est)
+    pdf.set_fill_color(210, 210, 210); pdf.set_font("Arial", 'B', 11)
+    pdf.cell(190, 5, "5 .REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
+    
+    w_e = 190 / 3
+    pdf.set_font("Arial", '', 8)
+    for i in range(4): 
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:_________H:___________", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:_________H:___________", 1, 0)
+        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:_________H:___________", 1, 1)
+
+# OBSERVACIONES FINALIZADO
+    pdf.set_font("Arial", "B", 8)
+    pdf.cell(130, 8, "OBSERVACIONES FINALIZADO", 1, 0, "C"); pdf.cell(60, 8, "RECIBE", 1, 1, "C")
+    pdf.set_font("Arial", "", 7)
+    for _ in range(2):
+        pdf.cell(130, 6, "", 1, 0); pdf.cell(60, 6, "", 1, 1)
 
 # ESPACIO PARA ANOTACIONES DE PLANTA 
     pdf.ln(5)
@@ -2966,7 +3005,7 @@ elif menu == "📅 Planificación":
                         eb1, eb2, eb3 = st.columns(3)
                         nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '').upper()
                         nuevo_gram    = eb2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ancho   = eb3.text_input("Referencia Comercial:", value=op_edit.get('ref_comercial','') or '').upper()
+                        nuevo_ancho   = eb3.text_input("Referencia Comercial (Ancho, Largo, Peso):", value=op_edit.get('ref_comercial','') or '').upper()
                         eb4, eb5 = st.columns(2)
                         nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
                         nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '').upper()
@@ -3421,7 +3460,7 @@ elif menu == "📅 Planificación":
 
                     mat = r1.text_input("Material / Papel").upper()
                     gram = r2.number_input("Gramaje", 0)
-                    ancho = r3.text_input("Referencia Comercial",).upper()
+                    ancho = r3.text_input("Referencia Comercial (Ancho, Largo, Peso)",).upper()
 
                     r4, r5 = st.columns(2)
 
