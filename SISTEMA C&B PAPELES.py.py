@@ -1493,7 +1493,7 @@ with st.sidebar:
     elif rol == 'supervisor_reb':
         opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
     elif rol == 'supervisor_bolsas':
-        opciones_menu = ["🖥️ Monitor", "👜 Bolsas"]
+        opciones_menu = ["🖥️ Monitor", "👜 Bolsas", "🔍 Seguimiento"]
     elif rol == 'patinador_roll':
         opciones_menu = ["📦 Bodega Terminados"]
     elif rol == 'almacen':
@@ -2465,7 +2465,7 @@ elif menu == "🔍 Seguimiento":
                 st.divider()
 
 #  BOTONES DE DESCARGA ORDEN EN PDF
-                if st.session_state.get('rol') in ['admin', 'ventas', 'diseño', 'aud_bolsas']:
+                if st.session_state.get('rol') in ['admin', 'ventas', 'diseño', 'aud_bolsas', 'supervisor_bolsas']:
                     try:
                         tipo = row.get('tipo_orden', '')
                         if "BOLSA" in tipo:
