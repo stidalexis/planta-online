@@ -1485,13 +1485,13 @@ with st.sidebar:
 # con los demás roles logísticos (jefe_log/patinador_log/aux_log/almacen).
         opciones_menu = ["🧻 Materia Prima Bodega"]
     elif rol == 'supervisor_imp':
-        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📥 Colectoras", "📕 Encuadernación"]
+        opciones_menu = ["🖥️ Monitor", "🖨️ Impresión", "📥 Colectoras", "📕 Encuadernación", "🔍 Seguimiento"]
     elif rol == 'supervisor_cor':
-        opciones_menu = ["🖥️ Monitor", "✂️ Corte", "⏱️ Seguimiento Cortadoras"]
+        opciones_menu = ["🖥️ Monitor", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "🔍 Seguimiento"]
     elif rol == 'supervisor_enc':
-        opciones_menu = ["🖥️ Monitor", "📕 Encuadernación"]
+        opciones_menu = ["🖥️ Monitor", "📕 Encuadernación", "🔍 Seguimiento"]
     elif rol == 'supervisor_reb':
-        opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras"]
+        opciones_menu = ["🖥️ Monitor", "🌀 Rebobinadoras", "🔍 Seguimiento"]
     elif rol == 'supervisor_bolsas':
         opciones_menu = ["🖥️ Monitor", "👜 Bolsas", "🔍 Seguimiento"]
     elif rol == 'patinador_roll':
@@ -2489,75 +2489,52 @@ elif menu == "🔍 Seguimiento":
                         st.error(f"No se pudo generar el PDF: {e}")
 
 # RECORRIDO DE TARJETAS POR PESTAÑA, SEPARADAS EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS / BOLSAS
+# CADA SUPERVISOR DE AREA SOLO VE LAS CATEGORIAS QUE LE APLICAN A SU AREA;
+# el resto de roles (admin, ventas, auditorias, diseño, etc.) siguen viendo
+# las 5 categorias completas, sin restriccion.
+        TODAS_LAS_CATEGORIAS_SEG = [
+            ("📄 Formas", "FORMAS"),
+            ("🧻 Rollos Blancos", "ROLLOS_BLANCOS"),
+            ("🔄 Rebobinado", "REBOBINADO"),
+            ("🧵 Rollos Impresos", "ROLLOS_IMPRESOS"),
+            ("👜 Bolsas", "BOLSAS"),
+        ]
+        CATEGORIAS_POR_SUPERVISOR = {
+            "supervisor_imp": ["FORMAS", "ROLLOS_BLANCOS", "ROLLOS_IMPRESOS"],
+            "supervisor_cor": ["ROLLOS_IMPRESOS", "ROLLOS_BLANCOS"],
+            "supervisor_reb": ["REBOBINADO"],
+            "supervisor_enc": ["FORMAS"],
+            "supervisor_bolsas": ["BOLSAS"],
+        }
+        rol_seg_cat = st.session_state.get('rol', '').lower()
+        claves_permitidas = CATEGORIAS_POR_SUPERVISOR.get(rol_seg_cat)
+        if claves_permitidas:
+            categorias_a_mostrar = [c for c in TODAS_LAS_CATEGORIAS_SEG if c[1] in claves_permitidas]
+        else:
+            categorias_a_mostrar = TODAS_LAS_CATEGORIAS_SEG
+
+        etiquetas_seg = [c[0] for c in categorias_a_mostrar]
+        claves_seg = [c[1] for c in categorias_a_mostrar]
+
         with tab_pendientes:
-            sub_formas_p, sub_rblancos_p, sub_rebob_p, sub_rimpresos_p, sub_bolsas_p = st.tabs(
-                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos", "👜 Bolsas"]
-            )
-            pendientes_formas = [r for r in ordenes_pendientes if _categoria_op(r) == "FORMAS"]
-            pendientes_rblancos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_BLANCOS"]
-            pendientes_rebob = [r for r in ordenes_pendientes if _categoria_op(r) == "REBOBINADO"]
-            pendientes_rimpresos = [r for r in ordenes_pendientes if _categoria_op(r) == "ROLLOS_IMPRESOS"]
-            pendientes_bolsas = [r for r in ordenes_pendientes if _categoria_op(r) == "BOLSAS"]
-            with sub_formas_p:
-                if not pendientes_formas:
-                    st.info("No hay órdenes de FORMAS pendientes o en proceso.")
-                for row in pendientes_formas:
-                    pintar_tarjeta_op(row)
-            with sub_rblancos_p:
-                if not pendientes_rblancos:
-                    st.info("No hay órdenes de ROLLOS BLANCOS pendientes o en proceso.")
-                for row in pendientes_rblancos:
-                    pintar_tarjeta_op(row)
-            with sub_rebob_p:
-                if not pendientes_rebob:
-                    st.info("No hay órdenes de REBOBINADO pendientes o en proceso.")
-                for row in pendientes_rebob:
-                    pintar_tarjeta_op(row)
-            with sub_rimpresos_p:
-                if not pendientes_rimpresos:
-                    st.info("No hay órdenes de ROLLOS IMPRESOS pendientes o en proceso.")
-                for row in pendientes_rimpresos:
-                    pintar_tarjeta_op(row)
-            with sub_bolsas_p:
-                if not pendientes_bolsas:
-                    st.info("No hay órdenes de BOLSAS pendientes o en proceso.")
-                for row in pendientes_bolsas:
-                    pintar_tarjeta_op(row)
+            tabs_pendientes_seg = st.tabs(etiquetas_seg)
+            for (etiqueta, clave), tab_obj in zip(categorias_a_mostrar, tabs_pendientes_seg):
+                with tab_obj:
+                    filas_cat = [r for r in ordenes_pendientes if _categoria_op(r) == clave]
+                    if not filas_cat:
+                        st.info(f"No hay órdenes de {etiqueta.split(' ', 1)[-1].upper()} pendientes o en proceso.")
+                    for row in filas_cat:
+                        pintar_tarjeta_op(row)
 
         with tab_finalizadas:
-            sub_formas_f, sub_rblancos_f, sub_rebob_f, sub_rimpresos_f, sub_bolsas_f = st.tabs(
-                ["📄 Formas", "🧻 Rollos Blancos", "🔄 Rebobinado", "🧵 Rollos Impresos", "👜 Bolsas"]
-            )
-            finalizadas_formas = [r for r in ordenes_finalizadas if _categoria_op(r) == "FORMAS"]
-            finalizadas_rblancos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS_BLANCOS"]
-            finalizadas_rebob = [r for r in ordenes_finalizadas if _categoria_op(r) == "REBOBINADO"]
-            finalizadas_rimpresos = [r for r in ordenes_finalizadas if _categoria_op(r) == "ROLLOS_IMPRESOS"]
-            finalizadas_bolsas = [r for r in ordenes_finalizadas if _categoria_op(r) == "BOLSAS"]
-            with sub_formas_f:
-                if not finalizadas_formas:
-                    st.info("No hay órdenes de FORMAS finalizadas.")
-                for row in finalizadas_formas:
-                    pintar_tarjeta_op(row)
-            with sub_rblancos_f:
-                if not finalizadas_rblancos:
-                    st.info("No hay órdenes de ROLLOS BLANCOS finalizadas.")
-                for row in finalizadas_rblancos:
-                    pintar_tarjeta_op(row)
-            with sub_rebob_f:
-                if not finalizadas_rebob:
-                    st.info("No hay órdenes de REBOBINADO finalizadas.")
-                for row in finalizadas_rebob:
-                    pintar_tarjeta_op(row)
-            with sub_rimpresos_f:
-                if not finalizadas_rimpresos:
-                    st.info("No hay órdenes de ROLLOS IMPRESOS finalizadas.")
-                for row in finalizadas_rimpresos:
-                    pintar_tarjeta_op(row)
-            with sub_bolsas_f:
-                if not finalizadas_bolsas:
-                    st.info("No hay órdenes de BOLSAS finalizadas.")
-                for row in finalizadas_bolsas:
-                    pintar_tarjeta_op(row)
+            tabs_finalizadas_seg = st.tabs(etiquetas_seg)
+            for (etiqueta, clave), tab_obj in zip(categorias_a_mostrar, tabs_finalizadas_seg):
+                with tab_obj:
+                    filas_cat = [r for r in ordenes_finalizadas if _categoria_op(r) == clave]
+                    if not filas_cat:
+                        st.info(f"No hay órdenes de {etiqueta.split(' ', 1)[-1].upper()} finalizadas.")
+                    for row in filas_cat:
+                        pintar_tarjeta_op(row)
 
 # MODULO DE DISEÑO
 elif menu == "🎨 Diseño y Pre-Prensa":
@@ -2851,18 +2828,17 @@ elif menu == "🧐 Auditoría Bolsas":
 elif menu == "📅 Planificación":
     st.title("Planificación de Órdenes 🌐")
 
-# Estados donde la OP aún no ha sido procesada por ningún área
-    ESTADOS_EDITABLES = [
-        "AUDITORIA VENTAS", "DISEÑO (AUDITORIA)", "IMPRESIÓN", "CORTE", "REBOBINADORAS",
-        "ESPERA DE AUDITORIA", "ESPERA DE CORTE", "ESPERA DE IMPRESIÓN",
-        "AUDITORIA BOLSAS", "AUDITORIA CARTERA", "BOLSAS - FLEXO", "BOLSAS - ARMADORAS"
-    ]
+# Estados donde una OP todavia puede ser editada por roles no-admin: SOLO
+# mientras sigue en su primer filtro de auditoria (antes de pasar de ahi).
+# Una vez la OP avanza mas alla de Auditoria Ventas / Auditoria Bolsas, ya
+# solo el admin puede editarla.
+    ESTADOS_EDITABLES = ["AUDITORIA VENTAS", "AUDITORIA BOLSAS"]
 
     tab_nueva, tab_editar, tab_anular = st.tabs(["➕ Nueva / Repetición", "✏️ Editar OP Existente", "🚫 Anular OP"])
 
     with tab_editar:
         st.markdown("<div class='section-header'>✏️ EDITAR ORDEN DE PRODUCCIÓN</div>", unsafe_allow_html=True)
-        st.caption("Solo puedes editar OPs que aún no han sido tomadas por ningún área de producción.")
+        st.caption("Los roles no-admin solo pueden editar mientras la OP sigue en su primer filtro de auditoría (Auditoría Ventas / Auditoría Bolsas). Una vez la OP avanza de ahí, solo el administrador puede editarla.")
 
         col_b1, col_b2 = st.columns([3, 1])
         op_buscar_edit = col_b1.text_input("Número de OP a editar (Ej: FRI-101):", key="op_edit_buscar")
@@ -2906,7 +2882,7 @@ elif menu == "📅 Planificación":
                 st.info("Las OP anuladas no se pueden editar. Si necesitas este mismo número de OP, puedes crear una nueva orden desde la pestaña '➕ Nueva / Repetición': el sistema lo permite porque la anterior está anulada.")
 
             elif not es_editable and not es_admin:
-                st.error(f"🔒 Esta OP ya fue tomada por producción ({estado_actual}) y no se puede editar.")
+                st.error(f"🔒 Esta OP ya pasó su filtro de auditoría inicial (está en: {estado_actual}) y ya no se puede editar. Solo el administrador puede editarla desde aquí en adelante.")
                 st.caption("Si necesitas hacer un cambio urgente, contacta al administrador.")
 
             else:
