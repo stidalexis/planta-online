@@ -1464,7 +1464,7 @@ with st.sidebar:
     
 # DEFINICION DE PERMISOS SEGUN ROL
     if rol == 'admin':
-        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🧐 Auditoría Ventas", "🧐 Auditoría Bolsas", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "👜 Bolsas", "📦 Inventario", "📦 Bodega Terminados", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🧻 Materia Prima Bodega", "🛒 Mercado"]     
+        opciones_menu = ["🖥️ Monitor", "📆 Cronograma Impresión", "🔍 Seguimiento", "📅 Planificación", "🧐 Auditoría Ventas", "🧐 Auditoría Bolsas", "🖨️ Impresión", "✂️ Corte", "⏱️ Seguimiento Cortadoras", "📥 Colectoras", "📕 Encuadernación", "🌀 Rebobinadoras", "👜 Bolsas", "📦 Inventario", "📦 Bodega Terminados", "📊 Reportes Admin", "🎨 Diseño y Pre-Prensa", "📦 Almacen/Despachos", "🧻 Materia Prima Bodega", "🧾 Recepción de Facturas", "🛒 Mercado"]     
     elif rol == 'ventas':
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento", "📅 Planificación"]
     elif rol == 'aud_ventas':
@@ -1475,11 +1475,11 @@ with st.sidebar:
 # Auditoría Cartera ya no existe; este rol queda solo con Monitor y Seguimiento hasta reasignarlo.
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento"]
     elif rol == 'jefe_log':
-        opciones_menu = ["📦 Bodega Terminados", "📊 Reportes Admin", "📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Bodega Terminados", "📊 Reportes Admin", "📦 Almacen/Despachos", "🧾 Recepción de Facturas"]
     elif rol == 'patinador_log':
-        opciones_menu = ["📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Almacen/Despachos", "🧾 Recepción de Facturas"]
     elif rol == 'aux_log':
-        opciones_menu = ["📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Almacen/Despachos", "🧾 Recepción de Facturas"]
     elif rol == 'log_bodega':
 # Rol dedicado exclusivamente al nuevo módulo de Materia Prima, sin relación
 # con los demás roles logísticos (jefe_log/patinador_log/aux_log/almacen).
@@ -1497,7 +1497,7 @@ with st.sidebar:
     elif rol == 'patinador_roll':
         opciones_menu = ["📦 Bodega Terminados"]
     elif rol == 'almacen':
-        opciones_menu = ["📦 Almacen/Despachos"]
+        opciones_menu = ["📦 Almacen/Despachos", "🧾 Recepción de Facturas"]
     elif rol == 'diseño':
         opciones_menu = ["🖥️ Monitor", "🎨 Diseño y Pre-Prensa", "🔍 Seguimiento"]
     elif rol in ('diseño1', 'diseño2', 'diseño3'):
@@ -1940,82 +1940,6 @@ if menu == "🖥️ Monitor":
 # Traer datos de trabajos activos
     act_data = supabase.table("trabajos_activos").select("*").execute().data
 
-# ALERTAS DE OP ESTANCADAS (Filtrando por ON/OFF)
-    alertas = []
-    for a in act_data:
-        try:
-
-# USA EL DICCIONARIO PARA NO BUSCAR EN LA SUPABASE
-            if not diccionario_estados.get(a['maquina'], True):
-                continue 
-            
-            inicio = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
-
-# PASA EL ESTADO ACTUAL ALA FUNCION 
-            tiempo_texto = calcular_duracion_laboral(inicio, ahora, a['maquina'], a.get('tiempo_pausa', 0))
-            
-            h, m, s = map(int, tiempo_texto.split(':'))
-            horas_laborales = h + m/60 + s/3600
-
-            if horas_laborales > 4:  
-                alertas.append(f"🚨 OP {a['op']} en {a['maquina']} lleva {round(horas_laborales,1)}h de trabajo activo")
-        except Exception as e:
-            print(f"Error en alerta: {e}")
-
-    if alertas:
-        st.error("🚨 ALERTAS DE PRODUCCIÓN:")
-        for al in alertas:
-            st.warning(al)
-
-# ALERTAS DE 3+ DIAS (SOLO VISIBLES PARA ADMIN)
-    if st.session_state.get('rol', '').lower() == 'admin':
-        alertas_3d = []
-
-#  OP ACTIVA EN UNA MAQUINA QUE LLEVA 3+ DIAS SIN FINALIZARSE
-        for a in act_data:
-            try:
-                if not diccionario_estados.get(a['maquina'], True):
-                    continue
-                inicio_a = datetime.fromisoformat(a["hora_inicio"].replace("Z", "+00:00"))
-                dias_en_maquina = (hora_colombia() - inicio_a.astimezone(pytz.timezone("America/Bogota"))).days
-                if dias_en_maquina >= 3:
-                    alertas_3d.append(f"🕒 OP {a['op']} en {a['maquina']} lleva {dias_en_maquina} día(s) SIN FINALIZARSE en la máquina")
-            except Exception as e:
-                print(f"Error en alerta 3 dias (activa): {e}")
-
-# OP CREADA HACE 3+ DIAS QUE NUNCA HA ENTRADO A NINGUNA MAQUINA
-        try:
-            ops_espera = supabase.table("ordenes_planeadas").select(
-                "op,cliente,nombre_trabajo,proxima_area,historial_procesos,created_at,fecha_creacion"
-            ).neq("proxima_area", "FINALIZADO").neq("proxima_area", "ANULADA").execute().data or []
-        except Exception:
-            ops_espera = []
-
-        ops_activas_ids = {str(a['op']) for a in act_data}
-        for o in ops_espera:
-            try:
-                if (o.get('proxima_area') or '').upper() == "FINALIZADO":
-                    continue
-                if str(o.get('op')) in ops_activas_ids:
-                    continue
-                if o.get('historial_procesos'):
-                    continue  # ya tuvo movimiento en algun momento, no aplica este caso
-                raw_fecha = o.get('created_at') or o.get('fecha_creacion')
-                if not raw_fecha:
-                    continue
-                dt_creacion = datetime.fromisoformat(str(raw_fecha).replace("Z", "")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
-                dias_sin_entrar = (hora_colombia() - dt_creacion).days
-                if dias_sin_entrar >= 3:
-                    alertas_3d.append(f"📋 OP {o.get('op')} ({o.get('cliente','')}) lleva {dias_sin_entrar} día(s) creada SIN ENTRAR a ninguna máquina")
-            except Exception as e:
-                print(f"Error en alerta 3 dias (creacion): {e}")
-
-        if alertas_3d:
-            st.markdown("---")
-            with st.expander(f"🕒 {len(alertas_3d)} ALERTA(S) DE 3+ DÍAS — solo visibles para Admin", expanded=True):
-                for al in alertas_3d:
-                    st.warning(al)
-
 # PREPARAR DATOS DE OPERACIONES  OPTIMIZACION: antes se traia "op,nombre_trabajo" de TODAS las ordenes de toda la
     op_ids_activos = list({str(a['op']) for a in act_data}) if act_data else []
     if op_ids_activos:
@@ -2152,42 +2076,6 @@ elif menu == "🔍 Seguimiento":
 
         if not busqueda:
             st.caption(f"Mostrando las {len(ordenes_finalizadas)} órdenes finalizadas más recientes. Usa el buscador para encontrar cualquier OP histórica.")
-
-# ALERTA DE OPs QUIETAS (5+ DIAS SIN MOVIMIENTO) — SOLO VISIBLE PARA ADMIN
-        rol_seg_actual = st.session_state.get('rol', '').lower()
-        if rol_seg_actual == 'admin':
-            tz_col = pytz.timezone("America/Bogota")
-            ahora_seg = hora_colombia()
-            alertas_quietas = []
-            for r in ordenes_pendientes:
-                try:
-                    ultima_dt = None
-                    hist_r = r.get('historial_procesos') or []
-                    if hist_r:
-                        raw_ult = hist_r[-1].get('fecha') or hist_r[-1].get('fin') or hist_r[-1].get('inicio')
-                        if raw_ult:
-                            try:
-                                ultima_dt = tz_col.localize(datetime.strptime(raw_ult, "%d/%m/%Y %H:%M"))
-                            except Exception:
-                                ultima_dt = None
-                    if ultima_dt is None:
-                        raw_creacion = r.get('created_at') or r.get('fecha_creacion')
-                        if raw_creacion:
-                            ultima_dt = datetime.fromisoformat(str(raw_creacion).replace("Z", "")).replace(tzinfo=pytz.utc).astimezone(tz_col)
-                    if ultima_dt is None:
-                        continue
-                    dias_quieta = (ahora_seg - ultima_dt).days
-                    if dias_quieta >= 5:
-                        alertas_quietas.append(
-                            f"🕒 OP {r.get('op')} ({r.get('cliente','')}) lleva {dias_quieta} día(s) SIN MOVIMIENTO — en espera de {r.get('proxima_area','SIN ÁREA')}"
-                        )
-                except Exception as e:
-                    print(f"Error en alerta OP quieta: {e}")
-
-            if alertas_quietas:
-                with st.expander(f"🚨 {len(alertas_quietas)} OP(s) QUIETAS por 5+ días — solo visibles para Admin", expanded=True):
-                    for al in alertas_quietas:
-                        st.warning(al)
 
 # SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS / BOLSAS
         def _categoria_op(row):
@@ -2558,8 +2446,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pendientes = supabase.table("ordenes_planeadas").select("*").ilike("proxima_area", "DISEÑO%").execute().data
         
         if op_pendientes:
-            op_sel = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pendientes], key="aud_v5")
-            op_id = op_sel.split(" - ")[0]
+            mapa_ops_v5 = {f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}": o['op'] for o in op_pendientes}
+            op_sel = st.selectbox("Seleccione OP:", list(mapa_ops_v5.keys()), key="aud_v5")
+            op_id = mapa_ops_v5[op_sel]
             datos_op = next((o for o in op_pendientes if str(o['op']) == str(op_id)), None)
 
             if datos_op:
@@ -2638,8 +2527,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_pre = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "PRE-PRENSA").execute().data
 
         if op_pre:
-            op_sel_2 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_pre], key="pre_v5")
-            op_id_2 = op_sel_2.split(" - ")[0]
+            mapa_ops_pre = {f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}": o['op'] for o in op_pre}
+            op_sel_2 = st.selectbox("Seleccione OP:", list(mapa_ops_pre.keys()), key="pre_v5")
+            op_id_2 = mapa_ops_pre[op_sel_2]
             datos_op_2 = next((o for o in op_pre if str(o['op']) == str(op_id_2)), None)
 
             if datos_op_2:
@@ -2678,8 +2568,9 @@ elif menu == "🎨 Diseño y Pre-Prensa":
         op_final = supabase.table("ordenes_planeadas").select("*").eq("proxima_area", "REVISION_FINAL").execute().data
 
         if op_final:
-            op_sel_3 = st.selectbox("Seleccione OP:", [f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}" for o in op_final], key="final_v5")
-            op_id_3 = op_sel_3.split(" - ")[0]
+            mapa_ops_final = {f"{o['op']} - {o['nombre_trabajo']} - {o['tipo_origen']}": o['op'] for o in op_final}
+            op_sel_3 = st.selectbox("Seleccione OP:", list(mapa_ops_final.keys()), key="final_v5")
+            op_id_3 = mapa_ops_final[op_sel_3]
             datos_op_3 = next((o for o in op_final if str(o['op']) == str(op_id_3)), None)
 
             if datos_op_3:
@@ -2736,12 +2627,13 @@ elif menu == "🧐 Auditoría Ventas":
     if not op_pendientes_av:
         st.info("No hay órdenes pendientes de auditoría de ventas en este momento.")
     else:
+        mapa_ops_av = {f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}": o['op'] for o in op_pendientes_av}
         op_sel_av = st.selectbox(
             "Seleccione OP a revisar:",
-            [f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}" for o in op_pendientes_av],
+            list(mapa_ops_av.keys()),
             key="aud_ventas_sel"
         )
-        op_id_av = op_sel_av.split(" - ")[0]
+        op_id_av = mapa_ops_av[op_sel_av]
         datos_op_av = next((o for o in op_pendientes_av if str(o['op']) == str(op_id_av)), None)
 
         if datos_op_av:
@@ -2781,12 +2673,13 @@ elif menu == "🧐 Auditoría Bolsas":
     if not op_pendientes_ab:
         st.info("No hay órdenes de Bolsas pendientes de auditoría en este momento.")
     else:
+        mapa_ops_ab = {f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}": o['op'] for o in op_pendientes_ab}
         op_sel_ab = st.selectbox(
             "Seleccione OP a revisar:",
-            [f"{o['op']} - {o['nombre_trabajo']} - {o.get('tipo_orden','')}" for o in op_pendientes_ab],
+            list(mapa_ops_ab.keys()),
             key="aud_bolsas_sel"
         )
-        op_id_ab = op_sel_ab.split(" - ")[0]
+        op_id_ab = mapa_ops_ab[op_sel_ab]
         datos_op_ab = next((o for o in op_pendientes_ab if str(o['op']) == str(op_id_ab)), None)
 
         if datos_op_ab:
@@ -3253,6 +3146,14 @@ elif menu == "📅 Planificación":
                         res_busq = supabase.table("ordenes_planeadas").select("*").eq("op", op_a_buscar.upper()).execute()
                         if res_busq.data:
                             st.session_state['datos_rec_cargados'] = res_busq.data[0]
+# LIMPIA LAS CLAVES DE ESTOS CAMPOS PARA QUE SE VUELVAN A CALCULAR CON LOS
+# DATOS NUEVOS RECIEN CARGADOS (si no se limpian, Streamlit conserva el
+# valor que haya quedado de una búsqueda anterior o de "NO" por defecto,
+# y las casillas de detalle se quedan ocultas y en blanco aunque sí haya
+# información en la OP anterior — esto es justo lo que reportó el usuario).
+                            for _k in ['partes_sel', 'perf_select', 'perf_det', 'barr_select', 'barr_det',
+                                       'num_select', 'num_desde', 'num_hasta']:
+                                st.session_state.pop(_k, None)
                             st.success(f"✅ Datos de '{res_busq.data[0]['nombre_trabajo']}' cargados correctamente.")
                         else:
                             st.session_state['datos_rec_cargados'] = {}
@@ -3285,10 +3186,12 @@ elif menu == "📅 Planificación":
             p1, p2, p3, p4 = st.columns(4)
 
 #  PERFORACIONES TODOS
-            t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], key="perf_select")
+            _perf_prev = datos_rec.get('perforaciones_detalle')
+            _idx_perf = 1 if (_perf_prev and str(_perf_prev).strip().upper() not in ("", "NO")) else 0
+            t_perf = p1.selectbox("¿Tiene Perforaciones?", ["NO","SI"], index=_idx_perf, key="perf_select")
 
             if t_perf == "SI":
-                perf_d = p1.text_area("Detalle Perforación", key="perf_det").upper()
+                perf_d = p1.text_area("Detalle Perforación", value=(_perf_prev if _idx_perf == 1 else ""), key="perf_det").upper()
             else:
                 perf_d = "NO"
 
@@ -3319,21 +3222,28 @@ elif menu == "📅 Planificación":
                 idx_pres = PRESENTACIONES.index(datos_rec['presentacion']) if datos_rec.get('presentacion') in PRESENTACIONES else 0
                 pres = g3.selectbox("Presentación", PRESENTACIONES, index=idx_pres)
 
-                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2)
+                idx_pres2 = PRESENTACIONES2.index(datos_rec['presentacion2']) if datos_rec.get('presentacion2') in PRESENTACIONES2 else 0
+                pres_peg = g4.selectbox("Encolada o Grapada", PRESENTACIONES2, index=idx_pres2)
 
-                t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], key="barr_select")
+                _barr_prev = datos_rec.get('codigo_barras_detalle')
+                _idx_barr = 1 if (_barr_prev and str(_barr_prev).strip().upper() not in ("", "NO")) else 0
+                t_barr = p2.selectbox("¿Tiene Código de Barras?", ["NO","SI"], index=_idx_barr, key="barr_select")
 
                 if t_barr == "SI":
-                    barr_d = p2.text_area("Detalle Barras", key="barr_det").upper()
+                    barr_d = p2.text_area("Detalle Barras", value=(_barr_prev if _idx_barr == 1 else ""), key="barr_det").upper()
                 else:
                     barr_d = "NO"
 
 
-                t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], key="num_select")
+                _num_id_prev = datos_rec.get('num_id')
+                _num_fd_prev = datos_rec.get('num_fd')
+                _idx_num = 1 if ((_num_id_prev and str(_num_id_prev).strip().upper() not in ("", "NO")) or
+                                  (_num_fd_prev and str(_num_fd_prev).strip().upper() not in ("", "NO"))) else 0
+                t_num = p3.selectbox("¿Tiene Numeración?", ["NO","SI"], index=_idx_num, key="num_select")
 
                 if t_num == "SI":
-                    num_id = p3.text_input("Desde", key="num_desde").upper()
-                    num_fd = p3.text_input("Hasta", key="num_hasta").upper()
+                    num_id = p3.text_input("Desde", value=(_num_id_prev if _idx_num == 1 else ""), key="num_desde").upper()
+                    num_fd = p3.text_input("Hasta", value=(_num_fd_prev if _idx_num == 1 else ""), key="num_hasta").upper()
                 else:
                     num_id = "NO"
                     num_fd = "NO"
@@ -4645,6 +4555,94 @@ elif menu == "🧻 Materia Prima Bodega":
         else:
             st.info("La bodega de materia prima está vacía actualmente.")
 
+elif menu == "🧾 Recepción de Facturas":
+    st.title("🧾 Recepción de Facturas en Almacén")
+    st.caption("Escanea el código de barras de cada factura apenas llega físicamente a bodega. Esto deja constancia de que SÍ llegó, evitando pérdidas y pedidos duplicados por facturas 'perdidas'.")
+
+# CAMPO DE ESCANEO: un lector de codigo de barras USB funciona como un teclado
+# que escribe el codigo y luego presiona Enter — por eso basta con un formulario
+# con un solo campo de texto: al escanear, el Enter que manda el lector envia
+# el formulario solo, sin que el usuario tenga que hacer clic en nada.
+    with st.form("form_escaneo_factura", clear_on_submit=True):
+        codigo_factura = st.text_input(
+            "📷 Escanea aquí la factura (o escribe el número manualmente):",
+            key="input_escaneo_factura",
+            placeholder="Apunta el lector y dispara..."
+        )
+        obs_factura = st.text_input("Observaciones (opcional, ej: 'llegó rota', 'llegó con otra factura')").upper()
+        confirmar_escaneo = st.form_submit_button("✅ REGISTRAR RECEPCIÓN", use_container_width=True, type="primary")
+
+    if confirmar_escaneo:
+        codigo_limpio = codigo_factura.strip().upper()
+        if not codigo_limpio:
+            st.error("No se leyó ningún código. Vuelve a intentar el escaneo.")
+        else:
+            try:
+# AVISA SI ESTA FACTURA YA HABIA SIDO ESCANEADA ANTES (posible duplicado o
+# doble escaneo por error) — pero de todas formas se sigue guardando el
+# nuevo registro, para no perder trazabilidad de cuándo volvió a aparecer.
+                ya_existe = supabase.table("recepcion_facturas").select("*")\
+                    .eq("numero_factura", codigo_limpio).order("fecha", desc=True).limit(1).execute().data
+
+                supabase.table("recepcion_facturas").insert({
+                    "numero_factura": codigo_limpio,
+                    "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                    "usuario": st.session_state.get('nombre_usuario', 'Sistema'),
+                    "observaciones": obs_factura
+                }).execute()
+
+                if ya_existe:
+                    st.warning(f"⚠️ ATENCIÓN: la factura **{codigo_limpio}** YA había sido registrada antes, "
+                               f"el {ya_existe[0].get('fecha')} por {ya_existe[0].get('usuario')}. "
+                               f"Este nuevo escaneo también quedó guardado — revisa si es una factura duplicada.")
+                else:
+                    st.success(f"✅ Factura **{codigo_limpio}** registrada como recibida en bodega.")
+                time.sleep(1.5)
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error al guardar el escaneo: {e}")
+
+# TRUCO PARA QUE EL CURSOR VUELVA SOLO AL CAMPO DE ESCANEO DESPUES DE CADA
+# ENVIO, ASI EL OPERARIO PUEDE SEGUIR ESCANEANDO FACTURAS SIN TOCAR EL MOUSE
+    st.markdown("""
+    <script>
+    setTimeout(function() {
+        const inputs = window.parent.document.querySelectorAll('input[type="text"]');
+        if (inputs.length > 0) { inputs[0].focus(); }
+    }, 300);
+    </script>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+    st.subheader("📋 Historial de Facturas Recibidas")
+
+    busqueda_factura = st.text_input("🔍 Buscar por número de factura...", key="busqueda_hist_factura")
+
+    q_facturas = supabase.table("recepcion_facturas").select("*").order("fecha", desc=True).limit(500)
+    if busqueda_factura:
+        q_facturas = q_facturas.ilike("numero_factura", f"%{busqueda_factura.upper()}%")
+    res_facturas = q_facturas.execute().data
+
+    if res_facturas:
+        df_facturas = pd.DataFrame(res_facturas)
+        cols_fact = [c for c in ["fecha", "numero_factura", "usuario", "observaciones"] if c in df_facturas.columns]
+        st.dataframe(
+            df_facturas[cols_fact].rename(columns={
+                "fecha": "Fecha/Hora", "numero_factura": "N.° Factura",
+                "usuario": "Recibida por", "observaciones": "Observaciones"
+            }),
+            use_container_width=True, hide_index=True
+        )
+
+# ALERTA DE POSIBLES DUPLICADOS: mismo numero de factura escaneado mas de una vez
+        conteo_por_factura = df_facturas['numero_factura'].value_counts()
+        duplicadas = conteo_por_factura[conteo_por_factura > 1]
+        if not duplicadas.empty:
+            st.warning(f"⚠️ Hay {len(duplicadas)} número(s) de factura escaneados más de una vez: " +
+                       ", ".join(duplicadas.index.tolist()))
+    else:
+        st.info("Todavía no se ha registrado ninguna factura recibida.")
+
 elif menu == "⏱️ Seguimiento Cortadoras":
         st.header("⏱️ Seguimiento Horario de Cortadoras")
         
@@ -4791,37 +4789,6 @@ elif menu == "📆 Cronograma Impresión":
     except Exception as e:
         st.warning(f"No se pudieron cargar las órdenes planeadas: {e}")
         todas_las_ops = []
-
-    # ALERTAS
-    ahora_col = hora_colombia()
-    alertas = []
-    for op in todas_las_ops:
-        if op.get("estado") == "Terminado" or op.get("proxima_area") == "FINALIZADO":
-            continue
-        fecha_fin_crono = op.get("fecha_fin_cronograma")
-        if fecha_fin_crono:
-            try:
-                dt_fin_crono = datetime.fromisoformat(str(fecha_fin_crono).replace("Z","")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
-                if ahora_col > dt_fin_crono:
-                    horas_retraso = int((ahora_col - dt_fin_crono).total_seconds() // 3600)
-                    alertas.append(f"⏰ **OP {op.get('op')}** ({op.get('cliente','')}) — lleva **{horas_retraso}h de retraso**")
-            except:
-                pass
-        fecha_creacion = op.get("fecha_creacion") or op.get("created_at")
-        if fecha_creacion and not op.get("maquina_cronograma") and not op.get("excluir_cronograma"):
-            try:
-                dt_creacion = datetime.fromisoformat(str(fecha_creacion).replace("Z","")).replace(tzinfo=pytz.utc).astimezone(pytz.timezone("America/Bogota"))
-                if (ahora_col - dt_creacion).days >= 3:
-                    alertas.append(f"📋 **OP {op.get('op')}** — lleva **{(ahora_col - dt_creacion).days} dias sin asignar**")
-            except:
-                pass
-
-    if alertas:
-        with st.expander(f"🚨 {len(alertas)} ALERTA(S) — haz clic para ver", expanded=True):
-            for a in alertas:
-                st.warning(a)
-    else:
-        st.success("✅ Todo en orden")
 
 # Separa las OPs que YA estan agendadas en el calendario de las que TODAVIA estan pendientes por asignar
     ops_agendadas  = [op for op in todas_las_ops if op.get("fecha_inicio_cronograma") and op.get("fecha_fin_cronograma") and op.get("maquina_cronograma")]
