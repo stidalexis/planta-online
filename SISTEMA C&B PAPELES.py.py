@@ -255,7 +255,7 @@ def fila_grid(pdf, celdas, h_linea=7):
 
     listas_lineas = []
     for c in celdas:
-        pdf.set_font("Arial", "B" if c.get("negrita") else "", c.get("tam", 10))
+        pdf.set_font("Arial", "B" if c.get("negrita") else "", c.get("tam", 11 if c.get("negrita") else 10))
         listas_lineas.append(_lineas_ajustadas(pdf, c.get("texto", ""), c["ancho"]))
 
     n_lineas = max(len(l) for l in listas_lineas)
@@ -264,10 +264,10 @@ def fila_grid(pdf, celdas, h_linea=7):
     x = x0
     for c, lineas in zip(celdas, listas_lineas):
         if c.get("fill"):
-            pdf.set_fill_color(230, 230, 230)
+            pdf.set_fill_color(215, 215, 215)
             pdf.rect(x, y0, c["ancho"], alto_fila, "F")
         pdf.rect(x, y0, c["ancho"], alto_fila)
-        pdf.set_font("Arial", "B" if c.get("negrita") else "", c.get("tam", 10))
+        pdf.set_font("Arial", "B" if c.get("negrita") else "", c.get("tam", 11 if c.get("negrita") else 10))
         for i, linea in enumerate(lineas):
             pdf.set_xy(x + 1, y0 + (i * h_linea))
             pdf.cell(c["ancho"] - 2, h_linea, linea, border=0)
@@ -582,8 +582,8 @@ def generar_pdf_op(row):
     pdf.ln(0.5)
     
 #  SECCION DATOS DE VENTA PDF
-    pdf.set_font("Arial", 'B', 11)
-    pdf.set_fill_color(230, 230, 230)
+    pdf.set_font("Arial", 'B', 12)
+    pdf.set_fill_color(215, 215, 215)
     pdf.cell(0, 8, " 1. INFORMACION GENERAL Y ORIGEN", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
     
@@ -595,7 +595,7 @@ def generar_pdf_op(row):
     pdf.ln(5)
 
 #  SECCION ESPECIFICACIONES PDF
-    pdf.set_font("Arial", 'B', 11)
+    pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 8, " 2. ESPECIFICACIONES TECNICAS", ln=True, fill=True)
     pdf.set_font("Arial", '', 10)
 
@@ -613,7 +613,7 @@ def generar_pdf_op(row):
     pdf.ln(5)
 
 #  SECCION BITACORA TECNICA  
-    pdf.set_font("Arial", 'B', 11)
+    pdf.set_font("Arial", 'B', 12)
     pdf.cell(0, 8, " 3. TRAZABILIDAD Y REGISTROS DE PLANTA", ln=True, fill=True)
     
     historial = row.get('historial_procesos', [])
@@ -653,7 +653,7 @@ def generar_pdf_op(row):
             if datos_c:
 
                 pdf.set_font("Arial", 'B', 7)
-                pdf.set_fill_color(230,230,230)
+                pdf.set_fill_color(215,215,215)
 
 # ENCABEZADOS TABLA
                 pdf.cell(47,6,"OBJETO",1,0,'C',True)
@@ -727,8 +727,8 @@ def generar_op_rollos(row):
     pdf.ln(4)
 
 # INFORMACION GENERAL
-    pdf.set_fill_color(230, 230, 230)
-    pdf.set_font("Arial", "B", 11)
+    pdf.set_fill_color(215, 215, 215)
+    pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
 
     fila_grid(pdf, [
@@ -746,42 +746,42 @@ def generar_op_rollos(row):
 
 #  ESPECIFICACIONES TECNICAS
     pdf.ln(4)
-    pdf.set_font("Arial", "B", 11)
+    pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 8, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
 
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Material: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(20, 7, " Material: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('material','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Gramaje: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(20, 7, " Gramaje: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(43, 7, f"{row.get('gramaje_rollos','')} GRS", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 7, " Core: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(20, 7, " Core: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(44, 7, f"{row.get('core','')}", 1, 1) 
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Cant. Rollos: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Cant. Rollos: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('cantidad_rollos','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Unid. Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Unid. Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(33, 7, f"{row.get('unidades_bolsa','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Unid. Caja: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Unid. Caja: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(34, 7, f"{row.get('unidades_caja','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Ref. Comercial: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(35, 7, " Ref. Comercial: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(100, 7, f"{row.get('ref_comercial','')}", 1, 0)
     trans = "SI" if row.get('transportadora_rollos') else "NO"
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Transportadora: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Transportadora: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(25, 7, f"{trans}", 1, 1) 
-    pdf.set_font("Arial", "B", 10); pdf.cell(20, 8, "Impresión", 1, 0, 'C', fill=True)
-    pdf.set_font("Arial", "B", 10); pdf.cell(27, 8, " Frente: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(20, 8, "Impresión", 1, 0, 'C', fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(27, 8, " Frente: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(65, 8, f"{row.get('tintas_frente_rollos', 'N/A')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(23, 8, " Respaldo: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(55, 8, f"{row.get('tintas_respaldo_rollos', 'N/A')}", 1, 1) 
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(165, 7, f"{row.get('destino_rollos','PLANTA')}", 1, 1)
 
 # OBSERFVACIONES Y PERFORACIONES 
-    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    pdf.ln(4); pdf.set_font("Arial", "B", 12); 
     pdf.cell(0, 8, "3. ADICIONALES Y OBSERVACIONES", 0, 1, fill=True)
     pdf.set_font("Arial", "B", 10)
     pdf.cell(0, 7, f"Perforaciones: {row.get('perforaciones_detalle', 'NO')}", 1, 1)
 
     pdf.ln(4)
-    pdf.set_font("Arial","B",11)
+    pdf.set_font("Arial","B",12)
     pdf.set_text_color(255, 0, 0)
     pdf.cell(0,8,"4. OBSERVACIONES GENERALES",0,1,fill=True)
     pdf.set_font("Arial","",10)
@@ -789,10 +789,10 @@ def generar_op_rollos(row):
 
 # FIRMAS O SELLOS
     pdf.set_text_color(0, 0, 0)
-    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    pdf.ln(4); pdf.set_font("Arial", "B", 12); 
     pdf.cell(0, 8, "5. FIRMAS", 0, 1, fill=True)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
-    pdf.set_fill_color(230, 230, 230)
+    pdf.set_fill_color(215, 215, 215)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
     pdf.cell(63, 6, "ASESOR", 1, 0, "C", fill=True) 
     pdf.cell(64, 6, "SUPERVISOR DE PRODUCCION", 1, 1, "C", fill=True)
@@ -856,8 +856,8 @@ def generar_op_formas(row):
     pdf.ln(4)
 
 #  INFORMACION DE LA ORDEN 
-    pdf.set_fill_color(230, 230, 230)
-    pdf.set_font("Arial", "B", 11)
+    pdf.set_fill_color(215, 215, 215)
+    pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
     fila_grid(pdf, [
         {"ancho": 25, "texto": " Cliente: ", "negrita": True, "fill": True},
@@ -879,38 +879,38 @@ def generar_op_formas(row):
     ])
 
 # ESPECIFICACIONES GENERALES Y ACABADOS 
-    pdf.set_font("Arial", "B", 11)
+    pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 8, "2. ESPECIFICACIONES GENERALES Y ACABADOS", 0, 1, fill=True)
-    pdf.set_font("Arial", "B", 10); pdf.cell(23, 7, " Cantidad: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(23, 7, " Cantidad: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(40, 7, f"{row.get('cantidad_formas','')}FORMAS", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(18, 7, " Partes: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(18, 7, " Partes: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(45, 7, f"{row.get('num_partes','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(26, 7, " Presentación: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(26, 7, " Presentación: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(38, 7, f"{row.get('presentacion','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Numeración Del: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(35, 7, " Numeración Del: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('num_id','NO')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Numeración Al: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(35, 7, " Numeración Al: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('num_fd','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(35, 7, " Código Barras: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(35, 7, " Código Barras: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(90, 7, f"{row.get('codigo_barras_detalle','')}", 1, 0)
     trans = "SI" if row.get('transportadora_formas') else "NO"
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Transportadora: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Transportadora: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(35, 7, f"{trans}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Tipo Pegue: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(25, 7, " Tipo Pegue: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('presentacion2', 'N/A')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(25, 7, " Destino: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(70, 7, f"{row.get('destino_formas','NO APLICA')}", 1, 1)
 
 # PERFORACIONES
     pdf.ln(4)
-    pdf.set_font("Arial","B",11)
+    pdf.set_font("Arial","B",12)
     pdf.cell(0,8,"3. PERFORACIONES",0,1,fill=True)
     pdf.set_font("Arial","",10)
     pdf.multi_cell(0,7,row.get("perforaciones_detalle","SIN PERFORACIONES"), 1)
 
 # DETALLE TECNICO POR PARTE
     pdf.ln(4)
-    pdf.set_font("Arial","B",11)
+    pdf.set_font("Arial","B",12)
     pdf.cell(0,8,"4. DETALLE TECNICO POR PARTE",0,1,fill=True)
     pdf.set_font("Arial","B",8)
     pdf.set_fill_color(200,200,200)
@@ -940,7 +940,7 @@ def generar_op_formas(row):
 
 # OBSERVACIONES GENERALES
     pdf.ln(5)
-    pdf.set_font("Arial","B",11)
+    pdf.set_font("Arial","B",12)
     pdf.set_text_color(255, 0, 0)
     pdf.cell(0,8,"5. OBSERVACIONES GENERALES",0,1,fill=True)
     pdf.set_font("Arial","",10)
@@ -949,10 +949,10 @@ def generar_op_formas(row):
 # FIRMAS
     pdf.ln(1)
     pdf.set_text_color(0, 0, 0)
-    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
+    pdf.ln(4); pdf.set_font("Arial", "B", 12); 
     pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
-    pdf.set_fill_color(230, 230, 230)
+    pdf.set_fill_color(215, 215, 215)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
     pdf.cell(63, 6, "ASESOR", 1, 0, "C", fill=True) 
     pdf.cell(64, 6, "SUPERVISOR DE PRODUCCION", 1, 1, "C", fill=True)
@@ -980,6 +980,7 @@ def generar_op_rebobinado(row):
     pdf.add_page()
     
     tipo_op = row.get('tipo_origen', '').upper()
+    es_rri_pdf = row.get('tipo_orden', '').upper() == "REBOBINADO INTERNO"
 
 # ENCABEZADO 
     if "NUEVA" in tipo_op:
@@ -997,84 +998,114 @@ def generar_op_rebobinado(row):
 
     pdf.set_text_color(255,255,255)
     pdf.set_font("Arial","B",16)
-    pdf.cell(0,18,"ORDEN DE PRODUCCION - REBOBINADO",0,1,"C")
+    pdf.cell(0,18,"ORDEN DE PRODUCCION - REBOBINADO INTERNO" if es_rri_pdf else "ORDEN DE PRODUCCION - REBOBINADO",0,1,"C")
     pdf.set_font("Arial","B",12)
     pdf.cell(0,5,f"OP: {row['op']}   |   {row['tipo_origen']}",0,1,"C")
     pdf.set_text_color(0,0,0)
     pdf.ln(4)
 
 # INFORMACION GENERAL
-    pdf.set_fill_color(230,230,230)
+    pdf.set_fill_color(215,215,215)
     pdf.set_font("Arial","B",12)
     pdf.cell(0,12,"1. INFORMACION GENERAL",0,1,fill=True)
-    pdf.set_font("Arial","",12)
+    pdf.set_font("Arial","",10)
 
     pdf.set_fill_color(250, 224, 196)
     fila_grid(pdf, [
-        {"ancho": 25, "texto": " Cliente: ", "negrita": True, "fill": True},
+        {"ancho": 25, "texto": " Área: " if es_rri_pdf else " Cliente: ", "negrita": True, "fill": True},
         {"ancho": 90, "texto": row.get('cliente',''), "negrita": False, "fill": False},
-        {"ancho": 25, "texto": " Vendedor: ", "negrita": True, "fill": True},
+        {"ancho": 25, "texto": " Jefe: " if es_rri_pdf else " Vendedor: ", "negrita": True, "fill": True},
         {"ancho": 50, "texto": row.get('vendedor',''), "negrita": False, "fill": False},
     ])
-    fila_grid(pdf, [
-        {"ancho": 20, "texto": " Trabajo: ", "negrita": True, "fill": True},
-        {"ancho": 100, "texto": row.get('nombre_trabajo',''), "negrita": False, "fill": False},
-        {"ancho": 25, "texto": " Op Anterior: ", "negrita": True, "fill": True},
-        {"ancho": 45, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
-    ])
+    if es_rri_pdf:
+        fila_grid(pdf, [
+            {"ancho": 20, "texto": " Trabajo: ", "negrita": True, "fill": True},
+            {"ancho": 100, "texto": row.get('nombre_trabajo',''), "negrita": False, "fill": False},
+            {"ancho": 50, "texto": " Certificado FSC: ", "negrita": True, "fill": True},
+            {"ancho": 20, "texto": row.get('certificado_fsc','NO'), "negrita": False, "fill": False},
+        ])
+    else:
+        fila_grid(pdf, [
+            {"ancho": 20, "texto": " Trabajo: ", "negrita": True, "fill": True},
+            {"ancho": 100, "texto": row.get('nombre_trabajo',''), "negrita": False, "fill": False},
+            {"ancho": 25, "texto": " Op Anterior: ", "negrita": True, "fill": True},
+            {"ancho": 45, "texto": row.get('op_anterior',''), "negrita": False, "fill": False},
+        ])
 
     pdf.ln(4)
     pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 9, "2. ESPECIFICACIONES TECNICAS", 0, 1, fill=True)
 
-    pdf.set_font("Arial", "B", 12); pdf.cell(20, 9, " Material: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 12);  pdf.cell(75, 9, f"{row.get('material','')}", 1, 0)
-    pdf.set_font("Arial", "B", 12); pdf.cell(25, 9, " Gramaje: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 12);  pdf.cell(70, 9, f"{row.get('gramaje_rollos','')} GRS", 1, 1)
+    pdf.set_font("Arial", "B", 11); pdf.cell(20, 9, " Material: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(75, 9, f"{row.get('material','')}", 1, 0)
+    pdf.set_font("Arial", "B", 11); pdf.cell(25, 9, " Gramaje: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(70, 9, f"{row.get('gramaje_rollos','')} GRS", 1, 1)
 
-    pdf.set_font("Arial", "B", 12); pdf.cell(35, 9, " Ref. Comercial: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 12);  pdf.cell(95, 9, f"{row.get('ref_comercial','')}", 1, 0)
-    pdf.set_font("Arial", "B", 12); pdf.cell(30, 9, " Cant. Rollos: ", 1, 0, fill=True)
-    pdf.set_font("Arial", "", 12);  pdf.cell(30, 9, f"{row.get('cantidad_rollos','')}", 1, 1)
+    pdf.set_font("Arial", "B", 11); pdf.cell(35, 9, " Ancho Bobina: " if es_rri_pdf else " Ref. Comercial: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(95, 9, f"{row.get('ref_comercial','')}", 1, 0)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 9, " Cantidad: " if es_rri_pdf else " Cant. Rollos: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "", 10);  pdf.cell(30, 9, f"{row.get('cantidad_rollos','')}", 1, 1)
 
+    if not es_rri_pdf:
+        pdf.set_font("Arial","B",11)
+        pdf.cell(190,7,"OBJETIVO PRINCIPAL DEL REBOBINADO:", "LTR", 1)
+        pdf.set_font("Arial","",10)
+        pdf.multi_cell(190,7, row.get('objetivo_rebobinado','No especificado'), "LRB")
 
-    pdf.set_font("Arial","B",12)
-    pdf.cell(190,7,"OBJETIVO PRINCIPAL DEL REBOBINADO:", "LTR", 1)
-    pdf.set_font("Arial","",12)
-    pdf.multi_cell(190,7, row.get('objetivo_rebobinado','No especificado'), "LRB")
-
-# OBSERVACIONES DE PLANIFICACION
+# OBSERVACIONES 
     pdf.ln(5)
     pdf.set_font("Arial","B",12)
     pdf.set_text_color(255, 0, 0)
     pdf.cell(0,9,"3. OBSERVACIONES GENERALES",0,1,fill=True)
-    pdf.set_font("Arial","",12)
+    pdf.set_font("Arial","",10)
     pdf.multi_cell(0,7,row.get("observaciones_rollos","Sin observaciones adicionales"), 1)
 
 # FIRMAS O SELLOS
+    if es_rri_pdf:
+        pdf.set_text_color(0, 0, 0)
+        pdf.ln(4); pdf.set_font("Arial", "B", 12);
+        pdf.cell(0, 8, "4. DETALLE DE CORTES / ENTREGAS", 0, 1, fill=True)
+        pdf.ln(1); pdf.set_font("Arial", "B", 7)
+        pdf.set_fill_color(215, 215, 215)
+        w_corte, w_ancho, w_metros, w_entrega = 18, 48, 55, 69
+        pdf.cell(w_corte, 7, "CORTE", 1, 0, "C", fill=True)
+        pdf.cell(w_ancho, 7, "ANCHO FINAL", 1, 0, "C", fill=True)
+        pdf.cell(w_metros, 7, "METROS FINALES", 1, 0, "C", fill=True)
+        pdf.cell(w_entrega, 7, "ENTREGAR A:", 1, 1, "C", fill=True)
+
+        cortes_rri = row.get("detalles_partes_json") or []
+        for i in range(1, 11):
+            c_data = cortes_rri[i - 1] if i <= len(cortes_rri) else {}
+            cell_fit(pdf, w_corte, 7, c_data.get("corte", i))
+            cell_fit(pdf, w_ancho, 7, c_data.get("ancho_final", ""))
+            cell_fit(pdf, w_metros, 7, c_data.get("metros_finales", ""))
+            cell_fit(pdf, w_entrega, 7, c_data.get("entregar_a", ""))
+            pdf.ln()
+# FIRMAS O SELLOS
     pdf.set_text_color(0, 0, 0)
-    pdf.ln(4); pdf.set_font("Arial", "B", 11); 
-    pdf.cell(0, 8, "4. FIRMAS", 0, 1, fill=True)
+    pdf.ln(4); pdf.set_font("Arial", "B", 12); 
+    pdf.cell(0, 8, "5. FIRMAS", 0, 1, fill=True)
     pdf.ln(1); pdf.set_font("Arial", "B", 6)
-    pdf.set_fill_color(230, 230, 230)
+    pdf.set_fill_color(215, 215, 215)
     pdf.cell(63, 6, "COORDINADORA COMERCIAL", 1, 0, "C", fill=True) 
-    pdf.cell(63, 6, "ASESOR", 1, 0, "C", fill=True) 
+    pdf.cell(63, 6, " JEFE " if es_rri_pdf else  "ASESOR", 1, 0, "C", fill=True) 
     pdf.cell(64, 6, "SUPERVISOR DE PRODUCCION", 1, 1, "C", fill=True)
     pdf.cell(63, 20, "", 1, 0); pdf.cell(63, 20, "", 1, 0); pdf.cell(64, 20, "", 1, 1)
 
 # DATOS DE ESTIBAS 
-    pdf.set_font("Arial", "", 11)
-    y_est = pdf.get_y() + 2
-    pdf.set_xy(10, y_est)
-    pdf.set_fill_color(210, 210, 210); pdf.set_font("Arial", 'B', 11)
-    pdf.cell(190, 5, "5 .REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
+    if not es_rri_pdf:
+        pdf.set_font("Arial", "", 11)
+        y_est = pdf.get_y() + 2
+        pdf.set_xy(10, y_est)
+        pdf.set_fill_color(210, 210, 210); pdf.set_font("Arial", 'B', 11)
+        pdf.cell(190, 5, "5 .REPORTE DE CAJAS POR ESTIBAS (PRODUCCIÓN)", 1, 1, 'C', True)
     
-    w_e = 190 / 3
-    pdf.set_font("Arial", '', 8)
-    for i in range(4): 
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:_________H:___________", 1, 0)
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:_________H:___________", 1, 0)
-        pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:_________H:___________", 1, 1)
+        w_e = 190 / 3
+        pdf.set_font("Arial", '', 8)
+        for i in range(4): 
+            pdf.cell(w_e, 7, f" ESTIBA {i*3+1} | Cant:_________H:___________", 1, 0)
+            pdf.cell(w_e, 7, f" ESTIBA {i*3+2} | Cant:_________H:___________", 1, 0)
+            pdf.cell(w_e, 7, f" ESTIBA {i*3+3} | Cant:_________H:___________", 1, 1)
 
 # OBSERVACIONES FINALIZADO
     pdf.set_font("Arial", "B", 8)
@@ -1088,10 +1119,37 @@ def generar_op_rebobinado(row):
     pdf.set_font("Arial","I",8)
     pdf.cell(0,5,"* Espacio reservado para el operario: verificar empalmes y diámetros finales.",0,1)
 
+# SEGUNDA HOJA — REGISTRO MANUAL DE BOBINAS (SOLO RRI)
+    if es_rri_pdf:
+        pdf.add_page()
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_fill_color(215, 215, 215)
+        pdf.set_font("Arial", "B", 12)
+        pdf.cell(0, 10, "REGISTRO DE BOBINAS PRODUCIDAS", 1, 1, "C", fill=True)
+        pdf.set_font("Arial", "B", 8)
+        pdf.set_fill_color(210, 210, 210)
+
+        # Cinco columnas que el operario diligencia manualmente.
+        w_codigo, w_sufijo, w_ancho, w_metraje, w_recibe = 42, 25, 32, 42, 49
+        pdf.cell(w_codigo, 8, "CODIGO DE BOBINA", 1, 0, "C", fill=True)
+        pdf.cell(w_sufijo, 8, "SUFIJO", 1, 0, "C", fill=True)
+        pdf.cell(w_ancho, 8, "ANCHO", 1, 0, "C", fill=True)
+        pdf.cell(w_metraje, 8, "METRAJE", 1, 0, "C", fill=True)
+        pdf.cell(w_recibe, 8, "RECIBE:", 1, 1, "C", fill=True)
+
+        pdf.set_font("Arial", "", 8)
+        # 31 filas de 7 mm ocupan prácticamente toda la segunda hoja.
+        for _ in range(31):
+            pdf.cell(w_codigo, 7, "", 1, 0)
+            pdf.cell(w_sufijo, 7, "", 1, 0)
+            pdf.cell(w_ancho, 7, "", 1, 0)
+            pdf.cell(w_metraje, 7, "", 1, 0)
+            pdf.cell(w_recibe, 7, "", 1, 1)
+
 # PIE DE PAGINA
-    pdf.ln(10)
+    pdf.ln(5)
     pdf.set_font("Arial","I",7)
-    pdf.cell(0,10,f"SISTEMA C&B PAPELES - GENERADO: {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
+    pdf.cell(0,5,f"SISTEMA C&B PAPELES - GENERADO: {hora_colombia().strftime('%d/%m/%Y %H:%M')}",0,1,"C")
 
     return bytes(pdf.output())
 
@@ -1126,7 +1184,7 @@ def generar_op_bolsas(row):
 
 # INFORMACION GENERAL
     pdf.set_fill_color(250, 224, 196)
-    pdf.set_font("Arial", "B", 11)
+    pdf.set_font("Arial", "B", 12)
     pdf.cell(0, 8, "1. INFORMACION DE LA ORDEN", 0, 1, fill=True)
 
     pdf.set_fill_color(250, 224, 196)
@@ -1157,29 +1215,29 @@ def generar_op_bolsas(row):
 # Guarda dónde empieza la tabla, para ubicar el diagrama de la bolsa a la derecha, a la misma altura.
     y_inicio_specs = pdf.get_y()
 
-    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (C) Largo Total De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(60, 7, " (C) Largo Total De La Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_c_largo_total','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (c) Largo Util De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(60, 7, " (c) Largo Util De La Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_c_largo_util','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (W) Ancho De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(60, 7, " (W) Ancho De La Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_w_ancho','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (H) Fuelle De La Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(60, 7, " (H) Fuelle De La Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_h_fuelle','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " (h) Pestaña De Fondo: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(60, 7, " (h) Pestaña De Fondo: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_h_pestana','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Tipo De Manija: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Tipo De Manija: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('bolsa_tipo_manija','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Base De Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Base De Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(30, 7, f"{row.get('bolsa_base','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " Material Para Bolsa: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(60, 7, " Material Para Bolsa: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_material','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(60, 7, " Gramaje Del Material: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(60, 7, " Gramaje Del Material: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(60, 7, f"{row.get('bolsa_gramaje','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(40, 7, " Certificacion FSC: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(40, 7, " Certificacion FSC: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('bolsa_certificacion_fsc','')}", 1, 0)
-    pdf.set_font("Arial", "B", 10); pdf.cell(40, 7, "Cantidad De Tintas: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(40, 7, "Cantidad De Tintas: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(20, 7, f"{row.get('bolsa_tintas_num','')}", 1, 1)
-    pdf.set_font("Arial", "B", 10); pdf.cell(30, 7, " Colores: ", 1, 0, fill=True)
+    pdf.set_font("Arial", "B", 11); pdf.cell(30, 7, " Colores: ", 1, 0, fill=True)
     pdf.set_font("Arial", "", 10);  pdf.cell(90, 7, f"{row.get('bolsa_tintas_color','')}", 1, 1)
 
     y_fin_specs = pdf.get_y()
@@ -1242,7 +1300,7 @@ def generar_op_bolsas(row):
 
 # FIRMAS
     pdf.ln(6)
-    pdf.set_fill_color(230, 230, 230)
+    pdf.set_fill_color(215, 215, 215)
     pdf.set_font("Arial", "B", 6)
     w_firma = 190 / 3
     pdf.cell(w_firma, 6, "FIRMA COORDINADORA COMERCIAL", 1, 0, "C", fill=True)
@@ -1617,6 +1675,8 @@ def ruta_despues_de_auditoria_ventas(tipo_orden):
         return "CORTE"
     elif tipo_orden == "REBOBINADO":
         return "REBOBINADORAS"
+    elif tipo_orden == "REBOBINADO INTERNO":
+        return "REBOBINADORAS"
     return "IMPRESIÓN"
 
 # Ruta a planta de Bolsas: Impresas pasan por Flexo y luego Armadoras; Blancas van directo a Armadoras.
@@ -1748,14 +1808,18 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
     tipo_radio = datos.get('tipo_orden', '')
     es_bolsa_radio = tipo_radio in ("BOLSA IMPRESA", "BOLSA BLANCA")
     es_formas_radio = tipo_radio in ("FORMAS IMPRESAS", "FORMAS BLANCAS")
-    es_rebobinado_radio = tipo_radio == "REBOBINADO"
+    es_rebobinado_radio = tipo_radio in ("REBOBINADO", "REBOBINADO INTERNO")
+    es_rri_radio = tipo_radio == "REBOBINADO INTERNO"
 
     with st.expander("🏢 INFORMACION COMERCIAL", expanded=True):
         c1, c2, c3, c4 = st.columns(4)
         c1.write(f"**OP #:**\n{datos.get('op')}")
-        c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
-        c2.write(f"**CLIENTE:**\n{datos.get('cliente')}")
-        c2.write(f"**VENDEDOR:**\n{datos.get('vendedor')}")
+        if es_rri_radio:
+            c1.write(f"**CERTIFICADO FSC:**\n{datos.get('certificado_fsc', 'NO')}")
+        else:
+            c1.write(f"**OP ANTERIOR:**\n{datos.get('op_anterior')}")
+        c2.write(f"**{'ÁREA' if es_rri_radio else 'CLIENTE'}:**\n{datos.get('cliente')}")
+        c2.write(f"**{'JEFE' if es_rri_radio else 'VENDEDOR'}:**\n{datos.get('vendedor')}")
         c3.write(f"**FECHA DE CREACION:**\n{fmt_fecha_hora(datos.get('created_at'))}")
         c3.write(f"**NOMBRE DEL TRABAJO:**\n{datos.get('nombre_trabajo')}")
         if es_bolsa_radio:
@@ -1839,12 +1903,16 @@ def radiografia_completa_op(datos, mostrar_obs_auditoria1=True):
         if es_rebobinado_radio:
             with c1:
                 st.markdown("**CANTIDADES**")
-                st.write(f"Cantidad Solicitada: {datos.get('cantidad_rollos')}")
-                st.write(f"Ancho Base: {datos.get('ref_comercial')}")
+                st.write(f"{'Cantidad' if es_rri_radio else 'Cantidad Solicitada'}: {datos.get('cantidad_rollos')}")
+                st.write(f"{'Ancho de Bobina' if es_rri_radio else 'Referencia Comercial'}: {datos.get('ref_comercial')}")
             with c2:
-                st.markdown("**OBJETIVO**")
-                st.write(f"Objetivo del Rebobinado: {datos.get('objetivo_rebobinado')}")
-                st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
+                if es_rri_radio:
+                    st.markdown("**CERTIFICACIÓN**")
+                    st.write(f"Certificado FSC: {datos.get('certificado_fsc', 'NO')}")
+                else:
+                    st.markdown("**OBJETIVO**")
+                    st.write(f"Objetivo del Rebobinado: {datos.get('objetivo_rebobinado')}")
+                    st.write(f"Referencia Comercial: {datos.get('ref_comercial')}")
             with c3:
                 st.markdown("**ORIGEN**")
                 st.write(f"Repetición: {datos.get('tipo_origen')}")
@@ -2238,10 +2306,11 @@ elif menu == "🔍 Seguimiento":
                         st.write("**📋 OBSERVACIONES:**")
                         st.info(row.get('observaciones_formas', 'N/A'))
 
-                elif tipo_op_actual in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS", "REBOBINADO"]:
+                elif tipo_op_actual in ["ROLLOS IMPRESOS", "ROLLOS BLANCOS", "REBOBINADO", "REBOBINADO INTERNO"]:
+                    es_rri_seg = (tipo_op_actual == "REBOBINADO INTERNO")
                     c1, c2, c3, c4 = st.columns(4)
                     with c1:
-                        st.write("**👤 CLIENTE:**")
+                        st.write(f"**👤 {'ÁREA' if es_rri_seg else 'CLIENTE'}:**")
                         st.info(cliente)
                         st.write("**⚙️ TIPO DE TRABAJO:**")
                         st.info(tipo_op_actual)
@@ -2252,9 +2321,14 @@ elif menu == "🔍 Seguimiento":
                     with c2:
                         st.write("**📝 NOMBRE DE TRABAJO:**")
                         st.info(nombre_t)
-                        st.write("**📦 CANTIDAD DE ROLLOS:**")
+                        st.write(f"**📦 {'CANTIDAD' if es_rri_seg else 'CANTIDAD DE ROLLOS'}:**")
                         st.info(row.get('cantidad_rollos', 'N/A'))
-                        if tipo_op_actual == "REBOBINADO":
+                        if es_rri_seg:
+                            st.write("**↔️ ANCHO DE BOBINA:**")
+                            st.info(row.get('ref_comercial', 'N/A'))
+                            st.write("**♻️ CERTIFICADO FSC:**")
+                            st.info(row.get('certificado_fsc', 'NO'))
+                        elif tipo_op_actual == "REBOBINADO":
                             st.write("**↔️ REFERENCIA COMERCIAL:**")
                             st.info(row.get('ref_comercial', 'N/A'))
                             st.write("**🎯 OBJETIVO DEL REBOBINADO:**")
@@ -2265,11 +2339,11 @@ elif menu == "🔍 Seguimiento":
                             st.write("**📖 REFERENCIA COMERCIAL:**")
                             st.info(row.get('ref_comercial', 'N/A'))
                     with c3:
-                        st.write("**💼 VENDEDOR:**")
+                        st.write(f"**💼 {'JEFE' if es_rri_seg else 'VENDEDOR'}:**")
                         st.info(row.get('vendedor', 'N/A'))
                         st.write("**📅 FECHA:**")
                         st.info(fmt_fecha_hora(row.get('created_at'), con_hora=False))
-                        if tipo_op_actual != "REBOBINADO":
+                        if tipo_op_actual not in ("REBOBINADO", "REBOBINADO INTERNO"):
                             st.write("**🎨 TINTAS FRENTE / RESPALDO:**")
                             st.info(f"{row.get('tintas_frente_rollos','-')} / {row.get('tintas_respaldo_rollos','-')}")
                             st.write("**📦 UNIDAD BOLSA / CAJA:**")
@@ -2727,7 +2801,7 @@ elif menu == "📅 Planificación":
 # solo el admin puede editarla.
     ESTADOS_EDITABLES = ["AUDITORIA VENTAS", "AUDITORIA BOLSAS"]
 
-    tab_nueva, tab_editar, tab_anular = st.tabs(["➕ Nueva / Repetición", "✏️ Editar OP Existente", "🚫 Anular OP"])
+    tab_nueva, tab_editar, tab_anular, tab_devolver = st.tabs(["➕ Nueva / Repetición", "✏️ Editar OP Existente", "🚫 Anular OP", "↩️ Devolver a Área Anterior"])
 
     with tab_editar:
         st.markdown("<div class='section-header'>✏️ EDITAR ORDEN DE PRODUCCIÓN</div>", unsafe_allow_html=True)
@@ -2789,9 +2863,10 @@ elif menu == "📅 Planificación":
 
 #  DATOS GENERALES 
                     st.markdown("**📋 Datos Generales**")
+                    es_rri_edit = (op_edit.get('tipo_orden', '') == "REBOBINADO INTERNO")
                     ec1, ec2, ec3 = st.columns(3)
-                    nuevo_cliente  = ec1.text_input("Cliente:", value=op_edit.get('cliente', '')).upper()
-                    nuevo_vendedor = ec2.text_input("Vendedor:", value=op_edit.get('vendedor', '')).upper()
+                    nuevo_cliente  = ec1.text_input("Área:" if es_rri_edit else "Cliente:", value=op_edit.get('cliente', '')).upper()
+                    nuevo_vendedor = ec2.text_input("Jefe:" if es_rri_edit else "Vendedor:", value=op_edit.get('vendedor', '')).upper()
                     nuevo_trabajo  = ec3.text_input("Nombre del Trabajo:", value=op_edit.get('nombre_trabajo', '')).upper()
 
                     tipo_op = op_edit.get('tipo_orden', '')
@@ -2869,15 +2944,60 @@ elif menu == "📅 Planificación":
                         nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '').upper()
 
 #  REBOBINADO 
-                    elif tipo_op == "REBOBINADO":
+                    elif tipo_op in ("REBOBINADO", "REBOBINADO INTERNO"):
                         st.markdown("**🌀 Datos de Rebobinado**")
                         eb1, eb2, eb3 = st.columns(3)
                         nuevo_mat     = eb1.text_input("Material / Papel:", value=op_edit.get('material','') or '').upper()
                         nuevo_gram    = eb2.number_input("Gramaje:", value=int(op_edit.get('gramaje_rollos', 0) or 0), min_value=0)
-                        nuevo_ancho   = eb3.text_input("Referencia Comercial (Ancho, Largo, Peso):", value=op_edit.get('ref_comercial','') or '').upper()
-                        eb4, eb5 = st.columns(2)
-                        nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
-                        nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '').upper()
+                        nuevo_ancho   = eb3.text_input("Ancho de Bobina:" if es_rri_edit else "Referencia Comercial (Ancho, Largo, Peso):", value=op_edit.get('ref_comercial','') or '').upper()
+                        if es_rri_edit:
+                            nueva_cant_r  = st.number_input("Cantidad:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
+                            nuevo_obj     = ""
+                            nuevo_fsc_edit = st.selectbox("Certificado FSC:", ["NO", "SI"], index=1 if op_edit.get('certificado_fsc') == "SI" else 0)
+
+
+                            st.markdown("##### ✂️ DETALLE DE CORTES / ENTREGAS")
+                            rec_cortes_e = op_edit.get('detalles_partes_json') or []
+                            n_cortes_e_prev = len(rec_cortes_e)
+                            n_cortes_e = st.number_input(
+                                "Número de cortes:",
+                                min_value=1,
+                                max_value=10,
+                                value=n_cortes_e_prev if 1 <= n_cortes_e_prev <= 10 else 1,
+                                step=1,
+                                key="rri_num_cortes_edit"
+                            )
+                            lista_rri_e = []
+                            for i in range(1, n_cortes_e + 1):
+                                c_data_e = rec_cortes_e[i - 1] if i <= len(rec_cortes_e) else {}
+                                st.markdown(f"**CORTE {i}**")
+                                rc1e, rc2e, rc3e = st.columns(3)
+                                anc_final_e = rc1e.text_input(
+                                    f"Ancho Final C{i}",
+                                    value=c_data_e.get('ancho_final', ''),
+                                    key=f"erri_anc_{i}"
+                                ).upper()
+                                met_final_e = rc2e.text_input(
+                                    f"Metros Finales C{i}",
+                                    value=c_data_e.get('metros_finales', ''),
+                                    key=f"erri_met_{i}"
+                                ).upper()
+                                entregar_a_e = rc3e.text_input(
+                                    f"Entregar A C{i}",
+                                    value=c_data_e.get('entregar_a', ''),
+                                    key=f"erri_ent_{i}"
+                                ).upper()
+                                lista_rri_e.append({
+                                    "corte": i,
+                                    "ancho_final": anc_final_e,
+                                    "metros_finales": met_final_e,
+                                    "entregar_a": entregar_a_e
+                                })
+                        else:
+                            eb4, eb5 = st.columns(2)
+                            nueva_cant_r  = eb4.number_input("Cantidad Rollos:", value=int(op_edit.get('cantidad_rollos', 0) or 0), min_value=0)
+                            nuevo_obj     = eb5.text_input("Objetivo del Rebobinado:", value=op_edit.get('objetivo_rebobinado','') or '').upper()
+                            nuevo_fsc_edit = None
                         nuevas_obs    = st.text_area("Observaciones:", value=op_edit.get('observaciones_rollos','') or '').upper()
 
 #  BOLSAS (IMPRESA / BLANCA) 
@@ -2974,7 +3094,7 @@ elif menu == "📅 Planificación":
                                         "destino_rollos":        nuevo_dest_r if nueva_trans_r == "SI" else None,
                                         "observaciones_rollos":  nuevas_obs,
                                     })
-                                elif tipo_op == "REBOBINADO":
+                                elif tipo_op in ("REBOBINADO", "REBOBINADO INTERNO"):
                                     update_payload.update({
                                         "material":             nuevo_mat,
                                         "gramaje_rollos":       nuevo_gram,
@@ -2983,6 +3103,9 @@ elif menu == "📅 Planificación":
                                         "objetivo_rebobinado":  nuevo_obj,
                                         "observaciones_rollos": nuevas_obs,
                                     })
+                                    if tipo_op == "REBOBINADO INTERNO":
+                                        update_payload["certificado_fsc"] = nuevo_fsc_edit
+                                        update_payload["detalles_partes_json"] = lista_rri_e
                                 elif tipo_op in ("BOLSA IMPRESA", "BOLSA BLANCA"):
                                     update_payload.update({
                                         "bolsa_c_largo_total": int(nuevo_bolsa_C),
@@ -3039,7 +3162,7 @@ elif menu == "📅 Planificación":
                                 st.error(f"Error al guardar: {e}")
 
     with tab_anular:
-        st.markdown("<div class='section-header'>🚫 ANULAR ORDEN DE PRODUCCIÓN</div>", unsafe_allow_html=True)
+        st.markdown("<div class='section-header'>🚫 ANULAR / 🗑️ ELIMINAR ORDEN DE PRODUCCIÓN</div>", unsafe_allow_html=True)
         st.caption("Usa esto cuando una OP quedó mal creada y necesitas descartarla sin tener que borrarla manualmente en Supabase.")
 
         rol_anular_actual = st.session_state.get('rol', '').lower()
@@ -3081,6 +3204,44 @@ elif menu == "📅 Planificación":
                 if op_anular.get('anulada'):
                     st.info(f"ℹ️ Esta OP ya está ANULADA desde el {op_anular.get('fecha_anulacion', 'N/A')} "
                             f"por {op_anular.get('anulada_por', 'N/A')}. Motivo: {op_anular.get('motivo_anulacion', 'N/A')}")
+
+# ELIMINACION DEFINITIVA: solo disponible para OPs YA ANULADAS, y solo para
+# admin — es la accion mas delicada del sistema (borra el registro de
+# Supabase de verdad, sin dejar ningun rastro ni en Trazabilidad).
+                    st.markdown("---")
+                    if rol_anular_actual != 'admin':
+                        st.caption("🔒 Solo el administrador puede eliminar definitivamente una OP anulada.")
+                    else:
+                        with st.expander("🗑️ ZONA DE PELIGRO — Eliminar esta OP definitivamente"):
+                            st.error("⚠️ Esto borra el registro por completo de la base de datos. No queda ningún rastro — "
+                                     "ni en Seguimiento, ni en Trazabilidad, ni en ningún reporte. A diferencia de anular, "
+                                     "esto NO se puede deshacer ni consultar después.")
+                            confirmar_texto_elim = st.text_input(
+                                f"Para confirmar, escribe exactamente el número de la OP ({op_anular.get('op')}):",
+                                key="confirmar_texto_elim_op"
+                            )
+                            confirmar_check_elim = st.checkbox(
+                                "Entiendo que esta acción es permanente y no se puede deshacer.",
+                                key="confirmar_check_elim_op"
+                            )
+                            puede_eliminar = (
+                                confirmar_check_elim
+                                and confirmar_texto_elim.strip().upper() == str(op_anular.get('op', '')).strip().upper()
+                            )
+                            if st.button("🗑️ ELIMINAR DEFINITIVAMENTE ESTA OP", type="primary",
+                                         use_container_width=True, disabled=not puede_eliminar):
+                                try:
+                                    supabase.table("ordenes_planeadas").delete().eq("op", op_anular['op']).execute()
+# LIMPIEZA DE SEGURIDAD, POR SI QUEDÓ ALGO SUELTO EN trabajos_activos (no
+# deberia haber nada ya que estaba anulada, pero se verifica igual)
+                                    supabase.table("trabajos_activos").delete().eq("op", op_anular['op']).execute()
+
+                                    st.success(f"🗑️ OP {op_anular['op']} eliminada definitivamente.")
+                                    st.session_state.pop('op_anular_data', None)
+                                    time.sleep(1.8)
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"Error al eliminar: {e}")
                 else:
 # AVISAR SI LA OP YA ESTA ACTIVA (SIENDO TRABAJADA) EN UNA MAQUINA EN ESTE MOMENTO
                     activa_en_maquina = supabase.table("trabajos_activos").select("*").eq("op", op_anular['op']).execute().data
@@ -3128,6 +3289,110 @@ elif menu == "📅 Planificación":
                             except Exception as e:
                                 st.error(f"Error al anular: {e}")
 
+    with tab_devolver:
+        st.markdown("<div class='section-header'>↩️ DEVOLVER OP A UN ÁREA ANTERIOR</div>", unsafe_allow_html=True)
+        st.caption("Úsalo cuando alguien se equivocó de botón (ej: dio 'Finalizar' cuando era solo un 'Parcial', o la máquina/área quedó mal) y necesitas corregir la ruta de la OP sin tener que entrar a Supabase.")
+
+        rol_devolver_actual = st.session_state.get('rol', '').lower()
+
+        if rol_devolver_actual != 'admin':
+            st.warning("🔒 Solo el administrador puede devolver una OP a un área anterior.")
+        else:
+            AREAS_VALIDAS_DEVOLVER = [
+                "AUDITORIA VENTAS", "AUDITORIA BOLSAS", "DISEÑO (AUDITORIA)", "PRE-PRENSA", "REVISION_FINAL",
+                "IMPRESIÓN", "COLECTORAS", "ENCUADERNACIÓN", "CORTE", "REBOBINADORAS",
+                "BOLSAS - FLEXO", "BOLSAS - ARMADORAS", "FINALIZADO"
+            ]
+
+            col_d1, col_d2 = st.columns([3, 1])
+            op_buscar_dev = col_d1.text_input("Número de OP a corregir (Ej: FRI-101):", key="op_devolver_buscar")
+
+            if col_d2.button("🔍 Buscar", key="btn_buscar_devolver"):
+                if op_buscar_dev:
+                    res_dev = supabase.table("ordenes_planeadas").select("*")\
+                        .eq("op", op_buscar_dev.upper().strip()).execute()
+                    if res_dev.data:
+                        st.session_state['op_devolver_data'] = res_dev.data[0]
+                    else:
+                        st.error("❌ No se encontró esa OP.")
+                        st.session_state.pop('op_devolver_data', None)
+                else:
+                    st.warning("Ingresa el número de OP.")
+
+            op_dev = st.session_state.get('op_devolver_data')
+
+            if op_dev:
+                estado_dev_actual = op_dev.get('proxima_area', '')
+
+                if op_dev.get('anulada'):
+                    st.error("🚫 Esta OP está ANULADA. Primero debes crear una OP nueva o revisar su estado desde la pestaña de Anular OP — esta herramienta no aplica a OPs anuladas.")
+                else:
+                    st.markdown(f"""
+                    <div class='metric-box'>
+                      <b>📋 OP:</b> {op_dev.get('op')} &nbsp;&nbsp;
+                      <b>👤 Cliente:</b> {op_dev.get('cliente')} &nbsp;&nbsp;
+                      <b>📝 Trabajo:</b> {op_dev.get('nombre_trabajo')} &nbsp;&nbsp;
+                      <b>🏷️ Tipo:</b> {op_dev.get('tipo_orden')} &nbsp;&nbsp;
+                      <b>📍 Estado actual:</b> <code>{estado_dev_actual}</code>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+# HISTORIAL DE PASOS, PARA QUE EL ADMIN VEA CLARAMENTE A CUAL AREA CONVIENE DEVOLVERLA
+                    hist_dev = op_dev.get('historial_procesos') or []
+                    if hist_dev:
+                        st.markdown("**📋 Historial de esta OP (más reciente primero):**")
+                        for paso in reversed(hist_dev[-8:]):
+                            st.caption(f"• {paso.get('fecha','?')} — {paso.get('area','?')} / {paso.get('maquina','—')} "
+                                       f"({paso.get('tipo','?')}) — {paso.get('operario','?')}")
+                    else:
+                        st.caption("Esta OP todavía no tiene pasos registrados en su historial.")
+
+# AVISAR SI LA OP ESTA ACTIVA EN UNA MAQUINA EN ESTE MOMENTO
+                    activa_en_maquina_dev = supabase.table("trabajos_activos").select("*").eq("op", op_dev['op']).execute().data
+                    if activa_en_maquina_dev:
+                        st.warning(f"⚠️ Esta OP está ACTIVA en este momento en la máquina **{activa_en_maquina_dev[0].get('maquina','?')}**. "
+                                   f"Si la devuelves, esa máquina quedará libre automáticamente.")
+
+                    st.markdown("---")
+                    idx_area_dev = AREAS_VALIDAS_DEVOLVER.index(estado_dev_actual) if estado_dev_actual in AREAS_VALIDAS_DEVOLVER else 0
+                    area_destino_dev = st.selectbox("Área a la que se debe devolver esta OP:", AREAS_VALIDAS_DEVOLVER, index=idx_area_dev, key="area_destino_devolver")
+                    motivo_devolver_txt = st.text_area("✍️ Motivo de la corrección (obligatorio):", key="motivo_devolver_txt").upper()
+                    confirmar_devolver = st.checkbox(
+                        f"Confirmo que deseo devolver la OP {op_dev.get('op')} a '{area_destino_dev}'.",
+                        key="confirmar_devolver_chk"
+                    )
+
+                    if st.button("↩️ DEVOLVER ESTA OP", type="primary", use_container_width=True, disabled=not confirmar_devolver):
+                        if not motivo_devolver_txt.strip():
+                            st.error("Debes escribir un motivo antes de devolver la OP.")
+                        else:
+                            try:
+                                hist_devolver = op_dev.get('historial_procesos') or []
+                                hist_devolver.append({
+                                    "area": "CORRECCIÓN",
+                                    "maquina": "—",
+                                    "tipo": "DEVUELTA",
+                                    "operario": st.session_state.get('nombre_usuario', '?'),
+                                    "fecha": hora_colombia().strftime("%d/%m/%Y %H:%M"),
+                                    "observaciones": f"OP devuelta de '{estado_dev_actual}' a '{area_destino_dev}'. Motivo: {motivo_devolver_txt}"
+                                })
+
+                                supabase.table("ordenes_planeadas").update({
+                                    "proxima_area": area_destino_dev,
+                                    "estado_parcial": None,
+                                    "historial_procesos": hist_devolver
+                                }).eq("op", op_dev['op']).execute()
+
+# SE LIBERA LA MAQUINA SI LA OP ESTABA ACTIVA EN ALGUNA, YA QUE LA RUTA CAMBIÓ
+                                supabase.table("trabajos_activos").delete().eq("op", op_dev['op']).execute()
+
+                                st.success(f"↩️ OP {op_dev['op']} devuelta correctamente a '{area_destino_dev}'.")
+                                st.session_state.pop('op_devolver_data', None)
+                                time.sleep(1.8)
+                                st.rerun()
+                            except Exception as e:
+                                st.error(f"Error al devolver la OP: {e}")
+
     with tab_nueva:
     
 #  SELECTOR OTIGEN DE OP
@@ -3151,7 +3416,7 @@ elif menu == "📅 Planificación":
 # valor que haya quedado de una búsqueda anterior o de "NO" por defecto,
 # y las casillas de detalle se quedan ocultas y en blanco aunque sí haya
 # información en la OP anterior — esto es justo lo que reportó el usuario).
-                            for _k in ['partes_sel', 'perf_select', 'perf_det', 'barr_select', 'barr_det',
+                            for _k in ['partes_sel', 'rri_cortes_sel', 'perf_select', 'perf_det', 'barr_select', 'barr_det',
                                        'num_select', 'num_desde', 'num_hasta']:
                                 st.session_state.pop(_k, None)
                             st.success(f"✅ Datos de '{res_busq.data[0]['nombre_trabajo']}' cargados correctamente.")
@@ -3171,18 +3436,19 @@ elif menu == "📅 Planificación":
         st.divider()
 
 # SELECTOR DE TIPO DE PRODUCTO
-        c1, c2, c3, c4, c5, c6, c7 = st.columns(7)
+        c1, c2, c3, c4, c5, c5b, c6, c7 = st.columns(8)
         if c1.button("📑 FORMAS IMPRESAS"): st.session_state.sel_tipo = "FORMAS IMPRESAS"
         if c2.button("📄 FORMAS BLANCAS"): st.session_state.sel_tipo = "FORMAS BLANCAS"
         if c3.button("🧵 ROLLOS IMPRESOS"): st.session_state.sel_tipo = "ROLLOS IMPRESOS"
         if c4.button("🧻 ROLLOS BLANCOS"): st.session_state.sel_tipo = "ROLLOS BLANCOS"
         if c5.button("🔄 REBOBINADO"):st.session_state.sel_tipo = "REBOBINADO"
+        if c5b.button("🔄🏠 REBOB. INTERNO"):st.session_state.sel_tipo = "REBOBINADO INTERNO"
         if c6.button("👜 BOLSA IMPRESA"): st.session_state.sel_tipo = "BOLSA IMPRESA"
         if c7.button("🛍️ BOLSA BLANCA"): st.session_state.sel_tipo = "BOLSA BLANCA"
 
         if st.session_state.sel_tipo:
             t = st.session_state.sel_tipo
-            prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-", "BOLSA IMPRESA": "BI-", "BOLSA BLANCA": "BB-"}.get(t, "")
+            prefijo = {"FORMAS IMPRESAS": "FRI-", "FORMAS BLANCAS": "FRB-", "ROLLOS IMPRESOS": "RI-", "ROLLOS BLANCOS": "RB-", "REBOBINADO": "RR-", "REBOBINADO INTERNO": "RRI-", "BOLSA IMPRESA": "BI-", "BOLSA BLANCA": "BB-"}.get(t, "")
             p1, p2, p3, p4 = st.columns(4)
 
 #  PERFORACIONES TODOS
@@ -3278,27 +3544,51 @@ elif menu == "📅 Planificación":
                         st.session_state[f"tr_{i}"] = st.session_state.get("tr_1", "")
                         st.session_state[f"obe_{i}"] = st.session_state.get("obe_1", "")
 
+# BOTON COPIAR CORTE 1 A TODOS (equivalente al de Formas, para RRI)
+            if t == "REBOBINADO INTERNO" and st.session_state.get("rri_cortes_sel", 1) > 1:
+                if st.button("📋 Copiar Corte 1 a todos los cortes"):
+                    n_cortes_copiar = st.session_state.get("rri_cortes_sel", 1)
+                    for i in range(2, n_cortes_copiar + 1):
+                        st.session_state[f"rri_anc_{i}"] = st.session_state.get("rri_anc_1", "")
+                        st.session_state[f"rri_met_{i}"] = st.session_state.get("rri_met_1", "")
+                        st.session_state[f"rri_ent_{i}"] = st.session_state.get("rri_ent_1", "")
+
                     st.success("Partes copiadas correctamente")
                     st.rerun()
                     
 
             with st.form("form_plan", clear_on_submit=True):
                 st.subheader(f"Nueva Orden: {t} (Prefijo: {prefijo})")
+
+                es_rri_form = (t == "REBOBINADO INTERNO")
                 
 # SECCION: DATOS GENERALES 
                 f1, f2, f3 = st.columns(3)
                 op_input = f1.text_input("Número de Nueva OP (Solo número) *").upper()
                 
+# EN REBOBINADO INTERNO, "OP Anterior" se reemplaza por "Certificado FSC"
+                if es_rri_form:
+                    fsc_rri_form = f2.selectbox("Certificado FSC:", ["NO", "SI"],
+                                                 index=1 if datos_rec.get('certificado_fsc') == "SI" else 0)
+                    op_a = ""
+                else:
 # SI ES REPETICION SUGERIR LA OP ANTERIOR BUSCADA
-                val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
-                op_a = f2.text_input("OP Anterior", value=val_op_ant).upper()
+                    val_op_ant = datos_rec.get('op', "") if "Repetición" in origen else ""
+                    op_a = f2.text_input("OP Anterior", value=val_op_ant).upper()
+                    fsc_rri_form = None
                 
-                cli = f3.text_input("Cliente *", value=datos_rec.get('cliente', "")).upper()
+                cli = f3.text_input("Área *" if es_rri_form else "Cliente *", value=datos_rec.get('cliente', "")).upper()
                 
-                f4, f5, f6 = st.columns(3)
-                vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', "")).upper()
-                trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', "")).upper()
-                num_ticket_creacion = f6.number_input("Número de Ticket", value=int(datos_rec.get('num_ticket', 0) or 0), min_value=0, step=1)
+                if es_rri_form:
+                    f4, f5 = st.columns(2)
+                    vend = f4.text_input("Jefe *", value=datos_rec.get('vendedor', "")).upper()
+                    trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', "")).upper()
+                    num_ticket_creacion = None
+                else:
+                    f4, f5, f6 = st.columns(3)
+                    vend = f4.text_input("Vendedor", value=datos_rec.get('vendedor', "")).upper()
+                    trab = f5.text_input("Nombre del Trabajo", value=datos_rec.get('nombre_trabajo', "")).upper()
+                    num_ticket_creacion = f6.number_input("Número de Ticket", value=int(datos_rec.get('num_ticket', 0) or 0), min_value=0, step=1)
 
                 if "FORMAS" in t:
                     lista_p = []
@@ -3340,18 +3630,63 @@ elif menu == "📅 Planificación":
                         })
                     
                     obs = st.text_area("Observaciones Generales Formas", value=datos_rec.get('observaciones_formas', "")).upper()
-                elif t == "REBOBINADO":
+                elif t in ("REBOBINADO", "REBOBINADO INTERNO"):
 
                     r1, r2, r3 = st.columns(3)
 
                     mat = r1.text_input("Material / Papel").upper()
                     gram = r2.number_input("Gramaje", 0)
-                    ancho = r3.text_input("Referencia Comercial (Ancho, Largo, Peso)",).upper()
+                    ancho = r3.text_input("Ancho de Bobina" if es_rri_form else "Referencia Comercial (Ancho, Largo, Peso)").upper()
 
-                    r4, r5 = st.columns(2)
+                    if es_rri_form:
+                        cant_r = st.number_input("Cantidad", 0)
+                        objetivo = ""
 
-                    cant_r = r4.number_input("Cantidad Rollos Solicitada", 0)
-                    objetivo = r5.text_input("Objetivo del Rebobinado").upper()
+                        # RRI: una bobina madre puede convertirse en hasta 10 cortes.
+                        rec_cortes_rri = datos_rec.get('detalles_partes_json') or []
+                        if "rri_cortes_sel" not in st.session_state:
+                            n_prev_rri = len(rec_cortes_rri)
+                            st.session_state.rri_cortes_sel = n_prev_rri if 1 <= n_prev_rri <= 10 else 1
+
+                        st.markdown("##### ✂️ DETALLE DE CORTES / ENTREGAS")
+                        rri_cortes = st.selectbox(
+                            "Número de cortes",
+                            list(range(1, 11)),
+                            index=st.session_state.rri_cortes_sel - 1,
+                            key="rri_cortes_sel"
+                        )
+
+                        lista_rri = []
+                        for i in range(1, rri_cortes + 1):
+                            c_data = rec_cortes_rri[i - 1] if i <= len(rec_cortes_rri) else {}
+                            st.markdown(f"**CORTE {i}**")
+                            rc1, rc2, rc3 = st.columns(3)
+                            anc_final = rc1.text_input(
+                                f"Ancho Final C{i}",
+                                value=c_data.get('ancho_final', ''),
+                                key=f"rri_anc_{i}"
+                            ).upper()
+                            met_final = rc2.text_input(
+                                f"Metros Finales C{i}",
+                                value=c_data.get('metros_finales', ''),
+                                key=f"rri_met_{i}"
+                            ).upper()
+                            entregar_a = rc3.text_input(
+                                f"Entregar A C{i}",
+                                value=c_data.get('entregar_a', ''),
+                                key=f"rri_ent_{i}"
+                            ).upper()
+                            lista_rri.append({
+                                "corte": i,
+                                "ancho_final": anc_final,
+                                "metros_finales": met_final,
+                                "entregar_a": entregar_a
+                            })
+                    else:
+                        r4, r5 = st.columns(2)
+                        cant_r = r4.number_input("Cantidad Rollos Solicitada", 0)
+                        objetivo = r5.text_input("Objetivo del Rebobinado").upper()
+                        lista_rri = []
 
                     obs = st.text_area("Observaciones Rebobinado").upper()
 
@@ -3448,10 +3783,10 @@ elif menu == "📅 Planificación":
                         campos_faltantes.append("Número OP")
 
                     if not cli:
-                        campos_faltantes.append("Cliente")
+                        campos_faltantes.append("Área" if es_rri_form else "Cliente")
 
                     if not vend:
-                        campos_faltantes.append("Vendedor")
+                        campos_faltantes.append("Jefe" if es_rri_form else "Vendedor")
 
                     if not trab:
                         campos_faltantes.append("Nombre del Trabajo")
@@ -3493,9 +3828,13 @@ elif menu == "📅 Planificación":
                         "proxima_area": ruta_inicial,
                         "historial_procesos": [],
                         "creado_por": st.session_state.get('nombre_usuario', ''),
-                        "num_ticket": int(num_ticket_creacion),
                         "anulada": False
                     }
+
+                    # El número de ticket no aplica para REBOBINADO INTERNO.
+                    # Para los demás tipos se conserva el comportamiento existente.
+                    if t != "REBOBINADO INTERNO":
+                        payload["num_ticket"] = int(num_ticket_creacion)
 
                     if "FORMAS" in t:
                         payload.update({
@@ -3514,7 +3853,7 @@ elif menu == "📅 Planificación":
                             "observaciones_formas": obs
                         })
 
-                    elif t == "REBOBINADO":
+                    elif t in ("REBOBINADO", "REBOBINADO INTERNO"):
                         payload.update({
                             "material": mat,
                             "gramaje_rollos": gram,
@@ -3524,6 +3863,9 @@ elif menu == "📅 Planificación":
                             "objetivo_rebobinado": objetivo,
                             "observaciones_rollos": obs
                     })
+                        if t == "REBOBINADO INTERNO":
+                            payload["certificado_fsc"] = fsc_rri_form
+                            payload["detalles_partes_json"] = lista_rri
 
                     elif t in ("BOLSA IMPRESA", "BOLSA BLANCA"):
                         payload.update({
@@ -3592,9 +3934,15 @@ elif menu == "📅 Planificación":
                             payload.pop("creado_por", None)
                             _insertar_op_con_reintentos(payload)
                         except Exception:
+                            try:
 # Si la columna 'anulada' aún no existe en Supabase, reintenta guardar sin ella.
-                            payload.pop("anulada", None)
-                            _insertar_op_con_reintentos(payload)
+                                payload.pop("anulada", None)
+                                _insertar_op_con_reintentos(payload)
+                            except Exception:
+# Si la columna 'certificado_fsc' (nueva, de Rebobinado Interno) aún no
+# existe en Supabase, reintenta guardar sin ella para no romper el guardado.
+                                payload.pop("certificado_fsc", None)
+                                _insertar_op_con_reintentos(payload)
 
                     st.success(f"Orden {op_final} registrada.")
                     st.session_state.sel_tipo = None
@@ -3647,7 +3995,7 @@ elif menu == "📦 Bodega Terminados":
                         st.info("ℹ️ Solo puede dar salida a productos que ya están en el inventario.")
                         nom_trabajo = st.selectbox("Seleccione Trabajo para Despacho:", [""] + nombres_existentes)
                     
-                    tipo_prod = st.selectbox("Tipo de Producto:", ["BLANCO", "IMPRESO", "REBOBINADO"])
+                    tipo_prod = st.selectbox("Tipo de Producto:", ["BLANCO", "IMPRESO", "REBOBINADO", "REBOBINADO INTERNO"])
                 
                 with col2:
                     c_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
@@ -3935,9 +4283,10 @@ elif menu == "📊 Reportes Admin":
             st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
 
 # SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-, BI-, BB-) PARA QUE SEA MAS FACIL
-            sub_ri, sub_rb, sub_fri, sub_frb, sub_rr, sub_bi, sub_bb = st.tabs([
+            sub_ri, sub_rb, sub_fri, sub_frb, sub_rr, sub_rri, sub_bi, sub_bb = st.tabs([
                 "🧵 RI- (Rollos Impresos)", "🧻 RB- (Rollos Blancos)",
                 "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)",
+                "🔄🏠 RRI- (Rebobinado Interno)",
                 "👜 BI- (Bolsas Impresas)", "🛍️ BB- (Bolsas Blancas)"
             ])
 
@@ -4058,6 +4407,8 @@ elif menu == "📊 Reportes Admin":
                 _tab_trazabilidad_por_prefijo("FRB-", "frb")
             with sub_rr:
                 _tab_trazabilidad_por_prefijo("RR-", "rr")
+            with sub_rri:
+                _tab_trazabilidad_por_prefijo("RRI-", "rri")
             with sub_bi:
                 _tab_trazabilidad_por_prefijo("BI-", "bi")
             with sub_bb:
@@ -4271,7 +4622,7 @@ elif menu == "📦 Almacen/Despachos":
                         st.info("ℹ️ Solo puede dar salida a productos que ya están en el inventario.")
                         nom_trabajo = st.selectbox("Seleccione Trabajo para Despacho:", [""] + nombres_existentes)
                     
-                    tipo_prod = st.selectbox("Tipo de Producto:", ["BLANCO", "IMPRESO", "REBOBINADO", "ADHESIVO"])
+                    tipo_prod = st.selectbox("Tipo de Producto:", ["BLANCO", "IMPRESO", "REBOBINADO", "REBOBINADO INTERNO", "ADHESIVO"])
                 
                 with col2:
                     c_cajas = st.number_input("Cantidad de Cajas", min_value=0, step=1)
@@ -5448,7 +5799,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
                         if area_act == "CORTE":
                             n_area = "FINALIZADO"
 
-                    elif tipo == "REBOBINADO":
+                    elif tipo in ("REBOBINADO", "REBOBINADO INTERNO"):
                         if area_act == "REBOBINADORAS":
                             n_area = "FINALIZADO"
 
@@ -5564,7 +5915,7 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
             elif tipo_p == "ROLLOS BLANCOS":
                 if area_act == "CORTE":
                     n_area_parcial = "FINALIZADO"
-            elif tipo_p == "REBOBINADO":
+            elif tipo_p in ("REBOBINADO", "REBOBINADO INTERNO"):
                 if area_act == "REBOBINADORAS":
                     n_area_parcial = "FINALIZADO"
 
