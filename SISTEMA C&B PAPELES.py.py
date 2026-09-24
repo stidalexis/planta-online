@@ -3939,7 +3939,24 @@ elif menu == "📅 Planificación":
                 
 # SECCIÓN: DATOS GENERALES 
                 f1, f2, f3 = st.columns(3)
-                op_input = f1.text_input("Número de Nueva OP (Solo número) *").upper()
+
+                if es_rri_form:
+# RRI: número de OP automático = último "RRI-N" guardado + 1 (no se edita a mano).
+                    try:
+                        rri_existentes = supabase.table("ordenes_planeadas").select("op").ilike("op", f"{prefijo}%").execute().data or []
+                        numeros_rri = [int(str(o.get("op", "")).replace(prefijo, "", 1)) for o in rri_existentes if str(o.get("op", "")).replace(prefijo, "", 1).isdigit()]
+                        siguiente_rri = max(numeros_rri) + 1 if numeros_rri else 1
+                    except Exception as e:
+                        siguiente_rri = None
+                        st.error(f"No se pudo calcular el número automático de RRI: {e}")
+
+                    if siguiente_rri:
+                        op_input = str(siguiente_rri)
+                        f1.text_input("Número de Nueva OP (automático)", value=op_input, disabled=True)
+                    else:
+                        op_input = f1.text_input("Número de Nueva OP (Solo número) *").upper()
+                else:
+                    op_input = f1.text_input("Número de Nueva OP (Solo número) *").upper()
                 
 # EN REBOBINADO INTERNO, "OP Anterior" se reemplaza por "Certificado FSC"
                 if es_rri_form:
@@ -6738,4 +6755,3 @@ if menu == "🛒 Mercado":
                     st.info("Aún no tienes movimientos de coins.")
             except Exception as e:
                 st.error(f"Error: {e}")
-                
