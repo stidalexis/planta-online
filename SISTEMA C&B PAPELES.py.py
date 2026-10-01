@@ -1470,32 +1470,109 @@ if 'rep' not in st.session_state: st.session_state.rep = None
 # LOGIN PRINCIPAL  LOGIN
 if not st.session_state.get('autenticado'):
 
-# ESTILOS DE LA PORTADA DE LOGIN (fondo de marca + tarjeta con los 3 logos)
-    st.markdown("""
+# PORTADA ESTACIONAL: cada mes tiene sus propios elementos Y una animacion distinta.
+    TEMAS_PORTADA = {
+        1: {"nombre":"Enero", "emoji":["❄️","☃️","✨","❄️","🎉","⭐","❄️","☃️"], "mensaje":"¡Comenzamos un nuevo año!", "fondo":"radial-gradient(circle at 20% 20%, rgba(120,190,255,0.35) 0%, transparent 42%), radial-gradient(circle at 80% 75%, rgba(255,255,255,0.28) 0%, transparent 38%), linear-gradient(160deg, #071b33 0%, #1261a0 50%, #dff6ff 140%)"},
+        2: {"nombre":"Febrero", "emoji":["❤️","💖","💕","💝","💗","💓","❤️","💘"], "mensaje":"Un mes lleno de buenos deseos", "fondo":"radial-gradient(circle at 18% 18%, rgba(255,80,130,0.30) 0%, transparent 42%), radial-gradient(circle at 82% 75%, rgba(255,180,205,0.30) 0%, transparent 38%), linear-gradient(160deg, #3b0718 0%, #9b1748 50%, #ffb3c7 140%)"},
+        3: {"nombre":"Marzo", "emoji":["🌱","🌿","🌼","🌸","🦋","🌱","🌼","🍃"], "mensaje":"Renovamos ideas y proyectos", "fondo":"radial-gradient(circle at 20% 20%, rgba(100,210,120,0.30) 0%, transparent 42%), radial-gradient(circle at 80% 75%, rgba(255,230,100,0.24) 0%, transparent 38%), linear-gradient(160deg, #07351e 0%, #167c4b 50%, #d8f5b7 140%)"},
+        4: {"nombre":"Abril", "emoji":["🌸","🌷","🌼","🦋","🌦️","🌸","🌷","✨"], "mensaje":"Que florezcan nuevos proyectos", "fondo":"radial-gradient(circle at 20% 20%, rgba(255,140,190,0.30) 0%, transparent 42%), radial-gradient(circle at 80% 75%, rgba(100,180,255,0.22) 0%, transparent 38%), linear-gradient(160deg, #32124f 0%, #7b3fa1 50%, #ffd4e7 140%)"},
+        5: {"nombre":"Mayo", "emoji":["🌺","🌻","🌼","🦋","🐝","🌸","🌻","🍃"], "mensaje":"Seguimos creciendo juntos", "fondo":"radial-gradient(circle at 20% 20%, rgba(255,210,60,0.30) 0%, transparent 42%), radial-gradient(circle at 80% 75%, rgba(80,190,120,0.25) 0%, transparent 38%), linear-gradient(160deg, #263b0b 0%, #658d13 50%, #fff0a8 140%)"},
+        6: {"nombre":"Junio", "emoji":["☀️","🌞","✨","🌈","⭐","☀️","🌤️","✨"], "mensaje":"Un mes para seguir avanzando", "fondo":"radial-gradient(circle at 20% 20%, rgba(255,220,60,0.32) 0%, transparent 42%), radial-gradient(circle at 80% 75%, rgba(80,190,255,0.24) 0%, transparent 38%), linear-gradient(160deg, #07355c 0%, #0878a5 50%, #ffe58a 140%)"},
+        7: {"nombre":"Julio", "emoji":["🎈","⭐","🎉","🎈","✨","🎊","⭐","🎈"], "mensaje":"Celebramos nuestros avances", "fondo":"radial-gradient(circle at 20% 20%, rgba(255,80,100,0.30) 0%, transparent 42%), radial-gradient(circle at 80% 75%, rgba(70,150,255,0.25) 0%, transparent 38%), linear-gradient(160deg, #172052 0%, #315db5 50%, #ffd34d 140%)"},
+        8: {"nombre":"Agosto", "emoji":["🪁","🪁","☁️","🌤️","🪁","✨","☁️","🪁"], "mensaje":"¡Mes de cometas!", "fondo":"radial-gradient(circle at 18% 18%, rgba(70,170,255,0.34) 0%, transparent 42%), radial-gradient(circle at 82% 72%, rgba(255,220,80,0.26) 0%, transparent 38%), linear-gradient(160deg, #07345c 0%, #1688c7 50%, #ffd96b 140%)"},
+        9: {"nombre":"Septiembre", "emoji":["❤️","💖","💕","💗","💝","💓","❤️","💞"], "mensaje":"Un mes para trabajar con el corazón", "fondo":"radial-gradient(circle at 18% 18%, rgba(255,80,120,0.30) 0%, transparent 42%), radial-gradient(circle at 82% 75%, rgba(255,190,210,0.28) 0%, transparent 38%), linear-gradient(160deg, #330717 0%, #8d1745 50%, #ffc1d6 140%)"},
+        10:{"nombre":"Octubre", "emoji":["🎃","🦇","🦇","👻","🕷️","🍬","🎃","🕸️"], "mensaje":"¡Una portada especial de octubre!", "fondo":"radial-gradient(circle at 20% 20%, rgba(255,140,0,0.35) 0%, transparent 45%), radial-gradient(circle at 80% 75%, rgba(255,140,0,0.25) 0%, transparent 40%), linear-gradient(160deg, #0a0014 0%, #2d0a4e 45%, #ff8c00 140%)"},
+        11:{"nombre":"Noviembre", "emoji":["🍂","🍁","🍂","🍁","🌰","🍃","🍂","🍁"], "mensaje":"Tiempo de cerrar el año con fuerza", "fondo":"radial-gradient(circle at 20% 20%, rgba(190,90,20,0.30) 0%, transparent 42%), radial-gradient(circle at 80% 75%, rgba(255,190,80,0.24) 0%, transparent 38%), linear-gradient(160deg, #351707 0%, #8b4513 50%, #f4c66b 140%)"},
+        12:{"nombre":"Diciembre", "emoji":["🎄","🎅","🎁","✨","🔔","❄️","🎄","⭐"], "mensaje":"¡Felices fiestas!", "fondo":"radial-gradient(circle at 18% 18%, rgba(255,70,70,0.28) 0%, transparent 42%), radial-gradient(circle at 82% 75%, rgba(70,180,100,0.28) 0%, transparent 38%), linear-gradient(160deg, #062b20 0%, #087348 50%, #d61f36 140%)"},
+    }
+
+    tema_portada = TEMAS_PORTADA.get(hora_colombia().month, TEMAS_PORTADA[1])
+    mes_actual = hora_colombia().month
+    decoraciones = tema_portada["emoji"]
+
+    # UNA ANIMACION DIFERENTE PARA CADA MES.
+    # No solo cambia el emoji: cambia el comportamiento del movimiento.
+    ANIMACIONES_MENSUALES = {
+        1: "nieve-suave",      # nieve flotando hacia abajo
+        2: "corazones-pulso",  # corazones que laten
+        3: "brote",             # crecimiento suave
+        4: "lluvia-primavera",  # lluvia ligera diagonal
+        5: "abejas",            # movimiento en pequenos zigzag
+        6: "sol-radial",        # brillo/pulso solar
+        7: "globos",             # globos suben y se balancean
+        8: "cometas",            # cometas se desplazan lateralmente
+        9: "corazones-flotan",   # corazones suben lentamente
+        10:"halloween-vuelo",   # murcielagos/fantasmas vuelan
+        11:"hojas-caen",         # HOJAS CAEN REALMENTE por la pantalla
+        12:"nieve-navidad",      # NIEVE BAJA REALMENTE por la pantalla
+    }
+    animacion_mes = ANIMACIONES_MENSUALES.get(mes_actual, "flotar")
+
+    # Posiciones iniciales; noviembre y diciembre comienzan arriba de la pantalla
+    # para que el movimiento vertical sea visible de principio a fin.
+    posiciones = [(8,7),(5,68),(88,10),(88,70),(18,38),(76,42),(48,9),(52,82)]
+    decoracion_html = "".join(
+        f'<div class="decoracion decoracion-{i+1} mes-{mes_actual}" '
+        f'style="top:{-12 if mes_actual in (11,12) else posiciones[i][0]}%; '
+        f'left:{posiciones[i][1]}%; animation-name:{animacion_mes}; '
+        f'animation-delay:{i*0.55}s;">{emoji}</div>'
+        for i, emoji in enumerate(decoraciones)
+    )
+
+    st.markdown(f"""
     <style>
-    .stApp { background: linear-gradient(160deg, #0D2E4E 0%, #0D47A1 45%, #0F8B8D 100%); }
-    .login-header {
-        background: rgba(255,255,255,0.97);
-        border-radius: 20px;
-        padding: 30px 20px 20px 20px;
-        margin: 10px auto 25px auto;
-        max-width: 780px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-        text-align: center;
-    }
-    .login-header .logos-fila { display:flex; justify-content:center; align-items:center; gap:35px; flex-wrap:wrap; margin-bottom:18px; }
-    .login-header .logos-fila img { max-height:78px; width:auto; object-fit:contain; }
-    .login-header .titulo-empresa { color:#0D47A1; font-weight:800; font-size:22px; margin:0; }
-    .login-header .subtitulo-empresa { color:#555; font-size:14px; margin-top:4px; }
-    div[data-testid="stForm"] {
-        background: rgba(255,255,255,0.97);
-        border-radius: 20px;
-        padding: 25px 30px;
-        max-width: 780px;
-        margin: 0 auto;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
-    }
+    .stApp {{ background: {tema_portada["fondo"]}; overflow-x:hidden; }}
+
+    .login-header {{ background:rgba(255,255,255,0.97); border-radius:20px; padding:30px 20px 20px; margin:10px auto 25px; max-width:780px; box-shadow:0 10px 30px rgba(0,0,0,0.25); text-align:center; position:relative; z-index:2; }}
+    .login-header .logos-fila {{ display:flex; justify-content:center; align-items:center; gap:35px; flex-wrap:wrap; margin-bottom:18px; }}
+    .login-header .logos-fila img {{ max-height:78px; width:auto; object-fit:contain; }}
+    .login-header .titulo-empresa {{ color:#0D47A1; font-weight:800; font-size:22px; margin:0; }}
+    .login-header .subtitulo-empresa {{ color:#555; font-size:14px; margin-top:4px; }}
+    .mes-portada {{ color:#0D47A1; font-weight:700; font-size:15px; margin-top:8px; margin-bottom:0; }}
+
+    div[data-testid="stForm"] {{ background:rgba(255,255,255,0.97); border-radius:20px; padding:25px 30px; max-width:780px; margin:0 auto; box-shadow:0 10px 30px rgba(0,0,0,0.25); position:relative; z-index:2; }}
+
+    .decoracion {{ position:fixed; z-index:0; font-size:44px; pointer-events:none; user-select:none; filter:drop-shadow(0 0 6px rgba(255,255,255,0.25)); transform-origin:center; animation-duration:8s; animation-timing-function:ease-in-out; animation-iteration-count:infinite; animation-fill-mode:both; }}
+
+    /* Enero: copos y adornos nevados descienden suavemente. */
+    @keyframes nieve-suave {{ 0%{{transform:translate(0,-5vh) rotate(0deg);opacity:0}} 12%{{opacity:1}} 50%{{transform:translate(35px,45vh) rotate(180deg)}} 100%{{transform:translate(-20px,110vh) rotate(360deg);opacity:.15}} }}
+    /* Febrero: corazones con efecto de latido. */
+    @keyframes corazones-pulso {{ 0%,100%{{transform:scale(1) translateY(0);opacity:.82}} 50%{{transform:scale(1.3) translateY(-14px);opacity:1}} }}
+    /* Marzo: brotes que aparecen y se elevan. */
+    @keyframes brote {{ 0%,100%{{transform:scale(.75) translateY(18px) rotate(-8deg);opacity:.45}} 55%{{transform:scale(1.12) translateY(-8px) rotate(8deg);opacity:1}} }}
+    /* Abril: movimiento diagonal de lluvia y flores. */
+    @keyframes lluvia-primavera {{ 0%{{transform:translate(-15px,-10px) rotate(-8deg);opacity:.35}} 50%{{transform:translate(28px,35px) rotate(8deg);opacity:1}} 100%{{transform:translate(65px,80px) rotate(-4deg);opacity:.35}} }}
+    /* Mayo: trayectoria corta tipo abeja/mariposa. */
+    @keyframes abejas {{ 0%,100%{{transform:translate(0,0) rotate(-8deg)}} 25%{{transform:translate(35px,-18px) rotate(10deg)}} 50%{{transform:translate(5px,18px) rotate(-5deg)}} 75%{{transform:translate(-32px,-10px) rotate(8deg)}} }}
+    /* Junio: efecto de resplandor/pulso para el sol. */
+    @keyframes sol-radial {{ 0%,100%{{transform:scale(1) rotate(0deg);filter:drop-shadow(0 0 4px rgba(255,220,80,.35))}} 50%{{transform:scale(1.18) rotate(8deg);filter:drop-shadow(0 0 18px rgba(255,230,100,.85))}} }}
+    /* Julio: globos suben y se balancean. */
+    @keyframes globos {{ 0%{{transform:translate(0,30px) rotate(-6deg);opacity:.2}} 45%{{transform:translate(18px,-35px) rotate(8deg);opacity:1}} 100%{{transform:translate(-12px,-105vh) rotate(-10deg);opacity:.15}} }}
+    /* Agosto: cometas cruzan el cielo. */
+    @keyframes cometas {{ 0%{{transform:translate(-30px,15px) rotate(-8deg)}} 50%{{transform:translate(55px,-25px) rotate(10deg)}} 100%{{transform:translate(125px,10px) rotate(-5deg)}} }}
+    /* Septiembre: corazones flotan hacia arriba. */
+    @keyframes corazones-flotan {{ 0%{{transform:translateY(30px) scale(.85);opacity:.15}} 30%{{opacity:1}} 100%{{transform:translateY(-105vh) scale(1.12) rotate(15deg);opacity:.08}} }}
+    /* Octubre: movimiento irregular de halloween. */
+    @keyframes halloween-vuelo {{ 0%{{transform:translate(0,0) rotate(-5deg)}} 30%{{transform:translate(-50px,-25px) rotate(-18deg)}} 60%{{transform:translate(35px,18px) rotate(12deg)}} 100%{{transform:translate(0,0) rotate(-5deg)}} }}
+    /* Noviembre: hojas que CAEN desde arriba, con giro y deriva lateral. */
+    @keyframes hojas-caen {{ 0%{{transform:translate3d(0,-12vh,0) rotate(0deg);opacity:0}} 8%{{opacity:1}} 25%{{transform:translate3d(-35px,25vh,0) rotate(95deg)}} 50%{{transform:translate3d(45px,55vh,0) rotate(210deg)}} 75%{{transform:translate3d(-25px,82vh,0) rotate(300deg)}} 100%{{transform:translate3d(30px,115vh,0) rotate(420deg);opacity:.08}} }}
+    /* Diciembre: copos de nieve que BAJAN por toda la pantalla con balanceo. */
+    @keyframes nieve-navidad {{ 0%{{transform:translate3d(0,-15vh,0) rotate(0deg);opacity:0}} 10%{{opacity:.95}} 30%{{transform:translate3d(28px,28vh,0) rotate(90deg)}} 55%{{transform:translate3d(-35px,55vh,0) rotate(180deg)}} 80%{{transform:translate3d(22px,82vh,0) rotate(270deg)}} 100%{{transform:translate3d(-18px,115vh,0) rotate(360deg);opacity:.12}} }}
+
+    .decoracion-1{{font-size:52px}} .decoracion-2{{font-size:40px}} .decoracion-3{{font-size:46px}} .decoracion-4{{font-size:48px}} .decoracion-5{{font-size:38px}} .decoracion-6{{font-size:44px}} .decoracion-7{{font-size:42px}} .decoracion-8{{font-size:40px}}
+
+    /* Octubre conserva las telarañas grandes del diseño que hiciste originalmente. */
+    .octubre-telarana{{position:fixed;z-index:0;font-size:145px;opacity:.42;pointer-events:none;animation:pulso 5s ease-in-out infinite}}
+    .octubre-telarana.izq{{top:-35px;left:-35px}} .octubre-telarana.der{{top:-35px;right:-35px;transform:scaleX(-1);animation-delay:1.2s}}
+
+    @media (prefers-reduced-motion: reduce) {{
+        .decoracion, .octubre-telarana {{ animation-duration:20s !important; animation-iteration-count:1 !important; }}
+    }}
+    @media (max-width:700px) {{ .decoracion{{font-size:32px!important}} .octubre-telarana{{font-size:95px}} .login-header{{margin-top:5px;padding:22px 12px 16px}} .login-header .logos-fila{{gap:15px}} .login-header .logos-fila img{{max-height:60px}} .login-header .titulo-empresa{{font-size:18px}} }}
     </style>
+
+    {('<div class="octubre-telarana izq">🕸️</div><div class="octubre-telarana der">🕸️</div>' if mes_actual == 10 else '')}
+    <div class="portada-decoraciones">{decoracion_html}</div>
     """, unsafe_allow_html=True)
 
     st.markdown(f"""
@@ -1506,7 +1583,8 @@ if not st.session_state.get('autenticado'):
             <img src="data:image/png;base64,{LOGO_CYB}">
         </div>
         <p class="titulo-empresa">🔐 Acceso al Sistema C&amp;B PAPELES DE COLOMBIA S.A.S</p>
-        <p class="subtitulo-empresa">Ingresa tu usuario y contraseña para continuar</p>
+        <p class="subtitulo-empresa">{decoraciones[0]} Ingresa tu usuario y contraseña para continuar {decoraciones[1]}</p>
+        <p class="mes-portada">{tema_portada["nombre"]} · {tema_portada["mensaje"]}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1514,10 +1592,9 @@ if not st.session_state.get('autenticado'):
         user = st.text_input("Usuario")
         pw = st.text_input("Contraseña", type="password")
         boton_login = st.form_submit_button("Ingresar")
-        
+
         if boton_login:
             datos_usuario = validar_usuario_supabase(user, pw)
-            
             if datos_usuario:
                 st.session_state['autenticado'] = True
                 st.session_state['usuario_actual'] = datos_usuario['usuario']
