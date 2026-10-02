@@ -1510,7 +1510,7 @@ if not st.session_state.get('autenticado'):
 
     # Posiciones iniciales; noviembre y diciembre comienzan arriba de la pantalla
     # para que el movimiento vertical sea visible de principio a fin.
-    posiciones = [(8,7),(5,68),(88,10),(88,70),(18,38),(76,42),(48,9),(52,82)]
+    posiciones = [(8,7),(5,68),(88,10),(88,70),(88,32),(92,55),(48,9),(52,82)]
     decoracion_html = "".join(
         f'<div class="decoracion decoracion-{i+1} mes-{mes_actual}" '
         f'style="top:{-12 if mes_actual in (11,12) else posiciones[i][0]}%; '
@@ -1562,6 +1562,7 @@ if not st.session_state.get('autenticado'):
     .decoracion-1{{font-size:52px}} .decoracion-2{{font-size:40px}} .decoracion-3{{font-size:46px}} .decoracion-4{{font-size:48px}} .decoracion-5{{font-size:38px}} .decoracion-6{{font-size:44px}} .decoracion-7{{font-size:42px}} .decoracion-8{{font-size:40px}}
 
     /* Octubre conserva las telarañas grandes del diseño que hiciste originalmente. */
+    @keyframes pulso {{ 0%,100%{{transform:scale(1);opacity:.42}} 50%{{transform:scale(1.06);opacity:.6}} }}
     .octubre-telarana{{position:fixed;z-index:0;font-size:145px;opacity:.42;pointer-events:none;animation:pulso 5s ease-in-out infinite}}
     .octubre-telarana.izq{{top:-35px;left:-35px}} .octubre-telarana.der{{top:-35px;right:-35px;transform:scaleX(-1);animation-delay:1.2s}}
 
