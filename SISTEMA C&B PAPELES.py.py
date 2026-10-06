@@ -20,7 +20,6 @@ except ImportError:
 st.set_page_config(layout="wide", page_title="SISTEMA C&B PAPELES V0.01 - TOTAL", page_icon="🏭")
 
 # LOGOS DE MARCA
-# 01. Configuración y recursos visuales
 def _logo_base64(nombre_archivo):
     ruta = os.path.join(os.path.dirname(__file__), "assets", nombre_archivo)
     try:
@@ -1510,7 +1509,7 @@ if not st.session_state.get('autenticado'):
 
     # Posiciones iniciales; noviembre y diciembre comienzan arriba de la pantalla
     # para que el movimiento vertical sea visible de principio a fin.
-    posiciones = [(8,7),(5,68),(88,10),(88,70),(88,32),(92,55),(48,9),(52,82)]
+    posiciones = [(8,7),(5,68),(88,10),(88,70),(18,38),(76,42),(48,9),(52,82)]
     decoracion_html = "".join(
         f'<div class="decoracion decoracion-{i+1} mes-{mes_actual}" '
         f'style="top:{-12 if mes_actual in (11,12) else posiciones[i][0]}%; '
@@ -1629,6 +1628,8 @@ with st.sidebar:
         opciones_menu = ["🖥️ Monitor", "🔍 Seguimiento"]
     elif rol == 'jefe_log':
         opciones_menu = ["📦 Bodega Terminados", "📊 Reportes Admin", "📦 Almacen/Despachos", "🧾 Recepción de Facturas"]
+    elif rol == 'supervision_saldos':
+        opciones_menu = ["🖥️ Monitor", "📊 Reportes Admin", "📦 Bodega Terminados", "📦 Almacen/Despachos"]
     elif rol == 'patinador_log':
         opciones_menu = ["📦 Almacen/Despachos", "🧾 Recepción de Facturas"]
     elif rol == 'aux_log':
@@ -1844,6 +1845,27 @@ def _desasignar_op_de_maquina(id_asignacion, maquina):
         return True, "OP desasignada de la máquina."
     except Exception as e:
         return False, f"No se pudo desasignar la OP: {e}"
+
+def _finalizar_op_en_cola(op, maquina):
+    """Al terminar el trabajo en una máquina, la OP desaparece sola de la cola
+    de planificación de esa máquina (ya cumplió su turno ahí)."""
+    try:
+        cola = _cargar_cola_planificacion(maquina)
+        asignaciones_op = [item for item in cola if str(item.get("op")) == str(op)]
+        if not asignaciones_op:
+            return
+        for item in asignaciones_op:
+            supabase.table("planificacion_maquinas").delete().eq("id", item["id"]).execute()
+
+        ids_eliminados = {item["id"] for item in asignaciones_op}
+        cola_restante = [item for item in cola if item["id"] not in ids_eliminados]
+        for n, item in enumerate(cola_restante, start=1):
+            supabase.table("planificacion_maquinas").update({
+                "posicion": n,
+                "updated_at": hora_colombia().isoformat(),
+            }).eq("id", item["id"]).execute()
+    except Exception as e:
+        print(f"No se pudo limpiar la cola de planificación para OP {op} en {maquina}: {e}")
 
 def _mapa_datos_op_planificacion(ops):
     """Consulta los datos visibles de las OP para no duplicarlos en la cola."""
@@ -4424,6 +4446,9 @@ elif menu == "📅 Planificación":
 elif menu == "📦 Bodega Terminados":
     st.title("📦 Bodega de Productos Terminados")
 
+    if st.session_state.get('rol', '').lower() == 'supervision_saldos':
+        st.info("👁️ Modo consulta: Supervisión Caldos puede revisar la información, pero no registrar entradas ni salidas.")
+
     tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
 
     with tab_mov:
@@ -4852,16 +4877,23 @@ elif menu == "📦 Bodega Terminados":
 
 # MODULO: REPORTES 
 elif menu == "📊 Reportes Admin":
-        st.title("📊 Panel de Control y Reportes")
+        if rol == 'jefe_log':
+            st.title("📦 Historial de Bodega")
+        else:
+            st.title("📊 Panel de Control y Reportes")
         
-        tab_historial, tab_muertos, tab_paradas, tab_traza, tab_rendimiento, tab_movs = st.tabs([
-            "📦 Historial de Bodega", 
-            "⏳ Disponibilidad (Máquina Libre)", 
-            "🛑 Reporte de Paradas (Fallas)",
-            "🗂️ Trazabilidad de OPs",
-            "👷 Rendimiento Maquinistas",
-            "🛠️ Movimientos del Sistema"
-        ])
+        # JEFE_LOG: por ahora solo puede consultar Historial de Bodega.
+        if rol == 'jefe_log':
+            tab_historial = st.tabs(["📦 Historial de Bodega"])[0]
+        else:
+            tab_historial, tab_muertos, tab_paradas, tab_traza, tab_rendimiento, tab_movs = st.tabs([
+                "📦 Historial de Bodega", 
+                "⏳ Disponibilidad (Máquina Libre)", 
+                "🛑 Reporte de Paradas (Fallas)",
+                "🗂️ Trazabilidad de OPs",
+                "👷 Rendimiento Maquinistas",
+                "🛠️ Movimientos del Sistema"
+            ])
         
         with tab_historial:
             st.subheader("Historial de Movimientos de Bodega")
@@ -4886,372 +4918,376 @@ elif menu == "📊 Reportes Admin":
             else:
                 st.info("Sin registros en bodega.")
 
-        with tab_muertos:
-            st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
+        if rol != 'jefe_log':
+            with tab_muertos:
+                st.subheader("⏳ Tiempo de Máquina Libre (Sin Órdenes)")
 
-#  TOMA DE TIEMPOS DE MÁQUINA LIBRE ENTRE UNA OP Y OTRA 
-            ver_todo_muertos = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_muertos")
-            q_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True)
-            if not ver_todo_muertos:
-                q_m = q_m.limit(500)
-            res_m = q_m.execute().data
-            if res_m:
+    #  TOMA DE TIEMPOS DE MÁQUINA LIBRE ENTRE UNA OP Y OTRA 
+                ver_todo_muertos = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_muertos")
+                q_m = supabase.table("tiempos_muertos").select("*").order("fecha", desc=True)
                 if not ver_todo_muertos:
-                    st.caption(f"Mostrando los {len(res_m)} registros más recientes.")
-                df_m = pd.DataFrame(res_m)
+                    q_m = q_m.limit(500)
+                res_m = q_m.execute().data
+                if res_m:
+                    if not ver_todo_muertos:
+                        st.caption(f"Mostrando los {len(res_m)} registros más recientes.")
+                    df_m = pd.DataFrame(res_m)
 
-# LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
-                if 'duracion_segundos' in df_m.columns:
-                    df_m['duracion_min'] = (df_m['duracion_segundos'].fillna(0) / 60).round(1)
-                    total_libre = df_m['duracion_min'].sum()
-                    st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre:.1f} min")
-                    df_m = df_m.drop(columns=['duracion_segundos'])
-                df_m = formatear_fechas_df(df_m)
+    # LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
+                    if 'duracion_segundos' in df_m.columns:
+                        df_m['duracion_min'] = (df_m['duracion_segundos'].fillna(0) / 60).round(1)
+                        total_libre = df_m['duracion_min'].sum()
+                        st.metric("Total Tiempo Libre (Ocioso)", f"{total_libre:.1f} min")
+                        df_m = df_m.drop(columns=['duracion_segundos'])
+                    df_m = formatear_fechas_df(df_m)
 
-# RENOMBRAR COLUMNAS PARA QUE QUEDE CLARO QUE YA ESTA EN MINUTOS (no segundos)
-                df_m = df_m.rename(columns={
-                    'maquina': 'MÁQUINA', 'motivo': 'MOTIVO', 'inicio': 'INICIO',
-                    'fin': 'FIN', 'fecha': 'FECHA', 'duracion_min': 'DURACIÓN (MIN)'
-                })
-                st.dataframe(df_m, use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay registros de tiempo libre.")
-
-        with tab_paradas:
-            st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
-
-# AQUI S EMUESTRA PORQUE LA MAQUINA SE DETENCIÓN 
-            ver_todo_paradas = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_paradas")
-            q_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True)
-            if not ver_todo_paradas:
-                q_p = q_p.limit(500)
-            res_p = q_p.execute().data
-            if res_p:
-                if not ver_todo_paradas:
-                    st.caption(f"Mostrando los {len(res_p)} registros más recientes.")
-                df_p = pd.DataFrame(res_p)
-
-# LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
-                if 'duracion_segundos' in df_p.columns:
-                    df_p['duracion_min'] = (df_p['duracion_segundos'].fillna(0) / 60).round(1)
-                    total_parada = df_p['duracion_min'].sum()
-                    st.metric("Total Tiempo Perdido por Fallas", f"{total_parada:.1f} min", delta_color="inverse")
-                    df_p = df_p.drop(columns=['duracion_segundos'])
-                
-                df_p = formatear_fechas_df(df_p)
-
-# RENOMBRAR COLUMNAS PARA QUE QUEDE CLARO QUE YA ESTA EN MINUTOS (no segundos)
-                df_p = df_p.rename(columns={
-                    'maquina': 'MÁQUINA', 'motivo': 'MOTIVO', 'inicio': 'INICIO',
-                    'fin': 'FIN', 'fecha': 'FECHA', 'duracion_min': 'DURACIÓN (MIN)'
-                })
-                st.dataframe(df_p, use_container_width=True, hide_index=True)
-            else:
-                st.info("No hay reportes de fallas técnicos.")
-
-# TRAZABILIDAD COMPLETA DE OPs (desde que se crea hasta el ultimo paso) 
-        with tab_traza:
-            st.subheader("🗂️ Trazabilidad Completa de Órdenes de Producción")
-            st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
-
-# SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-, BI-, BB-) PARA QUE SEA MAS FACIL
-            sub_ri, sub_rb, sub_fri, sub_frb, sub_rr, sub_rri, sub_bi, sub_bb = st.tabs([
-                "🧵 RI- (Rollos Impresos)", "🧻 RB- (Rollos Blancos)",
-                "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)",
-                "🔄🏠 RRI- (Rebobinado Interno)",
-                "👜 BI- (Bolsas Impresas)", "🛍️ BB- (Bolsas Blancas)"
-            ])
-
-            def _tab_trazabilidad_por_prefijo(prefijo, key_sufijo):
-                busqueda_op = st.text_input(
-                    f"🔎 Buscar por número de OP o nombre de cliente (dentro de {prefijo})",
-                    key=f"busca_traza_{key_sufijo}"
-                )
-
-                todas_ops_traza = supabase.table("ordenes_planeadas").select("*").ilike("op", f"{prefijo}%").execute().data or []
-
-                if busqueda_op:
-                    b = busqueda_op.strip().lower()
-                    todas_ops_traza = [
-                        o for o in todas_ops_traza
-                        if b in str(o.get("op", "")).lower() or b in str(o.get("cliente", "")).lower()
-                    ]
-
-                def _fecha_orden_traza(o):
-                    return str(o.get("created_at") or o.get("fecha_creacion") or "")
-                todas_ops_traza.sort(key=_fecha_orden_traza, reverse=True)
-
-                if not busqueda_op:
-                    st.info(f"Mostrando las 50 órdenes {prefijo} más recientes de {len(todas_ops_traza)}. Usa el buscador para ver cualquier OP histórica.")
-                    todas_ops_traza = todas_ops_traza[:50]
+    # RENOMBRAR COLUMNAS PARA QUE QUEDE CLARO QUE YA ESTA EN MINUTOS (no segundos)
+                    df_m = df_m.rename(columns={
+                        'maquina': 'MÁQUINA', 'motivo': 'MOTIVO', 'inicio': 'INICIO',
+                        'fin': 'FIN', 'fecha': 'FECHA', 'duracion_min': 'DURACIÓN (MIN)'
+                    })
+                    st.dataframe(df_m, use_container_width=True, hide_index=True)
                 else:
-                    st.caption(f"{len(todas_ops_traza)} orden(es) encontradas")
+                    st.info("No hay registros de tiempo libre.")
 
-                for o in todas_ops_traza:
-                    fecha_creacion_raw = o.get("created_at") or o.get("fecha_creacion") or ""
-                    fecha_creacion_fmt = fmt_fecha_hora(fecha_creacion_raw) if fecha_creacion_raw else "Sin fecha"
+            with tab_paradas:
+                st.subheader("🛑 Reporte de Fallas y Paradas Técnicas")
 
-# 'creado_por' solo existe en ordenes creadas despues de activar esta funcion
-                    creador = o.get("creado_por") or "No registrado (orden anterior a esta función)"
-                    estado_actual = o.get("proxima_area", "Sin estado")
-                    esta_anulada = bool(o.get("anulada"))
-                    titulo_expander = f"📋 OP {o.get('op')} | {o.get('cliente','')} | Estado: {estado_actual}"
-                    if esta_anulada:
-                        titulo_expander = f"🚫 [ANULADA] {titulo_expander}"
+    # AQUI S EMUESTRA PORQUE LA MAQUINA SE DETENCIÓN 
+                ver_todo_paradas = st.checkbox("Ver historial completo (puede tardar más)", key="ver_todo_paradas")
+                q_p = supabase.table("paradas_maquina").select("*").order("fecha", desc=True)
+                if not ver_todo_paradas:
+                    q_p = q_p.limit(500)
+                res_p = q_p.execute().data
+                if res_p:
+                    if not ver_todo_paradas:
+                        st.caption(f"Mostrando los {len(res_p)} registros más recientes.")
+                    df_p = pd.DataFrame(res_p)
 
-                    with st.expander(titulo_expander):
-                        if esta_anulada:
-                            st.error(
-                                f"🚫 Esta OP fue ANULADA el {o.get('fecha_anulacion', 'N/A')} por {o.get('anulada_por', 'N/A')}. "
-                                f"Motivo: {o.get('motivo_anulacion', 'Sin motivo registrado')}"
-                            )
-                        c1, c2, c3 = st.columns(3)
-                        c1.markdown(f"**Vendedor:** {o.get('vendedor','-')}")
-                        c2.markdown(f"**Creado por:** {creador}")
-                        c3.markdown(f"**Fecha creación:** {fecha_creacion_fmt}")
-                        st.markdown(f"**Trabajo:** {o.get('nombre_trabajo','-')}  |  **Tipo:** {o.get('tipo_orden','-')}")
+    # LA TABLA GUARDA LA DURACION EN SEGUNDOS -> SE CONVIERTE A MINUTOS PARA MOSTRAR
+                    if 'duracion_segundos' in df_p.columns:
+                        df_p['duracion_min'] = (df_p['duracion_segundos'].fillna(0) / 60).round(1)
+                        total_parada = df_p['duracion_min'].sum()
+                        st.metric("Total Tiempo Perdido por Fallas", f"{total_parada:.1f} min", delta_color="inverse")
+                        df_p = df_p.drop(columns=['duracion_segundos'])
+                
+                    df_p = formatear_fechas_df(df_p)
 
-                        historial = o.get("historial_procesos") or []
+    # RENOMBRAR COLUMNAS PARA QUE QUEDE CLARO QUE YA ESTA EN MINUTOS (no segundos)
+                    df_p = df_p.rename(columns={
+                        'maquina': 'MÁQUINA', 'motivo': 'MOTIVO', 'inicio': 'INICIO',
+                        'fin': 'FIN', 'fecha': 'FECHA', 'duracion_min': 'DURACIÓN (MIN)'
+                    })
+                    st.dataframe(df_p, use_container_width=True, hide_index=True)
+                else:
+                    st.info("No hay reportes de fallas técnicos.")
 
-# RESUMEN RAPIDO DE TIEMPOS POR AREA (areas ya completadas, en el orden que las paso)
-                        resumen_tiempos = []
-                        for h in historial:
-                            area_h = (h.get('area') or '').strip().upper()
-                            tipo_h = (h.get('tipo') or '').strip().upper()
-                            if area_h.startswith('EDIC') or tipo_h.startswith('EDIC'):
-                                continue
-                            t_area = h.get('tiempo_total_area') or h.get('duracion') or '-'
-                            resumen_tiempos.append(f"**{h.get('area','-')}**: {t_area}")
-                        if resumen_tiempos:
-                            st.success("📊 Tiempo que duró en cada área anterior:  " + "   |   ".join(resumen_tiempos))
+    # TRAZABILIDAD COMPLETA DE OPs (desde que se crea hasta el ultimo paso) 
+            with tab_traza:
+                st.subheader("🗂️ Trazabilidad Completa de Órdenes de Producción")
+                st.caption("Quién creó cada orden y cada paso por el que ha pasado en planta, con fechas y responsables.")
 
-# TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado ni fue anulada, se calcula en vivo)
-                        if estado_actual != "FINALIZADO" and not esta_anulada:
-                            _, tiempo_actual_area = calcular_tiempo_en_area(o)
-                            st.info(f"⏳ Lleva **{tiempo_actual_area}** en el área actual (**{estado_actual}**)")
+    # SEPARA LAS ORDENES POR PREFIJO (RI-, RB-, FRI-, FRB-, RR-, BI-, BB-) PARA QUE SEA MAS FACIL
+                sub_ri, sub_rb, sub_fri, sub_frb, sub_rr, sub_rri, sub_bi, sub_bb = st.tabs([
+                    "🧵 RI- (Rollos Impresos)", "🧻 RB- (Rollos Blancos)",
+                    "📑 FRI- (Formas Impresas)", "📄 FRB- (Formas Blancas)", "🔄 RR- (Rebobinado)",
+                    "🔄🏠 RRI- (Rebobinado Interno)",
+                    "👜 BI- (Bolsas Impresas)", "🛍️ BB- (Bolsas Blancas)"
+                ])
 
-                        if not historial:
-                            st.info("Esta orden todavía no tiene pasos de producción registrados.")
-                        else:
-                            st.markdown("**🔗 Línea de tiempo de producción:**")
-                            for paso_idx, paso in enumerate(historial, start=1):
-                                if (paso.get('area') or '').strip().upper().startswith('EDIC') or (paso.get('tipo') or '').strip().upper().startswith('EDIC'):
-                                    motivo_edicion_traza = (
-                                        paso.get('observaciones')
-                                        or paso.get('motivo')
-                                        or paso.get('motivo_edicion')
-                                        or (paso.get('nota', '').replace('Editado: ', '') if paso.get('nota') else None)
-                                        or 'Sin motivo registrado'
-                                    )
-                                    st.markdown(
-                                        f"**{paso_idx}. ✏️ EDICIÓN DE LA ORDEN** — "
-                                        f"Editado por: {paso.get('operario') or paso.get('usuario','-')}  |  "
-                                        f"{paso.get('fecha','-')}"
-                                    )
-                                    st.caption(f"📝 Motivo: {motivo_edicion_traza}")
-                                    st.divider()
-                                    continue
-                                st.markdown(
-                                    f"**{paso_idx}. {paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
-                                    f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
-                                    f"{paso.get('fecha','-')}  |  Duración trabajada: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
-                                )
-# TIEMPO TOTAL QUE LA OP ESTUVO EN ESTA AREA (desde que entro hasta que salio, incluyendo esperas/pausas)
-                                if paso.get("tiempo_total_area"):
-                                    st.caption(f"⏱️ Tiempo total en el área: {paso['tiempo_total_area']}")
-                                if paso.get("observaciones"):
-                                    st.caption(f"📝 {paso['observaciones']}")
-                                if paso.get("datos_cierre"):
-                                    with st.expander(f"Ver datos técnicos del paso {paso_idx}"):
-                                        df_paso = pd.DataFrame(list(paso["datos_cierre"].items()), columns=["Parámetro", "Valor"])
-                                        df_paso["Parámetro"] = df_paso["Parámetro"].str.replace("_", " ").str.upper()
-                                        st.table(df_paso)
-                                st.divider()
+                def _tab_trazabilidad_por_prefijo(prefijo, key_sufijo):
+                    busqueda_op = st.text_input(
+                        f"🔎 Buscar por número de OP o nombre de cliente (dentro de {prefijo})",
+                        key=f"busca_traza_{key_sufijo}"
+                    )
 
-# LLAMA LA FUNCION DE ARRIBA UNA VEZ POR CADA PESTAÑA, FILTRANDO POR SU PROPIO PREFIJO DE OP
-            with sub_ri:
-                _tab_trazabilidad_por_prefijo("RI-", "ri")
-            with sub_rb:
-                _tab_trazabilidad_por_prefijo("RB-", "rb")
-            with sub_fri:
-                _tab_trazabilidad_por_prefijo("FRI-", "fri")
-            with sub_frb:
-                _tab_trazabilidad_por_prefijo("FRB-", "frb")
-            with sub_rr:
-                _tab_trazabilidad_por_prefijo("RR-", "rr")
-            with sub_rri:
-                _tab_trazabilidad_por_prefijo("RRI-", "rri")
-            with sub_bi:
-                _tab_trazabilidad_por_prefijo("BI-", "bi")
-            with sub_bb:
-                _tab_trazabilidad_por_prefijo("BB-", "bb")
+                    todas_ops_traza = supabase.table("ordenes_planeadas").select("*").ilike("op", f"{prefijo}%").execute().data or []
 
-# MÓDULO: RENDIMIENTO DE MAQUINISTAS 
-        with tab_rendimiento:
-            st.subheader("👷 Rendimiento de Maquinistas")
-            st.caption("Se arma con el historial real de cada OP (quién trabajó qué, en qué máquina, cuánto tiempo) y, para Corte, con el detalle de varillas de Seguimiento Cortadoras.")
-            if not PLOTLY_DISPONIBLE:
-                st.info("ℹ️ Para ver los gráficos de anillo instala Plotly en el servidor: `pip install plotly`. Mientras tanto, se muestran tablas y barras nativas.")
+                    if busqueda_op:
+                        b = busqueda_op.strip().lower()
+                        todas_ops_traza = [
+                            o for o in todas_ops_traza
+                            if b in str(o.get("op", "")).lower() or b in str(o.get("cliente", "")).lower()
+                        ]
 
-            df_hist_rend = _cargar_historial_para_rendimiento()
+                    def _fecha_orden_traza(o):
+                        return str(o.get("created_at") or o.get("fecha_creacion") or "")
+                    todas_ops_traza.sort(key=_fecha_orden_traza, reverse=True)
 
-            if df_hist_rend.empty:
-                st.info("Todavía no hay historial de producción registrado.")
-            else:
-                sub_op_rend, sub_maq_rend = st.tabs(["🙋 Por Operario", "⚙️ Por Máquina"])
-
-# ==================== POR OPERARIO ====================
-                with sub_op_rend:
-                    operarios_lista = _lista_nombres_maquinistas()
-                    if not operarios_lista:
-                        st.info("Todavía no hay perfiles de maquinista creados en el Panel de Administración de Usuarios.")
+                    if not busqueda_op:
+                        st.info(f"Mostrando las 50 órdenes {prefijo} más recientes de {len(todas_ops_traza)}. Usa el buscador para ver cualquier OP histórica.")
+                        todas_ops_traza = todas_ops_traza[:50]
                     else:
-                        colf1, colf2, colf3 = st.columns([2, 1, 1])
-                        operario_sel = colf1.selectbox("👤 Selecciona el operario / maquinista:", operarios_lista, key="op_sel_rend")
-                        fecha_ini_op = colf2.date_input("Desde", value=hora_colombia().date() - timedelta(days=30), key="fecha_ini_op_rend")
-                        fecha_fin_op = colf3.date_input("Hasta", value=hora_colombia().date(), key="fecha_fin_op_rend")
+                        st.caption(f"{len(todas_ops_traza)} orden(es) encontradas")
 
-                        df_op = df_hist_rend[
-                            (df_hist_rend['operario'] == operario_sel) &
-                            (df_hist_rend['fecha_dt'].dt.date >= fecha_ini_op) &
-                            (df_hist_rend['fecha_dt'].dt.date <= fecha_fin_op)
+                    for o in todas_ops_traza:
+                        fecha_creacion_raw = o.get("created_at") or o.get("fecha_creacion") or ""
+                        fecha_creacion_fmt = fmt_fecha_hora(fecha_creacion_raw) if fecha_creacion_raw else "Sin fecha"
+
+    # 'creado_por' solo existe en ordenes creadas despues de activar esta funcion
+                        creador = o.get("creado_por") or "No registrado (orden anterior a esta función)"
+                        estado_actual = o.get("proxima_area", "Sin estado")
+                        esta_anulada = bool(o.get("anulada"))
+                        titulo_expander = f"📋 OP {o.get('op')} | {o.get('cliente','')} | Estado: {estado_actual}"
+                        if esta_anulada:
+                            titulo_expander = f"🚫 [ANULADA] {titulo_expander}"
+
+                        with st.expander(titulo_expander):
+                            if esta_anulada:
+                                st.error(
+                                    f"🚫 Esta OP fue ANULADA el {o.get('fecha_anulacion', 'N/A')} por {o.get('anulada_por', 'N/A')}. "
+                                    f"Motivo: {o.get('motivo_anulacion', 'Sin motivo registrado')}"
+                                )
+                            c1, c2, c3 = st.columns(3)
+                            c1.markdown(f"**Vendedor:** {o.get('vendedor','-')}")
+                            c2.markdown(f"**Creado por:** {creador}")
+                            c3.markdown(f"**Fecha creación:** {fecha_creacion_fmt}")
+                            st.markdown(f"**Trabajo:** {o.get('nombre_trabajo','-')}  |  **Tipo:** {o.get('tipo_orden','-')}")
+
+                            historial = o.get("historial_procesos") or []
+
+    # RESUMEN RAPIDO DE TIEMPOS POR AREA (areas ya completadas, en el orden que las paso)
+                            resumen_tiempos = []
+                            for h in historial:
+                                area_h = (h.get('area') or '').strip().upper()
+                                tipo_h = (h.get('tipo') or '').strip().upper()
+                                if area_h.startswith('EDIC') or tipo_h.startswith('EDIC'):
+                                    continue
+                                t_area = h.get('tiempo_total_area') or h.get('duracion') or '-'
+                                resumen_tiempos.append(f"**{h.get('area','-')}**: {t_area}")
+                            if resumen_tiempos:
+                                st.success("📊 Tiempo que duró en cada área anterior:  " + "   |   ".join(resumen_tiempos))
+
+    # TIEMPO EN EL AREA ACTUAL (si la orden todavia no ha finalizado ni fue anulada, se calcula en vivo)
+                            if estado_actual != "FINALIZADO" and not esta_anulada:
+                                _, tiempo_actual_area = calcular_tiempo_en_area(o)
+                                st.info(f"⏳ Lleva **{tiempo_actual_area}** en el área actual (**{estado_actual}**)")
+
+                            if not historial:
+                                st.info("Esta orden todavía no tiene pasos de producción registrados.")
+                            else:
+                                st.markdown("**🔗 Línea de tiempo de producción:**")
+                                for paso_idx, paso in enumerate(historial, start=1):
+                                    if (paso.get('area') or '').strip().upper().startswith('EDIC') or (paso.get('tipo') or '').strip().upper().startswith('EDIC'):
+                                        motivo_edicion_traza = (
+                                            paso.get('observaciones')
+                                            or paso.get('motivo')
+                                            or paso.get('motivo_edicion')
+                                            or (paso.get('nota', '').replace('Editado: ', '') if paso.get('nota') else None)
+                                            or 'Sin motivo registrado'
+                                        )
+                                        st.markdown(
+                                            f"**{paso_idx}. ✏️ EDICIÓN DE LA ORDEN** — "
+                                            f"Editado por: {paso.get('operario') or paso.get('usuario','-')}  |  "
+                                            f"{paso.get('fecha','-')}"
+                                        )
+                                        st.caption(f"📝 Motivo: {motivo_edicion_traza}")
+                                        st.divider()
+                                        continue
+                                    st.markdown(
+                                        f"**{paso_idx}. {paso.get('area','-')}** — Máquina: {paso.get('maquina','-')}  |  "
+                                        f"Operario: {paso.get('operario','-')}  |  Auxiliar: {paso.get('auxiliar','-') or '-'}  |  "
+                                        f"{paso.get('fecha','-')}  |  Duración trabajada: {paso.get('duracion','-')}  |  Tipo: {paso.get('tipo','-')}"
+                                    )
+    # TIEMPO TOTAL QUE LA OP ESTUVO EN ESTA AREA (desde que entro hasta que salio, incluyendo esperas/pausas)
+                                    if paso.get("tiempo_total_area"):
+                                        st.caption(f"⏱️ Tiempo total en el área: {paso['tiempo_total_area']}")
+                                    if paso.get("observaciones"):
+                                        st.caption(f"📝 {paso['observaciones']}")
+                                    if paso.get("datos_cierre"):
+                                        with st.expander(f"Ver datos técnicos del paso {paso_idx}"):
+                                            df_paso = pd.DataFrame(list(paso["datos_cierre"].items()), columns=["Parámetro", "Valor"])
+                                            df_paso["Parámetro"] = df_paso["Parámetro"].str.replace("_", " ").str.upper()
+                                            st.table(df_paso)
+                                    st.divider()
+
+    # LLAMA LA FUNCION DE ARRIBA UNA VEZ POR CADA PESTAÑA, FILTRANDO POR SU PROPIO PREFIJO DE OP
+                with sub_ri:
+                    _tab_trazabilidad_por_prefijo("RI-", "ri")
+                with sub_rb:
+                    _tab_trazabilidad_por_prefijo("RB-", "rb")
+                with sub_fri:
+                    _tab_trazabilidad_por_prefijo("FRI-", "fri")
+                with sub_frb:
+                    _tab_trazabilidad_por_prefijo("FRB-", "frb")
+                with sub_rr:
+                    _tab_trazabilidad_por_prefijo("RR-", "rr")
+                with sub_rri:
+                    _tab_trazabilidad_por_prefijo("RRI-", "rri")
+                with sub_bi:
+                    _tab_trazabilidad_por_prefijo("BI-", "bi")
+                with sub_bb:
+                    _tab_trazabilidad_por_prefijo("BB-", "bb")
+
+    # MÓDULO: RENDIMIENTO DE MAQUINISTAS 
+            with tab_rendimiento:
+                st.subheader("👷 Rendimiento de Maquinistas")
+                st.caption("Se arma con el historial real de cada OP (quién trabajó qué, en qué máquina, cuánto tiempo) y, para Corte, con el detalle de varillas de Seguimiento Cortadoras.")
+                if not PLOTLY_DISPONIBLE:
+                    st.info("ℹ️ Para ver los gráficos de anillo instala Plotly en el servidor: `pip install plotly`. Mientras tanto, se muestran tablas y barras nativas.")
+
+                df_hist_rend = _cargar_historial_para_rendimiento()
+
+                if df_hist_rend.empty:
+                    st.info("Todavía no hay historial de producción registrado.")
+                else:
+                    sub_op_rend, sub_maq_rend = st.tabs(["🙋 Por Operario", "⚙️ Por Máquina"])
+
+    # ==================== POR OPERARIO ====================
+                    with sub_op_rend:
+                        operarios_lista = _lista_nombres_maquinistas()
+                        if not operarios_lista:
+                            st.info("Todavía no hay perfiles de maquinista creados en el Panel de Administración de Usuarios.")
+                        else:
+                            colf1, colf2, colf3 = st.columns([2, 1, 1])
+                            operario_sel = colf1.selectbox("👤 Selecciona el operario / maquinista:", operarios_lista, key="op_sel_rend")
+                            fecha_ini_op = colf2.date_input("Desde", value=hora_colombia().date() - timedelta(days=30), key="fecha_ini_op_rend")
+                            fecha_fin_op = colf3.date_input("Hasta", value=hora_colombia().date(), key="fecha_fin_op_rend")
+
+                            df_op = df_hist_rend[
+                                (df_hist_rend['operario'] == operario_sel) &
+                                (df_hist_rend['fecha_dt'].dt.date >= fecha_ini_op) &
+                                (df_hist_rend['fecha_dt'].dt.date <= fecha_fin_op)
+                            ].sort_values('fecha_dt', ascending=False)
+
+                            if df_op.empty:
+                                st.warning(f"{operario_sel} no tiene trabajos registrados en ese rango de fechas.")
+                            else:
+                                tiempo_total_op = df_op['duracion_td'].sum()
+                                k1, k2, k3, k4 = st.columns(4)
+                                k1.metric("📋 Trabajos Realizados", len(df_op))
+                                k2.metric("⏱️ Tiempo Total Trabajado", _formatear_duracion_horas(tiempo_total_op))
+                                k3.metric("📊 Promedio por Trabajo", _formatear_duracion_horas(tiempo_total_op / len(df_op)))
+                                k4.metric("⚙️ Máquinas Distintas", df_op['maquina'].nunique())
+
+                                g1, g2 = st.columns(2)
+                                with g1:
+                                    st.markdown("##### ⏱️ Tiempo por máquina")
+                                    resumen_maq_op = df_op.groupby('maquina')['duracion_td'].sum().reset_index()
+                                    resumen_maq_op['horas'] = resumen_maq_op['duracion_td'].dt.total_seconds() / 3600
+                                    if PLOTLY_DISPONIBLE:
+                                        fig_anillo_op = px.pie(resumen_maq_op, values='horas', names='maquina', hole=0.55)
+                                        fig_anillo_op.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                        st.plotly_chart(fig_anillo_op, use_container_width=True)
+                                    else:
+                                        st.bar_chart(resumen_maq_op.set_index('maquina')['horas'])
+                                with g2:
+                                    st.markdown("##### 📅 Trabajos por día")
+                                    resumen_dia_op = df_op.groupby(df_op['fecha_dt'].dt.date).size().reset_index(name='trabajos')
+                                    resumen_dia_op.columns = ['fecha', 'trabajos']
+                                    if PLOTLY_DISPONIBLE:
+                                        fig_barras_op = px.bar(resumen_dia_op, x='fecha', y='trabajos')
+                                        fig_barras_op.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                        st.plotly_chart(fig_barras_op, use_container_width=True)
+                                    else:
+                                        st.bar_chart(resumen_dia_op.set_index('fecha')['trabajos'])
+
+                                st.markdown("##### 📋 Detalle día por día")
+                                df_op_mostrar = df_op[['fecha_txt', 'op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'maquina', 'rollos', 'tipo_cierre', 'duracion_txt']].rename(columns={
+                                    'fecha_txt': 'Fecha', 'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo',
+                                    'tipo_orden': 'Tipo', 'area': 'Área', 'maquina': 'Máquina', 'rollos': 'Rollos',
+                                    'tipo_cierre': 'Cierre', 'duracion_txt': 'Duración'
+                                })
+                                st.dataframe(df_op_mostrar, use_container_width=True, hide_index=True)
+
+    # ==================== POR MAQUINA ====================
+                    with sub_maq_rend:
+                        todas_las_maquinas = sorted({m for lista in MAQUINAS.values() for m in lista})
+                        colm1, colm2, colm3 = st.columns([2, 1, 1])
+                        maquina_sel = colm1.selectbox("⚙️ Selecciona la máquina:", todas_las_maquinas, key="maq_sel_rend")
+                        fecha_ini_maq = colm2.date_input("Desde", value=hora_colombia().date() - timedelta(days=30), key="fecha_ini_maq_rend")
+                        fecha_fin_maq = colm3.date_input("Hasta", value=hora_colombia().date(), key="fecha_fin_maq_rend")
+
+                        df_maq = df_hist_rend[
+                            (df_hist_rend['maquina'] == maquina_sel) &
+                            (df_hist_rend['fecha_dt'].dt.date >= fecha_ini_maq) &
+                            (df_hist_rend['fecha_dt'].dt.date <= fecha_fin_maq)
                         ].sort_values('fecha_dt', ascending=False)
 
-                        if df_op.empty:
-                            st.warning(f"{operario_sel} no tiene trabajos registrados en ese rango de fechas.")
+                        if df_maq.empty:
+                            st.warning(f"La máquina {maquina_sel} no tiene trabajos registrados en ese rango de fechas.")
                         else:
-                            tiempo_total_op = df_op['duracion_td'].sum()
-                            k1, k2, k3, k4 = st.columns(4)
-                            k1.metric("📋 Trabajos Realizados", len(df_op))
-                            k2.metric("⏱️ Tiempo Total Trabajado", _formatear_duracion_horas(tiempo_total_op))
-                            k3.metric("📊 Promedio por Trabajo", _formatear_duracion_horas(tiempo_total_op / len(df_op)))
-                            k4.metric("⚙️ Máquinas Distintas", df_op['maquina'].nunique())
+                            tiempo_total_maq = df_maq['duracion_td'].sum()
+                            km1, km2, km3 = st.columns(3)
+                            km1.metric("📋 Trabajos Realizados", len(df_maq))
+                            km2.metric("⏱️ Tiempo Total Trabajado", _formatear_duracion_horas(tiempo_total_maq))
+                            km3.metric("👷 Operarios Distintos", df_maq['operario'].nunique())
 
-                            g1, g2 = st.columns(2)
-                            with g1:
-                                st.markdown("##### ⏱️ Tiempo por máquina")
-                                resumen_maq_op = df_op.groupby('maquina')['duracion_td'].sum().reset_index()
-                                resumen_maq_op['horas'] = resumen_maq_op['duracion_td'].dt.total_seconds() / 3600
+                            gm1, gm2 = st.columns(2)
+                            with gm1:
+                                st.markdown("##### 👷 Reparto de trabajo por operario")
+                                resumen_op_maq = df_maq.groupby('operario')['duracion_td'].sum().reset_index()
+                                resumen_op_maq['horas'] = resumen_op_maq['duracion_td'].dt.total_seconds() / 3600
                                 if PLOTLY_DISPONIBLE:
-                                    fig_anillo_op = px.pie(resumen_maq_op, values='horas', names='maquina', hole=0.55)
-                                    fig_anillo_op.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
-                                    st.plotly_chart(fig_anillo_op, use_container_width=True)
+                                    fig_anillo_maq = px.pie(resumen_op_maq, values='horas', names='operario', hole=0.55)
+                                    fig_anillo_maq.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                    st.plotly_chart(fig_anillo_maq, use_container_width=True)
                                 else:
-                                    st.bar_chart(resumen_maq_op.set_index('maquina')['horas'])
-                            with g2:
+                                    st.bar_chart(resumen_op_maq.set_index('operario')['horas'])
+                            with gm2:
                                 st.markdown("##### 📅 Trabajos por día")
-                                resumen_dia_op = df_op.groupby(df_op['fecha_dt'].dt.date).size().reset_index(name='trabajos')
-                                resumen_dia_op.columns = ['fecha', 'trabajos']
+                                resumen_dia_maq = df_maq.groupby(df_maq['fecha_dt'].dt.date).size().reset_index(name='trabajos')
+                                resumen_dia_maq.columns = ['fecha', 'trabajos']
                                 if PLOTLY_DISPONIBLE:
-                                    fig_barras_op = px.bar(resumen_dia_op, x='fecha', y='trabajos')
-                                    fig_barras_op.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
-                                    st.plotly_chart(fig_barras_op, use_container_width=True)
+                                    fig_barras_maq = px.bar(resumen_dia_maq, x='fecha', y='trabajos')
+                                    fig_barras_maq.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
+                                    st.plotly_chart(fig_barras_maq, use_container_width=True)
                                 else:
-                                    st.bar_chart(resumen_dia_op.set_index('fecha')['trabajos'])
+                                    st.bar_chart(resumen_dia_maq.set_index('fecha')['trabajos'])
 
-                            st.markdown("##### 📋 Detalle día por día")
-                            df_op_mostrar = df_op[['fecha_txt', 'op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'maquina', 'rollos', 'tipo_cierre', 'duracion_txt']].rename(columns={
-                                'fecha_txt': 'Fecha', 'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo',
-                                'tipo_orden': 'Tipo', 'area': 'Área', 'maquina': 'Máquina', 'rollos': 'Rollos',
-                                'tipo_cierre': 'Cierre', 'duracion_txt': 'Duración'
-                            })
-                            st.dataframe(df_op_mostrar, use_container_width=True, hide_index=True)
+                            st.markdown("##### 📅 Qué hizo la máquina, día por día")
+                            for fecha_dia in sorted(df_maq['fecha_dt'].dt.date.unique(), reverse=True):
+                                trabajos_del_dia = df_maq[df_maq['fecha_dt'].dt.date == fecha_dia]
+                                with st.expander(f"📅 {fecha_dia.strftime('%d/%m/%Y')} — {len(trabajos_del_dia)} trabajo(s)"):
+                                    st.dataframe(
+                                        trabajos_del_dia[['op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'operario', 'rollos', 'tipo_cierre', 'duracion_txt']].rename(columns={
+                                            'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo', 'tipo_orden': 'Tipo', 'area': 'Área',
+                                            'operario': 'Operario', 'rollos': 'Rollos', 'tipo_cierre': 'Cierre', 'duracion_txt': 'Duración'
+                                        }),
+                                        use_container_width=True, hide_index=True
+                                    )
 
-# ==================== POR MAQUINA ====================
-                with sub_maq_rend:
-                    todas_las_maquinas = sorted({m for lista in MAQUINAS.values() for m in lista})
-                    colm1, colm2, colm3 = st.columns([2, 1, 1])
-                    maquina_sel = colm1.selectbox("⚙️ Selecciona la máquina:", todas_las_maquinas, key="maq_sel_rend")
-                    fecha_ini_maq = colm2.date_input("Desde", value=hora_colombia().date() - timedelta(days=30), key="fecha_ini_maq_rend")
-                    fecha_fin_maq = colm3.date_input("Hasta", value=hora_colombia().date(), key="fecha_fin_maq_rend")
+    # MÓDULO: MOVIMIENTOS DEL SISTEMA 
+            with tab_movs:
+                st.subheader("🛠️ Movimientos y Actividad del Sistema")
 
-                    df_maq = df_hist_rend[
-                        (df_hist_rend['maquina'] == maquina_sel) &
-                        (df_hist_rend['fecha_dt'].dt.date >= fecha_ini_maq) &
-                        (df_hist_rend['fecha_dt'].dt.date <= fecha_fin_maq)
-                    ].sort_values('fecha_dt', ascending=False)
+                sub_coins, sub_usuarios = st.tabs(["🪙 Movimientos de Coins", "👥 Usuarios del Sistema"])
 
-                    if df_maq.empty:
-                        st.warning(f"La máquina {maquina_sel} no tiene trabajos registrados en ese rango de fechas.")
+                with sub_coins:
+                    st.caption("Cada vez que se asignan o descuentan coins a un trabajador, queda registrado aquí.")
+                    res_coins = supabase.table("monedas_historial").select("*").order("fecha", desc=True).execute().data or []
+                    if res_coins:
+                        df_coins = pd.DataFrame(res_coins)
+                        if 'cantidad' in df_coins.columns:
+                            otorgados = df_coins[df_coins['cantidad'] > 0]['cantidad'].sum()
+                            descontados = df_coins[df_coins['cantidad'] < 0]['cantidad'].sum()
+                            c1, c2 = st.columns(2)
+                            c1.metric("🟢 Total Coins Otorgados", f"+{otorgados}")
+                            c2.metric("🔴 Total Coins Descontados", f"{descontados}")
+                        df_coins = formatear_fechas_df(df_coins)
+                        st.dataframe(df_coins, use_container_width=True, hide_index=True)
                     else:
-                        tiempo_total_maq = df_maq['duracion_td'].sum()
-                        km1, km2, km3 = st.columns(3)
-                        km1.metric("📋 Trabajos Realizados", len(df_maq))
-                        km2.metric("⏱️ Tiempo Total Trabajado", _formatear_duracion_horas(tiempo_total_maq))
-                        km3.metric("👷 Operarios Distintos", df_maq['operario'].nunique())
+                        st.info("Sin movimientos de coins registrados todavía.")
 
-                        gm1, gm2 = st.columns(2)
-                        with gm1:
-                            st.markdown("##### 👷 Reparto de trabajo por operario")
-                            resumen_op_maq = df_maq.groupby('operario')['duracion_td'].sum().reset_index()
-                            resumen_op_maq['horas'] = resumen_op_maq['duracion_td'].dt.total_seconds() / 3600
-                            if PLOTLY_DISPONIBLE:
-                                fig_anillo_maq = px.pie(resumen_op_maq, values='horas', names='operario', hole=0.55)
-                                fig_anillo_maq.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
-                                st.plotly_chart(fig_anillo_maq, use_container_width=True)
-                            else:
-                                st.bar_chart(resumen_op_maq.set_index('operario')['horas'])
-                        with gm2:
-                            st.markdown("##### 📅 Trabajos por día")
-                            resumen_dia_maq = df_maq.groupby(df_maq['fecha_dt'].dt.date).size().reset_index(name='trabajos')
-                            resumen_dia_maq.columns = ['fecha', 'trabajos']
-                            if PLOTLY_DISPONIBLE:
-                                fig_barras_maq = px.bar(resumen_dia_maq, x='fecha', y='trabajos')
-                                fig_barras_maq.update_layout(margin=dict(t=10, b=10, l=10, r=10), height=300)
-                                st.plotly_chart(fig_barras_maq, use_container_width=True)
-                            else:
-                                st.bar_chart(resumen_dia_maq.set_index('fecha')['trabajos'])
-
-                        st.markdown("##### 📅 Qué hizo la máquina, día por día")
-                        for fecha_dia in sorted(df_maq['fecha_dt'].dt.date.unique(), reverse=True):
-                            trabajos_del_dia = df_maq[df_maq['fecha_dt'].dt.date == fecha_dia]
-                            with st.expander(f"📅 {fecha_dia.strftime('%d/%m/%Y')} — {len(trabajos_del_dia)} trabajo(s)"):
-                                st.dataframe(
-                                    trabajos_del_dia[['op', 'cliente', 'nombre_trabajo', 'tipo_orden', 'area', 'operario', 'rollos', 'tipo_cierre', 'duracion_txt']].rename(columns={
-                                        'op': 'OP', 'cliente': 'Cliente', 'nombre_trabajo': 'Trabajo', 'tipo_orden': 'Tipo', 'area': 'Área',
-                                        'operario': 'Operario', 'rollos': 'Rollos', 'tipo_cierre': 'Cierre', 'duracion_txt': 'Duración'
-                                    }),
-                                    use_container_width=True, hide_index=True
-                                )
-
-# MÓDULO: MOVIMIENTOS DEL SISTEMA 
-        with tab_movs:
-            st.subheader("🛠️ Movimientos y Actividad del Sistema")
-
-            sub_coins, sub_usuarios = st.tabs(["🪙 Movimientos de Coins", "👥 Usuarios del Sistema"])
-
-            with sub_coins:
-                st.caption("Cada vez que se asignan o descuentan coins a un trabajador, queda registrado aquí.")
-                res_coins = supabase.table("monedas_historial").select("*").order("fecha", desc=True).execute().data or []
-                if res_coins:
-                    df_coins = pd.DataFrame(res_coins)
-                    if 'cantidad' in df_coins.columns:
-                        otorgados = df_coins[df_coins['cantidad'] > 0]['cantidad'].sum()
-                        descontados = df_coins[df_coins['cantidad'] < 0]['cantidad'].sum()
-                        c1, c2 = st.columns(2)
-                        c1.metric("🟢 Total Coins Otorgados", f"+{otorgados}")
-                        c2.metric("🔴 Total Coins Descontados", f"{descontados}")
-                    df_coins = formatear_fechas_df(df_coins)
-                    st.dataframe(df_coins, use_container_width=True, hide_index=True)
-                else:
-                    st.info("Sin movimientos de coins registrados todavía.")
-
-            with sub_usuarios:
-                st.caption("Listado de todos los usuarios con acceso al sistema (no se muestran contraseñas).")
-                try:
-                    res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol, maquina_asignada").execute().data or []
-                except Exception:
-                    res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
-                if res_usuarios:
-                    df_usuarios = pd.DataFrame(res_usuarios)
-                    st.dataframe(df_usuarios, use_container_width=True, hide_index=True)
-                    st.caption(f"Total de usuarios registrados: {len(res_usuarios)}")
-                else:
-                    st.info("No hay usuarios registrados.")
+                with sub_usuarios:
+                    st.caption("Listado de todos los usuarios con acceso al sistema (no se muestran contraseñas).")
+                    try:
+                        res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol, maquina_asignada").execute().data or []
+                    except Exception:
+                        res_usuarios = supabase.table("usuarios").select("usuario, nombre, rol").execute().data or []
+                    if res_usuarios:
+                        df_usuarios = pd.DataFrame(res_usuarios)
+                        st.dataframe(df_usuarios, use_container_width=True, hide_index=True)
+                        st.caption(f"Total de usuarios registrados: {len(res_usuarios)}")
+                    else:
+                        st.info("No hay usuarios registrados.")
 
 # 21. Almacén y despachos
 elif menu == "📦 Almacen/Despachos":
     st.title("📦 Inventario de Productos Almacen")
+
+    if st.session_state.get('rol', '').lower() == 'supervision_saldos':
+        st.info("👁️ Modo consulta: Supervisión Caldos puede revisar la información, pero no registrar entradas ni salidas.")
     
     tab_mov, tab_inv = st.tabs(["🔄 Movimientos (Entrada/Salida)", "📊 Inventario Actual"])
     
@@ -6275,6 +6311,10 @@ elif menu in ["🖨️ Impresión", "✂️ Corte", "📥 Colectoras", "📕 Enc
 # El ingreso a bodega ya no es automático al finalizar Corte: ahora se registra 100% manual desde Salida Producción P1.
 
                     supabase.table("trabajos_activos").delete().eq("maquina", r['maquina']).execute()
+
+# La OP ya terminó su turno en esta máquina: desaparece sola de la Cola de Producción.
+                    _finalizar_op_en_cola(r['op'], r['maquina'])
+
                     st.session_state.rep = None
                     st.rerun()
 
@@ -6586,6 +6626,10 @@ elif menu == "👜 Bolsas":
                 }).eq("op", tr_cierre_b['op']).execute()
 
                 supabase.table("trabajos_activos").delete().eq("maquina", tr_cierre_b['maquina']).execute()
+
+# La OP ya terminó su turno en esta máquina: desaparece sola de la Cola de Producción.
+                _finalizar_op_en_cola(tr_cierre_b['op'], tr_cierre_b['maquina'])
+
                 st.session_state.rep_bolsas = None
                 st.success(f"✅ Cierre registrado. La OP {tr_cierre_b['op']} continúa hacia: {siguiente_area_b}")
                 time.sleep(1.2)
@@ -6631,7 +6675,7 @@ if st.session_state.get('rol') == 'admin':
             nuevo_p = st.text_input("Nueva Clave", type="password", key="admin_p")
         with c2:
             nuevo_n = st.text_input("Nombre Completo", key="admin_n").upper()
-            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "aud_bolsas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "supervisor_bolsas",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "log_bodega", "maquinista" ], key="admin_r")
+            nuevo_r = st.selectbox("Rol", ["admin", "ventas", "aud_ventas", "aud_bolsas", "supervisor_imp", "supervisor_cor", "supervisor_reb", "supervisor_enc", "supervisor_bolsas",'diseño','diseño1','diseño2','diseño3', "patinador_roll", "almacen", "jefe_log", "patinador_log",'aux_log', "log_bodega", "maquinista", "supervision_saldos" ], key="admin_r")
 
 # SI EL ROL ES MAQUINISTA, PEDIR A QUE MAQUINA ESPECIFICA QUEDA ASIGNADO
         nueva_maquina_asignada = None
