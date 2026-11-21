@@ -11,3 +11,4 @@ bcrypt
 Pillow
 qrcode
 plotly
+openpyxl
