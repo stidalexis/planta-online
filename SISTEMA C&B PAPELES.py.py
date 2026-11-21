@@ -4,6 +4,7 @@ from supabase import create_client
 from datetime import datetime, timedelta
 import time
 import os
+import re
 import base64
 from fpdf import FPDF
 import pytz
@@ -1434,18 +1435,43 @@ def modal_detalle_op(row):
 
 # UI — TARJETA DE OP
 # Este bloque concentra mucha lógica visual y de estado; dividirlo requiere pruebas por rol y estado.
-# DISEÑO DE TARJETAS DE DENTRADA
+# DISEÑO DE TARJETAS DE ENTRADA
+
+            # Las devoluciones/correcciones son movimientos administrativos, no un proceso
+            # de producción. Se muestran únicamente como una observación de la corrección.
+            es_correccion = (h.get('area') or '').strip().upper() == 'CORRECCIÓN' or (h.get('tipo') or '').strip().upper() == 'DEVUELTA'
+
+            if es_correccion:
+                observacion_correccion = h.get('observaciones') or h.get('motivo') or 'Sin observaciones'
+                # Evita que etiquetas HTML guardadas accidentalmente aparezcan como código.
+                observacion_correccion = re.sub(r'<[^>]+>', '', str(observacion_correccion)).strip()
+
+                with st.container():
+                    st.markdown(f"""
+                    <div class='historial-card'>
+                        <div class='historial-header'>
+                            <span>↩️ <b>CORRECCIÓN</b> — OP DEVUELTA</span>
+                            <span>📅 {h.get('fecha') or h.get('fin') or h.get('inicio') or 'Sin fecha'}</span>
+                        </div>
+                        <div class='historial-tecnico'>
+                            <div>👤 <b>Operario:</b> {h.get('operario') or h.get('usuario') or 'N/A'}</div>
+                            <div style='grid-column: 1 / -1;'>📝 <b>Observaciones:</b> {observacion_correccion}</div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                continue
+
             with st.container():
                 st.markdown(f"""
                 <div class='historial-card'>
                     <div class='historial-header'>
-                        <span>✅ {h['area']} — {h['maquina']}{' 🔄 ENTREGA PARCIAL' if h.get('tipo') == 'PARCIAL' else ''}</span>
+                        <span>✅ {h.get('area', 'N/A')} — {h.get('maquina', 'N/A')}{' 🔄 ENTREGA PARCIAL' if h.get('tipo') == 'PARCIAL' else ''}</span>
                         <span>📅 {h.get('fecha') or h.get('fin') or h.get('inicio') or 'Sin fecha'}</span>
                     </div>
                     <div class='historial-tecnico'>
                         <div>👤 <b>Operario:</b> {h.get('operario') or h.get('usuario') or 'N/A'}</div>
                         <div>👥 <b>Auxiliar:</b> {h.get('auxiliar', 'N/A')}</div>
-                        <div>⏱️ <b>Tiempo Proceso:</b> {h['duracion']}</div>
+                        {f"<div>⏱️ <b>Tiempo Proceso:</b> {h.get('duracion')}</div>" if h.get('duracion') else ''}
                         <div>📝 <b>Obs:</b> {h.get('observaciones', 'Sin observaciones')}</div>
                     </div>
                 </div>
@@ -2081,51 +2107,144 @@ def calcular_tiempo_en_area(op_data):
     segundos = max(0, segundos_totales - segundos_detenido)
     return segundos, str(timedelta(seconds=int(segundos)))
 
+def _parsear_fechas_historial(serie):
+    """Convierte las fechas del historial a datetime sin zona horaria.
+
+    Acepta DD/MM/AAAA (con o sin hora/segundos) e ISO (con o sin zona horaria).
+    Si una fecha no se puede leer queda como NaT; nunca lanza error, aunque el
+    historial mezcle formatos o la versión de pandas sea antigua.
+    """
+    def _una(valor):
+        valor = str(valor).strip()
+        if not valor or valor.lower() in ("nan", "none", "nat"):
+            return pd.NaT
+        for formato in ("%d/%m/%Y %H:%M", "%d/%m/%Y %H:%M:%S", "%d/%m/%Y"):
+            try:
+                return datetime.strptime(valor, formato)
+            except ValueError:
+                continue
+        try:
+            ts = pd.to_datetime(valor, errors="coerce")
+            if pd.isna(ts):
+                return pd.NaT
+            if ts.tzinfo is not None:
+                ts = ts.tz_convert("America/Bogota").tz_localize(None)
+            return ts.to_pydatetime()
+        except Exception:
+            return pd.NaT
+
+    return pd.to_datetime(serie.map(_una), errors="coerce")
+
 # Historial aplanado de todas las OPs (una fila por paso) para Rendimiento Maquinistas; cache 2 min.
 @st.cache_data(ttl=120, show_spinner="Cargando historial de producción...")
 def _cargar_historial_para_rendimiento():
-    data = supabase.table("ordenes_planeadas").select("op,tipo_orden,nombre_trabajo,cliente,historial_procesos").execute().data or []
+    """Carga el historial completo de OPs por páginas para no perder registros
+    cuando Supabase supera su límite de filas por consulta.
+
+    También admite formatos de fecha habituales y protege el reporte ante pasos
+    antiguos que tengan campos incompletos.
+    """
     filas = []
-    for o in data:
-        for paso in (o.get('historial_procesos') or []):
-            maquina_paso = paso.get('maquina', '')
-            if not maquina_paso or maquina_paso == '—':
+    inicio = 0
+    tamano_pagina = 1000
+    columna_orden = "id"
+
+    # Supabase suele limitar cada respuesta; recorrer todas las páginas evita que
+    # los cierres más recientes queden fuera del informe.
+    while True:
+        # Orden estable (id) para que las páginas no repitan ni omitan filas;
+        # si la tabla no tuviera columna id, se ordena por op.
+        try:
+            respuesta = (
+                supabase.table("ordenes_planeadas")
+                .select("op,tipo_orden,nombre_trabajo,cliente,historial_procesos")
+                .order(columna_orden)
+                .range(inicio, inicio + tamano_pagina - 1)
+                .execute()
+            )
+        except Exception:
+            if columna_orden == "op":
+                raise
+            columna_orden = "op"
+            continue
+        pagina = respuesta.data or []
+        if not pagina:
+            break
+
+        for o in pagina:
+            historial = o.get("historial_procesos") or []
+            if isinstance(historial, dict):
+                # Compatibilidad por si algún registro guarda el historial como objeto.
+                historial = historial.get("pasos") or historial.get("historial") or []
+            if not isinstance(historial, list):
                 continue
-            datos_cierre_paso = paso.get('datos_cierre') or {}
-# ROLLOS: puede venir de Corte (rollos_finales) o de Rebobinadoras (rollos_finales tambien)
-            rollos_paso = datos_cierre_paso.get('rollos_finales')
-            cajas_paso = datos_cierre_paso.get('cajas_totales')
 
-# Tipo de cierre: FINAL = avanzó de una vez / PARCIAL = entrega parcial o cambio de turno (sigue en la misma área).
-            tipo_cierre_paso = paso.get('tipo', 'FINAL')
-            if tipo_cierre_paso == 'PARCIAL':
-                cantidad_parcial_paso = (paso.get('datos_cierre') or {}).get('cantidad_parcial_entregada', 0) or 0
-                texto_cierre_paso = "🔄 Parcial / Cambio de Turno" if cantidad_parcial_paso <= 0 else "📦 Entrega Parcial"
-            elif tipo_cierre_paso == 'FINAL':
-                texto_cierre_paso = "✅ Finalizado"
-            else:
-                texto_cierre_paso = tipo_cierre_paso.title() if tipo_cierre_paso else "—"
+            for paso in historial:
+                if not isinstance(paso, dict):
+                    continue
 
-            filas.append({
-                "op": o.get('op'),
-                "tipo_orden": o.get('tipo_orden'),
-                "nombre_trabajo": o.get('nombre_trabajo', ''),
-                "cliente": o.get('cliente', ''),
-                "area": paso.get('area', ''),
-                "maquina": maquina_paso,
-                "operario": (paso.get('operario') or '').strip(),
-                "auxiliar": paso.get('auxiliar', ''),
-                "fecha_txt": paso.get('fecha', ''),
-                "duracion_txt": paso.get('duracion', ''),
-                "rollos": rollos_paso if rollos_paso else None,
-                "cajas": cajas_paso if cajas_paso else None,
-                "tipo_cierre": texto_cierre_paso,
-            })
+                # Compatibilidad con variaciones de nombres de campo en registros antiguos.
+                maquina_paso = (
+                    paso.get("maquina") or paso.get("máquina") or
+                    paso.get("nombre_maquina") or paso.get("maquina_nombre") or ""
+                )
+                maquina_paso = str(maquina_paso).strip()
+                if not maquina_paso or maquina_paso in ("—", "-", "None", "nan"):
+                    continue
+
+                datos_cierre_paso = paso.get("datos_cierre") or {}
+                if not isinstance(datos_cierre_paso, dict):
+                    datos_cierre_paso = {}
+                rollos_paso = datos_cierre_paso.get("rollos_finales")
+                cajas_paso = datos_cierre_paso.get("cajas_totales")
+
+                tipo_cierre_paso = str(paso.get("tipo") or "FINAL").upper().strip()
+                if tipo_cierre_paso == "PARCIAL":
+                    cantidad_parcial_paso = datos_cierre_paso.get("cantidad_parcial_entregada", 0) or 0
+                    try:
+                        cantidad_parcial_paso = float(cantidad_parcial_paso)
+                    except (TypeError, ValueError):
+                        cantidad_parcial_paso = 0
+                    texto_cierre_paso = "🔄 Parcial / Cambio de Turno" if cantidad_parcial_paso <= 0 else "📦 Entrega Parcial"
+                elif tipo_cierre_paso == "FINAL":
+                    texto_cierre_paso = "✅ Finalizado"
+                else:
+                    texto_cierre_paso = tipo_cierre_paso.title() if tipo_cierre_paso else "—"
+
+                operario_paso = (
+                    paso.get("operario") or paso.get("maquinista") or
+                    paso.get("operador") or paso.get("responsable") or ""
+                )
+                fecha_paso = paso.get("fecha") or paso.get("fecha_cierre") or paso.get("created_at") or ""
+                duracion_paso = paso.get("duracion") or paso.get("tiempo_trabajado") or ""
+
+                filas.append({
+                    "op": o.get("op"),
+                    "tipo_orden": o.get("tipo_orden"),
+                    "nombre_trabajo": o.get("nombre_trabajo", ""),
+                    "cliente": o.get("cliente", ""),
+                    "area": paso.get("area", ""),
+                    "maquina": maquina_paso,
+                    "operario": str(operario_paso).strip(),
+                    "auxiliar": paso.get("auxiliar", ""),
+                    "fecha_txt": str(fecha_paso),
+                    "duracion_txt": str(duracion_paso),
+                    "rollos": rollos_paso if rollos_paso else None,
+                    "cajas": cajas_paso if cajas_paso else None,
+                    "tipo_cierre": texto_cierre_paso,
+                })
+
+        if len(pagina) < tamano_pagina:
+            break
+        inicio += tamano_pagina
+
     df = pd.DataFrame(filas)
     if df.empty:
         return df
-    df['fecha_dt'] = pd.to_datetime(df['fecha_txt'], format='%d/%m/%Y %H:%M', errors='coerce')
-    df['duracion_td'] = pd.to_timedelta(df['duracion_txt'], errors='coerce')
+
+    # Acepta tanto DD/MM/AAAA como ISO (AAAA-MM-DD...), con o sin segundos.
+    df["fecha_dt"] = _parsear_fechas_historial(df["fecha_txt"])
+    df["duracion_td"] = pd.to_timedelta(df["duracion_txt"], errors="coerce").fillna(pd.Timedelta(0))
     return df
 
 def _formatear_duracion_horas(td_total):
@@ -2135,6 +2254,296 @@ def _formatear_duracion_horas(td_total):
     total_min = int(td_total.total_seconds() // 60)
     h, m = divmod(total_min, 60)
     return f"{h}h {m:02d}min"
+
+
+
+def _cargar_seguimiento_cortadoras(maquina, fecha_ini, fecha_fin):
+    """Registros de Seguimiento Cortadoras de una máquina entre dos fechas (con paginación)."""
+    filas = []
+    inicio = 0
+    tamano_pagina = 1000
+    while True:
+        respuesta = (
+            supabase.table("seguimiento_cortadoras")
+            .select("*")
+            .eq("maquina", maquina)
+            .gte("fecha", fecha_ini.strftime("%Y-%m-%d"))
+            .lte("fecha", fecha_fin.strftime("%Y-%m-%d"))
+            .order("id", desc=True)
+            .range(inicio, inicio + tamano_pagina - 1)
+            .execute()
+        )
+        lote = respuesta.data or []
+        filas.extend(lote)
+        if len(lote) < tamano_pagina:
+            break
+        inicio += tamano_pagina
+    return pd.DataFrame(filas)
+
+def _generar_excel_seguimiento_cortadoras(df, etiqueta_filtro="Seguimiento de cortadoras"):
+    """Excel del historial de Seguimiento Cortadoras: detalle + resumen por operario."""
+    from io import BytesIO
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.utils import get_column_letter
+
+    columnas = [
+        ("fecha", "Fecha"), ("hora_registro", "Hora"), ("turno", "Turno"), ("operario", "Operario"),
+        ("op", "OP"), ("nombre_trabajo", "Trabajo"), ("tipo_papel", "Papel / Material"),
+        ("metros_rollo", "Metros Rollo"), ("medida_rollo", "Medida Rollo"), ("unidades_por_caja", "Unid/Caja"),
+        ("num_cajas", "Cajas"), ("num_varillas", "Varillas"), ("peso_desperdicio", "Desp. (KG)"),
+        ("motivo_desperdicio_seg", "Motivo Desp."), ("total_cajas_empacadas", "Total Cajas Turno"),
+        ("total_varillas_sacadas", "Total Varillas Turno"), ("observaciones", "Observaciones"),
+    ]
+    numericas = {"metros_rollo", "unidades_por_caja", "num_cajas", "num_varillas",
+                 "peso_desperdicio", "total_cajas_empacadas", "total_varillas_sacadas"}
+    sumables = {"num_cajas", "num_varillas", "peso_desperdicio", "total_cajas_empacadas", "total_varillas_sacadas"}
+
+    datos = df.copy() if df is not None else pd.DataFrame()
+    for clave, _ in columnas:
+        if clave not in datos.columns:
+            datos[clave] = None
+    for clave in numericas:
+        datos[clave] = pd.to_numeric(datos[clave], errors="coerce").fillna(0)
+    datos["operario"] = datos["operario"].fillna("").replace("", "Sin registrar")
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Seguimiento Cortadoras"
+    ultima_col = get_column_letter(len(columnas))
+    ws.merge_cells(f"A1:{ultima_col}1")
+    ws["A1"] = "HISTORIAL DE SEGUIMIENTO DE CORTADORAS"
+    ws["A1"].font = Font(name="Calibri", size=15, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="17365D")
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 30
+    ws.merge_cells(f"A2:{ultima_col}2")
+    ws["A2"] = etiqueta_filtro
+    ws["A2"].font = Font(italic=True, color="666666", size=10)
+
+    for idx, (_, titulo) in enumerate(columnas, 1):
+        c = ws.cell(row=3, column=idx, value=titulo)
+        c.font = Font(bold=True, color="FFFFFF", size=10)
+        c.fill = PatternFill("solid", fgColor="244062")
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    ws.row_dimensions[3].height = 32
+
+    for r, (_, reg) in enumerate(datos.iterrows(), 4):
+        for idx, (clave, _) in enumerate(columnas, 1):
+            valor = reg.get(clave)
+            if clave in numericas:
+                valor = float(valor) if valor == valor else 0
+                valor = int(valor) if valor == int(valor) else round(valor, 2)
+            else:
+                valor = "" if valor is None or valor != valor else str(valor)
+                if clave == "fecha" and valor:
+                    fecha_ts = pd.to_datetime(valor, errors="coerce")
+                    valor = fecha_ts.strftime("%d/%m/%Y") if pd.notna(fecha_ts) else valor
+            c = ws.cell(row=r, column=idx, value=valor)
+            c.alignment = Alignment(vertical="center", wrap_text=(clave == "observaciones"))
+            c.border = Border(bottom=Side(style="hair", color="D9E2F3"))
+            if r % 2 == 0:
+                c.fill = PatternFill("solid", fgColor="F2F6FC")
+
+    total_row = len(datos) + 4
+    ws.cell(total_row, 1, "TOTAL")
+    for idx, (clave, _) in enumerate(columnas, 1):
+        if clave in sumables and len(datos):
+            letra = get_column_letter(idx)
+            ws.cell(total_row, idx, f"=SUM({letra}4:{letra}{total_row-1})")
+    for idx in range(1, len(columnas) + 1):
+        c = ws.cell(total_row, idx)
+        c.font = Font(bold=True)
+        c.fill = PatternFill("solid", fgColor="DCE6F1")
+
+    anchos = [12, 8, 10, 22, 10, 28, 22, 12, 14, 10, 9, 10, 11, 24, 14, 16, 40]
+    for idx, ancho in enumerate(anchos, 1):
+        ws.column_dimensions[get_column_letter(idx)].width = ancho
+    ws.freeze_panes = "A4"
+    if len(datos):
+        ws.auto_filter.ref = f"A3:{ultima_col}{total_row-1}"
+
+    resumen = wb.create_sheet("Resumen por Operario")
+    encabezados = ["Operario", "Registros", "Cajas", "Varillas", "Desp. (KG)"]
+    for idx, titulo in enumerate(encabezados, 1):
+        c = resumen.cell(row=1, column=idx, value=titulo)
+        c.font = Font(bold=True, color="FFFFFF")
+        c.fill = PatternFill("solid", fgColor="244062")
+        c.alignment = Alignment(horizontal="center")
+    if len(datos):
+        agrupado = datos.groupby("operario").agg(
+            registros=("operario", "size"), cajas=("num_cajas", "sum"),
+            varillas=("num_varillas", "sum"), desp=("peso_desperdicio", "sum")
+        ).reset_index().sort_values("registros", ascending=False)
+        for r, fila in enumerate(agrupado.itertuples(index=False), 2):
+            resumen.cell(r, 1, fila.operario)
+            resumen.cell(r, 2, int(fila.registros))
+            resumen.cell(r, 3, float(fila.cajas))
+            resumen.cell(r, 4, float(fila.varillas))
+            resumen.cell(r, 5, round(float(fila.desp), 2))
+    for idx, ancho in enumerate([26, 12, 12, 12, 14], 1):
+        resumen.column_dimensions[get_column_letter(idx)].width = ancho
+
+    salida = BytesIO()
+    wb.save(salida)
+    return salida.getvalue()
+
+def _generar_excel_rendimiento(df_rendimiento, etiqueta_filtro="Rendimiento de producción"):
+    """Genera un Excel con detalle día a día y dashboard con gráficos."""
+    from io import BytesIO
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
+    from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.utils import get_column_letter
+
+    columnas = [
+        "Fecha y Hora", "OP", "Cliente", "Trabajo", "Tipo", "Área",
+        "Máquina", "Rollos", "Cierre", "Duración", "Duración (Horas)",
+        "Rendimiento (Rollos/Hora)", "Operario"
+    ]
+    filas = []
+    for _, reg in df_rendimiento.iterrows():
+        fecha = reg.get("fecha_dt")
+        if pd.isna(fecha):
+            fecha_texto = str(reg.get("fecha_txt") or "")
+        else:
+            fecha_texto = pd.Timestamp(fecha).strftime("%d/%m/%Y %H:%M")
+
+        duracion = reg.get("duracion_td")
+        try:
+            segundos = max(0, float(duracion.total_seconds())) if pd.notna(duracion) else 0.0
+        except Exception:
+            segundos = 0.0
+        horas = segundos / 3600
+        try:
+            rollos = float(reg.get("rollos")) if pd.notna(reg.get("rollos")) else 0
+        except (TypeError, ValueError):
+            rollos = 0
+        duracion_texto = str(timedelta(seconds=int(segundos)))
+        rendimiento = rollos / horas if horas > 0 else 0
+        filas.append([
+            fecha_texto, reg.get("op") or "", reg.get("cliente") or "",
+            reg.get("nombre_trabajo") or "", reg.get("tipo_orden") or "",
+            reg.get("area") or "", reg.get("maquina") or "", rollos,
+            str(reg.get("tipo_cierre") or "").replace("📦 ", "").replace("✅ ", "").replace("🔄 ", ""),
+            duracion_texto, round(horas, 2), round(rendimiento, 2),
+            str(reg.get("operario") or reg.get("maquinista") or "Sin registrar").strip()
+        ])
+
+    filas.sort(key=lambda f: datetime.strptime(f[0], "%d/%m/%Y %H:%M") if f[0] and re.match(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}$", f[0]) else datetime.min, reverse=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Detalle Día a Día"
+    ws.merge_cells("A1:M1")
+    ws["A1"] = "DETALLE DE PRODUCCIÓN Y RENDIMIENTO DÍA A DÍA"
+    ws["A1"].font = Font(name="Calibri", size=15, bold=True, color="FFFFFF")
+    ws["A1"].fill = PatternFill("solid", fgColor="17365D")
+    ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    ws.row_dimensions[1].height = 30
+    ws.merge_cells("A2:M2")
+    ws["A2"] = etiqueta_filtro
+    ws["A2"].font = Font(italic=True, color="666666", size=10)
+    ws["A2"].alignment = Alignment(horizontal="left")
+
+    for col_idx, titulo in enumerate(columnas, 1):
+        c = ws.cell(row=3, column=col_idx, value=titulo)
+        c.font = Font(bold=True, color="FFFFFF", size=10)
+        c.fill = PatternFill("solid", fgColor="244062")
+        c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        c.border = Border(bottom=Side(style="thin", color="FFFFFF"))
+    ws.row_dimensions[3].height = 32
+
+    for row_idx, fila in enumerate(filas, 4):
+        for col_idx, valor in enumerate(fila, 1):
+            c = ws.cell(row=row_idx, column=col_idx, value=valor)
+            c.alignment = Alignment(vertical="center")
+            c.border = Border(bottom=Side(style="hair", color="D9E2F3"))
+            if row_idx % 2 == 0:
+                c.fill = PatternFill("solid", fgColor="EAF0F8")
+            if col_idx in (8, 11, 12):
+                c.number_format = '#,##0.00' if col_idx in (11, 12) else '#,##0'
+    total_row = max(4, len(filas) + 4)
+    ws.cell(total_row, 1, "TOTAL / PROMEDIO")
+    ws.cell(total_row, 8, f"=SUM(H4:H{total_row-1})" if filas else 0)
+    ws.cell(total_row, 11, f"=SUM(K4:K{total_row-1})" if filas else 0)
+    ws.cell(total_row, 12, f"=IF(K{total_row}>0,H{total_row}/K{total_row},0)" if filas else 0)
+    for c in ws[total_row]:
+        c.font = Font(bold=True, color="FFFFFF")
+        c.fill = PatternFill("solid", fgColor="17365D")
+        c.alignment = Alignment(vertical="center")
+    ws.freeze_panes = "A4"
+    ws.auto_filter.ref = f"A3:M{max(3, len(filas)+3)}"
+    anchos = [20, 14, 26, 34, 22, 18, 16, 13, 22, 18, 18, 25, 24]
+    for i, ancho in enumerate(anchos, 1):
+        ws.column_dimensions[get_column_letter(i)].width = ancho
+
+    dash = wb.create_sheet("Dashboard y Gráficos")
+    dash.merge_cells("A1:H1")
+    dash["A1"] = "ANÁLISIS DE RENDIMIENTO DE PRODUCCIÓN POR DÍA"
+    dash["A1"].font = Font(bold=True, color="FFFFFF", size=15)
+    dash["A1"].fill = PatternFill("solid", fgColor="17365D")
+    dash["A1"].alignment = Alignment(horizontal="center", vertical="center")
+    dash.row_dimensions[1].height = 30
+    dash["A3"] = "Filtro aplicado"
+    dash["B3"] = etiqueta_filtro
+    dash["A4"] = "Registros"
+    dash["B4"] = len(filas)
+    dash["A5"] = "Total de rollos"
+    dash["B5"] = sum(f[7] for f in filas)
+    dash["A6"] = "Horas registradas"
+    dash["B6"] = round(sum(f[10] for f in filas), 2)
+    dash["A7"] = "Promedio rollos/hora"
+    dash["B7"] = round(sum(f[7] for f in filas) / sum(f[10] for f in filas), 2) if filas and sum(f[10] for f in filas) > 0 else 0
+    for r in range(3, 8):
+        dash.cell(r, 1).font = Font(bold=True, color="FFFFFF")
+        dash.cell(r, 1).fill = PatternFill("solid", fgColor="244062")
+        dash.cell(r, 2).fill = PatternFill("solid", fgColor="EAF0F8")
+    dash.column_dimensions["A"].width = 25
+    dash.column_dimensions["B"].width = 40
+
+    if filas:
+        chart1 = BarChart()
+        chart1.type = "col"
+        chart1.style = 10
+        chart1.title = "Total de Rollos Producidos por Registro / Día"
+        chart1.y_axis.title = "Rollos"
+        chart1.x_axis.title = "Fecha y hora"
+        chart1.height = 8
+        chart1.width = 18
+        # Datos de gráficas en orden cronológico (más viejo -> más nuevo)
+        graf = wb.create_sheet("Datos Gráficos")
+        graf.append(["Fecha y Hora", "Rollos", "Rendimiento (Rollos/Hora)"])
+        for fila in reversed(filas):
+            graf.append([fila[0], fila[7], fila[11]])
+        graf.sheet_state = "hidden"
+        data = Reference(graf, min_col=2, min_row=1, max_row=len(filas)+1)
+        cats = Reference(graf, min_col=1, min_row=2, max_row=len(filas)+1)
+        chart1.add_data(data, titles_from_data=True)
+        chart1.set_categories(cats)
+        chart1.legend = None
+        dash.add_chart(chart1, "A10")
+
+        chart2 = LineChart()
+        chart2.style = 13
+        chart2.title = "Rendimiento (Rollos por Hora) por Día"
+        chart2.y_axis.title = "Rollos por hora"
+        chart2.x_axis.title = "Fecha y hora"
+        chart2.height = 8
+        chart2.width = 18
+        data2 = Reference(graf, min_col=3, min_row=1, max_row=len(filas)+1)
+        chart2.add_data(data2, titles_from_data=True)
+        chart2.set_categories(cats)
+        chart2.legend = None
+        dash.add_chart(chart2, "A27")
+    else:
+        dash["A10"] = "No hay registros para el filtro seleccionado."
+
+    salida = BytesIO()
+    wb.save(salida)
+    salida.seek(0)
+    return salida.getvalue()
+
 
 # Radiografía completa de una OP: vista de solo lectura con todos sus datos de creación.
 # 15. Radiografía de una OP
@@ -2461,13 +2870,30 @@ elif menu == "🔍 Seguimiento":
                 .execute().data or []
             )
         else:
-            ordenes_finalizadas = (
+# Bolsas se consulta aparte: si compartiera el límite de 200 con las demás categorías,
+# las bolsas finalizadas más antiguas (por fecha de creación) quedaban fuera de la lista.
+            finalizadas_bolsas = (
                 supabase.table("ordenes_planeadas")
                 .select("*")
                 .eq("proxima_area", "FINALIZADO")
+                .ilike("tipo_orden", "%BOLSA%")
                 .order("created_at", desc=True)
                 .limit(200)
                 .execute().data or []
+            )
+            finalizadas_otras = (
+                supabase.table("ordenes_planeadas")
+                .select("*")
+                .eq("proxima_area", "FINALIZADO")
+                .or_("tipo_orden.is.null,tipo_orden.not.ilike.%BOLSA%")
+                .order("created_at", desc=True)
+                .limit(200)
+                .execute().data or []
+            )
+            ordenes_finalizadas = sorted(
+                finalizadas_bolsas + finalizadas_otras,
+                key=lambda o: o.get("created_at") or "",
+                reverse=True
             )
     except Exception as e:
         st.error(f"Error al cargar órdenes finalizadas: {e}")
@@ -2481,7 +2907,7 @@ elif menu == "🔍 Seguimiento":
         tab_pendientes, tab_finalizadas = st.tabs(["⏳ EN PROCESO / PENDIENTES", "✅ FINALIZADAS"])
 
         if not busqueda:
-            st.caption(f"Mostrando las {len(ordenes_finalizadas)} órdenes finalizadas más recientes. Usa el buscador para encontrar cualquier OP histórica.")
+            st.caption(f"Mostrando las {len(ordenes_finalizadas)} órdenes finalizadas más recientes (hasta 200 de Bolsas y 200 del resto). Usa el buscador para encontrar cualquier OP histórica.")
 
 # SEPARA UNA LISTA DE ORDENES EN FORMAS / ROLLOS BLANCOS / REBOBINADO / ROLLOS IMPRESOS / BOLSAS
         def _categoria_op(row):
@@ -5190,6 +5616,18 @@ elif menu == "📊 Reportes Admin":
                                 })
                                 st.dataframe(df_op_mostrar, use_container_width=True, hide_index=True)
 
+                                etiqueta_excel_op = (
+                                    f"Operario: {operario_sel} | Desde: {fecha_ini_op.strftime('%d/%m/%Y')} "
+                                    f"| Hasta: {fecha_fin_op.strftime('%d/%m/%Y')}"
+                                )
+                                st.download_button(
+                                    "📥 Descargar Excel de rendimiento",
+                                    data=_generar_excel_rendimiento(df_op, etiqueta_excel_op),
+                                    file_name=f"Rendimiento_{re.sub(r'[^A-Za-z0-9_-]+', '_', operario_sel)}_{fecha_ini_op}_{fecha_fin_op}.xlsx",
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    key="descargar_excel_rendimiento_operario"
+                                )
+
     # ==================== POR MAQUINA ====================
                     with sub_maq_rend:
                         todas_las_maquinas = sorted({m for lista in MAQUINAS.values() for m in lista})
@@ -5246,6 +5684,18 @@ elif menu == "📊 Reportes Admin":
                                         }),
                                         use_container_width=True, hide_index=True
                                     )
+
+                            etiqueta_excel_maq = (
+                                f"Máquina: {maquina_sel} | Desde: {fecha_ini_maq.strftime('%d/%m/%Y')} "
+                                f"| Hasta: {fecha_fin_maq.strftime('%d/%m/%Y')}"
+                            )
+                            st.download_button(
+                                "📥 Descargar Excel de rendimiento",
+                                data=_generar_excel_rendimiento(df_maq, etiqueta_excel_maq),
+                                file_name=f"Rendimiento_{re.sub(r'[^A-Za-z0-9_-]+', '_', maquina_sel)}_{fecha_ini_maq}_{fecha_fin_maq}.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                key="descargar_excel_rendimiento_maquina"
+                            )
 
     # MÓDULO: MOVIMIENTOS DEL SISTEMA 
             with tab_movs:
@@ -5789,37 +6239,56 @@ elif menu == "⏱️ Seguimiento Cortadoras":
                             st.error(f"Error al guardar en Supabase: {e}")
                             
         with t2:
-            st.markdown(f"### Historial Reciente - {maq_sel}")
-            try:
-                query = supabase.table("seguimiento_cortadoras").select("*").eq("maquina", maq_sel)
-                respuesta = query.order("id", desc=True).execute()
-                
-                if respuesta.data:
-                    df_h = pd.DataFrame(respuesta.data)
-                    df_h = formatear_fechas_df(df_h, columnas=['fecha'])
-                    
-                    columnas_visibles = ["fecha", "hora_registro", "turno", "operario", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
-                    columnas_visibles = [c for c in columnas_visibles if c in df_h.columns]
-                    
+            st.markdown(f"### Historial - {maq_sel}")
+            cf1, cf2 = st.columns(2)
+            fecha_ini_seg = cf1.date_input("Desde", value=hora_colombia().date() - timedelta(days=30), key="fecha_ini_seg_cort")
+            fecha_fin_seg = cf2.date_input("Hasta", value=hora_colombia().date(), key="fecha_fin_seg_cort")
+
+            if fecha_ini_seg > fecha_fin_seg:
+                st.warning("⚠️ La fecha inicial no puede ser mayor que la final.")
+            else:
+                try:
+                    df_h = _cargar_seguimiento_cortadoras(maq_sel, fecha_ini_seg, fecha_fin_seg)
+
+                    if not df_h.empty:
+                        df_excel_seg = df_h.copy()
+                        df_h = formatear_fechas_df(df_h, columnas=['fecha'])
+
+                        columnas_visibles = ["fecha", "hora_registro", "turno", "operario", "op", "nombre_trabajo", "num_cajas", "num_varillas", "peso_desperdicio", "observaciones"]
+                        columnas_visibles = [c for c in columnas_visibles if c in df_h.columns]
+
 # Renombrar las columnas para que se vea estetico en pantalla
-                    df_mostrar = df_h[columnas_visibles].rename(columns={
-                        "fecha": "Fecha",
-                        "hora_registro": "Hora",
-                        "turno": "Turno",
-                        "operario": "Operario",
-                        "op": "OP",
-                        "nombre_trabajo": "Trabajo",
-                        "num_cajas": "Cajas",
-                        "num_varillas": "Varillas",
-                        "peso_desperdicio": "Desp. (KG)",
-                        "observaciones": "Observaciones"
-                    })
-                    
-                    st.dataframe(df_mostrar, use_container_width=True)
-                else:
-                    st.info("No hay registros previos para esta máquina.")
-            except Exception as e:
-                st.error(f"Error al cargar el historial: {e}")
+                        df_mostrar = df_h[columnas_visibles].rename(columns={
+                            "fecha": "Fecha",
+                            "hora_registro": "Hora",
+                            "turno": "Turno",
+                            "operario": "Operario",
+                            "op": "OP",
+                            "nombre_trabajo": "Trabajo",
+                            "num_cajas": "Cajas",
+                            "num_varillas": "Varillas",
+                            "peso_desperdicio": "Desp. (KG)",
+                            "observaciones": "Observaciones"
+                        })
+
+                        st.caption(f"{len(df_mostrar)} registro(s) entre {fecha_ini_seg.strftime('%d/%m/%Y')} y {fecha_fin_seg.strftime('%d/%m/%Y')}.")
+                        st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
+
+                        etiqueta_excel_seg = (
+                            f"Máquina: {maq_sel} | Desde: {fecha_ini_seg.strftime('%d/%m/%Y')} "
+                            f"| Hasta: {fecha_fin_seg.strftime('%d/%m/%Y')}"
+                        )
+                        st.download_button(
+                            "📥 Descargar Excel de seguimiento",
+                            data=_generar_excel_seguimiento_cortadoras(df_excel_seg, etiqueta_excel_seg),
+                            file_name=f"Seguimiento_{re.sub(r'[^A-Za-z0-9_-]+', '_', maq_sel)}_{fecha_ini_seg}_{fecha_fin_seg}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            key="descargar_excel_seguimiento_cortadoras"
+                        )
+                    else:
+                        st.info("No hay registros para esta máquina en el rango de fechas seleccionado.")
+                except Exception as e:
+                    st.error(f"Error al cargar el historial: {e}")
 
 # 24. Inventario de cores y cajas
 elif menu == "📦 Inventario":
